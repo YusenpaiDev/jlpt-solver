@@ -203,13 +203,13 @@ export default function LembarTugas() {
   /* ── Render ── */
   return (
     <div className="flex h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ background: "#0a1220", fontFamily: "var(--font-manrope)" }}>
+      style={{ background: "transparent", fontFamily: "var(--font-manrope)" }}>
 
       <div className="flex-1 flex flex-col min-h-0">
 
         {/* ── Header ── */}
         <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0"
-          style={{ background: "#0a1220", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          style={{ background: "rgba(2,8,16,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(107,156,218,0.1)" }}>
           <div className="flex items-center gap-2 md:gap-3">
             <a href="/" className="flex items-center gap-2">
               <div className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"
@@ -253,7 +253,7 @@ export default function LembarTugas() {
         {/* ── Stats strip (quiz only) ── */}
         {stage === "quiz" && (
           <div className="flex items-center gap-6 px-6 py-3 shrink-0"
-            style={{ background: "#0d1929", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+            style={{ background: "rgba(8,15,30,0.7)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid rgba(107,156,218,0.08)" }}>
             <div className="flex items-center gap-2">
               <span className="text-xl font-extrabold text-[#bbc6e2]"
                 style={{ fontFamily: "var(--font-jakarta)" }}>{soalList.length}</span>
@@ -313,7 +313,7 @@ export default function LembarTugas() {
                 {/* Title */}
                 <div className="text-center">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
-                    style={{ background: "#101b30" }}>
+                    style={{ background: "rgba(107,156,218,0.12)", border: "1px solid rgba(107,156,218,0.2)" }}>
                     <Wand2 className="size-3 text-[#6b9cda]" />
                     <span className="text-[10px] font-bold text-[#6b9cda]"
                       style={{ fontFamily: "var(--font-space)" }}>AI GENERATE SOAL</span>
@@ -336,7 +336,7 @@ export default function LembarTugas() {
 
                 {/* Level */}
                 <div className="p-5 rounded-2xl flex flex-col gap-3"
-                  style={{ background: "#101b30" }}>
+                  style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.12)" }}>
                   <p className="text-[10px] font-bold text-[#4a5a7a]"
                     style={{ fontFamily: "var(--font-space)" }}>LEVEL JLPT</p>
                   <div className="flex gap-2">
@@ -354,7 +354,7 @@ export default function LembarTugas() {
 
                 {/* Category */}
                 <div className="p-5 rounded-2xl flex flex-col gap-3"
-                  style={{ background: "#101b30" }}>
+                  style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.12)" }}>
                   <p className="text-[10px] font-bold text-[#4a5a7a]"
                     style={{ fontFamily: "var(--font-space)" }}>KATEGORI</p>
                   <div className="grid grid-cols-5 gap-2">
@@ -375,7 +375,7 @@ export default function LembarTugas() {
 
                 {/* Count */}
                 <div className="p-5 rounded-2xl flex flex-col gap-3"
-                  style={{ background: "#101b30" }}>
+                  style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.12)" }}>
                   <p className="text-[10px] font-bold text-[#4a5a7a]"
                     style={{ fontFamily: "var(--font-space)" }}>JUMLAH SOAL</p>
                   <div className="flex gap-2">
@@ -394,7 +394,7 @@ export default function LembarTugas() {
                 {/* Generate button */}
                 <button onClick={handleGenerate}
                   className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold transition-all hover:brightness-110"
-                  style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)" }}>
+                  style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)", boxShadow: "0 0 30px rgba(74,122,191,0.3)" }}>
                   <Wand2 className="size-4" />
                   GENERATE {count} SOAL {level} — {CATS.find(c => c.value === category)?.label}
                 </button>
@@ -453,7 +453,7 @@ export default function LembarTugas() {
         {/* ── Bottom nav (quiz single view) ── */}
         {stage === "quiz" && view === "single" && (
           <div className="shrink-0 flex items-center justify-between px-6 py-3"
-            style={{ background: "#0d1929", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+            style={{ background: "rgba(2,8,16,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderTop: "1px solid rgba(107,156,218,0.1)" }}>
             <button onClick={() => setCurrent(c => Math.max(0, c - 1))}
               disabled={current === 0}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-30"
@@ -559,12 +559,12 @@ function SoalCard({ soal, picked, revealed, onPick, onReveal, questionIndex, tot
   function optStyle(i: number) {
     if (!revealed) {
       return picked === i
-        ? { bg: "rgba(107,156,218,0.12)", border: "rgba(107,156,218,0.4)", text: "#d7e2ff" }
-        : { bg: "#101b30", border: "rgba(255,255,255,0.04)", text: "#8a9bbf" };
+        ? { bg: "rgba(107,156,218,0.18)", border: "rgba(107,156,218,0.5)", text: "#d7e2ff" }
+        : { bg: "rgba(16,27,48,0.5)", border: "rgba(107,156,218,0.1)", text: "#8a9bbf" };
     }
     if (i === correctIdx) return { bg: "rgba(94,168,122,0.1)",  border: "rgba(94,168,122,0.45)", text: "#5ea87a" };
     if (picked === i)     return { bg: "rgba(224,90,90,0.08)",  border: "rgba(224,90,90,0.4)",  text: "#e05a5a" };
-    return { bg: "#0d1929", border: "rgba(255,255,255,0.03)", text: "#4a5a7a" };
+    return { bg: "rgba(8,15,30,0.4)", border: "rgba(107,156,218,0.06)", text: "#4a5a7a" };
   }
 
   return (
@@ -650,7 +650,7 @@ function SoalCard({ soal, picked, revealed, onPick, onReveal, questionIndex, tot
       {/* Explanation */}
       {revealed && (
         <div className="flex flex-col gap-3 p-4 rounded-2xl"
-          style={{ background: "#0d1929", border: "1px solid rgba(255,255,255,0.04)" }}>
+          style={{ background: "rgba(16,27,48,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.15)" }}>
 
           {/* Correct explanation */}
           <div className="flex gap-3">
