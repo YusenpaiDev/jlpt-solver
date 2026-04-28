@@ -894,11 +894,11 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
       {/* ── Left: All Questions ── */}
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-16 lg:pb-0"
-        style={{ background: "#080f1e" }}>
+        style={{ background: "transparent" }}>
 
         {/* Sticky header */}
         <div className="sticky top-0 z-10 px-8 py-4 flex items-center justify-between"
-          style={{ background: "rgba(8,15,30,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          style={{ background: "rgba(2,8,16,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(107,156,218,0.1)" }}>
           <div className="flex items-center gap-3">
             <h2 className="text-base font-bold text-[#d7e2ff]"
               style={{ fontFamily: "var(--font-jakarta)" }}>{result.title}</h2>
@@ -973,14 +973,16 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
             return (
               <div key={qi} className="rounded-3xl overflow-hidden transition-all"
                 style={{
-                  background: "#101b30",
-                  border: `1px solid ${isRevealed ? `${accent}30` : "rgba(255,255,255,0.05)"}`,
-                  boxShadow: isRevealed ? `0 0 30px ${accent}10` : "none",
+                  background: isRevealed ? `rgba(16,27,48,0.75)` : "rgba(16,27,48,0.55)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  border: `1px solid ${isRevealed ? `${accent}45` : "rgba(107,156,218,0.12)"}`,
+                  boxShadow: isRevealed ? `0 0 40px ${accent}20, 0 4px 24px rgba(0,0,0,0.3)` : "0 4px 16px rgba(0,0,0,0.2)",
                 }}>
 
                 {/* Question header strip */}
                 <div className="px-6 py-5 relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-[0.04]"
+                  <div className="absolute inset-0 opacity-[0.08]"
                     style={{ background: `radial-gradient(circle at top left,${accent},transparent 60%)` }} />
                   <div className="absolute top-0 left-0 w-1 h-full rounded-l-3xl"
                     style={{ background: `linear-gradient(180deg,${accent},${accent}40)` }} />
@@ -1102,7 +1104,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                     </div>
 
                     {/* Kenapa benar */}
-                    <div className="px-5 py-4" style={{ background: "rgba(8,16,36,0.55)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div className="px-5 py-4" style={{ background: "rgba(20,50,30,0.25)", borderBottom: "1px solid rgba(94,168,122,0.1)" }}>
                       <p className="text-[11px] font-bold text-[#5ea87a] mb-2" style={{ fontFamily: "var(--font-space)" }}>
                         💡 KENAPA BENAR?
                       </p>
@@ -1111,7 +1113,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
                     {/* Kenapa salah */}
                     {q.why_wrong && (
-                      <div className="px-5 py-4" style={{ background: "rgba(8,16,36,0.55)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="px-5 py-4" style={{ background: "rgba(50,20,20,0.25)", borderBottom: "1px solid rgba(192,80,80,0.1)" }}>
                         <p className="text-[11px] font-bold text-[#dc5050] mb-2" style={{ fontFamily: "var(--font-space)" }}>
                           ✗ KENAPA PILIHAN LAIN SALAH?
                         </p>
@@ -1121,7 +1123,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
                     {/* Grammar points */}
                     {q.grammar_points && q.grammar_points.length > 0 && (
-                      <div className="px-5 py-4" style={{ background: "rgba(8,16,36,0.55)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="px-5 py-4" style={{ background: "rgba(20,35,60,0.35)", borderBottom: "1px solid rgba(107,156,218,0.12)" }}>
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-[11px] font-bold text-[#6b9cda]" style={{ fontFamily: "var(--font-space)" }}>
                             📚 POIN GRAMMAR / KOSAKATA
@@ -1162,7 +1164,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
                     {/* Tip */}
                     {q.tip && (
-                      <div className="px-5 py-4" style={{ background: "#0a1525" }}>
+                      <div className="px-5 py-4" style={{ background: "rgba(40,28,8,0.3)" }}>
                         <p className="text-[11px] font-bold text-[#e0b45a] mb-2" style={{ fontFamily: "var(--font-space)" }}>
                           🎯 TIPS & TRIK UJIAN
                         </p>
@@ -1192,7 +1194,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {result.vocabulary.map((v, i) => (
                 <div key={i} className="p-4 rounded-2xl flex flex-col gap-2 relative"
-                  style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.15)" }}>
                   {/* Level badge */}
                   {v.jlpt_level && (
                     <span className="absolute top-3 right-3 text-[9px] px-1.5 py-0.5 rounded font-bold"
@@ -1233,7 +1235,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
       {/* ── Right: Chat Panel (desktop only) ── */}
       <div className="hidden lg:flex w-[320px] shrink-0 flex-col border-l"
-        style={{ background: "rgba(8,16,36,0.55)", borderColor: "rgba(255,255,255,0.04)" }}>
+        style={{ background: "rgba(8,16,36,0.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderColor: "rgba(107,156,218,0.12)" }}>
 
         {/* Header */}
         <div className="px-5 py-4 border-b shrink-0"
