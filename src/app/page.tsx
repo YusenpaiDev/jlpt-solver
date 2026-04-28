@@ -256,11 +256,11 @@ export default function Home() {
             {/* Action cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Ambil Foto */}
-              <button
+              <a
+                href="/analisis-foto?mode=camera"
                 className="group flex flex-col items-start gap-5 p-7 rounded-2xl transition-all hover:scale-[1.01] text-left relative overflow-hidden"
                 style={{ background: "#101b30" }}
               >
-                {/* card glow on hover via pseudo — use box-shadow */}
                 <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   style={{ background: "radial-gradient(circle at 30% 30%,rgba(74,122,191,0.12),transparent 70%)" }}
@@ -284,10 +284,11 @@ export default function Home() {
                   style={{ fontFamily: "var(--font-space)" }}>
                   BUKA KAMERA <ArrowUpRight className="size-3.5" />
                 </div>
-              </button>
+              </a>
 
               {/* Unggah Soal */}
-              <button
+              <a
+                href="/analisis-foto?mode=upload"
                 className="group flex flex-col items-start gap-5 p-7 rounded-2xl transition-all hover:scale-[1.01] text-left relative overflow-hidden"
                 style={{ background: "#101b30" }}
               >
@@ -314,7 +315,7 @@ export default function Home() {
                   style={{ fontFamily: "var(--font-space)" }}>
                   PILIH FILE <ArrowUpRight className="size-3.5" />
                 </div>
-              </button>
+              </a>
             </div>
 
             {/* Bottom note */}

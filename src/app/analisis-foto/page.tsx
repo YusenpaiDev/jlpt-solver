@@ -1482,11 +1482,19 @@ export default function AnalisisFoto() {
     }
   };
 
-  /* Load session from ?session=<id> URL param */
+  /* Load session from ?session=<id> URL param, or auto-trigger mode */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const sid = params.get("session");
-    if (sid) loadSession(sid);
+    const sid  = params.get("session");
+    const mode = params.get("mode");
+    if (sid) {
+      loadSession(sid);
+    } else if (mode === "upload") {
+      fileInputRef.current?.click();
+    } else if (mode === "camera") {
+      handleCameraClick();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSession = async (id: string) => {
