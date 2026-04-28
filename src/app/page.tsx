@@ -181,17 +181,25 @@ export default function Home() {
             style={{ background: "radial-gradient(circle,#8b5abf,transparent 70%)" }}
           />
 
-          {/* Decorative large kanji background */}
+          {/* Decorative floating kanji */}
           <div
-            className="pointer-events-none absolute right-10 top-4 text-[220px] font-black leading-none select-none"
+            className="animate-float3 pointer-events-none absolute right-10 top-4 text-[220px] font-black leading-none select-none"
             style={{
               color: "transparent",
-              WebkitTextStroke: "1px rgba(187,198,226,0.04)",
+              WebkitTextStroke: "1px rgba(107,156,218,0.07)",
               fontFamily: "var(--font-jakarta)",
             }}
           >
             解
           </div>
+
+          {/* Floating small kanji decorations */}
+          <div className="animate-float pointer-events-none absolute left-[55%] top-[12%] text-5xl font-black select-none opacity-[0.06]"
+            style={{ color: "#6b9cda", fontFamily: "var(--font-jakarta)" }}>語</div>
+          <div className="animate-float2 pointer-events-none absolute left-[72%] top-[40%] text-4xl font-black select-none opacity-[0.05]"
+            style={{ color: "#a67bd4", fontFamily: "var(--font-jakarta)" }}>文</div>
+          <div className="animate-float3 pointer-events-none absolute left-[40%] top-[65%] text-3xl font-black select-none opacity-[0.05]"
+            style={{ color: "#5ea87a", fontFamily: "var(--font-jakarta)" }}>読</div>
 
           <div className="relative flex flex-col">
             {/* AI status badge */}
@@ -225,7 +233,7 @@ export default function Home() {
             >
               <span className="text-[#d7e2ff]">Taklukan JLPT</span>
               <br />
-              <span style={{ color: "#8aafd4" }}>Dengan Presisi AI.</span>
+              <span className="shimmer-text">Dengan Presisi AI.</span>
             </h1>
 
             <p className="text-base text-[#8a9bbf] max-w-xl leading-relaxed mb-8">
@@ -282,8 +290,8 @@ export default function Home() {
                   style={{ background: "radial-gradient(circle at 30% 30%,rgba(74,122,191,0.18),transparent 70%)" }}
                 />
                 <div
-                  className="relative size-12 rounded-xl flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg,#1a3a6f,#0f1a2e)", boxShadow: "0 0 20px rgba(74,122,191,0.3)" }}
+                  className="animate-border-glow relative size-12 rounded-xl flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg,#1a3a6f,#0f1a2e)" }}
                 >
                   <Camera className="size-5 text-[#6b9cda]" />
                 </div>
@@ -318,7 +326,7 @@ export default function Home() {
                 />
                 <div
                   className="relative size-12 rounded-xl flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg,#2a1a4f,#0f0a25)", boxShadow: "0 0 20px rgba(139,90,191,0.3)" }}
+                  style={{ background: "linear-gradient(135deg,#2a1a4f,#0f0a25)", boxShadow: "0 0 20px rgba(139,90,191,0.4)", animation: "border-glow 3s ease-in-out infinite 1.5s" }}
                 >
                   <Upload className="size-5 text-[#a67bd4]" />
                 </div>

@@ -134,6 +134,47 @@
   animation: particle-drift2 13s ease-in-out infinite 3s;
 }
 
+/* ── Floating elements ── */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-14px); }
+}
+@keyframes float-y2 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-10px) rotate(8deg); }
+}
+@keyframes float-y3 {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%       { transform: translateY(-18px) scale(1.06); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes border-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(74,122,191,0.3), 0 0 30px rgba(74,122,191,0.1); }
+  50%       { box-shadow: 0 0 20px rgba(74,122,191,0.6), 0 0 50px rgba(74,122,191,0.2); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-float    { animation: float-y  6s ease-in-out infinite; }
+.animate-float2   { animation: float-y2 8s ease-in-out infinite 1s; }
+.animate-float3   { animation: float-y3 7s ease-in-out infinite 2s; }
+.animate-spin-slow { animation: spin-slow 20s linear infinite; }
+.animate-border-glow { animation: border-glow 3s ease-in-out infinite; }
+
+.shimmer-text {
+  background: linear-gradient(90deg, #bbc6e2 0%, #6b9cda 40%, #a67bd4 60%, #bbc6e2 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
 /* Star dots */
 .stars {
   position: absolute;
