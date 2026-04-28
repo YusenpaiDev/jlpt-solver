@@ -725,9 +725,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
   isReview?: boolean;
 }) {
   const [answers,      setAnswers]      = useState<Record<number, string>>({});
-  const [revealed,     setRevealed]     = useState<Set<number>>(
-    () => isReview ? new Set(result.questions.map((_, i) => i)) : new Set()
-  );
+  const [revealed,     setRevealed]     = useState<Set<number>>(new Set());
   const [chatInput,    setChatInput]    = useState("");
   const [chatLoading,  setChatLoading]  = useState(false);
   const [elapsed,      setElapsed]      = useState(0);
@@ -1065,21 +1063,15 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                       </p>
                     )}
                     <button
-                      onClick={() => userAns && reveal(qi)}
-                      disabled={!userAns}
+                      onClick={() => reveal(qi)}
                       className="w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.99]"
-                      style={userAns ? {
+                      style={{
                         background: `linear-gradient(135deg,${accent}30,${accent}15)`,
                         color: accent, border: `1px solid ${accent}40`,
                         fontFamily: "var(--font-space)",
                         cursor: "pointer",
-                      } : {
-                        background: "rgba(187,198,226,0.04)",
-                        color: "#2a354b", border: "1px solid rgba(187,198,226,0.06)",
-                        fontFamily: "var(--font-space)",
-                        cursor: "not-allowed",
                       }}>
-                      {userAns ? "Lihat Jawaban & Pembahasan ↓" : "🔒 Pilih jawaban dulu"}
+                      Lihat Jawaban & Pembahasan ↓
                     </button>
                   </div>
                 )}
