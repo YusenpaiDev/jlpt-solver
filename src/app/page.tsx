@@ -240,8 +240,12 @@ export default function Home() {
               {statItems.map(({ icon: Icon, value, label, color }) => (
                 <div
                   key={label}
-                  className="flex-1 flex items-center gap-3 px-5 py-3.5 rounded-xl"
-                  style={{ background: "#101b30" }}
+                  className="flex-1 flex items-center gap-3 px-5 py-3.5 rounded-xl backdrop-blur-md"
+                  style={{
+                    background: "rgba(16,27,48,0.6)",
+                    border: `1px solid ${color}22`,
+                    boxShadow: `0 0 20px ${color}0d, inset 0 1px 0 rgba(255,255,255,0.04)`,
+                  }}
                 >
                   <div className="size-8 rounded-lg flex items-center justify-center shrink-0"
                     style={{ background: `${color}18` }}>
@@ -266,12 +270,16 @@ export default function Home() {
               {/* Ambil Foto */}
               <a
                 href="/analisis-foto?mode=camera"
-                className="group flex flex-col items-start gap-5 p-7 rounded-2xl transition-all hover:scale-[1.01] text-left relative overflow-hidden"
-                style={{ background: "#101b30" }}
+                className="group flex flex-col items-start gap-5 p-7 rounded-2xl transition-all hover:scale-[1.01] text-left relative overflow-hidden backdrop-blur-md"
+                style={{
+                  background: "rgba(16,27,48,0.65)",
+                  border: "1px solid rgba(74,122,191,0.2)",
+                  boxShadow: "0 0 30px rgba(74,122,191,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}
               >
                 <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ background: "radial-gradient(circle at 30% 30%,rgba(74,122,191,0.12),transparent 70%)" }}
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  style={{ background: "radial-gradient(circle at 30% 30%,rgba(74,122,191,0.18),transparent 70%)" }}
                 />
                 <div
                   className="relative size-12 rounded-xl flex items-center justify-center"
@@ -297,12 +305,16 @@ export default function Home() {
               {/* Unggah Soal */}
               <a
                 href="/analisis-foto?mode=upload"
-                className="group flex flex-col items-start gap-5 p-7 rounded-2xl transition-all hover:scale-[1.01] text-left relative overflow-hidden"
-                style={{ background: "#101b30" }}
+                className="group flex flex-col items-start gap-5 p-7 rounded-2xl transition-all hover:scale-[1.01] text-left relative overflow-hidden backdrop-blur-md"
+                style={{
+                  background: "rgba(16,27,48,0.65)",
+                  border: "1px solid rgba(139,90,191,0.2)",
+                  boxShadow: "0 0 30px rgba(139,90,191,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}
               >
                 <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ background: "radial-gradient(circle at 30% 30%,rgba(139,90,191,0.12),transparent 70%)" }}
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  style={{ background: "radial-gradient(circle at 30% 30%,rgba(139,90,191,0.18),transparent 70%)" }}
                 />
                 <div
                   className="relative size-12 rounded-xl flex items-center justify-center"
@@ -337,8 +349,12 @@ export default function Home() {
 
               {/* Kanji Hari Ini */}
               <div
-                className="rounded-2xl p-5 relative overflow-hidden flex flex-col gap-3"
-                style={{ background: "#101b30" }}
+                className="rounded-2xl p-5 relative overflow-hidden flex flex-col gap-3 backdrop-blur-md"
+                style={{
+                  background: "rgba(16,27,48,0.65)",
+                  border: "1px solid rgba(187,198,226,0.1)",
+                  boxShadow: "0 0 24px rgba(107,140,186,0.07), inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}
               >
                 <div
                   className="absolute inset-0 opacity-[0.07]"
@@ -400,8 +416,12 @@ export default function Home() {
 
               {/* Latihan Kilat */}
               <div
-                className="rounded-2xl p-5 relative overflow-hidden flex flex-col gap-3"
-                style={{ background: "#101b30" }}
+                className="rounded-2xl p-5 relative overflow-hidden flex flex-col gap-3 backdrop-blur-md"
+                style={{
+                  background: "rgba(16,27,48,0.65)",
+                  border: "1px solid rgba(94,168,122,0.15)",
+                  boxShadow: "0 0 24px rgba(94,168,122,0.07), inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}
               >
                 <div
                   className="absolute inset-0 opacity-[0.06]"
@@ -470,8 +490,12 @@ export default function Home() {
 
         {/* ── Right Sidebar ── */}
         <aside
-          className="w-[270px] shrink-0 hidden lg:flex flex-col py-5 px-4 overflow-y-auto"
-          style={{ background: "#0d1929", borderLeft: "1px solid rgba(255,255,255,0.03)" }}
+          className="w-[270px] shrink-0 hidden lg:flex flex-col py-5 px-4 overflow-y-auto backdrop-blur-xl"
+          style={{
+            background: "rgba(8,16,36,0.55)",
+            borderLeft: "1px solid rgba(107,156,218,0.1)",
+            boxShadow: "inset 1px 0 0 rgba(255,255,255,0.03)",
+          }}
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-1">
