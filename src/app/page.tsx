@@ -50,6 +50,8 @@ export default function Home() {
   const [totalSoal,  setTotalSoal]  = useState(0);
   const [avgScore,   setAvgScore]   = useState<number | null>(null);
   const [loading,    setLoading]    = useState(true);
+  const [userInitial, setUserInitial] = useState("?");
+  const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -57,13 +59,18 @@ export default function Home() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
+      setUserInitial((user.user_metadata?.full_name || user.email || "?")[0].toUpperCase());
+
       const [profileRes, sessionRes] = await Promise.all([
-        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+        supabase.from("profiles").select("streak,avatar_url").eq("id", user.id).single(),
         supabase.from("sessions").select("id,level,category,title,total,score,created_at")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
       ]);
 
-      if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
+      if (profileRes.data) {
+        setStreak(profileRes.data.streak ?? 0);
+        setAvatarUrl(profileRes.data.avatar_url ?? null);
+      }
 
       const sess: Session[] = sessionRes.data ?? [];
       setSessions(sess.slice(0, 4));
@@ -95,62 +102,92 @@ export default function Home() {
     >
       {/* ── Top Header ── */}
       <header
-        className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0 border-b backdrop-blur-md"
-        style={{ background: "rgba(3,9,26,0.6)", borderColor: "rgba(255,255,255,0.06)" }}
+        className="flex items-center justify-between px-4 md:px-6 py-2.5 shrink-0 backdrop-blur-xl relative"
+        style={{
+          background: "rgba(2,8,20,0.8)",
+          borderBottom: "1px solid rgba(107,156,218,0.12)",
+          boxShadow: "0 1px 0 rgba(107,156,218,0.06)",
+        }}
       >
-        <div className="flex items-center gap-4 md:gap-8">
+        {/* subtle shimmer line at top */}
+        <div className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(107,156,218,0.4), rgba(166,123,212,0.3), transparent)" }} />
+
+        <div className="flex items-center gap-5 md:gap-8">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div
-              className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"
-              style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)" }}
-            >
-              S
+          <div className="flex items-center gap-2.5">
+            <div className="relative size-7 flex items-center justify-center">
+              {/* glow ring */}
+              <div className="absolute inset-0 rounded-lg opacity-60 blur-sm"
+                style={{ background: "linear-gradient(135deg,#4a7abf,#8b5abf)" }} />
+              <div className="relative size-7 rounded-lg flex items-center justify-center font-black text-[11px]"
+                style={{ background: "linear-gradient(135deg,#1a3a6f,#3a1a6f)", border: "1px solid rgba(107,156,218,0.4)", color: "#bbc6e2" }}>
+                先
+              </div>
             </div>
-            <span className="text-sm font-bold tracking-tight text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>
-              Sensei JLPT
-            </span>
+            <div className="flex flex-col leading-none">
+              <span className="text-[13px] font-extrabold tracking-tight"
+                style={{ fontFamily: "var(--font-jakarta)", color: "#d7e2ff" }}>Sensei</span>
+              <span className="text-[9px] font-bold tracking-widest"
+                style={{ fontFamily: "var(--font-space)", color: "#4a7abf" }}>JLPT · AI</span>
+            </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-0.5">
-            {["Materi", "Latihan", "Pro"].map((item, i) => (
-              <button
-                key={item}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  i === 0
-                    ? "text-[#d7e2ff] font-medium"
-                    : "text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5"
-                }`}
-              >
-                {item}
-                {item === "Pro" && (
-                  <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-semibold text-[#071327]"
-                    style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", fontFamily: "var(--font-space)" }}>
-                    NEW
-                  </span>
+          {/* Nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {[
+              { label: "Beranda", href: "/" },
+              { label: "Analisis", href: "/analisis-foto" },
+              { label: "Latihan", href: "/lembar-tugas" },
+            ].map((item, i) => (
+              <a key={item.label} href={item.href}
+                className="relative px-3 py-1.5 text-[13px] rounded-lg transition-all"
+                style={i === 0
+                  ? { color: "#d7e2ff", fontWeight: 600, background: "rgba(107,156,218,0.1)" }
+                  : { color: "#6a7a9a" }}>
+                {item.label}
+                {i === 0 && (
+                  <span className="absolute bottom-0.5 left-3 right-3 h-px rounded-full"
+                    style={{ background: "linear-gradient(90deg,#4a7abf,#8b5abf)" }} />
                 )}
-              </button>
+              </a>
             ))}
           </nav>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Pro badge */}
           <a href="/premium"
-            className="hidden sm:flex text-[11px] px-4 py-1.5 rounded-full font-medium border transition-colors hover:bg-white/5"
-            style={{ borderColor: "rgba(255,255,255,0.1)", color: "#bbc6e2", fontFamily: "var(--font-space)" }}>
-            Langganan
+            className="hidden sm:flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full font-bold transition-all hover:brightness-110"
+            style={{
+              background: "linear-gradient(135deg,rgba(74,122,191,0.15),rgba(139,90,191,0.15))",
+              border: "1px solid rgba(107,156,218,0.25)",
+              color: "#a0b4d4",
+              fontFamily: "var(--font-space)",
+            }}>
+            <Sparkles className="size-3 text-[#6b9cda]" />
+            PRO
           </a>
-          <button className="relative size-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors">
-            <Bell className="size-4 text-[#8a9bbf]" />
-            <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-red-400 ring-2 ring-[#071327]" />
+
+          {/* Bell */}
+          <button className="relative size-8 flex items-center justify-center rounded-lg transition-colors hover:bg-white/5">
+            <Bell className="size-4 text-[#6a7a9a]" />
+            <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-[#6b9cda] shadow-[0_0_6px_#6b9cda]" />
           </button>
-          <div
-            className="size-8 rounded-full flex items-center justify-center text-xs font-bold text-[#071327] ring-2 ring-[#2f4865]"
-            style={{ background: "linear-gradient(135deg,#bbc6e2,#4a7abf)" }}
-          >
-            A
-          </div>
+
+          {/* Avatar */}
+          <a href="/pengaturan" className="relative group">
+            <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-sm"
+              style={{ background: "linear-gradient(135deg,#4a7abf,#8b5abf)" }} />
+            {avatarUrl
+              ? <img src={avatarUrl} alt="avatar"
+                  className="relative size-8 rounded-full object-cover ring-2 ring-[rgba(107,156,218,0.4)]" />
+              : <div className="relative size-8 rounded-full flex items-center justify-center text-xs font-black transition-all"
+                  style={{ background: "linear-gradient(135deg,#1a3a6f,#3a1a6f)", color: "#bbc6e2", border: "1px solid rgba(107,156,218,0.3)", boxShadow: "0 0 0 2px rgba(74,122,191,0.25)" }}>
+                  {userInitial}
+                </div>
+            }
+          </a>
         </div>
       </header>
 
