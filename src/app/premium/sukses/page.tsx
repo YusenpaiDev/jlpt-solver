@@ -13,7 +13,7 @@ export default function PremiumSukses() {
 
   return (
     <div className="min-h-screen flex items-center justify-center text-[#d7e2ff]"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
+      style={{ fontFamily: "var(--font-manrope)" }}>
 
       {/* ambient glow */}
       <div className="pointer-events-none fixed inset-0 opacity-[0.06] blur-[100px]"

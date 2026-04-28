@@ -136,7 +136,7 @@ export default function Premium() {
 
   return (
     <div className="min-h-screen text-[#d7e2ff]"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
+      style={{ fontFamily: "var(--font-manrope)" }}>
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-8 py-4 sticky top-0 z-10"

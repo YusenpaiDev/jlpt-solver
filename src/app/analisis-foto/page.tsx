@@ -542,7 +542,7 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1 }: { imageUrl?: str
 
           {/* card header */}
           <div className="px-4 py-2.5 flex items-center justify-between border-b"
-            style={{ borderColor: "rgba(255,255,255,0.05)", background: "#0d1929" }}>
+            style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(8,16,36,0.55)" }}>
             <div className="flex items-center gap-2">
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                 style={{ background: `${accent}20`, color: accent, fontFamily: "var(--font-space)" }}>
@@ -1102,7 +1102,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                     </div>
 
                     {/* Kenapa benar */}
-                    <div className="px-5 py-4" style={{ background: "#0d1929", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div className="px-5 py-4" style={{ background: "rgba(8,16,36,0.55)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                       <p className="text-[11px] font-bold text-[#5ea87a] mb-2" style={{ fontFamily: "var(--font-space)" }}>
                         💡 KENAPA BENAR?
                       </p>
@@ -1111,7 +1111,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
                     {/* Kenapa salah */}
                     {q.why_wrong && (
-                      <div className="px-5 py-4" style={{ background: "#0d1929", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="px-5 py-4" style={{ background: "rgba(8,16,36,0.55)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                         <p className="text-[11px] font-bold text-[#dc5050] mb-2" style={{ fontFamily: "var(--font-space)" }}>
                           ✗ KENAPA PILIHAN LAIN SALAH?
                         </p>
@@ -1121,7 +1121,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
                     {/* Grammar points */}
                     {q.grammar_points && q.grammar_points.length > 0 && (
-                      <div className="px-5 py-4" style={{ background: "#0d1929", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="px-5 py-4" style={{ background: "rgba(8,16,36,0.55)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-[11px] font-bold text-[#6b9cda]" style={{ fontFamily: "var(--font-space)" }}>
                             📚 POIN GRAMMAR / KOSAKATA
@@ -1192,7 +1192,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {result.vocabulary.map((v, i) => (
                 <div key={i} className="p-4 rounded-2xl flex flex-col gap-2 relative"
-                  style={{ background: "#0d1929", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.05)" }}>
                   {/* Level badge */}
                   {v.jlpt_level && (
                     <span className="absolute top-3 right-3 text-[9px] px-1.5 py-0.5 rounded font-bold"
@@ -1233,7 +1233,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
       {/* ── Right: Chat Panel (desktop only) ── */}
       <div className="hidden lg:flex w-[320px] shrink-0 flex-col border-l"
-        style={{ background: "#0d1929", borderColor: "rgba(255,255,255,0.04)" }}>
+        style={{ background: "rgba(8,16,36,0.55)", borderColor: "rgba(255,255,255,0.04)" }}>
 
         {/* Header */}
         <div className="px-5 py-4 border-b shrink-0"
@@ -1354,7 +1354,7 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
     <div className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
       <div className="relative w-full max-w-md rounded-3xl overflow-hidden"
-        style={{ background: "#0d1929", border: "1px solid rgba(255,255,255,0.08)" }}>
+        style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b"
@@ -1641,11 +1641,11 @@ export default function AnalisisFoto() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
+      style={{ fontFamily: "var(--font-manrope)" }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0 border-b"
-        style={{ background: "#071327", borderColor: "rgba(255,255,255,0.04)" }}>
+        style={{ borderColor: "rgba(255,255,255,0.04)" }}>
         <div className="flex items-center gap-4 md:gap-8">
           <a href="/" className="flex items-center gap-2">
             <div className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"
@@ -1689,7 +1689,7 @@ export default function AnalisisFoto() {
 
                 {/* Panel */}
                 <div className="absolute right-0 top-10 z-50 w-[320px] rounded-2xl overflow-hidden shadow-2xl"
-                  style={{ background: "#0d1929", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.07)" }}>
 
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3"

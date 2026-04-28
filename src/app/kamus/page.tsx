@@ -249,11 +249,11 @@ export default function Kamus() {
   /* ── Render ── */
   return (
     <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
+      style={{ fontFamily: "var(--font-manrope)" }}>
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0"
-        style={{ background: "#071327", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="flex items-center gap-4 md:gap-8">
           <div className="flex items-center gap-2">
             <div className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"
@@ -421,7 +421,7 @@ export default function Kamus() {
 
           {/* ── Right: detail panel ── */}
           <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5 md:py-7 pb-20 lg:pb-7 relative"
-            style={{ background: "#071327" }}>
+            style={{}}>
 
             {/* ambient */}
             <div className="pointer-events-none absolute top-0 right-0 w-[400px] h-[300px] opacity-[0.05] blur-[80px]"
@@ -485,7 +485,7 @@ export default function Kamus() {
                       onClick={() => deleteWord(detail.id)}
                       disabled={deletingId === detail.id}
                       className="size-9 rounded-xl flex items-center justify-center transition-all hover:bg-red-500/10 disabled:opacity-40 shrink-0"
-                      style={{ background: "#0d1929" }}
+                      style={{ background: "rgba(8,16,36,0.55)" }}
                       title="Hapus dari kamus">
                       {deletingId === detail.id
                         ? <Loader2 className="size-4 text-[#4a5a7a] animate-spin" />
@@ -508,7 +508,7 @@ export default function Kamus() {
                     <p className="text-[10px] font-bold text-[#4a5a7a] mb-3"
                       style={{ fontFamily: "var(--font-space)" }}>CONTOH KALIMAT</p>
                     <div className="p-4 rounded-2xl relative overflow-hidden"
-                      style={{ background: "#0d1929" }}>
+                      style={{ background: "rgba(8,16,36,0.55)" }}>
                       <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-full"
                         style={{ background: accent }} />
                       <p className="text-sm text-[#d7e2ff] leading-relaxed"
@@ -536,7 +536,7 @@ export default function Kamus() {
                           return (
                             <button key={w.id} onClick={() => setSelected(w.id)}
                               className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all hover:brightness-110 w-full text-left"
-                              style={{ background: "#0d1929" }}>
+                              style={{ background: "rgba(8,16,36,0.55)" }}>
                               <span className="font-bold" style={{ color: ra, fontFamily: "var(--font-jakarta)" }}>
                                 {w.kanji}
                               </span>
@@ -553,7 +553,7 @@ export default function Kamus() {
 
                 {/* ── Tip AI ── */}
                 <div className="p-5 rounded-2xl relative overflow-hidden"
-                  style={{ background: "#0d1929", border: "1px solid rgba(107,156,218,0.12)" }}>
+                  style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(107,156,218,0.12)" }}>
                   <div className="absolute inset-0 opacity-15"
                     style={{ background: `radial-gradient(circle at top right,${accent},transparent 70%)` }} />
                   <div className="relative flex items-start gap-3">
@@ -591,7 +591,7 @@ export default function Kamus() {
 
           <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
             <div className="w-full max-w-md rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[90vh] flex flex-col"
-              style={{ background: "#0d1929", border: "1px solid rgba(255,255,255,0.07)" }}>
+              style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.07)" }}>
 
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"

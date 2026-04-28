@@ -150,11 +150,11 @@ export default function Statistik() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
+      style={{ fontFamily: "var(--font-manrope)" }}>
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0"
-        style={{ background: "#071327", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="flex items-center gap-4 md:gap-8">
           <div className="flex items-center gap-2">
             <div className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"
@@ -199,7 +199,7 @@ export default function Statistik() {
 
         {/* ── Main ── */}
         <main className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-5 md:py-7 pb-20 lg:pb-7 relative"
-          style={{ background: "#071327" }}>
+          style={{}}>
 
           {/* ambient glows */}
           <div className="pointer-events-none absolute top-0 left-1/3 w-[500px] h-[300px] opacity-[0.06] blur-[80px]"
@@ -401,7 +401,7 @@ export default function Statistik() {
             {/* ── Bottom: AI Insight ── */}
             <div className="pb-4">
               <div className="p-4 rounded-2xl relative overflow-hidden"
-                style={{ background: "#0d1929", border: "1px solid rgba(107,156,218,0.15)" }}>
+                style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(107,156,218,0.15)" }}>
                 <div className="absolute inset-0 opacity-20"
                   style={{ background: "radial-gradient(circle at bottom right,#4a7abf,transparent 70%)" }} />
                 <div className="relative flex items-start gap-3">

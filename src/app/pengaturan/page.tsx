@@ -124,11 +124,11 @@ export default function Pengaturan() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
+      style={{ fontFamily: "var(--font-manrope)" }}>
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0 border-b"
-        style={{ background: "#071327", borderColor: "rgba(255,255,255,0.04)" }}>
+        style={{ borderColor: "rgba(255,255,255,0.04)" }}>
         <div className="flex items-center gap-4 md:gap-8">
           <a href="/" className="flex items-center gap-2">
             <div className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"
@@ -186,7 +186,7 @@ export default function Pengaturan() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 pb-20 lg:pb-8 relative" style={{ background: "#071327" }}>
+          <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 pb-20 lg:pb-8 relative" style={{}}>
             <div className="pointer-events-none absolute top-0 left-1/3 w-[400px] h-[300px] opacity-[0.04] blur-[80px]"
               style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
 
@@ -271,7 +271,7 @@ export default function Pengaturan() {
                           className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
                           style={targetLevel === l
                             ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)" }
-                            : { background: "#0d1929", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
+                            : { background: "rgba(8,16,36,0.55)", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
                           {l}
                         </button>
                       ))}
@@ -287,7 +287,7 @@ export default function Pengaturan() {
                     </div>
                     <input type="date" value={ujianDate} onChange={e => setUjianDate(e.target.value)}
                       className="px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] outline-none"
-                      style={{ background: "#0d1929", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)", colorScheme: "dark" }} />
+                      style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)", colorScheme: "dark" }} />
                     {ujianDate && (
                       <p className="text-xs text-[#5ea87a]">
                         {Math.ceil((new Date(ujianDate).getTime() - Date.now()) / 86400000)} hari lagi menuju ujian
@@ -358,7 +358,7 @@ export default function Pengaturan() {
                     <p className="text-[11px] text-[#4a5a7a]">Notifikasi streak dan review akan dikirim pada jam ini.</p>
                     <input type="time" value={jamPengingat} onChange={e => setJamPengingat(e.target.value)}
                       className="px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] outline-none w-36"
-                      style={{ background: "#0d1929", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)", colorScheme: "dark" }} />
+                      style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)", colorScheme: "dark" }} />
                   </div>
 
                   <SaveButton onSave={showSaved} />
@@ -389,7 +389,7 @@ export default function Pengaturan() {
                             className="flex-1 py-3 rounded-xl text-sm font-black transition-all"
                             style={active
                               ? { background: "rgba(107,156,218,0.15)", color: "#6b9cda", border: "1px solid rgba(107,156,218,0.35)" }
-                              : { background: "#0d1929", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
+                              : { background: "rgba(8,16,36,0.55)", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
                             {k}
                           </button>
                         );
@@ -436,7 +436,7 @@ export default function Pengaturan() {
                             className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
                             style={bahasaJelaskan === v
                               ? { background: "rgba(107,156,218,0.15)", color: "#6b9cda", border: "1px solid rgba(107,156,218,0.35)" }
-                              : { background: "#0d1929", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
+                              : { background: "rgba(8,16,36,0.55)", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
                             {l}
                           </button>
                         ))}
@@ -495,7 +495,7 @@ export default function Pengaturan() {
                           className="flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all"
                           style={t.id === "dark"
                             ? { background: "rgba(107,156,218,0.12)", border: "1px solid rgba(107,156,218,0.3)" }
-                            : { background: "#0d1929", border: "1px solid rgba(255,255,255,0.04)" }}>
+                            : { background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.04)" }}>
                           <div className="size-8 rounded-lg"
                             style={{ background: t.preview, outline: t.id === "dark" ? "2px solid #4a7abf" : "2px solid transparent" }} />
                           <span className="text-[11px]"
@@ -589,7 +589,7 @@ function Field({ label, value, onChange, type = "text" }: {
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
         className="px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] outline-none transition-all"
         style={{
-          background: "#0d1929",
+          background: "rgba(8,16,36,0.55)",
           border: "1px solid rgba(187,198,226,0.08)",
           fontFamily: "var(--font-manrope)",
         }}

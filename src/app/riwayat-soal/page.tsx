@@ -136,11 +136,11 @@ export default function RiwayatSoal() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
+      style={{ fontFamily: "var(--font-manrope)" }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 shrink-0 border-b"
-        style={{ background: "#071327", borderColor: "rgba(255,255,255,0.04)" }}>
+        style={{ borderColor: "rgba(255,255,255,0.04)" }}>
         <div className="flex items-center gap-8">
           <a href="/" className="flex items-center gap-2">
             <div className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"

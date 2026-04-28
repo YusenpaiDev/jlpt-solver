@@ -62,17 +62,6 @@ export default function Login() {
     <div className="text-[#d7e2ff] min-h-screen md:grid md:grid-cols-2 bg-space"
       style={{ fontFamily: "var(--font-manrope)" }}>
 
-      {/* ── Particle background ── */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
-        <div className="stars" />
-        <div className="ai-ring ai-ring-1" />
-        <div className="ai-ring ai-ring-2" />
-        <div className="ai-ring ai-ring-3" />
-        <div className="particle particle-1" />
-        <div className="particle particle-2" />
-        <div className="particle particle-3" />
-        <div className="particle particle-4" />
-      </div>
 
       {/* ── Left panel ── */}
       <div className="hidden md:flex flex-col justify-center h-full gap-8 px-14 py-16 relative overflow-hidden">

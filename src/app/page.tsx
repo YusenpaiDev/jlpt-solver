@@ -93,17 +93,6 @@ export default function Home() {
       className="flex flex-col h-screen overflow-hidden text-[#d7e2ff] bg-space"
       style={{ fontFamily: "var(--font-manrope)" }}
     >
-      {/* ── Particle background ── */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
-        <div className="stars" />
-        <div className="ai-ring ai-ring-1" />
-        <div className="ai-ring ai-ring-2" />
-        <div className="ai-ring ai-ring-3" />
-        <div className="particle particle-1" />
-        <div className="particle particle-2" />
-        <div className="particle particle-3" />
-        <div className="particle particle-4" />
-      </div>
       {/* ── Top Header ── */}
       <header
         className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0 border-b backdrop-blur-md"
