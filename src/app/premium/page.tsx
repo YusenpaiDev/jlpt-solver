@@ -5,6 +5,7 @@ import {
   Sparkles, Check, X, Zap, ArrowRight, Camera, BarChart2,
   BookOpen, Flame, Brain, Shield, Headphones, Star, Loader2,
 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 
 /* ─── Midtrans Snap types ─────────────────────────────────────── */
 declare global {
@@ -138,27 +139,7 @@ export default function Premium() {
     <div className="min-h-screen text-[#d7e2ff]"
       style={{ fontFamily: "var(--font-manrope)" }}>
 
-      {/* ── Header ── */}
-      <header className="flex items-center justify-between px-8 py-4 sticky top-0 z-10"
-        style={{ background: "rgba(7,19,39,0.85)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="flex items-center gap-2.5">
-          <div className="size-7 rounded-lg flex items-center justify-center text-xs font-black text-[#071327]"
-            style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)" }}>S</div>
-          <div>
-            <p className="text-sm font-bold text-[#d7e2ff] leading-none"
-              style={{ fontFamily: "var(--font-jakarta)" }}>Sensei JLPT</p>
-            <p className="text-[9px] text-[#4a5a7a] tracking-widest"
-              style={{ fontFamily: "var(--font-space)" }}>THE INTELLIGENT SENSEI</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <a href="/" className="text-sm text-[#8a9bbf] hover:text-[#d7e2ff] transition-colors">Beranda</a>
-          <button className="text-sm px-4 py-2 rounded-full font-semibold transition-all hover:brightness-110"
-            style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", color: "#071327", fontFamily: "var(--font-space)", fontSize: "11px" }}>
-            MULAI GRATIS
-          </button>
-        </div>
-      </header>
+      <AppHeader activeHref="/premium" />
 
       <div className="max-w-5xl mx-auto px-6 pb-24">
 

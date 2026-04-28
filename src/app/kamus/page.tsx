@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sidebar, BottomNav } from "@/components/Sidebar";
 import {
-  Bell, Search, BookOpen, Zap,
+  Search, BookOpen, Zap,
   X, Brain, RotateCcw, CheckCircle2, XCircle,
   Trash2, Loader2, Plus, BookmarkPlus, Filter,
 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 interface SavedWord {
@@ -251,40 +252,7 @@ export default function Kamus() {
     <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
       style={{ fontFamily: "var(--font-manrope)" }}>
 
-      {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="flex items-center gap-4 md:gap-8">
-          <div className="flex items-center gap-2">
-            <div className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"
-              style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)" }}>S</div>
-            <span className="text-sm font-bold tracking-tight text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>Sensei JLPT</span>
-          </div>
-          <nav className="hidden md:flex items-center gap-0.5">
-            {["Materi","Latihan","Pro"].map((item, i) => (
-              <button key={item}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  i === 0 ? "text-[#d7e2ff] font-medium" : "text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5"
-                }`}>
-                {item}
-              </button>
-            ))}
-          </nav>
-        </div>
-        <div className="flex items-center gap-2">
-          <a href="/premium" className="hidden sm:flex text-[11px] px-4 py-1.5 rounded-full font-medium border transition-colors hover:bg-white/5"
-            style={{ borderColor: "rgba(255,255,255,0.1)", color: "#bbc6e2", fontFamily: "var(--font-space)" }}>
-            Langganan
-          </a>
-          <button className="relative size-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors">
-            <Bell className="size-4 text-[#8a9bbf]" />
-            <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-red-400 ring-2 ring-[#071327]" />
-          </button>
-          <div className="size-8 rounded-full flex items-center justify-center text-xs font-bold text-[#071327] ring-2 ring-[#2f4865]"
-            style={{ background: "linear-gradient(135deg,#bbc6e2,#4a7abf)" }}>A</div>
-        </div>
-      </header>
+      <AppHeader activeHref="/kamus" />
 
       {/* ── Body ── */}
       <div className="flex flex-1 min-h-0">

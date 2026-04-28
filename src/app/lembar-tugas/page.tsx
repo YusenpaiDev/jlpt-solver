@@ -211,11 +211,19 @@ export default function LembarTugas() {
         <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0"
           style={{ background: "rgba(2,8,16,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(107,156,218,0.1)" }}>
           <div className="flex items-center gap-2 md:gap-3">
-            <a href="/" className="flex items-center gap-2">
-              <div className="size-6 rounded-md flex items-center justify-center text-[10px] font-black text-[#071327]"
-                style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)" }}>S</div>
-              <span className="text-sm font-bold text-[#d7e2ff]"
-                style={{ fontFamily: "var(--font-jakarta)" }}>Sensei JLPT</span>
+            <a href="/" className="flex items-center gap-2.5">
+              <div className="relative size-7 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-lg opacity-60 blur-sm"
+                  style={{ background: "linear-gradient(135deg,#4a7abf,#8b5abf)" }} />
+                <div className="relative size-7 rounded-lg flex items-center justify-center font-black text-[11px]"
+                  style={{ background: "linear-gradient(135deg,#1a3a6f,#3a1a6f)", border: "1px solid rgba(107,156,218,0.4)", color: "#bbc6e2" }}>先</div>
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className="text-[13px] font-extrabold tracking-tight text-[#d7e2ff]"
+                  style={{ fontFamily: "var(--font-jakarta)" }}>Sensei</span>
+                <span className="text-[9px] font-bold tracking-widest"
+                  style={{ fontFamily: "var(--font-space)", color: "#4a7abf" }}>JLPT · AI</span>
+              </div>
             </a>
             <span className="text-[10px] px-2 py-0.5 rounded font-bold text-[#071327]"
               style={{ background: "#6b9cda", fontFamily: "var(--font-space)" }}>{level}</span>
