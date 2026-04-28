@@ -59,21 +59,34 @@ export default function Login() {
   }
 
   return (
-    <div className="text-[#d7e2ff] min-h-screen md:grid md:grid-cols-2"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
+    <div className="text-[#d7e2ff] min-h-screen md:grid md:grid-cols-2 bg-space"
+      style={{ fontFamily: "var(--font-manrope)" }}>
+
+      {/* ── Particle background ── */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
+        <div className="stars" />
+        <div className="particle particle-1" />
+        <div className="particle particle-2" />
+        <div className="particle particle-3" />
+        <div className="particle particle-4" />
+      </div>
 
       {/* ── Left panel ── */}
-      <div className="hidden md:flex flex-col justify-center h-full gap-8 px-14 py-16 relative overflow-hidden"
-        style={{ background: "#071327" }}>
+      <div className="hidden md:flex flex-col justify-center h-full gap-8 px-14 py-16 relative overflow-hidden">
 
-        <div className="pointer-events-none absolute bottom-0 left-0 w-[500px] h-[500px] opacity-[0.08] blur-[90px]"
+        <div className="pointer-events-none absolute bottom-0 left-0 w-[500px] h-[500px] opacity-[0.1] blur-[90px]"
           style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
-        <div className="pointer-events-none absolute top-1/3 right-0 w-[300px] h-[300px] opacity-[0.05] blur-[70px]"
+        <div className="pointer-events-none absolute top-1/3 right-0 w-[300px] h-[300px] opacity-[0.07] blur-[70px]"
           style={{ background: "radial-gradient(circle,#8b5abf,transparent 70%)" }} />
-        <div className="pointer-events-none absolute right-[-20px] top-[15%] text-[260px] font-black leading-none select-none"
-          style={{ color: "transparent", WebkitTextStroke: "1px rgba(187,198,226,0.04)", fontFamily: "var(--font-jakarta)" }}>
+        <div className="animate-float3 pointer-events-none absolute right-[-20px] top-[15%] text-[260px] font-black leading-none select-none"
+          style={{ color: "transparent", WebkitTextStroke: "1px rgba(107,156,218,0.08)", fontFamily: "var(--font-jakarta)" }}>
           学
         </div>
+        {/* Floating mini kanji */}
+        <div className="animate-float pointer-events-none absolute left-[60%] top-[20%] text-5xl font-black select-none opacity-[0.06]"
+          style={{ color: "#6b9cda", fontFamily: "var(--font-jakarta)" }}>語</div>
+        <div className="animate-float2 pointer-events-none absolute left-[75%] top-[60%] text-4xl font-black select-none opacity-[0.05]"
+          style={{ color: "#a67bd4", fontFamily: "var(--font-jakarta)" }}>文</div>
 
         {/* Logo */}
         <div className="relative flex items-center gap-2.5">
@@ -96,16 +109,14 @@ export default function Login() {
               style={{ fontFamily: "var(--font-space)" }}>N2 VOCABULARY FOCUS</span>
           </div>
 
-          <h1 className="text-[2.4rem] font-extrabold leading-[1.1] tracking-tight text-[#d7e2ff]"
+          <h1 className="text-[2.4rem] font-extrabold leading-[1.1] tracking-tight text-[#d7e2ff] animate-fade-in"
             style={{ fontFamily: "var(--font-jakarta)" }}>
             Belajar JLPT lebih{" "}
             <span style={{ background: "linear-gradient(135deg,#5ea87a,#3a9a6a)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               cerdas
             </span>
             {" "}dan lebih{" "}
-            <span style={{ background: "linear-gradient(135deg,#6b9cda,#a67bd4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              cepat.
-            </span>
+            <span className="shimmer-text">cepat.</span>
           </h1>
 
           <p className="text-sm text-[#8a9bbf] leading-relaxed">
@@ -119,8 +130,8 @@ export default function Login() {
               { icon: Flame,     accent: "#5ea87a", title: "Streak harian",          desc: "Konsisten setiap hari menuju N2",         badge: null,  badgeBg: "",                      badgeColor: "" },
             ].map(({ icon: Icon, accent, title, desc, badge, badgeBg, badgeColor }) => (
               <div key={title}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl relative overflow-hidden"
-                style={{ background: "#101b30" }}>
+                className="flex items-center gap-3 px-4 py-3 rounded-xl relative overflow-hidden backdrop-blur-md"
+                style={{ background: "rgba(16,27,48,0.6)", border: "1px solid rgba(107,156,218,0.08)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}>
                 <div className="absolute inset-0 opacity-30"
                   style={{ background: `radial-gradient(circle at left,${accent}18,transparent 60%)` }} />
                 <div className="relative size-8 rounded-lg flex items-center justify-center shrink-0"
@@ -171,8 +182,8 @@ export default function Login() {
       </div>
 
       {/* ── Right panel ── */}
-      <div className="flex flex-col justify-center min-h-screen px-6 py-10 md:px-16 relative"
-        style={{ background: "#0d1929" }}>
+      <div className="flex flex-col justify-center min-h-screen px-6 py-10 md:px-16 relative backdrop-blur-xl"
+        style={{ background: "rgba(8,16,36,0.7)", borderLeft: "1px solid rgba(107,156,218,0.08)" }}>
 
         <div className="pointer-events-none absolute top-0 right-0 w-[400px] h-[300px] opacity-[0.05] blur-[80px]"
           style={{ background: "radial-gradient(circle,#bbc6e2,transparent 70%)" }} />
@@ -180,7 +191,8 @@ export default function Login() {
         <div className="w-full max-w-sm mx-auto relative">
 
           {/* Tab toggle */}
-          <div className="flex mb-8 p-1 rounded-xl" style={{ background: "#1f2a3f" }}>
+          <div className="flex mb-8 p-1 rounded-xl backdrop-blur-md"
+            style={{ background: "rgba(20,35,70,0.5)", border: "1px solid rgba(107,156,218,0.12)" }}>
             {(["login","register"] as const).map(m => (
               <button key={m} onClick={() => { setMode(m); setError(null); setSuccess(null); }}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
