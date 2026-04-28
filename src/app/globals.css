@@ -78,3 +78,78 @@
 .animate-fade-in {
   animation: fade-in 0.4s ease-out;
 }
+
+/* ── Particle background ── */
+.bg-space {
+  background-color: #03091a;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(30,60,120,0.55) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(80,30,140,0.35) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 60% 20%, rgba(20,80,160,0.25) 0%, transparent 60%);
+}
+
+@keyframes particle-drift {
+  0%   { transform: translateY(0)   translateX(0)   scale(1);   opacity: 0.7; }
+  33%  { transform: translateY(-18px) translateX(8px)  scale(1.1); opacity: 1;   }
+  66%  { transform: translateY(-8px)  translateX(-6px) scale(0.95); opacity: 0.8; }
+  100% { transform: translateY(0)   translateX(0)   scale(1);   opacity: 0.7; }
+}
+@keyframes particle-drift2 {
+  0%   { transform: translateY(0)   translateX(0)  scale(1);    opacity: 0.5; }
+  50%  { transform: translateY(12px) translateX(-10px) scale(1.15); opacity: 0.9; }
+  100% { transform: translateY(0)   translateX(0)  scale(1);    opacity: 0.5; }
+}
+@keyframes glow-pulse {
+  0%,100% { opacity: 0.55; transform: scale(1);    }
+  50%      { opacity: 0.85; transform: scale(1.08); }
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.particle-1 {
+  width: 420px; height: 420px;
+  top: -80px; left: -60px;
+  background: radial-gradient(circle, rgba(50,100,220,0.22) 0%, transparent 70%);
+  animation: glow-pulse 7s ease-in-out infinite;
+}
+.particle-2 {
+  width: 320px; height: 320px;
+  top: 30%; right: -40px;
+  background: radial-gradient(circle, rgba(100,40,200,0.18) 0%, transparent 70%);
+  animation: glow-pulse 9s ease-in-out infinite 2s;
+}
+.particle-3 {
+  width: 200px; height: 200px;
+  bottom: 10%; left: 20%;
+  background: radial-gradient(circle, rgba(30,120,200,0.14) 0%, transparent 70%);
+  animation: particle-drift 11s ease-in-out infinite 1s;
+}
+.particle-4 {
+  width: 140px; height: 140px;
+  top: 55%; left: 45%;
+  background: radial-gradient(circle, rgba(120,60,220,0.12) 0%, transparent 70%);
+  animation: particle-drift2 13s ease-in-out infinite 3s;
+}
+
+/* Star dots */
+.stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(187,198,226,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 28% 72%, rgba(187,198,226,0.4)  0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 35%, rgba(187,198,226,0.5)  0%, transparent 100%),
+    radial-gradient(1px 1px at 62% 88%, rgba(187,198,226,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 74% 15%, rgba(187,198,226,0.6)  0%, transparent 100%),
+    radial-gradient(1px 1px at 88% 52%, rgba(187,198,226,0.4)  0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 35% 58%, rgba(187,198,226,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 10%, rgba(187,198,226,0.5)  0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 78%, rgba(187,198,226,0.3)  0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 92% 30%, rgba(187,198,226,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5%  90%, rgba(187,198,226,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 44%, rgba(187,198,226,0.4)  0%, transparent 100%);
+}

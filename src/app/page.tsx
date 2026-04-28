@@ -90,13 +90,21 @@ export default function Home() {
 
   return (
     <div
-      className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}
+      className="flex flex-col h-screen overflow-hidden text-[#d7e2ff] bg-space"
+      style={{ fontFamily: "var(--font-manrope)" }}
     >
+      {/* ── Particle background ── */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
+        <div className="stars" />
+        <div className="particle particle-1" />
+        <div className="particle particle-2" />
+        <div className="particle particle-3" />
+        <div className="particle particle-4" />
+      </div>
       {/* ── Top Header ── */}
       <header
-        className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0 border-b"
-        style={{ background: "#071327", borderColor: "rgba(255,255,255,0.04)" }}
+        className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0 border-b backdrop-blur-md"
+        style={{ background: "rgba(3,9,26,0.6)", borderColor: "rgba(255,255,255,0.06)" }}
       >
         <div className="flex items-center gap-4 md:gap-8">
           {/* Logo */}
@@ -161,7 +169,7 @@ export default function Home() {
         <Sidebar activeHref="/" />
 
         {/* ── Main Content ── */}
-        <main className="flex-1 flex flex-col min-h-0 overflow-y-auto px-4 md:px-10 py-5 md:py-8 pb-20 lg:pb-8 relative" style={{ background: "#071327" }}>
+        <main className="flex-1 flex flex-col min-h-0 overflow-y-auto px-4 md:px-10 py-5 md:py-8 pb-20 lg:pb-8 relative" style={{ background: "transparent" }}>
 
           {/* Ambient glow blobs */}
           <div
