@@ -15,6 +15,7 @@ interface Profile {
   streak: number;
   is_premium: boolean;
   last_active: string | null;
+  avatar_url: string | null;
 }
 
 /* ─── Nav ───────────────────────────────────────────────────── */
@@ -41,7 +42,7 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
 
       const { data } = await supabase
         .from("profiles")
-        .select("username, target_level, xp, streak, is_premium, last_active")
+        .select("username, target_level, xp, streak, is_premium, last_active, avatar_url")
         .eq("id", user.id)
         .single();
       if (!data) return;
@@ -59,7 +60,7 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
           .eq("id", user.id);
       }
 
-      setProfile({ ...data, streak: newStreak });
+      setProfile({ ...data, streak: newStreak, avatar_url: data.avatar_url ?? null });
     }
     load();
   }, []);
@@ -89,10 +90,18 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
 
           <div className="relative flex items-center gap-3">
             {/* Avatar */}
-            <div className="size-9 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ring-[#2f4865]"
-              style={{ background: "linear-gradient(135deg,#4a7abf,#2f4865)" }}>
-              {profile ? initial : "…"}
-            </div>
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="Avatar"
+                className="size-9 rounded-full object-cover ring-2 ring-[#2f4865] shrink-0"
+              />
+            ) : (
+              <div className="size-9 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ring-[#2f4865] shrink-0"
+                style={{ background: "linear-gradient(135deg,#4a7abf,#2f4865)" }}>
+                {profile ? initial : "…"}
+              </div>
+            )}
 
             <div className="flex flex-col min-w-0 flex-1">
               <div className="flex items-center gap-1.5">

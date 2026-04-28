@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sidebar, BottomNav } from "@/components/Sidebar";
 import {
   Settings, Bell, ArrowUpRight,
   User, Target, Calendar, CreditCard, BellRing,
   Clock, BookMarked, Languages, Shield, Download,
-  Trash2, ChevronRight, Check, AlertTriangle, Loader2,
+  Trash2, ChevronRight, Check, AlertTriangle, Loader2, Camera,
 } from "lucide-react";
 
 const settingSections = [
@@ -26,8 +26,12 @@ export default function Pengaturan() {
   const [email,        setEmail]        = useState("");
   const [targetLevel,  setTargetLevel]  = useState("N2");
   const [ujianDate,    setUjianDate]    = useState("");
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [saving,         setSaving]         = useState(false);
+  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(null);
+  const [avatarPreview,   setAvatarPreview]   = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [loadingProfile,  setLoadingProfile]  = useState(true);
+  const [saving,          setSaving]          = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* Notifikasi */
   const [notifStreak,  setNotifStreak]  = useState(true);
@@ -59,16 +63,42 @@ export default function Pengaturan() {
       if (!user) { setLoadingProfile(false); return; }
       setEmail(user.email ?? "");
       const { data } = await supabase.from("profiles")
-        .select("username,target_level")
+        .select("username,target_level,avatar_url")
         .eq("id", user.id).single();
       if (data) {
         setNama(data.username ?? "");
         setTargetLevel(data.target_level ?? "N2");
+        setAvatarUrl(data.avatar_url ?? null);
       }
       setLoadingProfile(false);
     }
     load();
   }, []);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // local preview
+    const reader = new FileReader();
+    reader.onload = ev => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    // upload to supabase storage
+    setUploadingAvatar(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (!error) {
+        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+        const url = urlData.publicUrl + `?t=${Date.now()}`;
+        setAvatarUrl(url);
+        await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+      }
+    }
+    setUploadingAvatar(false);
+  }
 
   async function handleSaveProfil() {
     setSaving(true);
@@ -174,16 +204,43 @@ export default function Pengaturan() {
                   {/* Avatar + nama */}
                   <div className="p-6 rounded-2xl flex items-center gap-5"
                     style={{ background: "#101b30" }}>
-                    <div className="size-16 rounded-2xl flex items-center justify-center text-2xl font-black text-[#071327] shrink-0 ring-2 ring-[#2f4865]"
-                      style={{ background: "linear-gradient(135deg,#bbc6e2,#4a7abf)" }}>
-                      {loadingProfile ? <Loader2 className="size-6 animate-spin text-[#071327]" /> : (nama[0]?.toUpperCase() || "?")}
+                    {/* Hidden file input — accepts image from camera/gallery/file */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    <div className="relative shrink-0 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                      {(avatarPreview || avatarUrl) ? (
+                        <img
+                          src={avatarPreview ?? avatarUrl!}
+                          alt="Avatar"
+                          className="size-16 rounded-2xl object-cover ring-2 ring-[#2f4865]"
+                        />
+                      ) : (
+                        <div className="size-16 rounded-2xl flex items-center justify-center text-2xl font-black text-[#071327] ring-2 ring-[#2f4865]"
+                          style={{ background: "linear-gradient(135deg,#bbc6e2,#4a7abf)" }}>
+                          {loadingProfile ? <Loader2 className="size-6 animate-spin text-[#071327]" /> : (nama[0]?.toUpperCase() || "?")}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ background: "rgba(0,0,0,0.5)" }}>
+                        {uploadingAvatar
+                          ? <Loader2 className="size-5 text-white animate-spin" />
+                          : <Camera className="size-5 text-white" />}
+                      </div>
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-[#d7e2ff] mb-1">{loadingProfile ? "…" : (nama || "—")}</p>
                       <p className="text-xs text-[#4a5a7a] mb-3">{email}</p>
-                      <button className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all hover:brightness-110"
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingAvatar}
+                        className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all hover:brightness-110 disabled:opacity-50"
                         style={{ background: "#1f2a3f", color: "#8a9bbf", fontFamily: "var(--font-space)" }}>
-                        GANTI FOTO
+                        {uploadingAvatar ? "MENGUNGGAH..." : "GANTI FOTO"}
                       </button>
                     </div>
                   </div>
