@@ -65,6 +65,9 @@ export default function Login() {
       {/* ── Particle background ── */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
         <div className="stars" />
+        <div className="ai-ring ai-ring-1" />
+        <div className="ai-ring ai-ring-2" />
+        <div className="ai-ring ai-ring-3" />
         <div className="particle particle-1" />
         <div className="particle particle-2" />
         <div className="particle particle-3" />
