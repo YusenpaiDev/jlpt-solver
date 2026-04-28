@@ -715,16 +715,19 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1 }: { imageUrl?: str
 }
 
 /* ─── Result State ──────────────────────────────────────────── */
-function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId }: {
+function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId, isReview }: {
   onReset: () => void;
   result: AIResult;
   chatMsgs: ChatMsg[];
   setChatMsgs: React.Dispatch<React.SetStateAction<ChatMsg[]>>;
   isSaved: boolean;
   sessionId: string | null;
+  isReview?: boolean;
 }) {
   const [answers,      setAnswers]      = useState<Record<number, string>>({});
-  const [revealed,     setRevealed]     = useState<Set<number>>(new Set());
+  const [revealed,     setRevealed]     = useState<Set<number>>(
+    () => isReview ? new Set(result.questions.map((_, i) => i)) : new Set()
+  );
   const [chatInput,    setChatInput]    = useState("");
   const [chatLoading,  setChatLoading]  = useState(false);
   const [elapsed,      setElapsed]      = useState(0);
@@ -843,7 +846,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
   };
 
   const pick = (qi: number, id: string) => {
-    if (revealed.has(qi)) return;
+    if (revealed.has(qi) && !isReview) return;
     setAnswers(a => ({ ...a, [qi]: id }));
   };
   const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
@@ -1035,8 +1038,8 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                     return (
                       <button key={opt}
                         onClick={() => pick(qi, id)}
-                        disabled={isRevealed}
-                        className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left transition-all duration-200 ${isRevealed ? "cursor-default" : "hover:brightness-110 active:scale-[0.99]"}`}
+                        disabled={isRevealed && !isReview}
+                        className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left transition-all duration-200 ${(isRevealed && !isReview) ? "cursor-default" : "hover:brightness-110 active:scale-[0.99]"}`}
                         style={{ background: bg, border: `1px solid ${border}`, color: textColor }}>
                         <span className="size-8 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
                           style={{ background: numBg, color: numColor, fontFamily: "var(--font-space)" }}>
@@ -1452,6 +1455,7 @@ export default function AnalisisFoto() {
   const [chatMsgs,            setChatMsgs]            = useState<ChatMsg[]>([]);
   const [savedSessionId,      setSavedSessionId]      = useState<string | null>(null);
   const [loadingSession,      setLoadingSession]      = useState(false);
+  const [isReviewMode,        setIsReviewMode]        = useState(false);
   const [currentAnalyzingIdx, setCurrentAnalyzingIdx] = useState(0);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const camInputRef    = useRef<HTMLInputElement>(null);
@@ -1512,6 +1516,7 @@ export default function AnalisisFoto() {
         setResult(data.ai_result as AIResult);
         setSavedSessionId(id);
         setChatMsgs([]);
+        setIsReviewMode(true);
         setStage("result");
       }
     } catch {
@@ -1636,6 +1641,7 @@ export default function AnalisisFoto() {
     setApiError(null);
     setChatMsgs([]);
     setSavedSessionId(null);
+    setIsReviewMode(false);
     setCurrentAnalyzingIdx(0);
     if (fileInputRef.current) fileInputRef.current.value = "";
     window.history.replaceState({}, "", "/analisis-foto");
@@ -1827,6 +1833,7 @@ export default function AnalisisFoto() {
             onReset={handleReset}
             isSaved={!!savedSessionId}
             sessionId={savedSessionId}
+            isReview={isReviewMode}
           />
         )}
       </div>
