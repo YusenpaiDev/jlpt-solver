@@ -59,15 +59,11 @@ export default function Login() {
   }
 
   return (
-    <div className="text-[#d7e2ff]"
-      style={{
-        position: "fixed", inset: 0,
-        display: "grid", gridTemplateColumns: "1fr 1fr",
-        background: "#071327", fontFamily: "var(--font-manrope)",
-      }}>
+    <div className="text-[#d7e2ff] min-h-screen md:grid md:grid-cols-2"
+      style={{ background: "#071327", fontFamily: "var(--font-manrope)" }}>
 
       {/* ── Left panel ── */}
-      <div className="flex flex-col justify-center h-full gap-8 px-14 py-16 relative overflow-hidden"
+      <div className="hidden md:flex flex-col justify-center h-full gap-8 px-14 py-16 relative overflow-hidden"
         style={{ background: "#071327" }}>
 
         <div className="pointer-events-none absolute bottom-0 left-0 w-[500px] h-[500px] opacity-[0.08] blur-[90px]"
@@ -175,7 +171,7 @@ export default function Login() {
       </div>
 
       {/* ── Right panel ── */}
-      <div className="flex flex-col justify-center h-full px-16 relative"
+      <div className="flex flex-col justify-center min-h-screen px-6 py-10 md:px-16 relative"
         style={{ background: "#0d1929" }}>
 
         <div className="pointer-events-none absolute top-0 right-0 w-[400px] h-[300px] opacity-[0.05] blur-[80px]"
