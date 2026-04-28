@@ -77,16 +77,24 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
 
   return (
     <aside
-      className="w-[220px] shrink-0 hidden lg:flex flex-col justify-between py-4 px-3"
-      style={{ background: "#0d1929", borderRight: "1px solid rgba(255,255,255,0.03)" }}
+      className="w-[220px] shrink-0 hidden lg:flex flex-col justify-between py-4 px-3 backdrop-blur-xl"
+      style={{
+        background: "rgba(8,16,36,0.55)",
+        borderRight: "1px solid rgba(107,156,218,0.1)",
+        boxShadow: "inset -1px 0 0 rgba(255,255,255,0.03), 4px 0 24px rgba(0,0,0,0.3)",
+      }}
     >
       <div className="flex flex-col gap-0.5">
 
         {/* ── User card ── */}
-        <div className="mb-4 p-3 rounded-xl relative overflow-hidden"
-          style={{ background: "linear-gradient(135deg,#1a2a3f,#0f1a2e)" }}>
-          <div className="absolute inset-0 opacity-30"
-            style={{ background: "radial-gradient(circle at top right,#2f4865,transparent 70%)" }} />
+        <div className="mb-4 p-3 rounded-xl relative overflow-hidden backdrop-blur-md"
+          style={{
+            background: "rgba(30,50,90,0.35)",
+            border: "1px solid rgba(107,156,218,0.15)",
+            boxShadow: "0 2px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
+          }}>
+          <div className="absolute inset-0 opacity-40"
+            style={{ background: "radial-gradient(circle at top right,rgba(74,122,191,0.3),transparent 70%)" }} />
 
           <div className="relative flex items-center gap-3">
             {/* Avatar */}
@@ -160,13 +168,19 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
           return (
             <a key={label} href={href}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${
-                active ? "text-[#d7e2ff] font-medium" : "text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5"
+                active ? "text-[#d7e2ff] font-medium" : "text-[#8a9bbf] hover:text-[#d7e2ff]"
               }`}
               style={active ? {
-                background: "linear-gradient(90deg,rgba(75,122,191,0.18),rgba(75,122,191,0.04))",
-                boxShadow: "inset 2px 0 0 #4a7abf",
+                background: "rgba(74,122,191,0.15)",
+                boxShadow: "inset 2px 0 0 #4a7abf, 0 0 12px rgba(74,122,191,0.1)",
+                border: "1px solid rgba(74,122,191,0.2)",
                 fontFamily: "var(--font-manrope)",
-              } : { fontFamily: "var(--font-manrope)" }}
+              } : {
+                fontFamily: "var(--font-manrope)",
+                border: "1px solid transparent",
+              }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.background = ""; }}
             >
               <Icon className={`size-4 shrink-0 ${active ? "text-[#6b9cda]" : "text-[#4a5a7a]"}`} />
               {label}
@@ -178,10 +192,14 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
       {/* ── Bottom section ── */}
       <div className="flex flex-col gap-1">
         {!isPremium && (
-          <div className="mb-3 p-3 rounded-xl relative overflow-hidden"
-            style={{ background: "#0f1a2e", border: "1px solid rgba(187,198,226,0.08)" }}>
-            <div className="absolute inset-0 opacity-20"
-              style={{ background: "radial-gradient(circle at bottom left,#6b8cba,transparent 70%)" }} />
+          <div className="mb-3 p-3 rounded-xl relative overflow-hidden backdrop-blur-md"
+            style={{
+              background: "rgba(20,35,70,0.5)",
+              border: "1px solid rgba(187,198,226,0.12)",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)",
+            }}>
+            <div className="absolute inset-0 opacity-30"
+              style={{ background: "radial-gradient(circle at bottom left,rgba(107,140,186,0.4),transparent 70%)" }} />
             <div className="relative">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Zap className="size-3 text-[#bbc6e2]" />
