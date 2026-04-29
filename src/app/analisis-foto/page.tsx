@@ -104,9 +104,13 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
           </span>
         </div>
         {error && (
-          <div className="mb-3 px-4 py-3 rounded-xl text-sm text-red-300"
-            style={{ background: "rgba(192,80,80,0.12)", border: "1px solid rgba(192,80,80,0.2)" }}>
-            {error}
+          <div className="mb-4 flex items-start gap-3 px-4 py-3 rounded-2xl text-sm animate-fade-in"
+            style={{ background: "rgba(192,80,80,0.08)", border: "1px solid rgba(192,80,80,0.18)", backdropFilter: "blur(8px)" }}>
+            <span className="text-lg shrink-0">⚠️</span>
+            <div>
+              <p className="font-semibold text-red-300 mb-0.5" style={{ fontFamily: "var(--font-space)", fontSize: "11px" }}>ANALISIS GAGAL</p>
+              <p className="text-[#c08080] leading-relaxed">{error}</p>
+            </div>
           </div>
         )}
         <h1 className="text-[2.4rem] font-extrabold leading-tight text-[#d7e2ff]"

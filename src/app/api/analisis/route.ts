@@ -101,7 +101,7 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 8192,
+      max_tokens: 16000,
       messages: [
         {
           role: "user",
@@ -118,7 +118,22 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
 
     const text = response.content[0].type === "text" ? response.content[0].text.trim() : "";
     const clean = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    const parsed = JSON.parse(clean);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch {
+      // Try to salvage truncated JSON by closing open structures
+      const fixed = clean
+        .replace(/,\s*$/, "")           // trailing comma
+        .replace(/"[^"]*$/, '"...')      // unterminated string
+        + ']}]}';                        // close questions + root
+      try {
+        parsed = JSON.parse(fixed);
+      } catch {
+        throw new Error("Respons AI terpotong. Coba lagi dengan foto yang lebih sedikit soalnya.");
+      }
+    }
 
     return NextResponse.json({ success: true, data: parsed });
   } catch (err: unknown) {
