@@ -161,7 +161,7 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
           <p className="font-bold text-[#d7e2ff] mb-1" style={{ fontFamily: "var(--font-jakarta)" }}>
             Seret & lepas foto soal JLPT di sini
           </p>
-          <p className="text-xs text-[#4a5a7a]">PNG, JPG, PDF · Maks. 10MB</p>
+          <p className="text-xs text-[#4a5a7a]">PNG, JPG, PDF (multi-halaman) · Maks. 10MB</p>
         </div>
 
         <div className="relative flex items-center gap-2">
@@ -1459,7 +1459,7 @@ export default function AnalisisFoto() {
     reader.onload = () => {
       const dataUrl = reader.result as string;
       const base64  = dataUrl.split(",")[1];
-      const newFile: FileData = { base64, mimeType: file.type || "image/jpeg", name: file.name, url: dataUrl };
+      const newFile: FileData = { base64, mimeType: file.type || "image/jpeg", name: file.name, url: file.type === "application/pdf" ? "" : dataUrl };
       if (stage === "setup") {
         setFiles(prev => [...prev, newFile]);
       } else {
@@ -1770,7 +1770,7 @@ export default function AnalisisFoto() {
       </header>
 
       {/* Hidden file inputs */}
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileChange} />
       <input ref={camInputRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
 
       {/* Desktop camera modal */}

@@ -79,6 +79,26 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
   ]
 }`;
 
+    const isPdf = mimeType === "application/pdf";
+
+    const fileContent = isPdf
+      ? {
+          type: "document" as const,
+          source: {
+            type: "base64" as const,
+            media_type: "application/pdf" as const,
+            data: imageBase64,
+          },
+        }
+      : {
+          type: "image" as const,
+          source: {
+            type: "base64" as const,
+            media_type: (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: imageBase64,
+          },
+        };
+
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 8192,
@@ -86,14 +106,7 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
         {
           role: "user",
           content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-                data: imageBase64,
-              },
-            },
+            fileContent,
             {
               type: "text",
               text: prompt,
