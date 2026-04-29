@@ -121,10 +121,11 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
     const parsed = JSON.parse(clean);
 
     return NextResponse.json({ success: true, data: parsed });
-  } catch (err) {
-    console.error("Analisis error:", err);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Analisis error:", msg);
     return NextResponse.json(
-      { error: "Gagal menganalisis foto. Coba lagi." },
+      { error: msg },
       { status: 500 }
     );
   }
