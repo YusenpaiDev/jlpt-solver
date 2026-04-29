@@ -356,9 +356,12 @@ function SetupView({
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {files.map((f, idx) => (
               <div key={idx} className="relative shrink-0 group/thumb">
-                <div className="size-16 rounded-xl overflow-hidden"
+                <div className="size-16 rounded-xl overflow-hidden flex items-center justify-center"
                   style={{ background: "linear-gradient(135deg,#1a2a3f,#0a1525)" }}>
-                  <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
+                  {f.url
+                    ? <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
+                    : <span className="text-[10px] font-bold text-[#6b9cda] text-center px-1">PDF</span>
+                  }
                 </div>
                 <button
                   onClick={() => onRemoveFile(idx)}
