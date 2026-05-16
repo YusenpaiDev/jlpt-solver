@@ -6,7 +6,8 @@ import { Sidebar, BottomNav } from "@/components/Sidebar";
 import {
   Search, BookOpen, Zap,
   X, Brain, RotateCcw, CheckCircle2, XCircle,
-  Trash2, Loader2, Plus, BookmarkPlus, Filter,
+  Trash2, Loader2, Plus, BookmarkPlus, Filter, Sparkles, Pencil, Save,
+  ChevronLeft, ChevronRight, Shuffle, Layers,
 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 
@@ -135,6 +136,17 @@ export default function Kamus() {
   const [addOpen,      setAddOpen]     = useState(false);
   const [adding,       setAdding]      = useState(false);
   const [addError,     setAddError]    = useState<string | null>(null);
+  const [genReading,   setGenReading]  = useState(false);
+  const [genAll,       setGenAll]      = useState(false);
+  const [genProgress,  setGenProgress] = useState(0);
+  const [editMode,     setEditMode]    = useState(false);
+  const [editForm,     setEditForm]    = useState({ reading:"", meaning:"", level:"" });
+  const [editSaving,   setEditSaving]  = useState(false);
+  const [editGenRead,  setEditGenRead] = useState(false);
+  const [flashMode,    setFlashMode]   = useState(false);
+  const [flashIdx,     setFlashIdx]    = useState(0);
+  const [flipped,      setFlipped]     = useState(false);
+  const [flashOrder,   setFlashOrder]  = useState<number[]>([]);
   const [form,         setForm]        = useState({ kanji:"", reading:"", meaning:"", example:"", level:"" });
   const [formImage,    setFormImage]   = useState<File | null>(null);
   const [imagePreview, setImagePreview]= useState<string | null>(null);
@@ -147,11 +159,12 @@ export default function Kamus() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data } = await supabase
+        const { data: d1 } = await supabase
           .from("saved_words")
-          .select("id, kanji, reading, meaning, example, level, image_url, created_at")
+          .select("id, kanji, reading, meaning, level, created_at")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
+        const data = (d1 ?? []).map(w => ({ ...w, example: null, image_url: null })) as SavedWord[];
         const ws = (data ?? []) as SavedWord[];
         setWords(ws);
         if (ws.length > 0) setSelected(ws[0].id);
@@ -176,6 +189,48 @@ export default function Kamus() {
   const detailIdx = words.findIndex(w => w.id === selected);
   const detail    = detailIdx >= 0 ? words[detailIdx] : null;
   const accent    = detail ? accentFor(detailIdx) : "#4a7abf";
+
+  /* ── Generate furigana semua kata ── */
+  const genAllFurigana = async () => {
+    const missing = words.filter(w => !w.reading);
+    if (missing.length === 0 || genAll) return;
+    setGenAll(true);
+    setGenProgress(0);
+    const supabase = createClient();
+    for (let i = 0; i < missing.length; i++) {
+      const w = missing[i];
+      try {
+        const res = await fetch("/api/furigana", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word: w.kanji }),
+        });
+        const json = await res.json();
+        if (json.reading) {
+          await supabase.from("saved_words").update({ reading: json.reading }).eq("id", w.id);
+          setWords(prev => prev.map(x => x.id === w.id ? { ...x, reading: json.reading } : x));
+        }
+      } catch { /* skip */ }
+      setGenProgress(i + 1);
+    }
+    setGenAll(false);
+  };
+
+  /* ── Auto furigana ── */
+  const autoFurigana = async () => {
+    if (!form.kanji.trim() || genReading) return;
+    setGenReading(true);
+    try {
+      const res = await fetch("/api/furigana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: form.kanji.trim() }),
+      });
+      const json = await res.json();
+      if (json.reading) setForm(f => ({ ...f, reading: json.reading }));
+    } catch { /* ignore */ }
+    finally { setGenReading(false); }
+  };
 
   /* ── Photo handler ── */
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,8 +285,56 @@ export default function Kamus() {
       setWords(w => [newWord, ...w]);
       setSelected(newWord.id);
       closeAdd();
-    } catch { setAddError("Gagal menyimpan. Coba lagi."); }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setAddError(`Gagal menyimpan: ${msg}`);
+    }
     finally  { setAdding(false); }
+  };
+
+  /* ── Edit: open ── */
+  const openEdit = () => {
+    if (!detail) return;
+    setEditForm({ reading: detail.reading ?? "", meaning: detail.meaning, level: detail.level ?? "" });
+    setEditMode(true);
+  };
+
+  /* ── Edit: AI re-generate reading + meaning ── */
+  const autoGenEdit = async () => {
+    if (!detail || editGenRead) return;
+    setEditGenRead(true);
+    try {
+      const res = await fetch("/api/furigana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: detail.kanji, withMeaning: true }),
+      });
+      const json = await res.json();
+      if (json.reading) setEditForm(f => ({ ...f, reading: json.reading }));
+      if (json.meaning) setEditForm(f => ({ ...f, meaning: json.meaning }));
+    } catch { /* ignore */ }
+    finally { setEditGenRead(false); }
+  };
+
+  /* ── Edit: save ── */
+  const saveEdit = async () => {
+    if (!detail || editSaving) return;
+    if (!editForm.meaning.trim()) return;
+    setEditSaving(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("saved_words").update({
+        reading: editForm.reading.trim() || null,
+        meaning: editForm.meaning.trim(),
+        level:   editForm.level || null,
+      }).eq("id", detail.id);
+      if (error) throw error;
+      setWords(prev => prev.map(w => w.id === detail.id
+        ? { ...w, reading: editForm.reading.trim() || null, meaning: editForm.meaning.trim(), level: editForm.level || null }
+        : w));
+      setEditMode(false);
+    } catch { /* ignore */ }
+    finally { setEditSaving(false); }
   };
 
   /* ── Delete word ── */
@@ -246,6 +349,25 @@ export default function Kamus() {
       });
     } finally { setDeletingId(null); }
   };
+
+  /* ── Flash card ── */
+  const enterFlash = () => {
+    if (filtered.length === 0) return;
+    setFlashOrder(filtered.map((_, i) => i));
+    setFlashIdx(0);
+    setFlipped(false);
+    setFlashMode(true);
+    setEditMode(false);
+  };
+
+  const shuffleFlash = () => {
+    setFlashOrder(prev => [...prev].sort(() => Math.random() - 0.5));
+    setFlashIdx(0);
+    setFlipped(false);
+  };
+
+  const flashWord = flashOrder.length > 0 ? filtered[flashOrder[flashIdx]] : null;
+  const flashAccent = flashWord ? accentFor(words.findIndex(w => w.id === flashWord.id)) : "#4a7abf";
 
   /* ── Render ── */
   return (
@@ -262,8 +384,8 @@ export default function Kamus() {
         {/* ── Split: list + detail ── */}
         <div className="flex flex-1 min-h-0">
 
-          {/* ── Left: search + list ── */}
-          <div className="w-[300px] md:w-[340px] shrink-0 flex flex-col border-r"
+          {/* ── Left: search + list ── (full width on mobile when nothing selected) */}
+          <div className={`w-full md:w-[340px] shrink-0 flex flex-col md:border-r ${(selected && !flashMode) ? "hidden md:flex" : "flex"}`}
             style={{ background: "#0a1525", borderColor: "rgba(255,255,255,0.03)" }}>
 
             {/* Search + filters */}
@@ -309,11 +431,28 @@ export default function Kamus() {
                 style={{ fontFamily: "var(--font-space)" }}>
                 {loading ? "Memuat…" : `${filtered.length} kata`}
               </span>
-              <button onClick={() => { setAddOpen(true); setAddError(null); }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
-                style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                <Plus className="size-3" /> TAMBAH
-              </button>
+              <div className="flex items-center gap-1.5">
+                {words.some(w => !w.reading) && (
+                  <button onClick={genAllFurigana} disabled={genAll}
+                    title="Auto-generate furigana untuk semua kata"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-50"
+                    style={{ background: "rgba(166,123,212,0.15)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
+                    {genAll
+                      ? <><Loader2 className="size-3 animate-spin" /> {genProgress}/{words.filter(w=>!w.reading).length}</>
+                      : <><Sparkles className="size-3" /> FURIGANA</>}
+                  </button>
+                )}
+                <button onClick={enterFlash} disabled={filtered.length === 0}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-40"
+                  style={{ background: "rgba(74,122,191,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                  <Layers className="size-3" /> FLASH
+                </button>
+                <button onClick={() => { setAddOpen(true); setAddError(null); }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
+                  style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
+                  <Plus className="size-3" /> TAMBAH
+                </button>
+              </div>
             </div>
 
             {/* List */}
@@ -339,17 +478,19 @@ export default function Kamus() {
                   )}
                 </div>
               ) : (
-                filtered.map((w, idx) => {
+                filtered.map((w, listIdx) => {
                   const wordIdx = words.findIndex(x => x.id === w.id);
                   const ac = accentFor(wordIdx);
                   return (
-                    <button key={w.id} onClick={() => setSelected(w.id)}
+                    <button key={w.id} onClick={() => { setSelected(w.id); setFlashMode(false); setEditMode(false); }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b hover:bg-white/[0.02]"
                       style={{
                         borderColor: "rgba(255,255,255,0.03)",
-                        background: selected === w.id ? "rgba(74,122,191,0.08)" : "transparent",
-                        boxShadow: selected === w.id ? "inset 2px 0 0 #4a7abf" : "none",
+                        background: selected === w.id && !flashMode ? "rgba(74,122,191,0.08)" : "transparent",
+                        boxShadow: selected === w.id && !flashMode ? "inset 2px 0 0 #4a7abf" : "none",
                       }}>
+                      <span className="text-[9px] text-[#2a354b] w-5 text-right shrink-0 font-mono"
+                        style={{ fontFamily: "var(--font-space)" }}>{listIdx + 1}</span>
                       <div className="size-10 rounded-xl flex items-center justify-center shrink-0 text-lg font-black overflow-hidden"
                         style={{ background: `${ac}15`, color: ac, fontFamily: "var(--font-jakarta)" }}>
                         {w.image_url
@@ -387,15 +528,248 @@ export default function Kamus() {
             </div>
           </div>
 
-          {/* ── Right: detail panel ── */}
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5 md:py-7 pb-20 lg:pb-7 relative"
+          {/* ── Right: detail panel ── (hidden on mobile when no word selected) */}
+          <div className={`flex-1 pb-20 lg:pb-7 relative ${flashMode ? "flex flex-col items-center justify-center px-4 md:px-6 py-6 md:py-8" : `overflow-y-auto px-4 md:px-8 py-5 md:py-7 ${selected ? "block" : "hidden md:block"}`}`}
             style={{}}>
 
             {/* ambient */}
             <div className="pointer-events-none absolute top-0 right-0 w-[400px] h-[300px] opacity-[0.05] blur-[80px]"
               style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
 
-            {!detail ? (
+            {/* ── Flash card view ── */}
+            {flashMode && flashWord && (
+              <div className="relative w-full max-w-2xl flex flex-col items-center gap-6">
+
+                {/* Top bar */}
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                    {flashIdx + 1} / {flashOrder.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={shuffleFlash}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
+                      style={{ background: "rgba(74,122,191,0.12)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                      <Shuffle className="size-3" /> ACAK
+                    </button>
+                    <button onClick={() => setFlashMode(false)}
+                      className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors">
+                      <X className="size-4 text-[#4a5a7a]" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Card with 3D flip */}
+                {(() => {
+                  const len = flashWord.kanji.length;
+                  const frontSize = len <= 2 ? "6rem" : len <= 4 ? "4.5rem" : len <= 7 ? "3rem" : "2rem";
+                  const backSize  = len <= 2 ? "4rem"  : len <= 4 ? "3rem"   : len <= 7 ? "2.2rem" : "1.6rem";
+                  return (
+                    <div className="w-full" style={{ perspective: "1200px" }}>
+                      <div
+                        onClick={() => setFlipped(f => !f)}
+                        className="relative w-full cursor-pointer"
+                        style={{
+                          height: "clamp(360px, 45vh, 480px)",
+                          transformStyle: "preserve-3d",
+                          transition: "transform 0.55s cubic-bezier(0.4,0.2,0.2,1)",
+                          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                        }}>
+
+                        {/* Front — kanji only */}
+                        <div className="absolute inset-0 rounded-3xl flex flex-col items-center justify-center gap-5 p-8"
+                          style={{
+                            background: "#101b30",
+                            border: `1px solid ${flashAccent}30`,
+                            boxShadow: `0 0 80px ${flashAccent}20`,
+                            backfaceVisibility: "hidden",
+                          }}>
+                          <div className="absolute inset-0 opacity-12 rounded-3xl"
+                            style={{ background: `radial-gradient(circle at center,${flashAccent},transparent 65%)` }} />
+                          {flashWord.level && (
+                            <span className="text-[10px] px-2.5 py-1 rounded-full font-bold relative"
+                              style={{ background: `${flashAccent}20`, color: flashAccent, fontFamily: "var(--font-space)" }}>
+                              JLPT {flashWord.level}
+                            </span>
+                          )}
+                          <span className="relative font-black leading-tight text-center px-4"
+                            style={{ fontSize: frontSize, color: flashAccent, fontFamily: "var(--font-jakarta)", textShadow: `0 0 50px ${flashAccent}70` }}>
+                            {flashWord.kanji}
+                          </span>
+                          <p className="text-[11px] text-[#2a354b] relative" style={{ fontFamily: "var(--font-space)" }}>
+                            KETUK UNTUK LIHAT JAWABAN
+                          </p>
+                        </div>
+
+                        {/* Back — reading + meaning */}
+                        <div className="absolute inset-0 rounded-3xl flex flex-col items-center justify-center gap-5 p-8"
+                          style={{
+                            background: "#101b30",
+                            border: `1px solid ${flashAccent}30`,
+                            boxShadow: `0 0 80px ${flashAccent}20`,
+                            backfaceVisibility: "hidden",
+                            transform: "rotateY(180deg)",
+                          }}>
+                          <div className="absolute inset-0 opacity-12 rounded-3xl"
+                            style={{ background: `radial-gradient(circle at center,${flashAccent},transparent 65%)` }} />
+                          <span className="relative font-black leading-tight text-center"
+                            style={{ fontSize: backSize, color: flashAccent, fontFamily: "var(--font-jakarta)" }}>
+                            {flashWord.kanji}
+                          </span>
+                          {flashWord.reading && (
+                            <p className="relative text-xl text-[#8a9bbf] text-center" style={{ fontFamily: "var(--font-jakarta)" }}>
+                              {flashWord.reading}
+                            </p>
+                          )}
+                          <div className="relative w-full px-4 py-3 rounded-2xl text-center"
+                            style={{ background: "rgba(8,16,36,0.6)" }}>
+                            <p className="text-lg text-[#d7e2ff] font-semibold leading-snug" style={{ fontFamily: "var(--font-manrope)" }}>
+                              {flashWord.meaning}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Navigation */}
+                <div className="flex items-center gap-3 w-full">
+                  <button
+                    onClick={() => { setFlashIdx(i => Math.max(0, i - 1)); setFlipped(false); }}
+                    disabled={flashIdx === 0}
+                    className="size-14 rounded-2xl flex items-center justify-center transition-all disabled:opacity-30 hover:brightness-110"
+                    style={{ background: "#101b30" }}>
+                    <ChevronLeft className="size-6 text-[#6b9cda]" />
+                  </button>
+                  <button
+                    onClick={() => setFlipped(f => !f)}
+                    className="flex-1 py-4 rounded-2xl text-sm font-bold transition-all hover:brightness-110"
+                    style={{ background: "rgba(74,122,191,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                    {flipped ? "SEMBUNYIKAN" : "LIHAT JAWABAN"}
+                  </button>
+                  <button
+                    onClick={() => { setFlashIdx(i => Math.min(flashOrder.length - 1, i + 1)); setFlipped(false); }}
+                    disabled={flashIdx === flashOrder.length - 1}
+                    className="size-14 rounded-2xl flex items-center justify-center transition-all disabled:opacity-30 hover:brightness-110"
+                    style={{ background: "#101b30" }}>
+                    <ChevronRight className="size-6 text-[#6b9cda]" />
+                  </button>
+                </div>
+
+                {/* Progress dots */}
+                <div className="flex gap-1 flex-wrap justify-center max-w-xs">
+                  {flashOrder.slice(Math.max(0, flashIdx - 4), flashIdx + 5).map((_, i) => {
+                    const absIdx = Math.max(0, flashIdx - 4) + i;
+                    return (
+                      <div key={absIdx}
+                        className="rounded-full transition-all"
+                        style={{
+                          width: absIdx === flashIdx ? "20px" : "6px",
+                          height: "6px",
+                          background: absIdx === flashIdx ? flashAccent : "rgba(74,122,191,0.2)",
+                        }} />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {!flashMode && (editMode && detail ? (
+              /* ── Edit mode panel ── */
+              <div className="relative flex flex-col gap-5 max-w-2xl">
+                {/* Header */}
+                <div className="p-5 rounded-2xl" style={{ background: "#101b30" }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="size-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(107,156,218,0.15)" }}>
+                        <Pencil className="size-4 text-[#6b9cda]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>Edit Kata</p>
+                        <p className="text-[11px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-jakarta)" }}>{detail.kanji}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setEditMode(false)}
+                      className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors">
+                      <X className="size-4 text-[#4a5a7a]" />
+                    </button>
+                  </div>
+
+                  {/* AI re-generate */}
+                  <button onClick={autoGenEdit} disabled={editGenRead}
+                    className="w-full mb-5 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 hover:brightness-110"
+                    style={{ background: "rgba(166,123,212,0.15)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
+                    {editGenRead ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                    {editGenRead ? "GENERATING..." : "AUTO-GENERATE DENGAN AI"}
+                  </button>
+
+                  {/* Reading */}
+                  <div className="mb-4">
+                    <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                      読み方 · CARA BACA
+                    </label>
+                    <input
+                      value={editForm.reading}
+                      onChange={e => setEditForm(f => ({ ...f, reading: e.target.value }))}
+                      placeholder="hiragana..."
+                      className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
+                      style={{ background: "#0d1929", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
+                      onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
+                    />
+                  </div>
+
+                  {/* Meaning */}
+                  <div className="mb-4">
+                    <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                      意味 · ARTI <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      value={editForm.meaning}
+                      onChange={e => setEditForm(f => ({ ...f, meaning: e.target.value }))}
+                      placeholder="Arti dalam Bahasa Indonesia"
+                      className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
+                      style={{ background: "#0d1929", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
+                      onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
+                    />
+                  </div>
+
+                  {/* Level */}
+                  <div className="mb-5">
+                    <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                      LEVEL JLPT
+                    </label>
+                    <div className="flex gap-2">
+                      {["","N1","N2","N3","N4","N5"].map(l => (
+                        <button key={l} onClick={() => setEditForm(f => ({ ...f, level: l }))}
+                          className="flex-1 py-2 rounded-xl text-[11px] font-bold transition-all"
+                          style={editForm.level === l
+                            ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)", fontFamily: "var(--font-space)" }
+                            : { background: "#0d1929", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)", fontFamily: "var(--font-space)" }}>
+                          {l || "—"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3">
+                    <button onClick={() => setEditMode(false)}
+                      className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all"
+                      style={{ background: "#0d1929", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+                      Batal
+                    </button>
+                    <button onClick={saveEdit}
+                      disabled={editSaving || !editForm.meaning.trim()}
+                      className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
+                      style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)" }}>
+                      {editSaving ? <><Loader2 className="size-4 animate-spin" /> Menyimpan...</> : <><Save className="size-4" /> SIMPAN</>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : !detail ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 opacity-40">
                 <BookOpen className="size-12 text-[#4a5a7a]" />
                 <p className="text-sm text-[#4a5a7a]">
@@ -404,6 +778,13 @@ export default function Kamus() {
               </div>
             ) : (
               <div className="relative flex flex-col gap-5 max-w-2xl">
+
+                {/* Mobile back button */}
+                <button onClick={() => setSelected(null)}
+                  className="md:hidden flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg w-fit -mb-2"
+                  style={{ background: "rgba(74,122,191,0.12)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                  <ChevronLeft className="size-3.5" /> KEMBALI
+                </button>
 
                 {/* ── Header entry ── */}
                 <div className="p-6 rounded-2xl relative overflow-hidden"
@@ -448,17 +829,26 @@ export default function Kamus() {
                         </div>
                       </div>
                     </div>
-                    {/* Delete action */}
-                    <button
-                      onClick={() => deleteWord(detail.id)}
-                      disabled={deletingId === detail.id}
-                      className="size-9 rounded-xl flex items-center justify-center transition-all hover:bg-red-500/10 disabled:opacity-40 shrink-0"
-                      style={{ background: "rgba(8,16,36,0.55)" }}
-                      title="Hapus dari kamus">
-                      {deletingId === detail.id
-                        ? <Loader2 className="size-4 text-[#4a5a7a] animate-spin" />
-                        : <Trash2 className="size-4 text-[#dc5050]" />}
-                    </button>
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <button
+                        onClick={openEdit}
+                        className="size-9 rounded-xl flex items-center justify-center transition-all hover:bg-[#4a7abf]/10"
+                        style={{ background: "rgba(8,16,36,0.55)" }}
+                        title="Edit kata">
+                        <Pencil className="size-4 text-[#6b9cda]" />
+                      </button>
+                      <button
+                        onClick={() => deleteWord(detail.id)}
+                        disabled={deletingId === detail.id}
+                        className="size-9 rounded-xl flex items-center justify-center transition-all hover:bg-red-500/10 disabled:opacity-40"
+                        style={{ background: "rgba(8,16,36,0.55)" }}
+                        title="Hapus dari kamus">
+                        {deletingId === detail.id
+                          ? <Loader2 className="size-4 text-[#4a5a7a] animate-spin" />
+                          : <Trash2 className="size-4 text-[#dc5050]" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -544,7 +934,7 @@ export default function Kamus() {
                 {words.length >= 2 && <QuizCepat word={detail} allWords={words} />}
 
               </div>
-            )}
+            ))}
           </div>
         </div>
       </div>
@@ -607,15 +997,29 @@ export default function Kamus() {
                     style={{ fontFamily: "var(--font-space)" }}>
                     読み方 · CARA BACA
                   </label>
-                  <input
-                    value={form.reading}
-                    onChange={e => setForm(f => ({ ...f, reading: e.target.value }))}
-                    placeholder="あきらめる"
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
-                    onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      value={form.reading}
+                      onChange={e => setForm(f => ({ ...f, reading: e.target.value }))}
+                      placeholder="あきらめる"
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
+                      style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
+                      onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
+                    />
+                    <button
+                      type="button"
+                      onClick={autoFurigana}
+                      disabled={genReading || !form.kanji.trim()}
+                      title="Auto-generate furigana dari kanji"
+                      className="px-3 py-2.5 rounded-xl flex items-center gap-1.5 text-[10px] font-bold transition-all disabled:opacity-40 shrink-0"
+                      style={{ background: "rgba(166,123,212,0.15)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
+                      {genReading
+                        ? <Loader2 className="size-3.5 animate-spin" />
+                        : <Sparkles className="size-3.5" />}
+                      AUTO
+                    </button>
+                  </div>
                 </div>
 
                 {/* 意味 */}

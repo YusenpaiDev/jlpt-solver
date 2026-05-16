@@ -1,14 +1,28 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 300; // 5 min — needed for large docx/PDF
+
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+/* Try to salvage truncated JSON by closing open structures at every depth */
+function repairJson(raw: string): unknown | null {
+  // Remove trailing comma and any unterminated string
+  let s = raw.replace(/,\s*$/, "").replace(/"[^"]*$/, '"...');
+  // Try closing at increasing depths: object field, array item, array, object, array, object
+  const closings = ["}", "}]", "}]}", "}]}", "}]}]}", "}]}]}"];
+  for (const tail of closings) {
+    try { return JSON.parse(s + tail); } catch { /* keep trying */ }
+  }
+  return null;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageBase64, mimeType, level, category } = await req.json();
+    const { imageBase64, mimeType, level, category, textContent } = await req.json();
 
-    if (!imageBase64) {
-      return NextResponse.json({ error: "Gambar tidak ditemukan" }, { status: 400 });
+    if (!imageBase64 && !textContent) {
+      return NextResponse.json({ error: "File tidak ditemukan" }, { status: 400 });
     }
 
     const categoryLabel =
@@ -31,8 +45,10 @@ Untuk setiap soal berikan analisis LENGKAP:
 3. Jawaban benar ("1"/"2"/"3"/"4")
 4. Penjelasan kenapa jawaban itu BENAR
 5. Penjelasan kenapa pilihan LAIN salah (sebutkan per nomor)
-6. Poin grammar/kosakata: kata kunci Jepang + arti Indonesia
+6. Poin grammar/kosakata: kata kunci Jepang + furigana + arti Indonesia
 7. Tips ujian singkat
+8. Kategori soal: "文法"/"語彙"/"文字"/"読解"
+9. Jika soal ini 読解: sertakan TEKS BACAAN LENGKAP di field "passage". Jika soal 読解 lanjutan yang bacaannya sama dengan soal sebelumnya, isi "passage" dengan null.
 
 BAHASA YANG WAJIB DIGUNAKAN:
 - Field "explanation", "why_wrong", dan "tip" HARUS SELURUHNYA dalam Bahasa Indonesia.
@@ -73,66 +89,58 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
       "correct": "2",
       "explanation": "penjelasan kenapa benar — WAJIB Bahasa Indonesia",
       "why_wrong": "kenapa pilihan 1 salah: ... Kenapa pilihan 3 salah: ... — WAJIB Bahasa Indonesia",
-      "grammar_points": [{"jp": "単語", "id": "arti dalam Bahasa Indonesia"}],
-      "tip": "tips ujian — WAJIB Bahasa Indonesia"
+      "grammar_points": [{"jp": "単語", "reading": "たんご", "id": "arti dalam Bahasa Indonesia"}],
+      "tip": "tips ujian — WAJIB Bahasa Indonesia",
+      "category": "文法",
+      "passage": null
     }
   ]
 }`;
 
-    const isPdf = mimeType === "application/pdf";
+    const isDocx = !!textContent;
+    const isPdf  = mimeType === "application/pdf";
 
-    const fileContent = isPdf
-      ? {
-          type: "document" as const,
-          source: {
-            type: "base64" as const,
-            media_type: "application/pdf" as const,
-            data: imageBase64,
-          },
-        }
-      : {
-          type: "image" as const,
-          source: {
-            type: "base64" as const,
-            media_type: (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-            data: imageBase64,
-          },
-        };
+    let contentBlocks: Anthropic.MessageParam["content"];
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 16000,
-      messages: [
-        {
-          role: "user",
-          content: [
-            fileContent,
-            {
-              type: "text",
-              text: prompt,
+    if (isDocx) {
+      contentBlocks = [
+        { type: "text", text: `Berikut adalah isi dokumen Word yang berisi soal JLPT:\n\n${textContent}` },
+        { type: "text", text: prompt },
+      ];
+    } else {
+      const fileContent = isPdf
+        ? {
+            type: "document" as const,
+            source: { type: "base64" as const, media_type: "application/pdf" as const, data: imageBase64 },
+          }
+        : {
+            type: "image" as const,
+            source: {
+              type: "base64" as const,
+              media_type: (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+              data: imageBase64,
             },
-          ],
-        },
-      ],
+          };
+      contentBlocks = [fileContent, { type: "text", text: prompt }];
+    }
+
+    // Use streaming — required for large max_tokens
+    const stream = client.messages.stream({
+      model: "claude-sonnet-4-6",
+      max_tokens: 32000,
+      messages: [{ role: "user", content: contentBlocks }],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    const message = await stream.finalMessage();
+    const text = message.content[0].type === "text" ? message.content[0].text.trim() : "";
     const clean = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
 
     let parsed;
     try {
       parsed = JSON.parse(clean);
     } catch {
-      // Try to salvage truncated JSON by closing open structures
-      const fixed = clean
-        .replace(/,\s*$/, "")           // trailing comma
-        .replace(/"[^"]*$/, '"...')      // unterminated string
-        + ']}]}';                        // close questions + root
-      try {
-        parsed = JSON.parse(fixed);
-      } catch {
-        throw new Error("Respons AI terpotong. Coba lagi dengan foto yang lebih sedikit soalnya.");
-      }
+      parsed = repairJson(clean);
+      if (!parsed) throw new Error("Respons AI tidak valid. Coba lagi.");
     }
 
     return NextResponse.json({ success: true, data: parsed });

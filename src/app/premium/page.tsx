@@ -203,7 +203,7 @@ export default function Premium() {
         )}
 
         {/* ── Pricing cards ── */}
-        <div className="grid grid-cols-3 gap-5 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-12 md:mb-20">
           {plans.map(plan => {
             const planKey = plan.id === "gratis" ? null
               : `${plan.id}-${yearly ? "yearly" : "monthly"}`;
@@ -312,7 +312,7 @@ export default function Premium() {
               Fitur yang bikin belajar terasa beda
             </h2>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {highlights.map(({ icon: Icon, label, desc, color }) => (
               <div key={label} className="p-5 rounded-2xl relative overflow-hidden"
                 style={{ background: "#101b30" }}>
@@ -342,7 +342,7 @@ export default function Premium() {
               Mereka sudah lulus. Sekarang giliranmu.
             </h2>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               { name: "Rizki A.", level: "Lulus N3", score: "142/180", avatar: "R", color: "#4a7abf",
                 text: "Dalam 3 bulan pakai Sensei JLPT, analisis foto soalnya bikin aku ngerti grammar yang selama ini bingung." },

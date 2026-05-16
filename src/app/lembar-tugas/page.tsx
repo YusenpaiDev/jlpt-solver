@@ -365,7 +365,7 @@ export default function LembarTugas() {
                   style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.12)" }}>
                   <p className="text-[10px] font-bold text-[#4a5a7a]"
                     style={{ fontFamily: "var(--font-space)" }}>KATEGORI</p>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {CATS.map(c => (
                       <button key={c.value} onClick={() => setCategory(c.value)}
                         className="flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all"
@@ -488,7 +488,7 @@ export default function LembarTugas() {
         <>
           <div className="fixed inset-0 z-40" style={{ background: "rgba(7,19,39,0.7)" }}
             onClick={() => setRiwayatOpen(false)} />
-          <aside className="fixed top-0 right-0 h-full z-50 flex flex-col w-[300px]"
+          <aside className="fixed top-0 right-0 h-full z-50 flex flex-col w-[85vw] max-w-[320px] sm:w-[300px]"
             style={{ background: "#0d1929", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
 
             <div className="flex items-center justify-between px-5 py-4 shrink-0"

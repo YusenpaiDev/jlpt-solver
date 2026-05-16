@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sidebar, BottomNav } from "@/components/Sidebar";
+import KamusFlashCard from "@/components/KamusFlashCard";
 import {
   Camera, Bell, Upload, ArrowUpRight,
   CheckCircle2, Circle, Sparkles,
   ChevronLeft, RotateCcw,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck,
+  BookOpen, Search, MessageCircle, NotebookPen, Plus,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -21,8 +23,10 @@ interface AIQuestion {
   correct: string;
   explanation: string;
   why_wrong?: string;
-  grammar_points?: { jp: string; id: string }[];
+  grammar_points?: { jp: string; reading?: string; id: string }[];
   tip?: string;
+  category?: "文法" | "語彙" | "文字" | "読解";
+  passage?: string | null;
 }
 interface VocabItem {
   word: string;
@@ -41,6 +45,7 @@ interface FileData {
   mimeType: string;
   name: string;
   url: string;
+  textContent?: string; // for .docx — extracted text
 }
 interface ChatMsg {
   role: "user" | "model";
@@ -48,17 +53,6 @@ interface ChatMsg {
 }
 
 
-/* ─── Vocab data — sama persis dengan entri di halaman Kamus ─── */
-const vocabList = [
-  { kanji: "諦める",   reading: "あきらめる",         meaning: "Menyerah; berhenti mencoba; merelakan",        level: "N2", accent: "#4a7abf", example: "夢を諦めないでください。" },
-  { kanji: "把握",     reading: "はあく",             meaning: "Memahami; menguasai; menggenggam",             level: "N2", accent: "#8b5abf", example: "状況を把握してください。" },
-  { kanji: "一生懸命", reading: "いっしょうけんめい", meaning: "Dengan sepenuh hati; sekuat tenaga; bersungguh-sungguh", level: "N3", accent: "#5ea87a", example: "一生懸命勉強しました。" },
-  { kanji: "雰囲気",   reading: "ふんいき",           meaning: "Suasana; atmosfer; aura",                      level: "N2", accent: "#e07b4a", example: "いい雰囲気のレストランだ。" },
-  { kanji: "遠慮",     reading: "えんりょ",           meaning: "Sungkan; menahan diri; tidak mau merepotkan",  level: "N2", accent: "#c05abf", example: "遠慮しないでください。" },
-  { kanji: "丁寧",     reading: "ていねい",           meaning: "Sopan; teliti; hati-hati",                     level: "N3", accent: "#6b9cda", example: "丁寧な言葉を使ってください。" },
-  { kanji: "我慢",     reading: "がまん",             meaning: "Bersabar; menahan diri; tahan banting",        level: "N3", accent: "#bbc6e2", example: "もう我慢できない！" },
-  { kanji: "複雑",     reading: "ふくざつ",           meaning: "Rumit; kompleks; pelik",                       level: "N2", accent: "#4a7abf", example: "気持ちが複雑です。" },
-];
 
 
 
@@ -165,7 +159,7 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
           <p className="font-bold text-[#d7e2ff] mb-1" style={{ fontFamily: "var(--font-jakarta)" }}>
             Seret & lepas foto soal JLPT di sini
           </p>
-          <p className="text-xs text-[#4a5a7a]">PNG, JPG, PDF (multi-halaman) · Maks. 10MB</p>
+          <p className="text-xs text-[#4a5a7a]">PNG, JPG, PDF, Word (.docx) · Maks. 10MB</p>
         </div>
 
         <div className="relative flex items-center gap-2">
@@ -354,7 +348,7 @@ function SetupView({
             </p>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
               style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-              {files.length} foto
+              {files.length} {files.some(f => f.mimeType.includes("wordprocessingml")) ? "bagian" : "foto"}
             </span>
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -364,7 +358,9 @@ function SetupView({
                   style={{ background: "linear-gradient(135deg,#1a2a3f,#0a1525)" }}>
                   {f.url
                     ? <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
-                    : <span className="text-[10px] font-bold text-[#6b9cda] text-center px-1">PDF</span>
+                    : f.mimeType.includes("wordprocessingml")
+                      ? <span className="text-[10px] font-bold text-[#5ea87a] text-center px-1">DOC</span>
+                      : <span className="text-[10px] font-bold text-[#6b9cda] text-center px-1">PDF</span>
                   }
                 </div>
                 <button
@@ -400,7 +396,9 @@ function SetupView({
             <Check className="size-3 inline mr-1" />
             {files.length === 1
               ? `${files[0].name} berhasil diunggah`
-              : `${files.length} foto siap dianalisis bersama`}
+              : files.some(f => f.mimeType.includes("wordprocessingml"))
+                ? `Dokumen dibagi menjadi ${files.length} bagian — setiap bagian dianalisis terpisah`
+                : `${files.length} foto siap dianalisis bersama`}
           </p>
         </div>
 
@@ -467,28 +465,39 @@ function SetupView({
 }
 
 /* ─── Analyzing State ───────────────────────────────────────── */
-function AnalyzingView({ imageUrl, currentIdx = 1, total = 1 }: { imageUrl?: string; currentIdx?: number; total?: number }) {
-  const [vocabIdx,  setVocabIdx]  = useState(0);
-  const [visible,   setVisible]   = useState(true);  // for fade transition
-  const [stepsDone, setStepsDone] = useState(1);     // steps 0..3
+const waitingMessages = [
+  { icon: "📖", text: "Nih sambil nunggu, ulang hafalan kosakata kamu yang ada di kiri! Itu kata-kata dari kamus kamu sendiri lho." },
+  { icon: "☕", text: "Santai dulu, ini emang butuh waktu. Soalnya lagi dibedah satu per satu sama Sensei." },
+  { icon: "📚", text: "Banyak soal = analisis makin panjang. Tapi hasilnya juga makin lengkap, janji!" },
+  { icon: "🎴", text: "Sambil nunggu, review hafalan kamu di kiri yuk — kata-kata itu dari kamus yang udah kamu kumpulin!" },
+  { icon: "🤖", text: "AI lagi nulis penjelasan detail tiap soal — ini yang bikin lama, tapi bermanfaat banget." },
+  { icon: "💪", text: "Sabar adalah kunci belajar JLPT. Latihan terus, pasti tembus! Sambil tunggu, hafal dulu." },
+  { icon: "🐢", text: "Pelan tapi pasti — persis kayak kamu belajar kanji. Manfaatin waktu ini buat review vocab!" },
+  { icon: "🎯", text: "Klik NEXT di kartu kiri buat ganti kata. Itu semua dari kamus kamu — gratis ulangan!" },
+];
+
+function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imageUrl?: string; currentIdx?: number; total?: number; onCancel?: () => void }) {
+  const [stepsDone, setStepsDone] = useState(1);
+  const [elapsed,   setElapsed]   = useState(0);
+  const [msgIdx,    setMsgIdx]    = useState(0);
 
   /* Animate steps finishing over time */
   useEffect(() => {
-    const t = setTimeout(() => setStepsDone(2), 4000);
+    const t  = setTimeout(() => setStepsDone(2), 4000);
     const t2 = setTimeout(() => setStepsDone(3), 9000);
     const t3 = setTimeout(() => setStepsDone(4), 14000);
     return () => { clearTimeout(t); clearTimeout(t2); clearTimeout(t3); };
   }, []);
 
-  /* Vocab auto-rotate every 5 s with fade */
+  /* Timer: count up every second */
   useEffect(() => {
-    const t = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setVocabIdx(i => (i + 1) % vocabList.length);
-        setVisible(true);
-      }, 350);
-    }, 8000);
+    const t = setInterval(() => setElapsed(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  /* Rotate patience message every 18 s */
+  useEffect(() => {
+    const t = setInterval(() => setMsgIdx(i => (i + 1) % waitingMessages.length), 18000);
     return () => clearInterval(t);
   }, []);
 
@@ -499,11 +508,10 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1 }: { imageUrl?: str
     "Deteksi Multi-Soal...",
   ];
 
-  /* Fake progress based on steps done */
   const fakeProgress = [15, 35, 65, 90][Math.min(stepsDone, 3)];
-
-  const vocab = vocabList[vocabIdx];
-  const accent = vocab.accent;
+  const mm  = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const ss  = String(elapsed % 60).padStart(2, "0");
+  const msg = waitingMessages[msgIdx];
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto lg:overflow-hidden">
@@ -536,84 +544,9 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1 }: { imageUrl?: str
           <div className="analyzing-scan-line" />
         </div>
 
-        {/* ── Vocab Flashcard ── */}
-        <div className="w-full max-w-[320px] rounded-2xl overflow-hidden relative"
-          style={{
-            background: "#101b30",
-            border: `1px solid ${accent}30`,
-            boxShadow: `0 0 30px ${accent}10`,
-            opacity: visible ? 1 : 0,
-            transform: visible ? "translateY(0)" : "translateY(6px)",
-            transition: "opacity 0.35s ease, transform 0.35s ease",
-          }}>
-
-          {/* card header */}
-          <div className="px-4 py-2.5 flex items-center justify-between border-b"
-            style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(8,16,36,0.55)" }}>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                style={{ background: `${accent}20`, color: accent, fontFamily: "var(--font-space)" }}>
-                JLPT {vocab.level}
-              </span>
-              <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                KOSAKATA
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[9px] text-[#2a354b]" style={{ fontFamily: "var(--font-space)" }}>
-                {vocabIdx + 1}/{vocabList.length}
-              </span>
-              <button
-                onClick={() => {
-                  setVisible(false);
-                  setTimeout(() => {
-                    setVocabIdx(i => (i + 1) % vocabList.length);
-                    setVisible(true);
-                  }, 350);
-                }}
-                className="text-[9px] px-2 py-0.5 rounded-full text-[#4a5a7a] hover:text-[#8a9bbf] transition-colors"
-                style={{ background: "#1f2a3f", fontFamily: "var(--font-space)" }}>
-                NEXT →
-              </button>
-            </div>
-          </div>
-
-          {/* card body */}
-          <div className="px-5 py-4">
-            {/* Kanji large */}
-            <p className="text-4xl font-black text-[#d7e2ff] mb-0.5"
-              style={{ fontFamily: "var(--font-jakarta)", color: accent }}>
-              {vocab.kanji}
-            </p>
-            {/* reading */}
-            <p className="text-sm text-[#8a9bbf] mb-3"
-              style={{ fontFamily: "var(--font-jakarta)" }}>
-              {vocab.reading}
-            </p>
-            {/* meaning */}
-            <p className="text-base font-semibold text-[#d7e2ff] mb-3"
-              style={{ fontFamily: "var(--font-manrope)" }}>
-              {vocab.meaning}
-            </p>
-            {/* example */}
-            <div className="rounded-xl px-3 py-2.5"
-              style={{ background: "#1f2a3f", borderLeft: `3px solid ${accent}60` }}>
-              <p className="text-xs text-[#4a5a7a] mb-1" style={{ fontFamily: "var(--font-space)" }}>CONTOH</p>
-              <p className="text-sm text-[#8a9bbf] leading-relaxed"
-                style={{ fontFamily: "var(--font-jakarta)" }}>
-                {vocab.example}
-              </p>
-            </div>
-          </div>
-
-          {/* progress dots */}
-          <div className="px-5 pb-4 flex items-center gap-1">
-            {vocabList.map((_, i) => (
-              <div key={i}
-                className="h-0.5 rounded-full flex-1 transition-all duration-300"
-                style={{ background: i === vocabIdx ? accent : "rgba(255,255,255,0.07)" }} />
-            ))}
-          </div>
+        {/* ── Kamus Flashcard ── */}
+        <div className="w-full max-w-[340px]">
+          <KamusFlashCard />
         </div>
       </div>
 
@@ -647,21 +580,21 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1 }: { imageUrl?: str
           </h2>
         </div>
 
-        {/* Kata counter */}
+        {/* Timer + kata counter */}
         <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
           style={{ background: "#101b30" }}>
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>KATA DIHAFAL</span>
-            <span className="text-2xl font-black text-[#5ea87a]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>
-              {vocabIdx + 1} <span className="text-sm font-semibold text-[#4a5a7a]">/ {vocabList.length}</span>
+            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>WAKTU BERJALAN</span>
+            <span className="text-2xl font-black tabular-nums"
+              style={{ fontFamily: "var(--font-space)", color: elapsed > 60 ? "#e07b4a" : "#6b9cda" }}>
+              {mm}:{ss}
             </span>
           </div>
           <div className="ml-auto flex flex-col items-end">
-            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>KATA SAAT INI</span>
-            <span className="text-lg font-black"
-              style={{ fontFamily: "var(--font-jakarta)", color: accent }}>
-              {vocab.kanji}
+            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>FOTO</span>
+            <span className="text-2xl font-black text-[#6b9cda]"
+              style={{ fontFamily: "var(--font-space)" }}>
+              {currentIdx}/{total}
             </span>
           </div>
         </div>
@@ -705,16 +638,29 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1 }: { imageUrl?: str
             );
           })}
 
-          {/* tip */}
-          <div className="mt-1 rounded-xl p-3" style={{ background: "#1f2a3f" }}>
-            <p className="text-[10px] font-bold text-[#bbc6e2] mb-1"
-              style={{ fontFamily: "var(--font-space)" }}>
-              Sambil tunggu, hafal dulu yuk 👈
+          {/* rotating patience message */}
+          <div className="mt-1 rounded-xl p-3 transition-all duration-500"
+            style={{ background: "#1f2a3f", border: "1px solid rgba(107,156,218,0.08)" }}>
+            <p className="text-base mb-1">{msg.icon}</p>
+            <p className="text-[12px] text-[#bbc6e2] leading-relaxed"
+              style={{ fontFamily: "var(--font-manrope)" }}>
+              {msg.text}
             </p>
-            <p className="text-[11px] text-[#8a9bbf] leading-relaxed">
-              Sensei menampilkan kosakata di kiri — 1 kata tiap 5 detik. Klik NEXT kalau mau lanjut.
-            </p>
+            <div className="flex gap-1 mt-2.5">
+              {waitingMessages.map((_, i) => (
+                <div key={i} className="h-0.5 flex-1 rounded-full transition-all duration-300"
+                  style={{ background: i === msgIdx ? "#6b9cda" : "rgba(255,255,255,0.06)" }} />
+              ))}
+            </div>
           </div>
+
+          {onCancel && (
+            <button onClick={onCancel}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold transition-all hover:brightness-110"
+              style={{ background: "rgba(220,80,80,0.1)", color: "#dc5050", border: "1px solid rgba(220,80,80,0.2)", fontFamily: "var(--font-space)" }}>
+              <X className="size-3.5" /> BATAL ANALISIS
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -733,6 +679,11 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 }) {
   const [answers,      setAnswers]      = useState<Record<number, string>>({});
   const [revealed,     setRevealed]     = useState<Set<number>>(new Set());
+  const [catFilter,    setCatFilter]    = useState<string>("全部");
+  const [expandedPassages, setExpandedPassages] = useState<Set<number>>(new Set());
+  const [furiganaMarked,   setFuriganaMarked]   = useState<Record<string, string>>({});
+  const [showFurigana,     setShowFurigana]     = useState<Set<string>>(new Set());
+  const [furiganaLoading,  setFuriganaLoading]  = useState<Set<string>>(new Set());
   const [chatInput,    setChatInput]    = useState("");
   const [chatLoading,  setChatLoading]  = useState(false);
   const [elapsed,      setElapsed]      = useState(0);
@@ -741,6 +692,166 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
   const [savingWord,   setSavingWord]   = useState<string | null>(null);
   const [toast,        setToast]        = useState<{ text: string; ok: boolean } | null>(null);
   const [scoreSaved,   setScoreSaved]   = useState(false);
+  const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
+  const [savingNote,   setSavingNote]   = useState<number | null>(null);
+  const [rightTab,     setRightTab]     = useState<"chat"|"kamus"|"catatan">("chat");
+  const [kamusWords,   setKamusWords]   = useState<{id:string;kanji:string;reading:string|null;meaning:string}[]>([]);
+  const [kamusQuery,   setKamusQuery]   = useState("");
+  const [kamusLoaded,  setKamusLoaded]  = useState(false);
+  const [catatanList,  setCatatanList]  = useState<{id:string;judul:string;isi:string;updated_at:string}[]>([]);
+  const [catatanLoaded,setCatatanLoaded]= useState(false);
+  const [expandedNote, setExpandedNote] = useState<string|null>(null);
+  const [newNoteOpen,  setNewNoteOpen]  = useState(false);
+  const [newNoteText,  setNewNoteText]  = useState("");
+  const [savingNewNote,setSavingNewNote]= useState(false);
+  const [addKanji,     setAddKanji]     = useState("");
+  const [addReading,   setAddReading]   = useState("");
+  const [addMeaning,   setAddMeaning]   = useState("");
+  const [generating,   setGenerating]   = useState(false);
+  const [savingNew,    setSavingNew]    = useState(false);
+
+  const generateWordInfo = async () => {
+    if (!addKanji.trim() || generating) return;
+    setGenerating(true);
+    setAddReading(""); setAddMeaning("");
+    try {
+      const res = await fetch("/api/furigana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: addKanji.trim(), withMeaning: true }),
+      });
+      const json = await res.json();
+      setAddReading(json.reading ?? "");
+      setAddMeaning(json.meaning ?? "");
+    } catch { /* ignore */ }
+    finally { setGenerating(false); }
+  };
+
+  /* Toggle furigana for any Japanese text; fetches & caches on first show.
+     `key` lets callers namespace e.g. "p-0" (passage 0) vs "q-0" (question 0). */
+  const toggleFurigana = async (key: string, text: string) => {
+    if (showFurigana.has(key)) {
+      setShowFurigana(s => { const n = new Set(s); n.delete(key); return n; });
+      return;
+    }
+    if (furiganaMarked[key]) {
+      setShowFurigana(s => new Set(s).add(key));
+      return;
+    }
+    setFuriganaLoading(s => new Set(s).add(key));
+    try {
+      const res = await fetch("/api/furigana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passage: text }),
+      });
+      const json = await res.json();
+      if (json.marked) {
+        setFuriganaMarked(m => ({ ...m, [key]: json.marked }));
+        setShowFurigana(s => new Set(s).add(key));
+      }
+    } catch { /* ignore */ }
+    finally {
+      setFuriganaLoading(s => { const n = new Set(s); n.delete(key); return n; });
+    }
+  };
+
+  /* Render a passage string with optional [[KANJI|FURIGANA]] markup as <ruby> tags */
+  const renderPassage = (text: string) => {
+    const parts: React.ReactNode[] = [];
+    const regex = /\[\[([^|\]]+)\|([^\]]+)\]\]/g;
+    let last = 0, m: RegExpExecArray | null, key = 0;
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) parts.push(<span key={key++}>{text.slice(last, m.index)}</span>);
+      parts.push(
+        <ruby key={key++} style={{ rubyAlign: "center" }}>
+          {m[1]}
+          <rt style={{ color: "#8ab4e8", fontSize: "0.55em", fontWeight: 500, letterSpacing: 0 }}>{m[2]}</rt>
+        </ruby>
+      );
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) parts.push(<span key={key++}>{text.slice(last)}</span>);
+    return parts;
+  };
+
+  const saveNewWord = async () => {
+    if (!addKanji.trim() || !addMeaning.trim() || savingNew) return;
+    setSavingNew(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { showToast("Login dulu", false); return; }
+      const { data, error } = await supabase.from("saved_words").insert({
+        user_id: user.id,
+        kanji: addKanji.trim(),
+        reading: addReading.trim() || null,
+        meaning: addMeaning.trim(),
+      }).select("id, kanji, reading, meaning").single();
+      if (error && error.code !== "23505") throw error;
+      if (data) setKamusWords(prev => [data as {id:string;kanji:string;reading:string|null;meaning:string}, ...prev]);
+      setSavedWords(s => new Set([...s, addKanji.trim()]));
+      setAddKanji(""); setAddReading(""); setAddMeaning("");
+      showToast(`${addKanji} disimpan ke Kamus ✓`, true);
+    } catch (err) {
+      showToast(`Gagal: ${err instanceof Error ? err.message : (err as {message?:string})?.message ?? JSON.stringify(err)}`, false);
+    } finally { setSavingNew(false); }
+  };
+
+  const addNewNote = async () => {
+    if (!newNoteText.trim() || savingNewNote) return;
+    setSavingNewNote(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { showToast("Login dulu", false); return; }
+      const { data, error } = await supabase.from("catatan").insert({
+        user_id: user.id,
+        judul: newNoteText.trim().split("\n")[0].slice(0, 60) || "Catatan",
+        isi: newNoteText.trim(),
+        source: result.title,
+      }).select("id, judul, isi, updated_at").single();
+      if (error) throw error;
+      setCatatanList(prev => [data as {id:string;judul:string;isi:string;updated_at:string}, ...prev]);
+      setNewNoteText("");
+      setNewNoteOpen(false);
+      showToast("Catatan disimpan ✓", true);
+    } catch (err) {
+      showToast(`Gagal: ${err instanceof Error ? err.message : (err as {message?:string})?.message ?? JSON.stringify(err)}`, false);
+    } finally { setSavingNewNote(false); }
+  };
+
+  useEffect(() => {
+    if (rightTab !== "catatan" || catatanLoaded) return;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("catatan")
+        .select("id, judul, isi, updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+      setCatatanList((data ?? []) as {id:string;judul:string;isi:string;updated_at:string}[]);
+      setCatatanLoaded(true);
+    })();
+  }, [rightTab, catatanLoaded]);
+
+  useEffect(() => {
+    if (rightTab !== "kamus" || kamusLoaded) return;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("saved_words")
+        .select("id, kanji, reading, meaning")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setKamusWords((data ?? []) as {id:string;kanji:string;reading:string|null;meaning:string}[]);
+      setKamusLoaded(true);
+    })();
+  }, [rightTab, kamusLoaded]);
 
   /* Save score + gain XP once all questions are revealed */
   useEffect(() => {
@@ -792,6 +903,30 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
     return () => clearInterval(t);
   }, [timerOn]);
 
+  const saveNoteToCatatan = async (qi: number, q: AIResult["questions"][number]) => {
+    if (savedNotes.has(qi) || savingNote === qi) return;
+    setSavingNote(qi);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { showToast("Login dulu", false); return; }
+      const judul = q.question.slice(0, 60);
+      const isi = `❓ ${q.question}\n\n✅ Jawaban: Pilihan ${q.correct}\n\n💡 ${q.explanation}${q.why_wrong ? `\n\n❌ ${q.why_wrong}` : ""}${q.tip ? `\n\n🎯 ${q.tip}` : ""}`;
+      const { error } = await supabase.from("catatan").insert({
+        user_id: user.id,
+        judul,
+        isi,
+        source: result.title,
+      });
+      if (error) throw error;
+      setSavedNotes(prev => new Set([...prev, qi]));
+      setCatatanList(prev => [{ id: "temp", judul, isi, updated_at: new Date().toISOString() }, ...prev]);
+      showToast("Disimpan ke Catatan ✓", true);
+    } catch (err) {
+      showToast(`Gagal: ${err instanceof Error ? err.message : (err as {message?:string})?.message ?? JSON.stringify(err)}`, false);
+    } finally { setSavingNote(null); }
+  };
+
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -835,16 +970,34 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { showToast("Login dulu untuk simpan kata", false); return; }
-      const { error } = await supabase.from("saved_words").insert({
+      let reading: string | null = null;
+      try {
+        const r = await fetch("/api/furigana", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word: jp }),
+        });
+        const rj = await r.json();
+        if (rj.reading) reading = rj.reading;
+      } catch { /* furigana optional */ }
+
+      const { data: inserted, error } = await supabase.from("saved_words").insert({
         user_id: user.id,
         kanji: jp,
+        reading,
         meaning,
-      });
-      if (error && error.code !== "23505") throw error; // 23505 = unique violation (already saved)
+      }).select("id, kanji, reading, meaning").single();
+      if (error && error.code !== "23505") throw error;
       setSavedWords(s => new Set([...s, jp]));
+      setKamusWords(prev => {
+        if (prev.find(w => w.kanji === jp)) return prev;
+        const w = inserted ?? { id: `local-${jp}`, kanji: jp, reading, meaning };
+        return [w as {id:string;kanji:string;reading:string|null;meaning:string}, ...prev];
+      });
       showToast(`${jp} ditambahkan ke Kamus ✓`, true);
-    } catch {
-      showToast("Gagal menyimpan, coba lagi", false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast(`Gagal: ${msg}`, false);
     } finally {
       setSavingWord(null);
     }
@@ -905,7 +1058,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
         style={{ background: "transparent" }}>
 
         {/* Sticky header */}
-        <div className="sticky top-0 z-10 px-8 py-4 flex items-center justify-between"
+        <div className="sticky top-0 z-10 px-4 md:px-8 py-3 md:py-4 flex items-center justify-between gap-3 flex-wrap"
           style={{ background: "rgba(2,8,16,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(107,156,218,0.1)" }}>
           <div className="flex items-center gap-3">
             <h2 className="text-base font-bold text-[#d7e2ff]"
@@ -970,45 +1123,160 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
           </div>
         </div>
 
+        {/* Category filter tabs */}
+        {(() => {
+          const cats = ["全部", ...Array.from(new Set(result.questions.map(q => q.category).filter(Boolean)))];
+          if (cats.length <= 2) return null;
+          return (
+            <div className="flex items-center gap-2 px-8 pt-6 pb-0 flex-wrap">
+              {cats.map(c => (
+                <button key={c} onClick={() => setCatFilter(c!)}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
+                  style={catFilter === c
+                    ? { background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", color: "#071327", fontFamily: "var(--font-space)" }
+                    : { background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+                  {c} {c !== "全部" && `(${result.questions.filter(q => q.category === c).length})`}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
         {/* Questions list */}
-        <div className="flex flex-col gap-6 px-8 py-6">
-          {result.questions.map((q, qi) => {
-            const isRevealed = revealed.has(qi);
-            const userAns = answers[qi];
-            const accentColors = ["#4a7abf","#8b5abf","#3a9a7a","#c0844a","#c05abf","#4a9abf","#7a8abf","#5a7abf"];
-            const accent = accentColors[qi % accentColors.length];
+        <div className="flex flex-col gap-5 md:gap-6 px-4 md:px-8 py-5 md:py-6">
+          {(() => {
+            let lastPassageText = "";
+            let passageCardIdx = -1;
+            return result.questions.map((q, qi) => {
+              if (catFilter !== "全部" && q.category && q.category !== catFilter) return null;
+              const isRevealed = revealed.has(qi);
+              const userAns = answers[qi];
+              const accentColors = ["#4a7abf","#8b5abf","#3a9a7a","#c0844a","#c05abf","#4a9abf","#7a8abf","#5a7abf"];
+              const accent = accentColors[qi % accentColors.length];
 
-            return (
-              <div key={qi} className="rounded-3xl overflow-hidden transition-all"
-                style={{
-                  background: isRevealed ? `rgba(16,27,48,0.75)` : "rgba(16,27,48,0.55)",
-                  backdropFilter: "blur(16px)",
-                  WebkitBackdropFilter: "blur(16px)",
-                  border: `1px solid ${isRevealed ? `${accent}45` : "rgba(107,156,218,0.12)"}`,
-                  boxShadow: isRevealed ? `0 0 40px ${accent}20, 0 4px 24px rgba(0,0,0,0.3)` : "0 4px 16px rgba(0,0,0,0.2)",
-                }}>
+              // New passage encountered → show passage card before this question
+              const showPassageCard = !!(q.passage && q.passage !== lastPassageText);
+              if (showPassageCard && q.passage) {
+                lastPassageText = q.passage;
+                passageCardIdx = qi;
+              }
+              const isPassageCollapsed = expandedPassages.has(passageCardIdx);
 
-                {/* Question header strip */}
-                <div className="px-6 py-5 relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-[0.08]"
-                    style={{ background: `radial-gradient(circle at top left,${accent},transparent 60%)` }} />
-                  <div className="absolute top-0 left-0 w-1 h-full rounded-l-3xl"
-                    style={{ background: `linear-gradient(180deg,${accent},${accent}40)` }} />
+              return (
+                <div key={qi} className="flex flex-col gap-4">
 
-                  <div className="relative flex items-start gap-4">
-                    {/* Number badge */}
-                    <div className="size-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 mt-0.5"
-                      style={{ background: `${accent}20`, color: accent, fontFamily: "var(--font-space)" }}>
-                      {qi + 1}
+                  {/* ── Standalone passage card ── */}
+                  {showPassageCard && q.passage && (
+                    <div className="rounded-3xl overflow-hidden"
+                      style={{ background: "rgba(10,20,40,0.8)", border: "1px solid rgba(94,168,122,0.25)", boxShadow: "0 0 30px rgba(94,168,122,0.06)" }}>
+                      <div className="px-6 py-4 flex items-center justify-between border-b gap-2 flex-wrap"
+                        style={{ borderColor: "rgba(94,168,122,0.15)" }}>
+                        <div className="flex items-center gap-2.5">
+                          <div className="size-7 rounded-lg flex items-center justify-center"
+                            style={{ background: "rgba(74,222,128,0.2)", boxShadow: "0 0 14px rgba(74,222,128,0.25)" }}>
+                            <BookOpen className="size-3.5" style={{ color: "#4ade80" }} />
+                          </div>
+                          <span className="text-xs font-black tracking-wider"
+                            style={{ fontFamily: "var(--font-space)", color: "#4ade80", textShadow: "0 0 10px rgba(74,222,128,0.4)" }}>
+                            📖 TEKS BACAAN · 読解
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const pKey = `p-${qi}`;
+                            return (
+                              <button
+                                onClick={() => toggleFurigana(pKey, q.passage!)}
+                                disabled={furiganaLoading.has(pKey)}
+                                className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg font-bold transition-all disabled:opacity-50"
+                                style={{ background: showFurigana.has(pKey) ? "rgba(138,180,232,0.18)" : "rgba(138,180,232,0.08)", color: "#8ab4e8", fontFamily: "var(--font-space)" }}>
+                                {furiganaLoading.has(pKey) ? <Loader2 className="size-3 animate-spin" /> : "ふ"}
+                                {furiganaLoading.has(pKey) ? "MEMUAT…" : showFurigana.has(pKey) ? "FURIGANA ✓" : "FURIGANA"}
+                              </button>
+                            );
+                          })()}
+                          <button
+                            onClick={() => setExpandedPassages(s => { const n = new Set(s); n.has(qi) ? n.delete(qi) : n.add(qi); return n; })}
+                            className="text-[10px] px-2.5 py-1 rounded-lg font-bold transition-all"
+                            style={{ background: "rgba(94,168,122,0.1)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
+                            {isPassageCollapsed ? "TAMPILKAN ▼" : "SEMBUNYIKAN ▲"}
+                          </button>
+                        </div>
+                      </div>
+                      {!isPassageCollapsed && (() => {
+                        const pKey = `p-${qi}`;
+                        return (
+                          <div className="px-6 py-5 text-[17px] whitespace-pre-wrap font-medium"
+                            style={{ fontFamily: "var(--font-jakarta)", color: "#f0fdf4", lineHeight: showFurigana.has(pKey) ? 2.6 : 2 }}>
+                            {showFurigana.has(pKey) && furiganaMarked[pKey]
+                              ? renderPassage(furiganaMarked[pKey])
+                              : q.passage}
+                          </div>
+                        );
+                      })()}
                     </div>
+                  )}
 
-                    {/* Question text — blanks highlighted */}
-                    <p className="text-[17px] font-bold text-[#d7e2ff] leading-relaxed flex-1"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>
-                      {renderQuestion(q.question, accent)}
-                    </p>
+                  {/* ── Question card ── */}
+                  <div className="rounded-3xl overflow-hidden transition-all"
+                    style={{
+                      background: isRevealed ? `rgba(16,27,48,0.75)` : "rgba(16,27,48,0.55)",
+                      backdropFilter: "blur(16px)",
+                      WebkitBackdropFilter: "blur(16px)",
+                      border: `1px solid ${isRevealed ? `${accent}45` : "rgba(107,156,218,0.12)"}`,
+                      boxShadow: isRevealed ? `0 0 40px ${accent}20, 0 4px 24px rgba(0,0,0,0.3)` : "0 4px 16px rgba(0,0,0,0.2)",
+                    }}>
+
+                  {/* Question header strip */}
+                  <div className="px-6 py-5 relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-[0.08]"
+                      style={{ background: `radial-gradient(circle at top left,${accent},transparent 60%)` }} />
+                    <div className="absolute top-0 left-0 w-1 h-full rounded-l-3xl"
+                      style={{ background: `linear-gradient(180deg,${accent},${accent}40)` }} />
+
+                    <div className="relative flex items-start gap-4">
+                      {/* Number badge */}
+                      <div className="size-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 mt-0.5"
+                        style={{ background: `${accent}20`, color: accent, fontFamily: "var(--font-space)" }}>
+                        {qi + 1}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {q.category && (
+                            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold inline-block"
+                              style={{ background: `${accent}20`, color: accent, fontFamily: "var(--font-space)" }}>
+                              {q.category}
+                            </span>
+                          )}
+                          {(() => {
+                            const qKey = `q-${qi}`;
+                            return (
+                              <button
+                                onClick={() => toggleFurigana(qKey, q.question)}
+                                disabled={furiganaLoading.has(qKey)}
+                                className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all disabled:opacity-50"
+                                style={{ background: showFurigana.has(qKey) ? "rgba(138,180,232,0.22)" : "rgba(138,180,232,0.1)", color: "#8ab4e8", fontFamily: "var(--font-space)" }}>
+                                {furiganaLoading.has(qKey) ? <Loader2 className="size-2.5 animate-spin" /> : "ふ"}
+                                {furiganaLoading.has(qKey) ? "MEMUAT…" : showFurigana.has(qKey) ? "FURIGANA ✓" : "FURIGANA"}
+                              </button>
+                            );
+                          })()}
+                        </div>
+                        {/* Question text — blanks highlighted, with optional furigana */}
+                        {(() => {
+                          const qKey = `q-${qi}`;
+                          const useFuri = showFurigana.has(qKey) && furiganaMarked[qKey];
+                          return (
+                            <p className="font-bold"
+                              style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff", fontSize: useFuri ? "17px" : "18px", lineHeight: useFuri ? 2.4 : 1.6 }}>
+                              {useFuri ? renderPassage(furiganaMarked[qKey]) : renderQuestion(q.question, accent)}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    </div>
                   </div>
-                </div>
 
                 {/* Options */}
                 <div className="px-6 pb-5 flex flex-col gap-2.5">
@@ -1017,40 +1285,44 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                     const isSelected = userAns === id;
                     const isCorrect = id === q.correct;
 
-                    let bg = "rgba(187,198,226,0.03)";
-                    let border = "rgba(187,198,226,0.07)";
-                    let textColor = "#8a9bbf";
-                    let numBg = "#1f2a3f";
-                    let numColor = "#4a5a7a";
+                    let bg = "rgba(99,102,241,0.06)";
+                    let border = "rgba(129,140,248,0.18)";
+                    let textColor = "#e0e7ff";
+                    let numBg = "rgba(129,140,248,0.18)";
+                    let numColor = "#a5b4fc";
+                    let shadow = "none";
                     let icon = null as React.ReactNode;
 
                     if (isRevealed && isCorrect) {
-                      bg = "rgba(94,168,122,0.12)"; border = "rgba(94,168,122,0.35)";
-                      textColor = "#d7e2ff"; numBg = "rgba(94,168,122,0.25)"; numColor = "#5ea87a";
-                      icon = <Check className="size-4 text-[#5ea87a] shrink-0" />;
+                      bg = "rgba(74,222,128,0.18)"; border = "rgba(74,222,128,0.55)";
+                      textColor = "#f0fdf4"; numBg = "rgba(74,222,128,0.35)"; numColor = "#4ade80";
+                      shadow = "0 0 24px rgba(74,222,128,0.25), inset 0 0 16px rgba(74,222,128,0.05)";
+                      icon = <Check className="size-5 shrink-0" style={{ color: "#4ade80" }} />;
                     } else if (isRevealed && isSelected && !isCorrect) {
-                      bg = "rgba(220,80,80,0.08)"; border = "rgba(220,80,80,0.2)";
-                      textColor = "#dc8080"; numBg = "rgba(220,80,80,0.2)"; numColor = "#dc5050";
-                      icon = <X className="size-4 text-[#dc5050] shrink-0" />;
+                      bg = "rgba(248,113,113,0.15)"; border = "rgba(248,113,113,0.5)";
+                      textColor = "#fef2f2"; numBg = "rgba(248,113,113,0.3)"; numColor = "#f87171";
+                      shadow = "0 0 20px rgba(248,113,113,0.2)";
+                      icon = <X className="size-5 shrink-0" style={{ color: "#f87171" }} />;
                     } else if (isRevealed && !isCorrect) {
-                      bg = "rgba(187,198,226,0.02)"; border = "rgba(187,198,226,0.05)";
-                      textColor = "#4a5a7a";
+                      bg = "rgba(100,116,139,0.05)"; border = "rgba(100,116,139,0.15)";
+                      textColor = "#94a3b8";
                     } else if (!isRevealed && isSelected) {
-                      bg = `${accent}15`; border = `${accent}50`;
-                      textColor = "#d7e2ff"; numBg = `${accent}30`; numColor = accent;
+                      bg = `${accent}25`; border = `${accent}80`;
+                      textColor = "#ffffff"; numBg = `${accent}50`; numColor = "#ffffff";
+                      shadow = `0 0 24px ${accent}40, inset 0 0 12px ${accent}10`;
                     }
 
                     return (
                       <button key={opt}
                         onClick={() => pick(qi, id)}
                         disabled={isRevealed && !isReview}
-                        className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left transition-all duration-200 ${(isRevealed && !isReview) ? "cursor-default" : "hover:brightness-110 active:scale-[0.99]"}`}
-                        style={{ background: bg, border: `1px solid ${border}`, color: textColor }}>
-                        <span className="size-8 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
+                        className={`flex items-center gap-4 px-4 py-4 rounded-2xl text-left transition-all duration-200 ${(isRevealed && !isReview) ? "cursor-default" : "hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"}`}
+                        style={{ background: bg, border: `1.5px solid ${border}`, color: textColor, boxShadow: shadow }}>
+                        <span className="size-9 rounded-xl flex items-center justify-center text-base font-black shrink-0"
                           style={{ background: numBg, color: numColor, fontFamily: "var(--font-space)" }}>
                           {id}
                         </span>
-                        <span className="flex-1 text-[15px]"
+                        <span className="flex-1 text-[16px] font-semibold"
                           style={{ fontFamily: "var(--font-jakarta)" }}>
                           {opt.slice(2).trim()}
                         </span>
@@ -1064,21 +1336,24 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                 {!isRevealed && (
                   <div className="px-6 pb-6 flex flex-col gap-2">
                     {!userAns && (
-                      <p className="text-center text-[11px] text-[#4a5a7a]"
-                        style={{ fontFamily: "var(--font-space)" }}>
-                        Pilih jawaban dulu sebelum lihat pembahasan
+                      <p className="text-center text-[11px] font-semibold"
+                        style={{ fontFamily: "var(--font-space)", color: "#94a3b8" }}>
+                        💪 Pilih jawaban dulu sebelum lihat pembahasan
                       </p>
                     )}
                     <button
                       onClick={() => reveal(qi)}
-                      className="w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.99]"
+                      className="w-full py-3.5 rounded-2xl text-sm font-black tracking-wider transition-all hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"
                       style={{
-                        background: `linear-gradient(135deg,${accent}30,${accent}15)`,
-                        color: accent, border: `1px solid ${accent}40`,
+                        background: `linear-gradient(135deg,${accent}60,${accent}30)`,
+                        color: "#ffffff",
+                        border: `1.5px solid ${accent}90`,
+                        boxShadow: `0 0 28px ${accent}40, inset 0 1px 0 rgba(255,255,255,0.1)`,
                         fontFamily: "var(--font-space)",
+                        textShadow: `0 0 12px ${accent}90`,
                         cursor: "pointer",
                       }}>
-                      Lihat Jawaban & Pembahasan ↓
+                      🔥 LIHAT JAWABAN &amp; PEMBAHASAN ↓
                     </button>
                   </div>
                 )}
@@ -1090,44 +1365,48 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
                     {/* Jawaban benar */}
                     <div className="px-5 py-4 flex items-center gap-3"
-                      style={{ background: "rgba(94,168,122,0.1)", borderBottom: "1px solid rgba(94,168,122,0.15)" }}>
-                      <div className="size-8 rounded-xl flex items-center justify-center"
-                        style={{ background: "rgba(94,168,122,0.2)" }}>
-                        <Check className="size-4 text-[#5ea87a]" />
+                      style={{ background: "rgba(74,222,128,0.12)", borderBottom: "1px solid rgba(74,222,128,0.2)" }}>
+                      <div className="size-9 rounded-xl flex items-center justify-center"
+                        style={{ background: "rgba(74,222,128,0.25)", boxShadow: "0 0 16px rgba(74,222,128,0.3)" }}>
+                        <Check className="size-5" style={{ color: "#4ade80" }} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-[#5ea87a]" style={{ fontFamily: "var(--font-space)" }}>
-                          JAWABAN BENAR
+                        <p className="text-[10px] font-black tracking-widest"
+                          style={{ fontFamily: "var(--font-space)", color: "#4ade80", textShadow: "0 0 10px rgba(74,222,128,0.4)" }}>
+                          ✨ JAWABAN BENAR
                         </p>
-                        <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                        <p className="text-base font-bold" style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff" }}>
                           Pilihan {q.correct} — {q.options.find(o => o.startsWith(q.correct))?.slice(2).trim()}
                         </p>
                       </div>
                     </div>
 
                     {/* Kenapa benar */}
-                    <div className="px-5 py-4" style={{ background: "rgba(20,50,30,0.25)", borderBottom: "1px solid rgba(94,168,122,0.1)" }}>
-                      <p className="text-[11px] font-bold text-[#5ea87a] mb-2" style={{ fontFamily: "var(--font-space)" }}>
+                    <div className="px-5 py-4" style={{ background: "rgba(20,60,35,0.32)", borderBottom: "1px solid rgba(74,222,128,0.15)" }}>
+                      <p className="text-[11px] font-black mb-2 tracking-wider"
+                        style={{ fontFamily: "var(--font-space)", color: "#4ade80", textShadow: "0 0 12px rgba(74,222,128,0.4)" }}>
                         💡 KENAPA BENAR?
                       </p>
-                      <p className="text-sm text-[#8a9bbf] leading-relaxed">{q.explanation}</p>
+                      <p className="text-[15px] leading-relaxed font-medium" style={{ color: "#ecfdf5" }}>{q.explanation}</p>
                     </div>
 
                     {/* Kenapa salah */}
                     {q.why_wrong && (
-                      <div className="px-5 py-4" style={{ background: "rgba(50,20,20,0.25)", borderBottom: "1px solid rgba(192,80,80,0.1)" }}>
-                        <p className="text-[11px] font-bold text-[#dc5050] mb-2" style={{ fontFamily: "var(--font-space)" }}>
+                      <div className="px-5 py-4" style={{ background: "rgba(60,20,25,0.32)", borderBottom: "1px solid rgba(248,113,113,0.15)" }}>
+                        <p className="text-[11px] font-black mb-2 tracking-wider"
+                          style={{ fontFamily: "var(--font-space)", color: "#f87171", textShadow: "0 0 12px rgba(248,113,113,0.4)" }}>
                           ✗ KENAPA PILIHAN LAIN SALAH?
                         </p>
-                        <p className="text-sm text-[#8a9bbf] leading-relaxed">{q.why_wrong}</p>
+                        <p className="text-[15px] leading-relaxed font-medium" style={{ color: "#fef2f2" }}>{q.why_wrong}</p>
                       </div>
                     )}
 
                     {/* Grammar points */}
                     {q.grammar_points && q.grammar_points.length > 0 && (
-                      <div className="px-5 py-4" style={{ background: "rgba(20,35,60,0.35)", borderBottom: "1px solid rgba(107,156,218,0.12)" }}>
+                      <div className="px-5 py-4" style={{ background: "rgba(25,40,80,0.4)", borderBottom: "1px solid rgba(129,140,248,0.18)" }}>
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-[11px] font-bold text-[#6b9cda]" style={{ fontFamily: "var(--font-space)" }}>
+                          <p className="text-[11px] font-black tracking-wider"
+                            style={{ fontFamily: "var(--font-space)", color: "#a5b4fc", textShadow: "0 0 12px rgba(129,140,248,0.4)" }}>
                             📚 POIN GRAMMAR / KOSAKATA
                           </p>
                           <span className="text-[10px] text-[#2a354b]" style={{ fontFamily: "var(--font-space)" }}>
@@ -1142,8 +1421,13 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                             <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl group/chip"
                               style={{ background: isSavedWord ? "rgba(94,168,122,0.12)" : "#1f2a3f",
                                 border: isSavedWord ? "1px solid rgba(94,168,122,0.25)" : "1px solid transparent" }}>
-                              <span className="text-sm font-bold"
-                                style={{ fontFamily: "var(--font-jakarta)", color: isSavedWord ? "#5ea87a" : "#d7e2ff" }}>{gp.jp}</span>
+                              <div className="flex flex-col leading-tight">
+                                <span className="text-sm font-bold"
+                                  style={{ fontFamily: "var(--font-jakarta)", color: isSavedWord ? "#5ea87a" : "#d7e2ff" }}>{gp.jp}</span>
+                                {gp.reading && (
+                                  <span className="text-[10px] text-[#4a5a7a]">{gp.reading}</span>
+                                )}
+                              </div>
                               <span className="text-xs text-[#4a5a7a]">=</span>
                               <span className="text-xs text-[#8a9bbf]">{gp.id}</span>
                               <button
@@ -1166,23 +1450,42 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
 
                     {/* Tip */}
                     {q.tip && (
-                      <div className="px-5 py-4" style={{ background: "rgba(40,28,8,0.3)" }}>
-                        <p className="text-[11px] font-bold text-[#e0b45a] mb-2" style={{ fontFamily: "var(--font-space)" }}>
+                      <div className="px-5 py-4" style={{ background: "rgba(55,38,8,0.35)" }}>
+                        <p className="text-[11px] font-black mb-2 tracking-wider"
+                          style={{ fontFamily: "var(--font-space)", color: "#fbbf24", textShadow: "0 0 12px rgba(251,191,36,0.4)" }}>
                           🎯 TIPS & TRIK UJIAN
                         </p>
-                        <p className="text-sm text-[#8a9bbf] leading-relaxed">{q.tip}</p>
+                        <p className="text-[15px] leading-relaxed font-medium" style={{ color: "#fef3c7" }}>{q.tip}</p>
                       </div>
                     )}
+
+                    {/* ── Simpan ke Catatan ── */}
+                    <div className="px-5 py-3" style={{ borderTop: "1px solid rgba(107,156,218,0.06)" }}>
+                      <button
+                        onClick={() => saveNoteToCatatan(qi, q)}
+                        disabled={savedNotes.has(qi) || savingNote === qi}
+                        className="flex items-center gap-1.5 text-[11px] font-bold transition-all disabled:opacity-50 hover:brightness-110"
+                        style={savedNotes.has(qi)
+                          ? { color: "#5ea87a", fontFamily: "var(--font-space)" }
+                          : { color: "#a67bd4", fontFamily: "var(--font-space)" }}>
+                        {savingNote === qi
+                          ? <Loader2 className="size-3 animate-spin" />
+                          : savedNotes.has(qi) ? "✓" : "📝"}
+                        {savedNotes.has(qi) ? "TERSIMPAN DI CATATAN" : savingNote === qi ? "MENYIMPAN…" : "SIMPAN KE CATATAN"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
+              </div>
             );
-          })}
+          });
+        })()}
         </div>
 
         {/* ── Kosakata dari Foto ── */}
         {result.vocabulary && result.vocabulary.length > 0 && (
-          <div className="px-8 pb-10">
+          <div className="px-4 md:px-8 pb-8 md:pb-10">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-[10px] font-bold text-[#4a5a7a]"
                 style={{ fontFamily: "var(--font-space)" }}>KOSAKATA DARI FOTO</span>
@@ -1235,79 +1538,273 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
         <div className="h-8" />
       </div>
 
-      {/* ── Right: Chat Panel (desktop only) ── */}
+      {/* ── Right: Chat + Kamus Panel (desktop only) ── */}
       <div className="hidden lg:flex w-[320px] shrink-0 flex-col border-l"
         style={{ background: "rgba(8,16,36,0.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderColor: "rgba(107,156,218,0.12)" }}>
 
-        {/* Header */}
-        <div className="px-5 py-4 border-b shrink-0"
-          style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-[#6b9cda]" />
-            <p className="text-sm font-bold text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>Tanya Sensei</p>
-          </div>
-          <p className="text-[11px] text-[#4a5a7a] mt-0.5">
-            Ada yang kurang jelas? Tanya langsung.
-          </p>
+        {/* Tab switcher */}
+        <div className="flex border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+          <button onClick={() => setRightTab("chat")}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-[11px] font-bold transition-all"
+            style={rightTab === "chat"
+              ? { color: "#6b9cda", borderBottom: "2px solid #6b9cda", fontFamily: "var(--font-space)" }
+              : { color: "#4a5a7a", borderBottom: "2px solid transparent", fontFamily: "var(--font-space)" }}>
+            <MessageCircle className="size-3.5" /> SENSEI
+          </button>
+          <button onClick={() => setRightTab("kamus")}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-[11px] font-bold transition-all"
+            style={rightTab === "kamus"
+              ? { color: "#a67bd4", borderBottom: "2px solid #a67bd4", fontFamily: "var(--font-space)" }
+              : { color: "#4a5a7a", borderBottom: "2px solid transparent", fontFamily: "var(--font-space)" }}>
+            <BookOpen className="size-3.5" /> KAMUS
+          </button>
+          <button onClick={() => setRightTab("catatan")}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-[11px] font-bold transition-all"
+            style={rightTab === "catatan"
+              ? { color: "#5ea87a", borderBottom: "2px solid #5ea87a", fontFamily: "var(--font-space)" }
+              : { color: "#4a5a7a", borderBottom: "2px solid transparent", fontFamily: "var(--font-space)" }}>
+            <NotebookPen className="size-3.5" /> CATATAN
+          </button>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-          {chatMsgs.length === 0 && (
-            <div className="flex flex-col gap-2">
-              {[
-                "Kenapa jawaban ini benar?",
-                "Kasih contoh kalimat lain",
-                "Jelasin grammar-nya lebih detail",
-              ].map(s => (
-                <button key={s} onClick={() => { setChatInput(s); }}
-                  className="text-left px-3 py-2 rounded-xl text-xs text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5 transition-all"
-                  style={{ background: "#1f2a3f", fontFamily: "var(--font-manrope)" }}>
-                  {s}
+        {/* ── Tab: Chat ── */}
+        {rightTab === "chat" && (<>
+          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+            {chatMsgs.length === 0 && (
+              <div className="flex flex-col gap-2">
+                {[
+                  "Kenapa jawaban ini benar?",
+                  "Kasih contoh kalimat lain",
+                  "Jelasin grammar-nya lebih detail",
+                ].map(s => (
+                  <button key={s} onClick={() => { setChatInput(s); }}
+                    className="text-left px-3 py-2 rounded-xl text-xs text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5 transition-all"
+                    style={{ background: "#1f2a3f", fontFamily: "var(--font-manrope)" }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+            {chatMsgs.map((m, i) => (
+              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className="max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed"
+                  style={m.role === "user"
+                    ? { background: "linear-gradient(135deg,#2f4865,#1a2a3f)", color: "#d7e2ff", fontFamily: "var(--font-manrope)" }
+                    : { background: "#1f2a3f", color: "#8a9bbf", fontFamily: "var(--font-manrope)" }}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="px-3 py-2 rounded-xl" style={{ background: "#1f2a3f" }}>
+                  <Loader2 className="size-3 text-[#4a5a7a] animate-spin" />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="px-4 py-3 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "#1f2a3f" }}>
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
+                placeholder="Tanya tentang soal ini..."
+                className="flex-1 text-xs text-[#d7e2ff] placeholder-[#2a354b] bg-transparent outline-none"
+                style={{ fontFamily: "var(--font-manrope)" }}
+              />
+              <button onClick={sendChat} disabled={!chatInput.trim() || chatLoading}
+                className="size-6 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 hover:brightness-125"
+                style={{ background: "linear-gradient(135deg,#2f4865,#4a7abf)" }}>
+                <Send className="size-3 text-white" />
+              </button>
+            </div>
+          </div>
+        </>)}
+
+        {/* ── Tab: Kamus ── */}
+        {rightTab === "kamus" && (
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Search */}
+            <div className="px-3 py-3 border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "#1f2a3f" }}>
+                <Search className="size-3.5 text-[#4a5a7a] shrink-0" />
+                <input
+                  value={kamusQuery}
+                  onChange={e => setKamusQuery(e.target.value)}
+                  placeholder="Cari kata..."
+                  className="flex-1 text-xs text-[#d7e2ff] placeholder-[#2a354b] bg-transparent outline-none"
+                  style={{ fontFamily: "var(--font-manrope)" }}
+                />
+                {kamusQuery && <button onClick={() => setKamusQuery("")}><X className="size-3 text-[#4a5a7a]" /></button>}
+              </div>
+            </div>
+
+            {/* Add word form */}
+            <div className="px-3 py-3 border-b shrink-0 flex flex-col gap-2" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+              <div className="flex gap-1.5">
+                <input
+                  value={addKanji}
+                  onChange={e => setAddKanji(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && generateWordInfo()}
+                  placeholder="Ketik kata/kanji..."
+                  className="flex-1 px-3 py-2 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none"
+                  style={{ background: "#1f2a3f", fontFamily: "var(--font-jakarta)" }}
+                />
+                <button onClick={generateWordInfo} disabled={!addKanji.trim() || generating}
+                  className="px-3 py-2 rounded-xl text-[10px] font-bold transition-all disabled:opacity-40 flex items-center gap-1 shrink-0"
+                  style={{ background: "rgba(166,123,212,0.2)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
+                  {generating ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                  {generating ? "" : "AUTO"}
                 </button>
+              </div>
+              {(addReading || addMeaning) && (
+                <div className="flex flex-col gap-1.5">
+                  <input
+                    value={addReading}
+                    onChange={e => setAddReading(e.target.value)}
+                    placeholder="Cara baca (hiragana)"
+                    className="w-full px-3 py-1.5 rounded-lg text-xs text-[#a67bd4] placeholder-[#2a354b] outline-none"
+                    style={{ background: "rgba(166,123,212,0.08)", fontFamily: "var(--font-jakarta)" }}
+                  />
+                  <input
+                    value={addMeaning}
+                    onChange={e => setAddMeaning(e.target.value)}
+                    placeholder="Arti"
+                    className="w-full px-3 py-1.5 rounded-lg text-xs text-[#d7e2ff] placeholder-[#2a354b] outline-none"
+                    style={{ background: "#1f2a3f", fontFamily: "var(--font-manrope)" }}
+                  />
+                  <button onClick={saveNewWord} disabled={!addMeaning.trim() || savingNew}
+                    className="w-full py-2 rounded-xl text-[10px] font-bold transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                    style={{ background: "rgba(94,168,122,0.2)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
+                    {savingNew ? <Loader2 className="size-3 animate-spin" /> : <BookmarkPlus className="size-3" />}
+                    SIMPAN KE KAMUS
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Word list */}
+            <div className="flex-1 overflow-y-auto">
+              {!kamusLoaded ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="size-4 text-[#4a5a7a] animate-spin" />
+                </div>
+              ) : kamusWords.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2 px-4 text-center">
+                  <BookOpen className="size-7 text-[#2a354b]" />
+                  <p className="text-xs text-[#4a5a7a]">Kamus kosong. Simpan kata dari soal dulu.</p>
+                </div>
+              ) : (
+                kamusWords
+                  .filter(w => {
+                    const q = kamusQuery.toLowerCase();
+                    return !q || w.kanji.includes(kamusQuery) || (w.reading ?? "").includes(kamusQuery) || w.meaning.toLowerCase().includes(q);
+                  })
+                  .map(w => (
+                    <div key={w.id} className="px-4 py-3 border-b hover:bg-white/[0.02] transition-colors"
+                      style={{ borderColor: "rgba(255,255,255,0.03)" }}>
+                      <div className="flex items-baseline gap-2 mb-0.5">
+                        <span className="text-sm font-bold text-[#d7e2ff]"
+                          style={{ fontFamily: "var(--font-jakarta)" }}>{w.kanji}</span>
+                        {w.reading && (
+                          <span className="text-[10px] text-[#a67bd4]">{w.reading}</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#4a5a7a] leading-snug">{w.meaning.split(";")[0]}</p>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab: Catatan ── */}
+        {rightTab === "catatan" && (
+          <div className="flex-1 flex flex-col min-h-0">
+
+            {/* Header + tombol + */}
+            <div className="px-3 py-2.5 border-b flex items-center justify-between shrink-0"
+              style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+              <span className="text-[10px] font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                {catatanList.length} catatan
+              </span>
+              <button onClick={() => { setNewNoteOpen(o => !o); setNewNoteText(""); }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
+                style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
+                <Plus className="size-3" /> BARU
+              </button>
+            </div>
+
+            {/* Form tambah catatan */}
+            {newNoteOpen && (
+              <div className="px-3 py-3 border-b flex flex-col gap-2 shrink-0"
+                style={{ borderColor: "rgba(255,255,255,0.04)", background: "rgba(94,168,122,0.04)" }}>
+                <textarea
+                  autoFocus
+                  value={newNoteText}
+                  onChange={e => setNewNoteText(e.target.value)}
+                  placeholder="Tulis catatanmu..."
+                  rows={4}
+                  className="w-full px-3 py-2 rounded-xl text-xs text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-none leading-relaxed"
+                  style={{ background: "#101b30", border: "1px solid rgba(94,168,122,0.2)", fontFamily: "var(--font-manrope)" }}
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => { setNewNoteOpen(false); setNewNoteText(""); }}
+                    className="flex-1 py-1.5 rounded-lg text-[10px] font-bold"
+                    style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+                    BATAL
+                  </button>
+                  <button onClick={addNewNote} disabled={!newNoteText.trim() || savingNewNote}
+                    className="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all disabled:opacity-40 flex items-center justify-center gap-1"
+                    style={{ background: "rgba(94,168,122,0.2)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
+                    {savingNewNote ? <Loader2 className="size-3 animate-spin" /> : null}
+                    SIMPAN
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto">
+              {!catatanLoaded ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="size-4 text-[#4a5a7a] animate-spin" />
+                </div>
+              ) : catatanList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2 px-4 text-center">
+                  <NotebookPen className="size-7 text-[#2a354b]" />
+                  <p className="text-xs text-[#4a5a7a]">Belum ada catatan. Klik "Simpan ke Catatan" di tiap soal.</p>
+                </div>
+              ) : catatanList.map(c => (
+                <div key={c.id} className="border-b" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
+                  <button
+                    onClick={() => setExpandedNote(expandedNote === c.id ? null : c.id)}
+                    className="w-full px-4 py-3 text-left flex items-start gap-2.5 hover:bg-white/[0.02] transition-colors">
+                    <NotebookPen className="size-3.5 text-[#5ea87a] shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-[#d7e2ff] truncate" style={{ fontFamily: "var(--font-jakarta)" }}>{c.judul || "Catatan"}</p>
+                      <p className="text-[10px] text-[#4a5a7a] mt-0.5">
+                        {new Date(c.updated_at).toLocaleDateString("id-ID", { day:"numeric", month:"short" })}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-[#4a5a7a] shrink-0">{expandedNote === c.id ? "▲" : "▼"}</span>
+                  </button>
+                  {expandedNote === c.id && (
+                    <div className="px-4 pb-3">
+                      <p className="text-xs text-[#8a9bbf] leading-relaxed whitespace-pre-wrap"
+                        style={{ fontFamily: "var(--font-manrope)" }}>{c.isi}</p>
+                      <a href="/catatan"
+                        className="mt-2 inline-block text-[10px] text-[#5ea87a] hover:underline"
+                        style={{ fontFamily: "var(--font-space)" }}>
+                        Buka di Catatan →
+                      </a>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
-          )}
-          {chatMsgs.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className="max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed"
-                style={m.role === "user"
-                  ? { background: "linear-gradient(135deg,#2f4865,#1a2a3f)", color: "#d7e2ff", fontFamily: "var(--font-manrope)" }
-                  : { background: "#1f2a3f", color: "#8a9bbf", fontFamily: "var(--font-manrope)" }}>
-                {m.text}
-              </div>
-            </div>
-          ))}
-          {chatLoading && (
-            <div className="flex justify-start">
-              <div className="px-3 py-2 rounded-xl" style={{ background: "#1f2a3f" }}>
-                <Loader2 className="size-3 text-[#4a5a7a] animate-spin" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input */}
-        <div className="px-4 py-3 border-t shrink-0"
-          style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-            style={{ background: "#1f2a3f" }}>
-            <input
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
-              placeholder="Tanya tentang soal ini..."
-              className="flex-1 text-xs text-[#d7e2ff] placeholder-[#2a354b] bg-transparent outline-none"
-              style={{ fontFamily: "var(--font-manrope)" }}
-            />
-            <button onClick={sendChat} disabled={!chatInput.trim() || chatLoading}
-              className="size-6 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 hover:brightness-125"
-              style={{ background: "linear-gradient(135deg,#2f4865,#4a7abf)" }}>
-              <Send className="size-3 text-white" />
-            </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -1456,12 +1953,58 @@ export default function AnalisisFoto() {
   const [loadingSession,      setLoadingSession]      = useState(false);
   const [isReviewMode,        setIsReviewMode]        = useState(false);
   const [currentAnalyzingIdx, setCurrentAnalyzingIdx] = useState(0);
+  const abortRef       = useRef<AbortController | null>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const camInputRef    = useRef<HTMLInputElement>(null);
   const [camModalOpen, setCamModalOpen] = useState(false);
 
+  /* Split text at paragraph boundaries, max ~4000 chars per chunk */
+  const chunkDocxText = (text: string, maxChars = 4000): string[] => {
+    const paragraphs = text.split(/\n\s*\n/);
+    const chunks: string[] = [];
+    let current = "";
+    for (const para of paragraphs) {
+      if (current.length + para.length > maxChars && current) {
+        chunks.push(current.trim());
+        current = para;
+      } else {
+        current += (current ? "\n\n" : "") + para;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks.filter(c => c.length > 50);
+  };
+
   /* Shared: process a File object into FileData and add to state */
   const processFile = (file: File) => {
+    const isDocx = file.name.toLowerCase().endsWith(".docx") ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    if (isDocx) {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const mammoth = (await import("mammoth")).default;
+        const result  = await mammoth.extractRawText({ arrayBuffer: reader.result as ArrayBuffer });
+        const chunks  = chunkDocxText(result.value);
+        const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        const newFiles: FileData[] = chunks.map((chunk, i) => ({
+          base64: "",
+          mimeType: DOCX_MIME,
+          name: chunks.length > 1 ? `${file.name} — bagian ${i + 1}/${chunks.length}` : file.name,
+          url: "",
+          textContent: chunk,
+        }));
+        if (stage === "setup") {
+          setFiles(prev => [...prev, ...newFiles]);
+        } else {
+          setFiles(newFiles);
+          setStage("setup");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
@@ -1536,8 +2079,17 @@ export default function AnalisisFoto() {
     e.target.value = "";
   };
 
+  const handleCancel = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStage("upload");
+    setApiError(null);
+  };
+
   const handleStart = async (level: Level, category: Category) => {
     if (files.length === 0) return;
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setStage("analyzing");
     setApiError(null);
     setCurrentAnalyzingIdx(1);
@@ -1553,7 +2105,8 @@ export default function AnalisisFoto() {
         const res = await fetch("/api/analisis", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: fd.base64, mimeType: fd.mimeType, level, category }),
+          body: JSON.stringify({ imageBase64: fd.base64, mimeType: fd.mimeType, level, category, textContent: fd.textContent }),
+          signal: ctrl.signal,
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Analisis gagal");
@@ -1628,8 +2181,11 @@ export default function AnalisisFoto() {
         // saving failed silently
       }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return; // user cancelled
       setApiError(err instanceof Error ? err.message : "Terjadi kesalahan");
       setStage("upload");
+    } finally {
+      abortRef.current = null;
     }
   };
 
@@ -1777,7 +2333,7 @@ export default function AnalisisFoto() {
       </header>
 
       {/* Hidden file inputs */}
-      <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileChange} />
+      <input ref={fileInputRef} type="file" accept="image/*,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleFileChange} />
       <input ref={camInputRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
 
       {/* Desktop camera modal */}
@@ -1822,6 +2378,7 @@ export default function AnalisisFoto() {
             imageUrl={files[currentAnalyzingIdx - 1]?.url}
             currentIdx={currentAnalyzingIdx}
             total={files.length}
+            onCancel={handleCancel}
           />
         )}
         {!loadingSession && stage === "result" && result && (

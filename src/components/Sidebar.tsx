@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   House, History, Camera, BookOpen, BarChart2,
-  Settings, LogOut, Zap, ArrowUpRight, Flame, ClipboardList,
+  Settings, LogOut, Zap, ArrowUpRight, Flame, ClipboardList, NotebookPen,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -25,6 +25,7 @@ const navItems = [
   { icon: Camera,        label: "Analisis Foto",   href: "/analisis-foto"  },
   { icon: ClipboardList, label: "Lembar Tugas",    href: "/lembar-tugas"   },
   { icon: BookOpen,      label: "Kamus",           href: "/kamus"          },
+  { icon: NotebookPen,   label: "Catatan",          href: "/catatan"        },
   { icon: BarChart2,     label: "Statistik",       href: "/statistik"      },
 ];
 

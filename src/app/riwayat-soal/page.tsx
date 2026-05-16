@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar, BottomNav } from "@/components/Sidebar";
 import {
   Search, Trash2, Clock, BookMarked,
   SlidersHorizontal, Loader2, RefreshCw,
@@ -39,12 +39,25 @@ function relativeTime(iso: string): string {
 }
 
 const categoryMeta: Record<string, { kanji: string; accent: string; from: string; to: string }> = {
-  "文法": { kanji: "文", accent: "#4a7abf", from: "#0d2a50", to: "#071327" },
-  "語彙": { kanji: "語", accent: "#8b5abf", from: "#1e0f3a", to: "#071327" },
-  "文字": { kanji: "字", accent: "#3a9a7a", from: "#0a2a1e", to: "#071327" },
-  "読解": { kanji: "読", accent: "#c0844a", from: "#2e1a06", to: "#071327" },
-  "AI":   { kanji: "全", accent: "#4a9abf", from: "#072030", to: "#071327" },
+  "文法": { kanji: "文", accent: "#60a5fa", from: "#1e3a8a", to: "#0c1942" },
+  "語彙": { kanji: "語", accent: "#c084fc", from: "#581c87", to: "#1e0f3a" },
+  "文字": { kanji: "字", accent: "#4ade80", from: "#14532d", to: "#0a2a1e" },
+  "読解": { kanji: "読", accent: "#fb923c", from: "#7c2d12", to: "#2e1a06" },
+  "AI":   { kanji: "全", accent: "#22d3ee", from: "#155e75", to: "#062030" },
 };
+
+/* Vibrant gradient palettes — rotate per card index so cards never look identical,
+   even when several sessions share the same category. */
+const cardPalettes: { from: string; to: string; glow: string }[] = [
+  { from: "#1e3a8a", to: "#3b0764", glow: "#60a5fa" }, // blue → purple
+  { from: "#581c87", to: "#831843", glow: "#e879f9" }, // purple → pink
+  { from: "#14532d", to: "#155e75", glow: "#34d399" }, // green → teal
+  { from: "#7c2d12", to: "#831843", glow: "#fb923c" }, // orange → pink
+  { from: "#155e75", to: "#1e3a8a", glow: "#22d3ee" }, // cyan → blue
+  { from: "#831843", to: "#7c2d12", glow: "#f472b6" }, // pink → orange
+  { from: "#3b0764", to: "#14532d", glow: "#a78bfa" }, // deep purple → green
+  { from: "#7c2d12", to: "#1e3a8a", glow: "#fbbf24" }, // orange → blue
+];
 
 const levelColors: Record<Level, { bg: string; text: string; border: string }> = {
   N1: { bg: "rgba(139,90,191,0.15)",  text: "#b07ad4", border: "rgba(139,90,191,0.3)" },
@@ -147,7 +160,7 @@ export default function RiwayatSoal() {
         <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
 
           {/* Page header */}
-          <div className="px-8 pt-7 pb-5 border-b shrink-0"
+          <div className="px-4 md:px-8 pt-5 md:pt-7 pb-4 md:pb-5 border-b shrink-0"
             style={{ borderColor: "rgba(255,255,255,0.04)" }}>
             <div className="flex items-start justify-between mb-5">
               <div>
@@ -178,8 +191,8 @@ export default function RiwayatSoal() {
             </div>
 
             {/* Search + filter */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 max-w-sm">
+            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+              <div className="relative w-full md:flex-1 md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#4a5a7a]" />
                 <input
                   value={query}
@@ -190,14 +203,14 @@ export default function RiwayatSoal() {
                 />
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 md:gap-1.5 overflow-x-auto -mx-1 px-1 scrollbar-none">
                 {filters.map(f => {
                   const active = activeFilter === f;
                   const lc = f !== "ALL" ? levelColors[f as Level] : null;
                   return (
                     <button key={f}
                       onClick={() => setActiveFilter(f)}
-                      className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+                      className="px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0"
                       style={active && lc ? {
                         background: lc.bg, color: lc.text,
                         border: `1px solid ${lc.border}`,
@@ -217,7 +230,7 @@ export default function RiwayatSoal() {
                 })}
               </div>
 
-              <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-[#4a5a7a] hover:text-[#8a9bbf] hover:bg-white/5 transition-colors ml-auto"
+              <button className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-[#4a5a7a] hover:text-[#8a9bbf] hover:bg-white/5 transition-colors ml-auto"
                 style={{ fontFamily: "var(--font-space)" }}>
                 <SlidersHorizontal className="size-3.5" /> FILTER
               </button>
@@ -225,7 +238,7 @@ export default function RiwayatSoal() {
           </div>
 
           {/* Grid area */}
-          <div className="flex-1 overflow-y-auto px-8 py-6">
+          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5 md:py-6 pb-20 lg:pb-6">
 
             {/* Loading */}
             {loading && (
@@ -279,10 +292,11 @@ export default function RiwayatSoal() {
             {/* Cards */}
             {!loading && !fetchError && filtered.length > 0 && (
               <>
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  {filtered.map((s) => {
-                    const meta   = categoryMeta[s.category] ?? categoryMeta["AI"];
-                    const lc     = levelColors[s.level] ?? levelColors.N3;
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                  {filtered.map((s, idx) => {
+                    const meta    = categoryMeta[s.category] ?? categoryMeta["AI"];
+                    const palette = cardPalettes[idx % cardPalettes.length];
+                    const lc      = levelColors[s.level] ?? levelColors.N3;
                     const pct    = s.score !== null && s.total > 0
                       ? Math.round((s.score / s.total) * 100)
                       : null;
@@ -298,16 +312,21 @@ export default function RiwayatSoal() {
 
                     return (
                       <div key={s.id}
-                        className="group relative flex flex-col rounded-2xl overflow-hidden transition-all hover:scale-[1.02] hover:shadow-xl cursor-pointer"
-                        style={{ background: "#101b30", boxShadow: "0 0 0 1px rgba(255,255,255,0.03)" }}>
+                        className="group relative flex flex-col rounded-2xl overflow-hidden transition-all hover:scale-[1.03] hover:-translate-y-0.5 cursor-pointer"
+                        style={{
+                          background: "#101b30",
+                          boxShadow: `0 0 0 1px ${palette.glow}25, 0 8px 28px ${palette.glow}10`,
+                        }}>
 
                         {/* Thumbnail */}
                         <a href={`/analisis-foto?session=${s.id}`}
                           className="h-32 relative overflow-hidden block"
-                          style={{ background: `linear-gradient(145deg,${meta.from},${meta.to})` }}>
+                          style={{ background: `linear-gradient(135deg, ${palette.from} 0%, ${palette.to} 100%)` }}>
 
                           <div className="absolute inset-0"
-                            style={{ background: `radial-gradient(ellipse at 25% 30%,${meta.accent}22,transparent 65%)` }} />
+                            style={{ background: `radial-gradient(ellipse at 25% 30%, ${palette.glow}40, transparent 60%)` }} />
+                          <div className="absolute inset-0"
+                            style={{ background: `radial-gradient(ellipse at 80% 90%, ${palette.glow}25, transparent 55%)` }} />
 
                           {/* fake text lines */}
                           <div className="absolute left-3 top-10 flex flex-col gap-1.5 w-[55%]">
@@ -324,7 +343,7 @@ export default function RiwayatSoal() {
                           )}
 
                           <span className="absolute -bottom-2 right-1 text-[72px] font-black leading-none select-none"
-                            style={{ color: `${meta.accent}18`, fontFamily: "var(--font-jakarta)" }}>
+                            style={{ color: `${palette.glow}30`, fontFamily: "var(--font-jakarta)", textShadow: `0 0 24px ${palette.glow}30` }}>
                             {meta.kanji}
                           </span>
 
@@ -407,6 +426,7 @@ export default function RiwayatSoal() {
           </div>
         </main>
       </div>
+      <BottomNav activeHref="/riwayat-soal" />
     </div>
   );
 }
