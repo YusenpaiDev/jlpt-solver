@@ -147,10 +147,12 @@ export default function Kamus() {
   const [flashIdx,     setFlashIdx]    = useState(0);
   const [flipped,      setFlipped]     = useState(false);
   const [flashOrder,   setFlashOrder]  = useState<number[]>([]);
+  const [flashDragX,   setFlashDragX]  = useState(0);
   const [form,         setForm]        = useState({ kanji:"", reading:"", meaning:"", example:"", level:"" });
   const [formImage,    setFormImage]   = useState<File | null>(null);
   const [imagePreview, setImagePreview]= useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const flashSwipe    = useRef({ x: 0, dx: 0, swiped: false });
 
   /* ── Load from Supabase ── */
   useEffect(() => {
@@ -384,8 +386,8 @@ export default function Kamus() {
         {/* ── Split: list + detail ── */}
         <div className="flex flex-1 min-h-0">
 
-          {/* ── Left: search + list ── (full width on mobile when nothing selected) */}
-          <div className={`w-full md:w-[340px] shrink-0 flex flex-col md:border-r ${(selected && !flashMode) ? "hidden md:flex" : "flex"}`}
+          {/* ── Left: search + list ── (full width on mobile when nothing selected & not in flash mode) */}
+          <div className={`w-full md:w-[340px] shrink-0 flex flex-col md:border-r ${(selected || flashMode) ? "hidden md:flex" : "flex"}`}
             style={{ background: "#0a1525", borderColor: "rgba(255,255,255,0.03)" }}>
 
             {/* Search + filters */}
@@ -563,16 +565,46 @@ export default function Kamus() {
                   const len = flashWord.kanji.length;
                   const frontSize = len <= 2 ? "6rem" : len <= 4 ? "4.5rem" : len <= 7 ? "3rem" : "2rem";
                   const backSize  = len <= 2 ? "4rem"  : len <= 4 ? "3rem"   : len <= 7 ? "2.2rem" : "1.6rem";
+                  const SWIPE_THRESHOLD = 60;
                   return (
                     <div className="w-full" style={{ perspective: "1200px" }}>
                       <div
-                        onClick={() => setFlipped(f => !f)}
-                        className="relative w-full cursor-pointer"
+                        onClick={() => {
+                          // Skip click if it was actually a swipe
+                          if (flashSwipe.current.swiped) { flashSwipe.current.swiped = false; return; }
+                          setFlipped(f => !f);
+                        }}
+                        onTouchStart={(e) => {
+                          flashSwipe.current.x = e.touches[0].clientX;
+                          flashSwipe.current.dx = 0;
+                          flashSwipe.current.swiped = false;
+                        }}
+                        onTouchMove={(e) => {
+                          flashSwipe.current.dx = e.touches[0].clientX - flashSwipe.current.x;
+                          setFlashDragX(flashSwipe.current.dx);
+                        }}
+                        onTouchEnd={() => {
+                          const dx = flashSwipe.current.dx;
+                          if (Math.abs(dx) > SWIPE_THRESHOLD) {
+                            flashSwipe.current.swiped = true;
+                            if (dx < 0) {
+                              setFlashIdx(i => Math.min(flashOrder.length - 1, i + 1));
+                            } else {
+                              setFlashIdx(i => Math.max(0, i - 1));
+                            }
+                            setFlipped(false);
+                          }
+                          setFlashDragX(0);
+                        }}
+                        className="relative w-full cursor-pointer touch-pan-y select-none"
                         style={{
                           height: "clamp(360px, 45vh, 480px)",
                           transformStyle: "preserve-3d",
-                          transition: "transform 0.55s cubic-bezier(0.4,0.2,0.2,1)",
-                          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                          transition: flashDragX === 0
+                            ? "transform 0.55s cubic-bezier(0.4,0.2,0.2,1)"
+                            : "none",
+                          transform: `translateX(${flashDragX}px) rotateY(${flipped ? 180 : 0}deg)`,
+                          opacity: 1 - Math.min(0.4, Math.abs(flashDragX) / 400),
                         }}>
 
                         {/* Front — kanji only */}
