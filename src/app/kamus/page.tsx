@@ -445,9 +445,15 @@ export default function Kamus() {
                   </button>
                 )}
                 <button onClick={enterFlash} disabled={filtered.length === 0}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-40"
-                  style={{ background: "rgba(74,122,191,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                  <Layers className="size-3" /> FLASH
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all hover:brightness-110 disabled:opacity-40 active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                    color: "#ffffff",
+                    boxShadow: "0 0 16px rgba(168,85,247,0.5), 0 2px 8px rgba(99,102,241,0.4)",
+                    fontFamily: "var(--font-space)",
+                    textShadow: "0 0 8px rgba(255,255,255,0.5)",
+                  }}>
+                  <Layers className="size-3.5" /> FLASH
                 </button>
                 <button onClick={() => { setAddOpen(true); setAddError(null); }}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
@@ -970,6 +976,21 @@ export default function Kamus() {
           </div>
         </div>
       </div>
+
+      {/* Floating FLASH button (mobile only) — gampang ke-spot, ngambang di atas BottomNav */}
+      {!flashMode && !selected && !addOpen && filtered.length > 0 && (
+        <button onClick={enterFlash}
+          className="md:hidden fixed bottom-20 right-5 z-30 flex items-center gap-2 px-5 py-3.5 rounded-full font-black text-sm transition-all hover:brightness-110 active:scale-95"
+          style={{
+            background: "linear-gradient(135deg, #6366f1, #a855f7)",
+            color: "#ffffff",
+            boxShadow: "0 0 32px rgba(168,85,247,0.6), 0 8px 20px rgba(99,102,241,0.45), inset 0 1px 0 rgba(255,255,255,0.2)",
+            fontFamily: "var(--font-space)",
+            textShadow: "0 0 8px rgba(255,255,255,0.5)",
+          }}>
+          <Layers className="size-4" /> FLASH MODE
+        </button>
+      )}
 
       <BottomNav activeHref="/kamus" />
 
