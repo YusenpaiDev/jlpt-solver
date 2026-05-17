@@ -172,7 +172,9 @@ export default function Kamus() {
         const data = (d1 ?? []).map(w => ({ ...w, example: null, image_url: null })) as SavedWord[];
         const ws = (data ?? []) as SavedWord[];
         setWords(ws);
-        if (ws.length > 0) setSelected(ws[0].id);
+        if (ws.length > 0 && typeof window !== "undefined" && window.innerWidth >= 768) {
+          setSelected(ws[0].id);
+        }
       } finally {
         setLoading(false);
       }
