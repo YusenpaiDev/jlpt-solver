@@ -7,7 +7,7 @@ import {
   Search, BookOpen, Zap,
   X, Brain, RotateCcw, CheckCircle2, XCircle,
   Trash2, Loader2, Plus, BookmarkPlus, Filter, Sparkles, Pencil, Save,
-  ChevronLeft, ChevronRight, Shuffle, Layers,
+  ChevronLeft, ChevronRight, Shuffle, Layers, FolderOpen,
 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 
@@ -31,6 +31,7 @@ const ACCENTS = [
 const accentFor = (idx: number) => ACCENTS[idx % ACCENTS.length];
 
 const LEVEL_FILTERS = ["ALL","N1","N2","N3","N4","N5"];
+const ALBUM_SIZE = 50;
 
 /* ─── QuizCepat ─────────────────────────────────────────────── */
 function QuizCepat({ word, allWords }: { word: SavedWord; allWords: SavedWord[] }) {
@@ -148,6 +149,8 @@ export default function Kamus() {
   const [flipped,      setFlipped]     = useState(false);
   const [flashOrder,   setFlashOrder]  = useState<number[]>([]);
   const [flashDragX,   setFlashDragX]  = useState(0);
+  const [albumPickerOpen, setAlbumPickerOpen] = useState(false);
+  const [activeAlbum,  setActiveAlbum] = useState<{ idx: number; total: number } | null>(null);
   const [form,         setForm]        = useState({ kanji:"", reading:"", meaning:"", example:"", level:"" });
   const [formImage,    setFormImage]   = useState<File | null>(null);
   const [imagePreview, setImagePreview]= useState<string | null>(null);
@@ -353,13 +356,39 @@ export default function Kamus() {
   };
 
   /* ── Flash card ── */
+  const albumCount = Math.max(1, Math.ceil(filtered.length / ALBUM_SIZE));
+
   const enterFlash = () => {
     if (filtered.length === 0) return;
-    setFlashOrder(filtered.map((_, i) => i));
+    if (filtered.length <= ALBUM_SIZE) {
+      startAlbum(0);
+    } else {
+      setAlbumPickerOpen(true);
+    }
+  };
+
+  const startAlbum = (albumIdx: number) => {
+    const start = albumIdx * ALBUM_SIZE;
+    const end   = Math.min(start + ALBUM_SIZE, filtered.length);
+    const order: number[] = [];
+    for (let i = start; i < end; i++) order.push(i);
+    setFlashOrder(order);
+    setActiveAlbum({ idx: albumIdx, total: albumCount });
     setFlashIdx(0);
     setFlipped(false);
     setFlashMode(true);
     setEditMode(false);
+    setAlbumPickerOpen(false);
+  };
+
+  const startAll = () => {
+    setFlashOrder(filtered.map((_, i) => i));
+    setActiveAlbum(null);
+    setFlashIdx(0);
+    setFlipped(false);
+    setFlashMode(true);
+    setEditMode(false);
+    setAlbumPickerOpen(false);
   };
 
   const shuffleFlash = () => {
@@ -550,9 +579,19 @@ export default function Kamus() {
 
                 {/* Top bar */}
                 <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                    {flashIdx + 1} / {flashOrder.length}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                      {flashIdx + 1} / {flashOrder.length}
+                    </span>
+                    {activeAlbum && (
+                      <button onClick={() => { setFlashMode(false); setAlbumPickerOpen(true); }}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all hover:brightness-110"
+                        style={{ background: `${flashAccent}20`, color: flashAccent, fontFamily: "var(--font-space)" }}
+                        title="Ganti album">
+                        <FolderOpen className="size-3" /> ALBUM {activeAlbum.idx + 1}/{activeAlbum.total}
+                      </button>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <button onClick={shuffleFlash}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
@@ -993,6 +1032,88 @@ export default function Kamus() {
       )}
 
       <BottomNav activeHref="/kamus" />
+
+      {/* ── Modal Pilih Album ── */}
+      {albumPickerOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setAlbumPickerOpen(false)} />
+          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <div className="w-full max-w-md rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[85vh] flex flex-col"
+              style={{ background: "rgba(8,16,36,0.92)", border: "1px solid rgba(255,255,255,0.07)" }}>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
+                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="size-9 rounded-xl flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.25))" }}>
+                    <FolderOpen className="size-4 text-[#a855f7]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>Pilih Album</p>
+                    <p className="text-[10px] text-[#4a5a7a]">{filtered.length} kata · {ALBUM_SIZE} per album</p>
+                  </div>
+                </div>
+                <button onClick={() => setAlbumPickerOpen(false)}
+                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors">
+                  <X className="size-4 text-[#4a5a7a]" />
+                </button>
+              </div>
+
+              {/* Album list */}
+              <div className="overflow-y-auto px-4 py-4 flex flex-col gap-2">
+                {Array.from({ length: albumCount }, (_, i) => {
+                  const start = i * ALBUM_SIZE;
+                  const end   = Math.min(start + ALBUM_SIZE, filtered.length);
+                  const count = end - start;
+                  const ac    = accentFor(i);
+                  return (
+                    <button key={i} onClick={() => startAlbum(i)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:brightness-110 active:scale-[0.98] text-left"
+                      style={{ background: "#101b30", border: `1px solid ${ac}25` }}>
+                      <div className="size-11 rounded-xl flex items-center justify-center shrink-0 font-black text-lg"
+                        style={{ background: `${ac}20`, color: ac, fontFamily: "var(--font-space)" }}>
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                          Album {i + 1}
+                        </p>
+                        <p className="text-[11px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                          Kata #{start + 1}–{end} · {count} kata
+                        </p>
+                      </div>
+                      <ChevronRight className="size-4 text-[#4a5a7a] shrink-0" />
+                    </button>
+                  );
+                })}
+
+                {/* All button */}
+                <button onClick={startAll}
+                  className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:brightness-110 active:scale-[0.98] text-left mt-2"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15))",
+                    border: "1px solid rgba(168,85,247,0.3)",
+                  }}>
+                  <div className="size-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+                    <Layers className="size-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                      Semua Kata
+                    </p>
+                    <p className="text-[11px] text-[#a67bd4]" style={{ fontFamily: "var(--font-space)" }}>
+                      {filtered.length} kata sekaligus (tanpa album)
+                    </p>
+                  </div>
+                  <ChevronRight className="size-4 text-[#a67bd4] shrink-0" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Modal Tambah Kosakata ── */}
       {addOpen && (
