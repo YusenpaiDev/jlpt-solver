@@ -160,6 +160,7 @@ export default function Kamus() {
   const [formImage,    setFormImage]   = useState<File | null>(null);
   const [imagePreview, setImagePreview]= useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const bulkFileRef   = useRef<HTMLInputElement>(null);
   const flashSwipe    = useRef({ x: 0, dx: 0, swiped: false });
 
   /* ── Load from Supabase ── */
@@ -389,6 +390,51 @@ export default function Kamus() {
     setBulkText("");
     setBulkResult(null);
     setBulkProgress({ done: 0, total: 0 });
+    if (bulkFileRef.current) bulkFileRef.current.value = "";
+  };
+
+  /* ── CSV parser (handles "quoted, fields") ── */
+  const parseCSV = (text: string): string[][] => {
+    const rows: string[][] = [];
+    let current: string[] = [];
+    let field = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') { inQuotes = false; }
+        else { field += c; }
+      } else {
+        if (c === '"') { inQuotes = true; }
+        else if (c === ',') { current.push(field); field = ""; }
+        else if (c === '\n' || c === '\r') {
+          if (c === '\r' && text[i + 1] === '\n') i++;
+          current.push(field);
+          if (current.some(f => f.trim())) rows.push(current);
+          current = []; field = "";
+        } else { field += c; }
+      }
+    }
+    if (field || current.length > 0) { current.push(field); rows.push(current); }
+    return rows;
+  };
+
+  const handleBulkFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const raw = await file.text();
+    const isCSV = file.name.toLowerCase().endsWith(".csv");
+    if (isCSV) {
+      const rows = parseCSV(raw);
+      const normalized = rows
+        .map(r => r.map(f => f.trim()).filter(Boolean).join(" | "))
+        .filter(Boolean)
+        .join("\n");
+      setBulkText(normalized);
+    } else {
+      setBulkText(raw);
+    }
   };
 
   const submitBulk = async () => {
@@ -1210,6 +1256,7 @@ export default function Kamus() {
       {/* ── Modal Bulk Import ── */}
       {bulkOpen && (
         <>
+          <input ref={bulkFileRef} type="file" accept=".txt,.csv,text/plain,text/csv" className="hidden" onChange={handleBulkFile} />
           <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => !bulkAdding && closeBulk()} />
           <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
             <div className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[92vh] flex flex-col"
@@ -1254,11 +1301,21 @@ export default function Kamus() {
 
                 {/* Textarea */}
                 <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 flex items-center justify-between"
-                    style={{ fontFamily: "var(--font-space)" }}>
-                    <span>DAFTAR KOTOBA</span>
-                    <span className="text-[#4a5a7a]">{bulkParsed.length} kata terdeteksi</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold text-[#bbc6e2]" style={{ fontFamily: "var(--font-space)" }}>
+                      DAFTAR KOTOBA
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                        {bulkParsed.length} kata terdeteksi
+                      </span>
+                      <button onClick={() => bulkFileRef.current?.click()} disabled={bulkAdding}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-40"
+                        style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                        <Upload className="size-3" /> UPLOAD .TXT / .CSV
+                      </button>
+                    </div>
+                  </div>
                   <textarea
                     value={bulkText}
                     onChange={e => setBulkText(e.target.value)}
