@@ -536,44 +536,50 @@ export default function Kamus() {
               </div>
             </div>
 
-            {/* Count + Add */}
-            <div className="px-4 py-2 border-b flex items-center justify-between"
+            {/* Count + Actions */}
+            <div className="px-4 py-3 border-b flex flex-col gap-2.5"
               style={{ borderColor: "rgba(255,255,255,0.03)", background: "#0a1525" }}>
-              <span className="text-xs font-semibold text-[#8a9bbf]"
-                style={{ fontFamily: "var(--font-space)" }}>
-                {loading ? "Memuat…" : `${filtered.length} kata`}
-              </span>
-              <div className="flex items-center gap-1.5">
+
+              {/* Top row: count + furigana hint */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#8a9bbf] whitespace-nowrap"
+                  style={{ fontFamily: "var(--font-space)" }}>
+                  {loading ? "MEMUAT…" : `${filtered.length} KATA`}
+                </span>
                 {words.some(w => !w.reading) && (
                   <button onClick={genAllFurigana} disabled={genAll}
                     title="Auto-generate furigana untuk semua kata"
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-50"
-                    style={{ background: "rgba(166,123,212,0.15)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-50"
+                    style={{ background: "rgba(166,123,212,0.12)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
                     {genAll
                       ? <><Loader2 className="size-3 animate-spin" /> {genProgress}/{words.filter(w=>!w.reading).length}</>
                       : <><Sparkles className="size-3" /> FURIGANA</>}
                   </button>
                 )}
+              </div>
+
+              {/* Bottom row: 3 primary actions */}
+              <div className="grid grid-cols-3 gap-1.5">
                 <button onClick={enterFlash} disabled={filtered.length === 0}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all hover:brightness-110 disabled:opacity-40 active:scale-95"
+                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-black transition-all hover:brightness-110 disabled:opacity-40 active:scale-95"
                   style={{
                     background: "linear-gradient(135deg, #6366f1, #a855f7)",
                     color: "#ffffff",
-                    boxShadow: "0 0 16px rgba(168,85,247,0.5), 0 2px 8px rgba(99,102,241,0.4)",
+                    boxShadow: "0 0 14px rgba(168,85,247,0.45), 0 2px 6px rgba(99,102,241,0.35)",
                     fontFamily: "var(--font-space)",
                     textShadow: "0 0 8px rgba(255,255,255,0.5)",
                   }}>
                   <Layers className="size-3.5" /> FLASH
                 </button>
                 <button onClick={() => { setBulkOpen(true); setBulkResult(null); }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
-                  style={{ background: "rgba(224,123,74,0.15)", color: "#e07b4a", fontFamily: "var(--font-space)" }}>
-                  <Upload className="size-3" /> IMPORT
+                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all hover:brightness-110 active:scale-95"
+                  style={{ background: "rgba(224,123,74,0.13)", color: "#e07b4a", border: "1px solid rgba(224,123,74,0.2)", fontFamily: "var(--font-space)" }}>
+                  <Upload className="size-3.5" /> IMPORT
                 </button>
                 <button onClick={() => { setAddOpen(true); setAddError(null); }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
-                  style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                  <Plus className="size-3" /> TAMBAH
+                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all hover:brightness-110 active:scale-95"
+                  style={{ background: "rgba(94,168,122,0.13)", color: "#5ea87a", border: "1px solid rgba(94,168,122,0.2)", fontFamily: "var(--font-space)" }}>
+                  <Plus className="size-3.5" /> TAMBAH
                 </button>
               </div>
             </div>
