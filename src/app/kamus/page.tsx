@@ -7,7 +7,7 @@ import {
   Search, BookOpen, Zap,
   X, Brain, RotateCcw, CheckCircle2, XCircle,
   Trash2, Loader2, Plus, BookmarkPlus, Filter, Sparkles, Pencil, Save,
-  ChevronLeft, ChevronRight, Shuffle, Layers, FolderOpen,
+  ChevronLeft, ChevronRight, Shuffle, Layers, FolderOpen, Upload, FileText,
 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 
@@ -151,6 +151,11 @@ export default function Kamus() {
   const [flashDragX,   setFlashDragX]  = useState(0);
   const [albumPickerOpen, setAlbumPickerOpen] = useState(false);
   const [activeAlbum,  setActiveAlbum] = useState<{ idx: number; total: number } | null>(null);
+  const [bulkOpen,     setBulkOpen]    = useState(false);
+  const [bulkText,     setBulkText]    = useState("");
+  const [bulkAdding,   setBulkAdding]  = useState(false);
+  const [bulkProgress, setBulkProgress]= useState({ done: 0, total: 0 });
+  const [bulkResult,   setBulkResult]  = useState<{ added: number; skipped: number; failed: number } | null>(null);
   const [form,         setForm]        = useState({ kanji:"", reading:"", meaning:"", example:"", level:"" });
   const [formImage,    setFormImage]   = useState<File | null>(null);
   const [imagePreview, setImagePreview]= useState<string | null>(null);
@@ -357,6 +362,80 @@ export default function Kamus() {
     } finally { setDeletingId(null); }
   };
 
+  /* ── Bulk import parser ── */
+  type BulkRow = { kanji: string; reading: string | null; meaning: string; level: string | null };
+  const bulkParsed: BulkRow[] = useMemo(() => {
+    if (!bulkText.trim()) return [];
+    const validLevels = new Set(["N1","N2","N3","N4","N5"]);
+    return bulkText
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith("#"))
+      .map(line => {
+        const parts = line.split(/\s*[|\t]\s*/).map(p => p.trim());
+        const [kanji, reading, meaning, level] = parts;
+        return {
+          kanji: kanji ?? "",
+          reading: reading || null,
+          meaning: meaning ?? "",
+          level: level && validLevels.has(level.toUpperCase()) ? level.toUpperCase() : null,
+        };
+      })
+      .filter(r => r.kanji && r.meaning);
+  }, [bulkText]);
+
+  const closeBulk = () => {
+    setBulkOpen(false);
+    setBulkText("");
+    setBulkResult(null);
+    setBulkProgress({ done: 0, total: 0 });
+  };
+
+  const submitBulk = async () => {
+    if (bulkParsed.length === 0 || bulkAdding) return;
+    setBulkAdding(true);
+    setBulkResult(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setBulkAdding(false); return; }
+
+      const existing = new Set(words.map(w => w.kanji));
+      const fresh = bulkParsed.filter(r => !existing.has(r.kanji));
+      const skipped = bulkParsed.length - fresh.length;
+
+      setBulkProgress({ done: 0, total: fresh.length });
+      let added = 0, failed = 0;
+      const accumulated: SavedWord[] = [];
+      const CHUNK = 50;
+      for (let i = 0; i < fresh.length; i += CHUNK) {
+        const chunk = fresh.slice(i, i + CHUNK).map(r => ({
+          user_id: user.id,
+          kanji:   r.kanji,
+          reading: r.reading,
+          meaning: r.meaning,
+          level:   r.level,
+        }));
+        const { data, error } = await supabase
+          .from("saved_words")
+          .insert(chunk)
+          .select("id, kanji, reading, meaning, level, created_at");
+        if (error) { failed += chunk.length; }
+        else if (data) {
+          added += data.length;
+          accumulated.push(...(data.map(d => ({ ...d, example: null, image_url: null })) as SavedWord[]));
+        }
+        setBulkProgress({ done: Math.min(i + CHUNK, fresh.length), total: fresh.length });
+      }
+      if (accumulated.length > 0) {
+        setWords(prev => [...accumulated, ...prev]);
+      }
+      setBulkResult({ added, skipped, failed });
+    } finally {
+      setBulkAdding(false);
+    }
+  };
+
   /* ── Flash card ── */
   const albumCount = Math.max(1, Math.ceil(filtered.length / ALBUM_SIZE));
 
@@ -485,6 +564,11 @@ export default function Kamus() {
                     textShadow: "0 0 8px rgba(255,255,255,0.5)",
                   }}>
                   <Layers className="size-3.5" /> FLASH
+                </button>
+                <button onClick={() => { setBulkOpen(true); setBulkResult(null); }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
+                  style={{ background: "rgba(224,123,74,0.15)", color: "#e07b4a", fontFamily: "var(--font-space)" }}>
+                  <Upload className="size-3" /> IMPORT
                 </button>
                 <button onClick={() => { setAddOpen(true); setAddError(null); }}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
@@ -1111,6 +1195,168 @@ export default function Kamus() {
                   </div>
                   <ChevronRight className="size-4 text-[#a67bd4] shrink-0" />
                 </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Modal Bulk Import ── */}
+      {bulkOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => !bulkAdding && closeBulk()} />
+          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <div className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[92vh] flex flex-col"
+              style={{ background: "rgba(8,16,36,0.92)", border: "1px solid rgba(255,255,255,0.07)" }}>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
+                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="size-9 rounded-xl flex items-center justify-center"
+                    style={{ background: "rgba(224,123,74,0.18)" }}>
+                    <Upload className="size-4 text-[#e07b4a]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>Import Banyak Kotoba</p>
+                    <p className="text-[10px] text-[#4a5a7a]">Paste daftar kata · 1 baris = 1 kata</p>
+                  </div>
+                </div>
+                <button onClick={closeBulk} disabled={bulkAdding}
+                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors disabled:opacity-30">
+                  <X className="size-4 text-[#4a5a7a]" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="overflow-y-auto px-6 py-5 flex flex-col gap-4">
+
+                {/* Format hint */}
+                <div className="rounded-2xl px-4 py-3 flex items-start gap-2.5"
+                  style={{ background: "rgba(224,123,74,0.08)", border: "1px solid rgba(224,123,74,0.18)" }}>
+                  <FileText className="size-4 text-[#e07b4a] shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold text-[#e07b4a] mb-1" style={{ fontFamily: "var(--font-space)" }}>FORMAT</p>
+                    <p className="text-[11px] text-[#bbc6e2] leading-relaxed font-mono">
+                      kanji <span className="text-[#4a5a7a]">|</span> reading <span className="text-[#4a5a7a]">|</span> arti <span className="text-[#4a5a7a]">|</span> level
+                    </p>
+                    <p className="text-[10px] text-[#4a5a7a] mt-1">
+                      Reading & level opsional. Pakai <span className="text-[#bbc6e2]">|</span> atau tab sebagai pemisah. Baris kosong & baris dengan # diabaikan.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Textarea */}
+                <div>
+                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 flex items-center justify-between"
+                    style={{ fontFamily: "var(--font-space)" }}>
+                    <span>DAFTAR KOTOBA</span>
+                    <span className="text-[#4a5a7a]">{bulkParsed.length} kata terdeteksi</span>
+                  </label>
+                  <textarea
+                    value={bulkText}
+                    onChange={e => setBulkText(e.target.value)}
+                    disabled={bulkAdding}
+                    placeholder={"諦める | あきらめる | menyerah | N3\n勉強 | べんきょう | belajar | N5\n会議 | かいぎ | rapat | N4"}
+                    rows={10}
+                    className="w-full px-4 py-3 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all resize-y"
+                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)", lineHeight: 1.7 }}
+                    onFocus={e => e.currentTarget.style.borderColor = "rgba(224,123,74,0.4)"}
+                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
+                  />
+                </div>
+
+                {/* Preview */}
+                {bulkParsed.length > 0 && !bulkResult && (
+                  <div className="rounded-2xl p-3 flex flex-col gap-1.5"
+                    style={{ background: "#101b30", border: "1px solid rgba(94,168,122,0.15)" }}>
+                    <p className="text-[10px] font-bold text-[#5ea87a] mb-1" style={{ fontFamily: "var(--font-space)" }}>
+                      PREVIEW (5 pertama)
+                    </p>
+                    {bulkParsed.slice(0, 5).map((r, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[11px]">
+                        <span className="font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>{r.kanji}</span>
+                        {r.reading && <span className="text-[#8a9bbf]">({r.reading})</span>}
+                        <span className="text-[#4a5a7a]">·</span>
+                        <span className="text-[#bbc6e2] truncate">{r.meaning}</span>
+                        {r.level && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold ml-auto shrink-0"
+                            style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                            {r.level}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    {bulkParsed.length > 5 && (
+                      <p className="text-[10px] text-[#4a5a7a] mt-1">+ {bulkParsed.length - 5} kata lainnya…</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Progress */}
+                {bulkAdding && bulkProgress.total > 0 && (
+                  <div className="rounded-2xl p-4 flex flex-col gap-2"
+                    style={{ background: "#101b30", border: "1px solid rgba(107,156,218,0.2)" }}>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-[#6b9cda]" style={{ fontFamily: "var(--font-space)" }}>
+                        MENGIMPOR…
+                      </span>
+                      <span className="text-[#bbc6e2] font-mono">{bulkProgress.done} / {bulkProgress.total}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(74,122,191,0.15)" }}>
+                      <div className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${(bulkProgress.done / bulkProgress.total) * 100}%`,
+                          background: "linear-gradient(90deg, #6366f1, #a855f7)",
+                        }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Result */}
+                {bulkResult && (
+                  <div className="rounded-2xl p-4 flex flex-col gap-2"
+                    style={{ background: "#101b30", border: "1px solid rgba(94,168,122,0.25)" }}>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="size-4 text-[#5ea87a]" />
+                      <span className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                        Selesai!
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-1">
+                      <div className="rounded-xl px-3 py-2 text-center" style={{ background: "rgba(94,168,122,0.1)" }}>
+                        <p className="text-lg font-black text-[#5ea87a]" style={{ fontFamily: "var(--font-jakarta)" }}>{bulkResult.added}</p>
+                        <p className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>DITAMBAH</p>
+                      </div>
+                      <div className="rounded-xl px-3 py-2 text-center" style={{ background: "rgba(166,123,212,0.1)" }}>
+                        <p className="text-lg font-black text-[#a67bd4]" style={{ fontFamily: "var(--font-jakarta)" }}>{bulkResult.skipped}</p>
+                        <p className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>DUPLIKAT</p>
+                      </div>
+                      <div className="rounded-xl px-3 py-2 text-center" style={{ background: "rgba(224,90,90,0.1)" }}>
+                        <p className="text-lg font-black text-[#e05a5a]" style={{ fontFamily: "var(--font-jakarta)" }}>{bulkResult.failed}</p>
+                        <p className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>GAGAL</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-1">
+                  <button onClick={closeBulk} disabled={bulkAdding}
+                    className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
+                    style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+                    {bulkResult ? "Tutup" : "Batal"}
+                  </button>
+                  {!bulkResult && (
+                    <button onClick={submitBulk} disabled={bulkAdding || bulkParsed.length === 0}
+                      className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
+                      style={{ background: "linear-gradient(135deg,#c0654a,#e07b4a)", color: "#fff", fontFamily: "var(--font-space)" }}>
+                      {bulkAdding
+                        ? <><Loader2 className="size-4 animate-spin" /> Mengimpor...</>
+                        : <><Upload className="size-4" /> IMPORT {bulkParsed.length} KATA</>}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
