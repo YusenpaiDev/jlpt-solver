@@ -1205,6 +1205,7 @@ export default function Kamus() {
                   const end   = Math.min(start + ALBUM_SIZE, filtered.length);
                   const count = end - start;
                   const ac    = accentFor(i);
+                  const preview = filtered.slice(start, start + 4).map(w => w.kanji);
                   return (
                     <button key={i} onClick={() => startAlbum(i)}
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:brightness-110 active:scale-[0.98] text-left"
@@ -1213,13 +1214,29 @@ export default function Kamus() {
                         style={{ background: `${ac}20`, color: ac, fontFamily: "var(--font-space)" }}>
                         {i + 1}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                          Album {i + 1}
-                        </p>
-                        <p className="text-[11px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                          Kata #{start + 1}–{end} · {count} kata
-                        </p>
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                            Album {i + 1}
+                          </p>
+                          <p className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                            #{start + 1}–{end} · {count} kata
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {preview.map((k, pi) => (
+                            <span key={pi}
+                              className="text-[11px] font-bold px-1.5 py-0.5 rounded-md truncate max-w-[5rem]"
+                              style={{ background: `${ac}12`, color: ac, fontFamily: "var(--font-jakarta)" }}>
+                              {k}
+                            </span>
+                          ))}
+                          {count > preview.length && (
+                            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                              +{count - preview.length}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <ChevronRight className="size-4 text-[#4a5a7a] shrink-0" />
                     </button>
