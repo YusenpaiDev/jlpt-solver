@@ -483,6 +483,13 @@ export default function Kamus() {
   };
 
   /* ── Flash card ── */
+  // Indices into `filtered`, sorted by creation time ASC (oldest first)
+  // so albums stay stable when new kotoba get added (they slot into the last album).
+  const ascIndices = useMemo(() => {
+    return filtered
+      .map((_, i) => i)
+      .sort((a, b) => new Date(filtered[a].created_at).getTime() - new Date(filtered[b].created_at).getTime());
+  }, [filtered]);
   const albumCount = Math.max(1, Math.ceil(filtered.length / ALBUM_SIZE));
 
   const enterFlash = () => {
@@ -496,9 +503,8 @@ export default function Kamus() {
 
   const startAlbum = (albumIdx: number) => {
     const start = albumIdx * ALBUM_SIZE;
-    const end   = Math.min(start + ALBUM_SIZE, filtered.length);
-    const order: number[] = [];
-    for (let i = start; i < end; i++) order.push(i);
+    const end   = Math.min(start + ALBUM_SIZE, ascIndices.length);
+    const order = ascIndices.slice(start, end);
     setFlashOrder(order);
     setActiveAlbum({ idx: albumIdx, total: albumCount });
     setFlashIdx(0);
@@ -1202,10 +1208,11 @@ export default function Kamus() {
               <div className="overflow-y-auto px-4 py-4 flex flex-col gap-2">
                 {Array.from({ length: albumCount }, (_, i) => {
                   const start = i * ALBUM_SIZE;
-                  const end   = Math.min(start + ALBUM_SIZE, filtered.length);
+                  const end   = Math.min(start + ALBUM_SIZE, ascIndices.length);
                   const count = end - start;
                   const ac    = accentFor(i);
-                  const preview = filtered.slice(start, start + 4).map(w => w.kanji);
+                  const preview = ascIndices.slice(start, start + 4).map(idx => filtered[idx].kanji);
+                  const isLast = i === albumCount - 1;
                   return (
                     <button key={i} onClick={() => startAlbum(i)}
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:brightness-110 active:scale-[0.98] text-left"
@@ -1220,8 +1227,14 @@ export default function Kamus() {
                             Album {i + 1}
                           </p>
                           <p className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                            #{start + 1}–{end} · {count} kata
+                            {count} kata
                           </p>
+                          {isLast && count < ALBUM_SIZE && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                              style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
+                              MASIH NAMBAH
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {preview.map((k, pi) => (
