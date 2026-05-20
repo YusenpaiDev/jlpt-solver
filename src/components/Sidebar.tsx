@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   House, History, Camera, BookOpen, BarChart2,
-  Settings, LogOut, Zap, ArrowUpRight, Flame, ClipboardList, NotebookPen,
+  Settings, LogOut, Zap, ArrowUpRight, Flame, ClipboardList, NotebookPen, GraduationCap,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -21,6 +21,7 @@ interface Profile {
 /* ─── Nav ───────────────────────────────────────────────────── */
 const navItems = [
   { icon: House,         label: "Beranda",        href: "/"               },
+  { icon: GraduationCap, label: "Materi",         href: "/materi"         },
   { icon: History,       label: "Riwayat Soal",   href: "/riwayat-soal"   },
   { icon: Camera,        label: "Analisis Foto",   href: "/analisis-foto"  },
   { icon: ClipboardList, label: "Lembar Tugas",    href: "/lembar-tugas"   },
