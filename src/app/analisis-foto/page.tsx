@@ -2225,11 +2225,15 @@ export default function AnalisisFoto() {
             </div>
           </a>
           <nav className="hidden md:flex items-center gap-0.5">
-            {["Materi", "Latihan", "Pro"].map((item) => (
-              <button key={item}
+            {[
+              { label: "Materi",  href: "/materi" },
+              { label: "Latihan", href: "/lembar-tugas" },
+              { label: "Pro",     href: "/premium" },
+            ].map((item) => (
+              <a key={item.label} href={item.href}
                 className="px-3 py-1.5 text-sm rounded-lg text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5 transition-colors">
-                {item}
-              </button>
+                {item.label}
+              </a>
             ))}
           </nav>
         </div>

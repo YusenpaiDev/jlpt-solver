@@ -136,20 +136,13 @@ export default function Home() {
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-1">
             {[
-              { label: "Beranda", href: "/" },
-              { label: "Analisis", href: "/analisis-foto" },
+              { label: "Materi",  href: "/materi" },
               { label: "Latihan", href: "/lembar-tugas" },
-            ].map((item, i) => (
+              { label: "Pro",     href: "/premium" },
+            ].map((item) => (
               <a key={item.label} href={item.href}
-                className="relative px-3 py-1.5 text-[13px] rounded-lg transition-all"
-                style={i === 0
-                  ? { color: "#d7e2ff", fontWeight: 600, background: "rgba(107,156,218,0.1)" }
-                  : { color: "#6a7a9a" }}>
+                className="relative px-3 py-1.5 text-[13px] rounded-lg transition-all text-[#6a7a9a] hover:text-[#d7e2ff]">
                 {item.label}
-                {i === 0 && (
-                  <span className="absolute bottom-0.5 left-3 right-3 h-px rounded-full"
-                    style={{ background: "linear-gradient(90deg,#4a7abf,#8b5abf)" }} />
-                )}
               </a>
             ))}
           </nav>

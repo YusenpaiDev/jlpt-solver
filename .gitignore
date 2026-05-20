@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# materi belajar lokal (PDF/sumber kotoba) — jangan ke-push
+/materi/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

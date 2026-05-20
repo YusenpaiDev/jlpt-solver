@@ -5,9 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Bell, Sparkles } from "lucide-react";
 
 const NAV = [
-  { label: "Beranda",  href: "/" },
-  { label: "Analisis", href: "/analisis-foto" },
-  { label: "Latihan",  href: "/lembar-tugas" },
+  { label: "Materi",  href: "/materi" },
+  { label: "Latihan", href: "/lembar-tugas" },
+  { label: "Pro",     href: "/premium" },
 ];
 
 interface AppHeaderProps {
