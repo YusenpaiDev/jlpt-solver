@@ -138,42 +138,28 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
       contentBlocks = [fileContent, { type: "text", text: prompt }];
     }
 
-    // Try Haiku first (≈3× cheaper). If it fails to produce valid JSON OR hits
-    // max_tokens, automatically fall back to Sonnet for full quality.
-    async function attempt(model: string, maxTokens: number) {
-      const stream = client.messages.stream({
-        model,
-        max_tokens: maxTokens,
-        messages: [{ role: "user", content: contentBlocks }],
-      });
-      const message = await stream.finalMessage();
-      const stopReason = message.stop_reason ?? "unknown";
-      const text = message.content[0]?.type === "text" ? message.content[0].text : "";
-      const clean = extractJsonBlock(text);
-      let parsed: unknown;
-      try { parsed = JSON.parse(clean); }
-      catch { parsed = repairJson(clean); }
-      return { parsed, stopReason, text };
-    }
+    // Sonnet-only: prioritize analysis quality over cost. Each PDF is already
+    // auto-split into 2-page chunks on the frontend, so token usage stays
+    // reasonable per request.
+    const stream = client.messages.stream({
+      model: "claude-sonnet-4-6",
+      max_tokens: 64000,
+      messages: [{ role: "user", content: contentBlocks }],
+    });
+    const message    = await stream.finalMessage();
+    const stopReason = message.stop_reason ?? "unknown";
+    const text       = message.content[0]?.type === "text" ? message.content[0].text : "";
+    const clean      = extractJsonBlock(text);
 
-    let { parsed, stopReason, text } = await attempt("claude-haiku-4-5-20251001", 32000);
-    let modelUsed = "haiku-4.5";
+    let parsed: unknown;
+    try { parsed = JSON.parse(clean); }
+    catch { parsed = repairJson(clean); }
 
-    if (!parsed || stopReason === "max_tokens") {
-      console.info("Haiku attempt insufficient — falling back to Sonnet", {
-        haikuParsed: !!parsed,
-        haikuStopReason: stopReason,
-      });
-      const fallback = await attempt("claude-sonnet-4-6", 64000);
-      parsed     = fallback.parsed;
-      stopReason = fallback.stopReason;
-      text       = fallback.text;
-      modelUsed  = "sonnet-4.6";
-    }
+    const modelUsed = "sonnet-4.6";
 
     if (!parsed) {
       // Log everything we can on the server so debugging is easy later.
-      console.error("Analisis parse failed (after fallback):", {
+      console.error("Analisis parse failed:", {
         modelUsed,
         stopReason,
         textLength: text.length,
