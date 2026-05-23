@@ -795,30 +795,70 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const addPhotoRef = useRef<HTMLInputElement>(null);
   const [addingPhoto, setAddingPhoto] = useState(false);
 
+  /* Ensure we know the session level/category — re-fetch lazily if state is empty
+     (happens for sessions loaded before this feature shipped, or via a stale tab). */
+  const ensureSessionMeta = async (): Promise<{ level: Level; category: Category } | null> => {
+    if (sessionLevel) return { level: sessionLevel, category: sessionCategory ?? "ai" };
+    if (!sessionId) return null;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("sessions")
+      .select("level, category")
+      .eq("id", sessionId)
+      .single();
+    if (!data?.level) return null;
+    return {
+      level: data.level as Level,
+      category: ((data.category === "AI" ? "ai" : data.category) ?? "ai") as Category,
+    };
+  };
+
   const handleAddFromPhoto = async (file: File) => {
-    if (!sessionLevel) {
-      setToast({ text: "Level sesi tidak ketahuan — refresh halaman dulu", ok: false });
-      setTimeout(() => setToast(null), 2000);
-      return;
-    }
     setAddingPhoto(true);
     try {
-      const reader = new FileReader();
-      const base64: string = await new Promise((resolve, reject) => {
-        reader.onload  = () => resolve((reader.result as string).split(",")[1]);
-        reader.onerror = () => reject(new Error("Gagal baca file"));
-        reader.readAsDataURL(file);
-      });
+      const meta = await ensureSessionMeta();
+      if (!meta) {
+        setToast({ text: "Level sesi nggak ketahuan. Save sesi dulu lalu coba lagi.", ok: false });
+        setTimeout(() => setToast(null), 2500);
+        return;
+      }
+
+      // Dispatch by file type so each format is sent the way /api/analisis expects.
+      const isDocx = file.name.toLowerCase().endsWith(".docx") ||
+        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const isPdf  = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+      let body: Record<string, unknown>;
+      if (isDocx) {
+        const mammoth = (await import("mammoth")).default;
+        const buf = await file.arrayBuffer();
+        const ext = await mammoth.extractRawText({ arrayBuffer: buf });
+        if (!ext.value.trim()) throw new Error("Dokumen Word kosong / tidak ada teks");
+        body = {
+          textContent: ext.value,
+          mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          level: meta.level,
+          category: meta.category,
+        };
+      } else {
+        const reader = new FileReader();
+        const base64: string = await new Promise((resolve, reject) => {
+          reader.onload  = () => resolve((reader.result as string).split(",")[1]);
+          reader.onerror = () => reject(new Error("Gagal baca file"));
+          reader.readAsDataURL(file);
+        });
+        body = {
+          imageBase64: base64,
+          mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+          level: meta.level,
+          category: meta.category,
+        };
+      }
 
       const res = await fetch("/api/analisis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: base64,
-          mimeType: file.type || "image/jpeg",
-          level: sessionLevel,
-          category: sessionCategory ?? "ai",
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Analisis gagal");
@@ -826,7 +866,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       const data: AIResult = json.data;
       const newQs = data.questions ?? [];
       if (newQs.length === 0) {
-        setToast({ text: "Nggak ada soal yang ke-detect di foto", ok: false });
+        setToast({ text: "Nggak ada soal yang ke-detect di file", ok: false });
         setTimeout(() => setToast(null), 2000);
         return;
       }
@@ -842,10 +882,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       };
       setResult(next);
       persistResultJsonb(next).catch(() => { /* swallow */ });
-      setToast({ text: `+${newQs.length} soal ditambah dari foto`, ok: true });
+      setToast({ text: `+${newQs.length} soal ditambah`, ok: true });
       setTimeout(() => setToast(null), 2000);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal tambah dari foto";
+      const msg = err instanceof Error ? err.message : "Gagal tambah dari file";
       setToast({ text: msg, ok: false });
       setTimeout(() => setToast(null), 3000);
     } finally {
@@ -1762,22 +1802,24 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           });
         })()}
 
-        {/* ── Tambah soal: manual / dari foto ── */}
+        {/* ── Tambah soal: manual / dari file ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-          <input ref={addPhotoRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={onAddPhotoChange} />
+          <input ref={addPhotoRef} type="file"
+            accept="image/*,application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden" onChange={onAddPhotoChange} />
           <button onClick={openAddManual} disabled={addingPhoto}
             className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
             style={{ background: "rgba(94,168,122,0.12)", color: "#5ea87a", border: "1px dashed rgba(94,168,122,0.35)", fontFamily: "var(--font-space)" }}>
             <Plus className="size-4" /> TAMBAH SOAL MANUAL
           </button>
           <button onClick={() => addPhotoRef.current?.click()}
-            disabled={addingPhoto || !sessionLevel}
-            title={!sessionLevel ? "Level sesi nggak ketahuan — refresh dulu" : "Upload foto/PDF buat AI analisis & append ke sesi ini"}
+            disabled={addingPhoto}
+            title="Upload foto/PDF/Word — AI analisis & append ke sesi ini"
             className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
             style={{ background: "rgba(107,156,218,0.12)", color: "#6b9cda", border: "1px dashed rgba(107,156,218,0.35)", fontFamily: "var(--font-space)" }}>
             {addingPhoto
               ? <><Loader2 className="size-4 animate-spin" /> MENGANALISIS…</>
-              : <><Camera className="size-4" /> TAMBAH DARI FOTO</>}
+              : <><Upload className="size-4" /> TAMBAH DARI FILE</>}
           </button>
         </div>
         </div>
