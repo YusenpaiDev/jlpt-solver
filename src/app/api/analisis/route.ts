@@ -138,10 +138,10 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
       contentBlocks = [fileContent, { type: "text", text: prompt }];
     }
 
-    // Use streaming — required for large max_tokens
+    // Use streaming — required for large max_tokens (Sonnet 4.6 caps at 64000)
     const stream = client.messages.stream({
       model: "claude-sonnet-4-6",
-      max_tokens: 32000,
+      max_tokens: 64000,
       messages: [{ role: "user", content: contentBlocks }],
     });
 
@@ -185,8 +185,22 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Analisis error:", msg);
+
+    // Surface common Anthropic-side errors in plain Bahasa so the user knows what to do.
+    let friendly = msg;
+    const lower = msg.toLowerCase();
+    if (lower.includes("credit balance") || lower.includes("billing")) {
+      friendly = "Kredit Anthropic API udah habis. Top-up dulu di console.anthropic.com supaya analisis bisa lanjut.";
+    } else if (lower.includes("rate limit") || lower.includes("429")) {
+      friendly = "Lagi banyak request — kena rate limit. Tunggu 30 detik terus coba lagi.";
+    } else if (lower.includes("overloaded") || lower.includes("529")) {
+      friendly = "Server AI lagi overload. Coba lagi sebentar.";
+    } else if (lower.includes("invalid api key") || lower.includes("authentication")) {
+      friendly = "API key Anthropic invalid. Cek environment variable ANTHROPIC_API_KEY di Vercel.";
+    }
+
     return NextResponse.json(
-      { error: msg },
+      { error: friendly },
       { status: 500 }
     );
   }
