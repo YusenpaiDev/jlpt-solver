@@ -7,7 +7,7 @@ import {
   Search, BookOpen, Zap,
   X, Brain, RotateCcw, CheckCircle2, XCircle,
   Trash2, Loader2, Plus, BookmarkPlus, Filter, Sparkles, Pencil, Save,
-  ChevronLeft, ChevronRight, Shuffle, Layers, FolderOpen, Upload, FileText,
+  ChevronLeft, ChevronRight, Shuffle, Layers, FolderOpen, Upload, FileText, Copy,
 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 
@@ -151,6 +151,9 @@ export default function Kamus() {
   const [flashDragX,   setFlashDragX]  = useState(0);
   const [albumPickerOpen, setAlbumPickerOpen] = useState(false);
   const [activeAlbum,  setActiveAlbum] = useState<{ idx: number; total: number } | null>(null);
+  const [cleanupOpen,  setCleanupOpen] = useState(false);
+  const [cleanupSel,   setCleanupSel]  = useState<Set<string>>(new Set());
+  const [cleanupBusy,  setCleanupBusy] = useState(false);
   const [bulkOpen,     setBulkOpen]    = useState(false);
   const [bulkText,     setBulkText]    = useState("");
   const [bulkAdding,   setBulkAdding]  = useState(false);
@@ -393,6 +396,68 @@ export default function Kamus() {
     if (bulkFileRef.current) bulkFileRef.current.value = "";
   };
 
+  /* ── Duplicate detection (by exact kanji) ── */
+  const dupGroups = useMemo(() => {
+    const map = new Map<string, SavedWord[]>();
+    for (const w of words) {
+      const key = w.kanji.trim();
+      if (!key) continue;
+      const arr = map.get(key) ?? [];
+      arr.push(w);
+      map.set(key, arr);
+    }
+    return Array.from(map.values())
+      .filter(g => g.length > 1)
+      .map(g => [...g].sort((a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      ));
+  }, [words]);
+
+  const dupExtraCount = dupGroups.reduce((s, g) => s + (g.length - 1), 0);
+
+  const openCleanup = () => {
+    // Default: keep the oldest in each group, select the rest for deletion.
+    const next = new Set<string>();
+    for (const group of dupGroups) {
+      for (let i = 1; i < group.length; i++) next.add(group[i].id);
+    }
+    setCleanupSel(next);
+    setCleanupOpen(true);
+  };
+
+  const closeCleanup = () => {
+    setCleanupOpen(false);
+    setCleanupSel(new Set());
+  };
+
+  const toggleCleanupId = (id: string) => {
+    setCleanupSel(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const submitCleanup = async () => {
+    if (cleanupSel.size === 0 || cleanupBusy) return;
+    setCleanupBusy(true);
+    try {
+      const ids = Array.from(cleanupSel);
+      const supabase = createClient();
+      const { error } = await supabase.from("saved_words").delete().in("id", ids);
+      if (!error) {
+        setWords(prev => {
+          const next = prev.filter(w => !cleanupSel.has(w.id));
+          if (selected && cleanupSel.has(selected)) setSelected(next[0]?.id ?? null);
+          return next;
+        });
+        closeCleanup();
+      }
+    } finally {
+      setCleanupBusy(false);
+    }
+  };
+
   /* ── CSV parser (handles "quoted, fields") ── */
   const parseCSV = (text: string): string[][] => {
     const rows: string[][] = [];
@@ -592,22 +657,32 @@ export default function Kamus() {
             <div className="px-4 py-3 border-b flex flex-col gap-2.5"
               style={{ borderColor: "rgba(255,255,255,0.03)", background: "#0a1525" }}>
 
-              {/* Top row: count + furigana hint */}
-              <div className="flex items-center justify-between">
+              {/* Top row: count + furigana + duplikat */}
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-[#8a9bbf] whitespace-nowrap"
                   style={{ fontFamily: "var(--font-space)" }}>
                   {loading ? "MEMUAT…" : `${filtered.length} KATA`}
                 </span>
-                {words.some(w => !w.reading) && (
-                  <button onClick={genAllFurigana} disabled={genAll}
-                    title="Auto-generate furigana untuk semua kata"
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-50"
-                    style={{ background: "rgba(166,123,212,0.12)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-                    {genAll
-                      ? <><Loader2 className="size-3 animate-spin" /> {genProgress}/{words.filter(w=>!w.reading).length}</>
-                      : <><Sparkles className="size-3" /> FURIGANA</>}
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  {dupExtraCount > 0 && (
+                    <button onClick={openCleanup}
+                      title={`${dupExtraCount} duplikat ditemukan — klik untuk bersihkan`}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
+                      style={{ background: "rgba(224,90,90,0.12)", color: "#e05a5a", fontFamily: "var(--font-space)" }}>
+                      <Copy className="size-3" /> {dupExtraCount} DUPLIKAT
+                    </button>
+                  )}
+                  {words.some(w => !w.reading) && (
+                    <button onClick={genAllFurigana} disabled={genAll}
+                      title="Auto-generate furigana untuk semua kata"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-50"
+                      style={{ background: "rgba(166,123,212,0.12)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
+                      {genAll
+                        ? <><Loader2 className="size-3 animate-spin" /> {genProgress}/{words.filter(w=>!w.reading).length}</>
+                        : <><Sparkles className="size-3" /> FURIGANA</>}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Bottom row: 3 primary actions */}
@@ -1276,6 +1351,155 @@ export default function Kamus() {
                     </p>
                   </div>
                   <ChevronRight className="size-4 text-[#a67bd4] shrink-0" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Modal Cleanup Duplikat ── */}
+      {cleanupOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => !cleanupBusy && closeCleanup()} />
+          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <div className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[92vh] flex flex-col"
+              style={{ background: "rgba(8,16,36,0.92)", border: "1px solid rgba(255,255,255,0.07)" }}>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
+                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="size-9 rounded-xl flex items-center justify-center"
+                    style={{ background: "rgba(224,90,90,0.18)" }}>
+                    <Copy className="size-4 text-[#e05a5a]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                      Bersihkan Duplikat
+                    </p>
+                    <p className="text-[10px] text-[#4a5a7a]">
+                      {dupGroups.length} grup · {dupExtraCount} entri bisa dihapus
+                    </p>
+                  </div>
+                </div>
+                <button onClick={closeCleanup} disabled={cleanupBusy}
+                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors disabled:opacity-30">
+                  <X className="size-4 text-[#4a5a7a]" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="overflow-y-auto px-5 py-4 flex flex-col gap-3">
+
+                {/* Hint */}
+                <div className="rounded-2xl px-4 py-3 flex items-start gap-2.5"
+                  style={{ background: "rgba(224,90,90,0.06)", border: "1px solid rgba(224,90,90,0.15)" }}>
+                  <FileText className="size-4 text-[#e05a5a] shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-[#bbc6e2] leading-relaxed">
+                    Yang paling lama di tiap grup tetap (centang otomatis off). Centang entri yang mau dihapus, terus tekan tombol di bawah.
+                  </p>
+                </div>
+
+                {/* Duplicate groups */}
+                {dupGroups.length === 0 ? (
+                  <div className="rounded-2xl p-8 flex flex-col items-center gap-2 text-center"
+                    style={{ background: "#101b30" }}>
+                    <CheckCircle2 className="size-8 text-[#5ea87a]" />
+                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                      Bersih, nggak ada duplikat!
+                    </p>
+                  </div>
+                ) : dupGroups.map((group, gi) => {
+                  const ac = accentFor(gi);
+                  return (
+                    <div key={group[0].kanji + gi} className="rounded-2xl overflow-hidden"
+                      style={{ background: "#101b30", border: `1px solid ${ac}25` }}>
+                      {/* Group header */}
+                      <div className="flex items-center gap-3 px-4 py-3"
+                        style={{ background: `${ac}10`, borderBottom: `1px solid ${ac}15` }}>
+                        <span className="font-black text-xl"
+                          style={{ color: ac, fontFamily: "var(--font-jakarta)" }}>
+                          {group[0].kanji}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ background: `${ac}20`, color: ac, fontFamily: "var(--font-space)" }}>
+                          {group.length} ENTRI
+                        </span>
+                      </div>
+
+                      {/* Group entries */}
+                      <div className="flex flex-col">
+                        {group.map((w, wi) => {
+                          const checked = cleanupSel.has(w.id);
+                          const isOldest = wi === 0;
+                          return (
+                            <button key={w.id}
+                              onClick={() => toggleCleanupId(w.id)}
+                              disabled={cleanupBusy}
+                              className="flex items-center gap-3 px-4 py-2.5 text-left transition-all border-t hover:bg-white/[0.02] disabled:opacity-50"
+                              style={{ borderColor: "rgba(255,255,255,0.03)" }}>
+                              {/* Checkbox */}
+                              <div className="size-4 rounded shrink-0 flex items-center justify-center transition-all"
+                                style={{
+                                  background: checked ? "#e05a5a" : "transparent",
+                                  border: checked ? "1px solid #e05a5a" : "1px solid rgba(187,198,226,0.2)",
+                                }}>
+                                {checked && <X className="size-3 text-white" />}
+                              </div>
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs text-[#8a9bbf]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                                    {w.reading || "—"}
+                                  </span>
+                                  <span className="text-[#4a5a7a]">·</span>
+                                  <span className="text-xs text-[#d7e2ff] truncate" style={{ fontFamily: "var(--font-manrope)" }}>
+                                    {w.meaning}
+                                  </span>
+                                  {w.level && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                                      style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                                      {w.level}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                                    {new Date(w.created_at).toLocaleString("id-ID", { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" })}
+                                  </span>
+                                  {isOldest && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                                      style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
+                                      PALING LAMA
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer actions */}
+              <div className="flex gap-3 px-6 py-4 border-t shrink-0"
+                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                <button onClick={closeCleanup} disabled={cleanupBusy}
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
+                  style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+                  Batal
+                </button>
+                <button onClick={submitCleanup}
+                  disabled={cleanupBusy || cleanupSel.size === 0}
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
+                  style={{ background: "linear-gradient(135deg,#a04040,#dc5050)", color: "#fff", fontFamily: "var(--font-space)" }}>
+                  {cleanupBusy
+                    ? <><Loader2 className="size-4 animate-spin" /> Menghapus...</>
+                    : <><Trash2 className="size-4" /> HAPUS {cleanupSel.size} KATA</>}
                 </button>
               </div>
             </div>
