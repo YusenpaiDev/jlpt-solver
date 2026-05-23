@@ -1975,10 +1975,57 @@ export default function AnalisisFoto() {
     return chunks.filter(c => c.length > 50);
   };
 
+  /* Convert raw bytes (ArrayBuffer / Uint8Array) → base64 string */
+  const bytesToBase64 = (input: ArrayBuffer | Uint8Array): string => {
+    const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+    let binary = "";
+    const CHUNK = 0x8000; // avoid call-stack overflow on large buffers
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)));
+    }
+    return btoa(binary);
+  };
+
+  /* Split a multi-page PDF into chunks of N pages each. Returns a list of FileData. */
+  const splitPdfIntoChunks = async (file: File, pagesPerChunk = 2): Promise<FileData[]> => {
+    const { PDFDocument } = await import("pdf-lib");
+    const buffer = await file.arrayBuffer();
+    const pdf    = await PDFDocument.load(buffer);
+    const total  = pdf.getPageCount();
+
+    // Small PDF → no split, ship as single chunk
+    if (total <= pagesPerChunk) {
+      return [{
+        base64: bytesToBase64(buffer),
+        mimeType: "application/pdf",
+        name: file.name,
+        url: "",
+      }];
+    }
+
+    const chunks: FileData[] = [];
+    for (let i = 0; i < total; i += pagesPerChunk) {
+      const newPdf  = await PDFDocument.create();
+      const count   = Math.min(pagesPerChunk, total - i);
+      const indices = Array.from({ length: count }, (_, j) => i + j);
+      const copied  = await newPdf.copyPages(pdf, indices);
+      copied.forEach(p => newPdf.addPage(p));
+      const bytes   = await newPdf.save();
+      chunks.push({
+        base64: bytesToBase64(bytes),
+        mimeType: "application/pdf",
+        name: `${file.name} — hal ${i + 1}-${i + count}`,
+        url: "",
+      });
+    }
+    return chunks;
+  };
+
   /* Shared: process a File object into FileData and add to state */
   const processFile = (file: File) => {
     const isDocx = file.name.toLowerCase().endsWith(".docx") ||
       file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const isPdf  = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
     if (isDocx) {
       const reader = new FileReader();
@@ -2005,11 +2052,34 @@ export default function AnalisisFoto() {
       return;
     }
 
+    if (isPdf) {
+      (async () => {
+        try {
+          const newFiles = await splitPdfIntoChunks(file, 2);
+          if (stage === "setup") setFiles(prev => [...prev, ...newFiles]);
+          else { setFiles(newFiles); setStage("setup"); }
+        } catch (err) {
+          console.error("PDF split failed, falling back to single upload:", err);
+          // Fallback: treat the PDF as one piece using the simple base64 path below.
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const base64  = dataUrl.split(",")[1];
+            const newFile: FileData = { base64, mimeType: "application/pdf", name: file.name, url: "" };
+            if (stage === "setup") setFiles(prev => [...prev, newFile]);
+            else { setFiles([newFile]); setStage("setup"); }
+          };
+          reader.readAsDataURL(file);
+        }
+      })();
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
       const base64  = dataUrl.split(",")[1];
-      const newFile: FileData = { base64, mimeType: file.type || "image/jpeg", name: file.name, url: file.type === "application/pdf" ? "" : dataUrl };
+      const newFile: FileData = { base64, mimeType: file.type || "image/jpeg", name: file.name, url: dataUrl };
       if (stage === "setup") {
         setFiles(prev => [...prev, newFile]);
       } else {
