@@ -9,7 +9,7 @@ import {
   CheckCircle2, Circle, Sparkles,
   ChevronLeft, RotateCcw,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck,
-  BookOpen, Search, MessageCircle, NotebookPen, Plus,
+  BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -27,6 +27,7 @@ interface AIQuestion {
   tip?: string;
   category?: "文法" | "語彙" | "文字" | "読解";
   passage?: string | null;
+  needs_review?: boolean;
 }
 interface VocabItem {
   word: string;
@@ -668,9 +669,10 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
 }
 
 /* ─── Result State ──────────────────────────────────────────── */
-function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId, isReview }: {
+function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview }: {
   onReset: () => void;
   result: AIResult;
+  setResult: React.Dispatch<React.SetStateAction<AIResult | null>>;
   chatMsgs: ChatMsg[];
   setChatMsgs: React.Dispatch<React.SetStateAction<ChatMsg[]>>;
   isSaved: boolean;
@@ -680,6 +682,11 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
   const [answers,      setAnswers]      = useState<Record<number, string>>({});
   const [revealed,     setRevealed]     = useState<Set<number>>(new Set());
   const [catFilter,    setCatFilter]    = useState<string>("全部");
+  const [reviewOnly,   setReviewOnly]   = useState(false);
+  const [editIdx,      setEditIdx]      = useState<number | null>(null);
+  const [editDraft,    setEditDraft]    = useState<AIQuestion | null>(null);
+  const [editSaving,   setEditSaving]   = useState(false);
+  const [savingFlagIdx, setSavingFlagIdx] = useState<number | null>(null);
   const [expandedPassages, setExpandedPassages] = useState<Set<number>>(new Set());
   const [furiganaMarked,   setFuriganaMarked]   = useState<Record<string, string>>({});
   const [showFurigana,     setShowFurigana]     = useState<Set<string>>(new Set());
@@ -709,6 +716,55 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
   const [addMeaning,   setAddMeaning]   = useState("");
   const [generating,   setGenerating]   = useState(false);
   const [savingNew,    setSavingNew]    = useState(false);
+
+  /* ── Persist & edit helpers (Phase 1) ── */
+  const persistResultJsonb = async (next: AIResult) => {
+    if (!sessionId) return;
+    const supabase = createClient();
+    await supabase.from("sessions").update({ ai_result: next }).eq("id", sessionId);
+  };
+
+  const updateQuestionAt = (qi: number, patch: Partial<AIQuestion>) => {
+    const next: AIResult = {
+      ...result,
+      questions: result.questions.map((q, i) => (i === qi ? { ...q, ...patch } : q)),
+    };
+    setResult(next);
+    // Fire-and-forget persistence; UI already updated optimistically.
+    persistResultJsonb(next).catch(() => { /* swallow */ });
+  };
+
+  const toggleReviewFlag = async (qi: number) => {
+    if (savingFlagIdx !== null) return;
+    setSavingFlagIdx(qi);
+    try {
+      const flipped = !result.questions[qi].needs_review;
+      updateQuestionAt(qi, { needs_review: flipped });
+    } finally {
+      setSavingFlagIdx(null);
+    }
+  };
+
+  const openEdit = (qi: number) => {
+    setEditIdx(qi);
+    setEditDraft({ ...result.questions[qi] });
+  };
+
+  const closeEdit = () => {
+    setEditIdx(null);
+    setEditDraft(null);
+  };
+
+  const saveEdit = async () => {
+    if (editIdx === null || !editDraft || editSaving) return;
+    setEditSaving(true);
+    try {
+      updateQuestionAt(editIdx, editDraft);
+      closeEdit();
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const generateWordInfo = async () => {
     if (!addKanji.trim() || generating) return;
@@ -1123,13 +1179,15 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
           </div>
         </div>
 
-        {/* Category filter tabs */}
+        {/* Category + review filters */}
         {(() => {
           const cats = ["全部", ...Array.from(new Set(result.questions.map(q => q.category).filter(Boolean)))];
-          if (cats.length <= 2) return null;
+          const reviewCount = result.questions.filter(q => q.needs_review).length;
+          const hasCatFilter = cats.length > 2;
+          if (!hasCatFilter && reviewCount === 0) return null;
           return (
             <div className="flex items-center gap-2 px-8 pt-6 pb-0 flex-wrap">
-              {cats.map(c => (
+              {hasCatFilter && cats.map(c => (
                 <button key={c} onClick={() => setCatFilter(c!)}
                   className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
                   style={catFilter === c
@@ -1138,6 +1196,16 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                   {c} {c !== "全部" && `(${result.questions.filter(q => q.category === c).length})`}
                 </button>
               ))}
+              {reviewCount > 0 && (
+                <button onClick={() => setReviewOnly(v => !v)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ml-auto"
+                  style={reviewOnly
+                    ? { background: "linear-gradient(135deg,#dc5050,#e07b4a)", color: "#fff", fontFamily: "var(--font-space)" }
+                    : { background: "rgba(224,123,74,0.12)", color: "#e07b4a", border: "1px solid rgba(224,123,74,0.25)", fontFamily: "var(--font-space)" }}>
+                  <Flag className="size-3" />
+                  {reviewOnly ? "TAMPILKAN SEMUA" : `PERLU REVIEW (${reviewCount})`}
+                </button>
+              )}
             </div>
           );
         })()}
@@ -1149,6 +1217,7 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
             let passageCardIdx = -1;
             return result.questions.map((q, qi) => {
               if (catFilter !== "全部" && q.category && q.category !== catFilter) return null;
+              if (reviewOnly && !q.needs_review) return null;
               const isRevealed = revealed.has(qi);
               const userAns = answers[qi];
               const accentColors = ["#4a7abf","#8b5abf","#3a9a7a","#c0844a","#c05abf","#4a9abf","#7a8abf","#5a7abf"];
@@ -1262,6 +1331,24 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
                               </button>
                             );
                           })()}
+                          <div className="flex items-center gap-1.5 ml-auto">
+                            <button onClick={() => toggleReviewFlag(qi)}
+                              disabled={savingFlagIdx === qi}
+                              title={q.needs_review ? "Sudah ditandai perlu review — klik untuk lepas" : "Tandai soal ini perlu direview/diedit"}
+                              className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all hover:brightness-110 disabled:opacity-50"
+                              style={q.needs_review
+                                ? { background: "rgba(224,123,74,0.2)", color: "#e07b4a", border: "1px solid rgba(224,123,74,0.35)", fontFamily: "var(--font-space)" }
+                                : { background: "rgba(74,90,122,0.12)", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+                              <Flag className="size-2.5" />
+                              {q.needs_review ? "REVIEW ✓" : "REVIEW"}
+                            </button>
+                            <button onClick={() => openEdit(qi)}
+                              title="Edit soal manual"
+                              className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all hover:brightness-110"
+                              style={{ background: "rgba(107,156,218,0.12)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                              <Pencil className="size-2.5" /> EDIT
+                            </button>
+                          </div>
                         </div>
                         {/* Question text — blanks highlighted, with optional furigana */}
                         {(() => {
@@ -1806,6 +1893,182 @@ function ResultView({ onReset, result, chatMsgs, setChatMsgs, isSaved, sessionId
           </div>
         )}
       </div>
+
+      {/* ─── Edit Modal per Soal ─── */}
+      {editIdx !== null && editDraft && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" onClick={() => !editSaving && closeEdit()} />
+          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <div className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[92vh] flex flex-col"
+              style={{ background: "rgba(8,16,36,0.95)", border: "1px solid rgba(255,255,255,0.07)" }}>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
+                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="size-9 rounded-xl flex items-center justify-center"
+                    style={{ background: "rgba(107,156,218,0.18)" }}>
+                    <Pencil className="size-4 text-[#6b9cda]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
+                      Edit Soal #{editIdx + 1}
+                    </p>
+                    <p className="text-[10px] text-[#4a5a7a]">Perbaiki field manual kalau AI kurang akurat</p>
+                  </div>
+                </div>
+                <button onClick={closeEdit} disabled={editSaving}
+                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors disabled:opacity-30">
+                  <X className="size-4 text-[#4a5a7a]" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <div className="overflow-y-auto px-6 py-5 flex flex-col gap-4">
+
+                {/* Perlu review checkbox */}
+                <label className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer"
+                  style={{ background: editDraft.needs_review ? "rgba(224,123,74,0.12)" : "#101b30", border: `1px solid ${editDraft.needs_review ? "rgba(224,123,74,0.3)" : "rgba(255,255,255,0.04)"}` }}>
+                  <input type="checkbox"
+                    checked={!!editDraft.needs_review}
+                    onChange={e => setEditDraft(d => d ? { ...d, needs_review: e.target.checked } : d)}
+                    className="accent-[#e07b4a]"
+                  />
+                  <Flag className="size-3.5 text-[#e07b4a]" />
+                  <span className="text-xs font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-space)" }}>
+                    TANDAI PERLU REVIEW
+                  </span>
+                </label>
+
+                {/* Soal */}
+                <div>
+                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                    SOAL (TEKS PERTANYAAN)
+                  </label>
+                  <textarea
+                    value={editDraft.question}
+                    onChange={e => setEditDraft(d => d ? { ...d, question: e.target.value } : d)}
+                    rows={3}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-y"
+                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
+                  />
+                </div>
+
+                {/* Options */}
+                <div>
+                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                    PILIHAN JAWABAN
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {editDraft.options.map((opt, oi) => (
+                      <div key={oi} className="flex items-center gap-2">
+                        <button onClick={() => setEditDraft(d => d ? { ...d, correct: String(oi + 1) } : d)}
+                          title={`Tandai sebagai jawaban benar`}
+                          className="size-6 rounded-md flex items-center justify-center shrink-0 transition-all"
+                          style={editDraft.correct === String(oi + 1)
+                            ? { background: "#5ea87a", color: "#fff" }
+                            : { background: "#101b30", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          {editDraft.correct === String(oi + 1) ? <Check className="size-3.5" /> : oi + 1}
+                        </button>
+                        <input
+                          value={opt}
+                          onChange={e => setEditDraft(d => {
+                            if (!d) return d;
+                            const next = [...d.options];
+                            next[oi] = e.target.value;
+                            return { ...d, options: next };
+                          })}
+                          className="flex-1 px-3 py-2 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none"
+                          style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-[#4a5a7a] mt-1.5">Klik nomor di kiri buat tandai jawaban benar (sekarang: <span className="text-[#5ea87a] font-bold">{editDraft.correct}</span>)</p>
+                </div>
+
+                {/* Explanation */}
+                <div>
+                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                    PENJELASAN
+                  </label>
+                  <textarea
+                    value={editDraft.explanation}
+                    onChange={e => setEditDraft(d => d ? { ...d, explanation: e.target.value } : d)}
+                    rows={4}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-y leading-relaxed"
+                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
+                  />
+                </div>
+
+                {/* Why wrong */}
+                <div>
+                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                    KENAPA PILIHAN LAIN SALAH
+                  </label>
+                  <textarea
+                    value={editDraft.why_wrong ?? ""}
+                    onChange={e => setEditDraft(d => d ? { ...d, why_wrong: e.target.value } : d)}
+                    rows={3}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-y leading-relaxed"
+                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
+                  />
+                </div>
+
+                {/* Tip */}
+                <div>
+                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                    TIPS UJIAN
+                  </label>
+                  <textarea
+                    value={editDraft.tip ?? ""}
+                    onChange={e => setEditDraft(d => d ? { ...d, tip: e.target.value } : d)}
+                    rows={2}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-y leading-relaxed"
+                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
+                    KATEGORI
+                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    {(["文法","語彙","文字","読解"] as const).map(c => (
+                      <button key={c} onClick={() => setEditDraft(d => d ? { ...d, category: c } : d)}
+                        className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
+                        style={editDraft.category === c
+                          ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)", fontFamily: "var(--font-space)" }
+                          : { background: "#101b30", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)", fontFamily: "var(--font-space)" }}>
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex gap-3 px-6 py-4 border-t shrink-0"
+                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                <button onClick={closeEdit} disabled={editSaving}
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
+                  style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+                  Batal
+                </button>
+                <button onClick={saveEdit}
+                  disabled={editSaving || !editDraft.question.trim() || !editDraft.explanation.trim()}
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
+                  style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)" }}>
+                  {editSaving
+                    ? <><Loader2 className="size-4 animate-spin" /> Menyimpan...</>
+                    : <><Save className="size-4" /> SIMPAN</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -2458,6 +2721,7 @@ export default function AnalisisFoto() {
         {!loadingSession && stage === "result" && result && (
           <ResultView
             result={result}
+            setResult={setResult}
             chatMsgs={chatMsgs}
             setChatMsgs={setChatMsgs}
             onReset={handleReset}
