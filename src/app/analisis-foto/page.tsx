@@ -669,7 +669,7 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
 }
 
 /* ─── Result State ──────────────────────────────────────────── */
-function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview }: {
+function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview, sessionLevel, sessionCategory }: {
   onReset: () => void;
   result: AIResult;
   setResult: React.Dispatch<React.SetStateAction<AIResult | null>>;
@@ -678,6 +678,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   isSaved: boolean;
   sessionId: string | null;
   isReview?: boolean;
+  sessionLevel?: Level | null;
+  sessionCategory?: Category | null;
 }) {
   const [answers,      setAnswers]      = useState<Record<number, string>>({});
   const [revealed,     setRevealed]     = useState<Set<number>>(new Set());
@@ -759,11 +761,103 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     if (editIdx === null || !editDraft || editSaving) return;
     setEditSaving(true);
     try {
-      updateQuestionAt(editIdx, editDraft);
+      const isNew = editIdx >= result.questions.length;
+      const next: AIResult = {
+        ...result,
+        questions: isNew
+          ? [...result.questions, editDraft]
+          : result.questions.map((q, i) => (i === editIdx ? editDraft : q)),
+      };
+      setResult(next);
+      persistResultJsonb(next).catch(() => { /* swallow */ });
       closeEdit();
     } finally {
       setEditSaving(false);
     }
+  };
+
+  /* Open the modal with a blank draft → manual-add new question */
+  const openAddManual = () => {
+    setEditIdx(result.questions.length);
+    setEditDraft({
+      question: "",
+      options: ["1. ", "2. ", "3. ", "4. "],
+      correct: "1",
+      explanation: "",
+      why_wrong: "",
+      tip: "",
+      category: "文法",
+    });
+  };
+
+  /* Re-photo: upload a new image, send to /api/analisis with the session's
+     level/category, append returned questions to current session. */
+  const addPhotoRef = useRef<HTMLInputElement>(null);
+  const [addingPhoto, setAddingPhoto] = useState(false);
+
+  const handleAddFromPhoto = async (file: File) => {
+    if (!sessionLevel) {
+      setToast({ text: "Level sesi tidak ketahuan — refresh halaman dulu", ok: false });
+      setTimeout(() => setToast(null), 2000);
+      return;
+    }
+    setAddingPhoto(true);
+    try {
+      const reader = new FileReader();
+      const base64: string = await new Promise((resolve, reject) => {
+        reader.onload  = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = () => reject(new Error("Gagal baca file"));
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch("/api/analisis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mimeType: file.type || "image/jpeg",
+          level: sessionLevel,
+          category: sessionCategory ?? "ai",
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Analisis gagal");
+
+      const data: AIResult = json.data;
+      const newQs = data.questions ?? [];
+      if (newQs.length === 0) {
+        setToast({ text: "Nggak ada soal yang ke-detect di foto", ok: false });
+        setTimeout(() => setToast(null), 2000);
+        return;
+      }
+
+      // Merge: append questions, dedupe vocab by word.
+      const mergedVocab = Array.from(
+        new Map([...(result.vocabulary ?? []), ...(data.vocabulary ?? [])].map(v => [v.word, v])).values(),
+      );
+      const next: AIResult = {
+        ...result,
+        vocabulary: mergedVocab,
+        questions: [...result.questions, ...newQs],
+      };
+      setResult(next);
+      persistResultJsonb(next).catch(() => { /* swallow */ });
+      setToast({ text: `+${newQs.length} soal ditambah dari foto`, ok: true });
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Gagal tambah dari foto";
+      setToast({ text: msg, ok: false });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setAddingPhoto(false);
+    }
+  };
+
+  const onAddPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleAddFromPhoto(file);
+    e.target.value = "";
   };
 
   /* Copy text to clipboard, with toast confirmation */
@@ -1667,6 +1761,25 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             );
           });
         })()}
+
+        {/* ── Tambah soal: manual / dari foto ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+          <input ref={addPhotoRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={onAddPhotoChange} />
+          <button onClick={openAddManual} disabled={addingPhoto}
+            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
+            style={{ background: "rgba(94,168,122,0.12)", color: "#5ea87a", border: "1px dashed rgba(94,168,122,0.35)", fontFamily: "var(--font-space)" }}>
+            <Plus className="size-4" /> TAMBAH SOAL MANUAL
+          </button>
+          <button onClick={() => addPhotoRef.current?.click()}
+            disabled={addingPhoto || !sessionLevel}
+            title={!sessionLevel ? "Level sesi nggak ketahuan — refresh dulu" : "Upload foto/PDF buat AI analisis & append ke sesi ini"}
+            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
+            style={{ background: "rgba(107,156,218,0.12)", color: "#6b9cda", border: "1px dashed rgba(107,156,218,0.35)", fontFamily: "var(--font-space)" }}>
+            {addingPhoto
+              ? <><Loader2 className="size-4 animate-spin" /> MENGANALISIS…</>
+              : <><Camera className="size-4" /> TAMBAH DARI FOTO</>}
+          </button>
+        </div>
         </div>
 
         {/* ── Kosakata dari Foto ── */}
@@ -2011,9 +2124,13 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                   </div>
                   <div>
                     <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                      Edit Soal #{editIdx + 1}
+                      {editIdx >= result.questions.length ? "Tambah Soal Manual" : `Edit Soal #${editIdx + 1}`}
                     </p>
-                    <p className="text-[10px] text-[#4a5a7a]">Perbaiki field manual kalau AI kurang akurat</p>
+                    <p className="text-[10px] text-[#4a5a7a]">
+                      {editIdx >= result.questions.length
+                        ? "Ketik soal + opsi + jawaban + penjelasan dari nol"
+                        : "Perbaiki field manual kalau AI kurang akurat"}
+                    </p>
                   </div>
                 </div>
                 <button onClick={closeEdit} disabled={editSaving}
@@ -2309,6 +2426,8 @@ export default function AnalisisFoto() {
   const [readIds,             setReadIds]             = useState<Set<number>>(new Set(notifs.filter(n => n.read).map(n => n.id)));
   const [files,               setFiles]               = useState<FileData[]>([]);
   const [result,              setResult]              = useState<AIResult | null>(null);
+  const [resultLevel,         setResultLevel]         = useState<Level | null>(null);
+  const [resultCategory,      setResultCategory]      = useState<Category | null>(null);
   const [apiError,            setApiError]            = useState<string | null>(null);
   const [chatMsgs,            setChatMsgs]            = useState<ChatMsg[]>([]);
   const [savedSessionId,      setSavedSessionId]      = useState<string | null>(null);
@@ -2483,11 +2602,13 @@ export default function AnalisisFoto() {
       const supabase = createClient();
       const { data } = await supabase
         .from("sessions")
-        .select("ai_result")
+        .select("ai_result, level, category")
         .eq("id", id)
         .single();
       if (data?.ai_result) {
         setResult(data.ai_result as AIResult);
+        setResultLevel((data.level ?? null) as Level | null);
+        setResultCategory(((data.category === "AI" ? "ai" : data.category) ?? null) as Category | null);
         setSavedSessionId(id);
         setChatMsgs([]);
         setIsReviewMode(true);
@@ -2525,6 +2646,8 @@ export default function AnalisisFoto() {
     setStage("analyzing");
     setApiError(null);
     setCurrentAnalyzingIdx(1);
+    setResultLevel(level);
+    setResultCategory(category);
 
     const allQuestions: AIQuestion[] = [];
     const allVocab: VocabItem[] = [];
@@ -2827,6 +2950,8 @@ export default function AnalisisFoto() {
             isSaved={!!savedSessionId}
             sessionId={savedSessionId}
             isReview={isReviewMode}
+            sessionLevel={resultLevel}
+            sessionCategory={resultCategory}
           />
         )}
       </div>
