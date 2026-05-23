@@ -114,12 +114,22 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
     const isDocx = !!textContent;
     const isPdf  = mimeType === "application/pdf";
 
+    // Put the (identical-across-chunks) prompt FIRST and mark it for prompt
+    // caching. Subsequent chunks of the same PDF re-use the cached prefix at
+    // ~10% of base input cost. Cache TTL is 5 min — well over the time it
+    // takes to process all chunks sequentially.
+    const cachedPromptBlock = {
+      type: "text" as const,
+      text: prompt,
+      cache_control: { type: "ephemeral" as const },
+    };
+
     let contentBlocks: Anthropic.MessageParam["content"];
 
     if (isDocx) {
       contentBlocks = [
+        cachedPromptBlock,
         { type: "text", text: `Berikut adalah isi dokumen Word yang berisi soal JLPT:\n\n${textContent}` },
-        { type: "text", text: prompt },
       ];
     } else {
       const fileContent = isPdf
@@ -135,18 +145,26 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
               data: imageBase64,
             },
           };
-      contentBlocks = [fileContent, { type: "text", text: prompt }];
+      contentBlocks = [cachedPromptBlock, fileContent];
     }
 
     // Sonnet-only: prioritize analysis quality over cost. Each PDF is already
     // auto-split into 2-page chunks on the frontend, so token usage stays
-    // reasonable per request.
+    // reasonable per request. Prompt caching cuts repeat-chunk input cost ~90%.
     const stream = client.messages.stream({
       model: "claude-sonnet-4-6",
       max_tokens: 64000,
       messages: [{ role: "user", content: contentBlocks }],
     });
     const message    = await stream.finalMessage();
+    const usage      = message.usage;
+    console.info("Analisis tokens:", {
+      input: usage.input_tokens,
+      output: usage.output_tokens,
+      cache_write: usage.cache_creation_input_tokens ?? 0,
+      cache_read: usage.cache_read_input_tokens ?? 0,
+      fileType: isPdf ? "pdf" : isDocx ? "docx" : "image",
+    });
     const stopReason = message.stop_reason ?? "unknown";
     const text       = message.content[0]?.type === "text" ? message.content[0].text : "";
     const clean      = extractJsonBlock(text);
