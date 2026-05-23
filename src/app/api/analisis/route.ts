@@ -5,12 +5,26 @@ export const maxDuration = 300; // 5 min — needed for large docx/PDF
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+/* Extract the JSON object block out of a wrapped response (markdown / prose). */
+function extractJsonBlock(text: string): string {
+  let s = text.trim()
+    .replace(/^```(?:json)?\n?/i, "")
+    .replace(/\n?```\s*$/i, "")
+    .trim();
+  if (s.startsWith("{")) return s;
+  // Fall back: grab everything between the first '{' and the last '}'.
+  const start = s.indexOf("{");
+  const end   = s.lastIndexOf("}");
+  if (start >= 0 && end > start) s = s.slice(start, end + 1);
+  return s;
+}
+
 /* Try to salvage truncated JSON by closing open structures at every depth */
 function repairJson(raw: string): unknown | null {
   // Remove trailing comma and any unterminated string
-  let s = raw.replace(/,\s*$/, "").replace(/"[^"]*$/, '"...');
-  // Try closing at increasing depths: object field, array item, array, object, array, object
-  const closings = ["}", "}]", "}]}", "}]}", "}]}]}", "}]}]}"];
+  const s = raw.replace(/,\s*$/, "").replace(/"[^"]*$/, '"...');
+  // Try closing at increasing depths
+  const closings = ["}", "}]", "}]}", "]}", "}]}]", "}]}]}", "]}]}", "}]}]}]"];
   for (const tail of closings) {
     try { return JSON.parse(s + tail); } catch { /* keep trying */ }
   }
@@ -132,18 +146,42 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa komentar):
     });
 
     const message = await stream.finalMessage();
-    const text = message.content[0].type === "text" ? message.content[0].text.trim() : "";
-    const clean = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    const stopReason = message.stop_reason ?? "unknown";
+    const text = message.content[0]?.type === "text" ? message.content[0].text : "";
+    const clean = extractJsonBlock(text);
 
-    let parsed;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(clean);
     } catch {
       parsed = repairJson(clean);
-      if (!parsed) throw new Error("Respons AI tidak valid. Coba lagi.");
     }
 
-    return NextResponse.json({ success: true, data: parsed });
+    if (!parsed) {
+      // Log everything we can on the server so debugging is easy later.
+      console.error("Analisis parse failed:", {
+        stopReason,
+        textLength: text.length,
+        first300: text.slice(0, 300),
+        last300: text.slice(-300),
+        fileType: isPdf ? "pdf" : isDocx ? "docx" : "image",
+      });
+
+      // Surface a hint matched to the most likely cause.
+      let hint = "Coba ulang sekali lagi atau pisah file jadi bagian lebih kecil.";
+      if (stopReason === "max_tokens") {
+        hint = isPdf
+          ? "PDF terlalu padat — soal/teks-nya kebanyakan. Pisah jadi 5–10 halaman per file, terus upload terpisah."
+          : "Isi soal kebanyakan untuk sekali analisis. Pisah jadi beberapa file.";
+      } else if (stopReason === "refusal") {
+        hint = "AI menolak menjawab konten ini. Cek file-nya nggak ada hal yang sensitif.";
+      } else if (text.trim().length === 0) {
+        hint = "AI nggak menghasilkan respons. Cek file rusak/kosong, lalu coba lagi.";
+      }
+      throw new Error(`Respons AI tidak bisa diproses (alasan: ${stopReason}). ${hint}`);
+    }
+
+    return NextResponse.json({ success: true, data: parsed, stopReason });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Analisis error:", msg);
