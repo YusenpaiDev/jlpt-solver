@@ -9,7 +9,7 @@ import {
   CheckCircle2, Circle, Sparkles,
   ChevronLeft, RotateCcw,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck,
-  BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save,
+  BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -766,6 +766,53 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     }
   };
 
+  /* Copy text to clipboard, with toast confirmation */
+  const copyToClipboard = async (text: string, label = "Tersalin!") => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast({ text: label, ok: true });
+      setTimeout(() => setToast(null), 1500);
+    } catch {
+      setToast({ text: "Gagal menyalin", ok: false });
+      setTimeout(() => setToast(null), 1500);
+    }
+  };
+
+  /* Toggle furigana for all 4 options of a question at once */
+  const toggleAllOptions = async (qi: number, opts: string[]) => {
+    const keys = opts.map((_, oi) => `o-${qi}-${oi}`);
+    const allShowing = keys.every(k => showFurigana.has(k));
+    if (allShowing) {
+      setShowFurigana(s => {
+        const n = new Set(s);
+        keys.forEach(k => n.delete(k));
+        return n;
+      });
+    } else {
+      // Toggle each option that's not already showing (in parallel).
+      await Promise.all(
+        opts.map((opt, oi) => {
+          const k = `o-${qi}-${oi}`;
+          if (!showFurigana.has(k)) return toggleFurigana(k, opt.slice(2).trim());
+          return Promise.resolve();
+        }),
+      );
+    }
+  };
+
+  /* Delete a question from the session (with confirm) */
+  const deleteQuestion = async (qi: number) => {
+    if (!confirm(`Hapus soal #${qi + 1}? Aksi ini permanen.`)) return;
+    const next: AIResult = {
+      ...result,
+      questions: result.questions.filter((_, i) => i !== qi),
+    };
+    setResult(next);
+    persistResultJsonb(next).catch(() => { /* swallow */ });
+    setToast({ text: "Soal dihapus", ok: true });
+    setTimeout(() => setToast(null), 1500);
+  };
+
   const generateWordInfo = async () => {
     if (!addKanji.trim() || generating) return;
     setGenerating(true);
@@ -1327,7 +1374,22 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                                 className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all disabled:opacity-50"
                                 style={{ background: showFurigana.has(qKey) ? "rgba(138,180,232,0.22)" : "rgba(138,180,232,0.1)", color: "#8ab4e8", fontFamily: "var(--font-space)" }}>
                                 {furiganaLoading.has(qKey) ? <Loader2 className="size-2.5 animate-spin" /> : "ふ"}
-                                {furiganaLoading.has(qKey) ? "MEMUAT…" : showFurigana.has(qKey) ? "FURIGANA ✓" : "FURIGANA"}
+                                {furiganaLoading.has(qKey) ? "SOAL…" : showFurigana.has(qKey) ? "SOAL ✓" : "SOAL"}
+                              </button>
+                            );
+                          })()}
+                          {(() => {
+                            const optKeys = q.options.map((_, oi) => `o-${qi}-${oi}`);
+                            const allShowing = optKeys.every(k => showFurigana.has(k));
+                            const anyLoading = optKeys.some(k => furiganaLoading.has(k));
+                            return (
+                              <button
+                                onClick={() => toggleAllOptions(qi, q.options)}
+                                disabled={anyLoading}
+                                className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all disabled:opacity-50"
+                                style={{ background: allShowing ? "rgba(166,123,212,0.22)" : "rgba(166,123,212,0.1)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
+                                {anyLoading ? <Loader2 className="size-2.5 animate-spin" /> : "ふ"}
+                                {anyLoading ? "OPSI…" : allShowing ? "OPSI ✓" : "OPSI"}
                               </button>
                             );
                           })()}
@@ -1348,6 +1410,12 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                               style={{ background: "rgba(107,156,218,0.12)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
                               <Pencil className="size-2.5" /> EDIT
                             </button>
+                            <button onClick={() => deleteQuestion(qi)}
+                              title="Hapus soal ini"
+                              className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all hover:brightness-110"
+                              style={{ background: "rgba(220,80,80,0.12)", color: "#dc5050", fontFamily: "var(--font-space)" }}>
+                              <Trash2 className="size-2.5" />
+                            </button>
                           </div>
                         </div>
                         {/* Question text — blanks highlighted, with optional furigana */}
@@ -1367,10 +1435,13 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
                 {/* Options */}
                 <div className="px-6 pb-5 flex flex-col gap-2.5">
-                  {q.options.map((opt) => {
+                  {q.options.map((opt, oi) => {
                     const id = opt.charAt(0);
                     const isSelected = userAns === id;
                     const isCorrect = id === q.correct;
+                    const optText = opt.slice(2).trim();
+                    const opKey = `o-${qi}-${oi}`;
+                    const useFuri = showFurigana.has(opKey) && furiganaMarked[opKey];
 
                     let bg = "rgba(99,102,241,0.06)";
                     let border = "rgba(129,140,248,0.18)";
@@ -1400,21 +1471,30 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                     }
 
                     return (
-                      <button key={opt}
-                        onClick={() => pick(qi, id)}
-                        disabled={isRevealed && !isReview}
-                        className={`flex items-center gap-4 px-4 py-4 rounded-2xl text-left transition-all duration-200 ${(isRevealed && !isReview) ? "cursor-default" : "hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"}`}
-                        style={{ background: bg, border: `1.5px solid ${border}`, color: textColor, boxShadow: shadow }}>
-                        <span className="size-9 rounded-xl flex items-center justify-center text-base font-black shrink-0"
-                          style={{ background: numBg, color: numColor, fontFamily: "var(--font-space)" }}>
-                          {id}
-                        </span>
-                        <span className="flex-1 text-[16px] font-semibold"
-                          style={{ fontFamily: "var(--font-jakarta)" }}>
-                          {opt.slice(2).trim()}
-                        </span>
-                        {icon}
-                      </button>
+                      <div key={opt} className="relative group/opt">
+                        <button
+                          onClick={() => pick(qi, id)}
+                          disabled={isRevealed && !isReview}
+                          className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left transition-all duration-200 ${(isRevealed && !isReview) ? "cursor-default" : "hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"}`}
+                          style={{ background: bg, border: `1.5px solid ${border}`, color: textColor, boxShadow: shadow }}>
+                          <span className="size-9 rounded-xl flex items-center justify-center text-base font-black shrink-0"
+                            style={{ background: numBg, color: numColor, fontFamily: "var(--font-space)" }}>
+                            {id}
+                          </span>
+                          <span className="flex-1 font-semibold pr-8"
+                            style={{ fontFamily: "var(--font-jakarta)", fontSize: useFuri ? "15px" : "16px", lineHeight: useFuri ? 2.2 : 1.5 }}>
+                            {useFuri ? renderPassage(furiganaMarked[opKey]) : optText}
+                          </span>
+                          {icon}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); copyToClipboard(optText, `Opsi ${id} tersalin`); }}
+                          title="Salin teks opsi ini"
+                          className="absolute top-2 right-2 size-7 rounded-lg flex items-center justify-center opacity-0 group-hover/opt:opacity-100 transition-all hover:bg-white/10"
+                          style={{ background: "rgba(8,16,36,0.6)" }}>
+                          <Copy className="size-3 text-[#bbc6e2]" />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -1457,15 +1537,34 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                         style={{ background: "rgba(74,222,128,0.25)", boxShadow: "0 0 16px rgba(74,222,128,0.3)" }}>
                         <Check className="size-5" style={{ color: "#4ade80" }} />
                       </div>
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-black tracking-widest"
                           style={{ fontFamily: "var(--font-space)", color: "#4ade80", textShadow: "0 0 10px rgba(74,222,128,0.4)" }}>
                           ✨ JAWABAN BENAR
                         </p>
-                        <p className="text-base font-bold" style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff" }}>
-                          Pilihan {q.correct} — {q.options.find(o => o.startsWith(q.correct))?.slice(2).trim()}
-                        </p>
+                        {(() => {
+                          const correctOpt = q.options.find(o => o.startsWith(q.correct));
+                          const correctText = correctOpt?.slice(2).trim() ?? "";
+                          const correctIdx = q.options.findIndex(o => o.startsWith(q.correct));
+                          const opKey = `o-${qi}-${correctIdx}`;
+                          const useFuri = showFurigana.has(opKey) && furiganaMarked[opKey];
+                          return (
+                            <p className="font-bold" style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff", fontSize: useFuri ? "15px" : "16px", lineHeight: useFuri ? 2.2 : 1.5 }}>
+                              Pilihan {q.correct} — {useFuri ? renderPassage(furiganaMarked[opKey]) : correctText}
+                            </p>
+                          );
+                        })()}
                       </div>
+                      <button onClick={() => {
+                        const correctOpt = q.options.find(o => o.startsWith(q.correct));
+                        const correctText = correctOpt?.slice(2).trim() ?? "";
+                        copyToClipboard(`Pilihan ${q.correct} — ${correctText}`, "Jawaban tersalin");
+                      }}
+                        title="Salin jawaban"
+                        className="size-8 rounded-lg flex items-center justify-center shrink-0 transition-all hover:brightness-110"
+                        style={{ background: "rgba(74,222,128,0.18)" }}>
+                        <Copy className="size-3.5 text-[#4ade80]" />
+                      </button>
                     </div>
 
                     {/* Kenapa benar */}
