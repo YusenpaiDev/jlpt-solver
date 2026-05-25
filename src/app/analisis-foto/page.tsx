@@ -53,8 +53,74 @@ interface ChatMsg {
   text: string;
 }
 
+/* Sometimes the AI bundles options ("1xxx 2xxx 3xxx 4xxx") into the question
+   text — usually for 読解 where the option lines sit directly under the prompt.
+   Detect that pattern at the tail of `question` and split it out.
 
+   Returns null if no clean 4-option pattern is found. */
+function splitInlineOptions(question: string): { question: string; options: string[] } | null {
+  const text = question.replace(/\r\n?/g, "\n");
+  const normDigit = (c: string) => ({ "１": "1", "２": "2", "３": "3", "４": "4" } as Record<string,string>)[c] ?? c;
 
+  // A marker is a digit 1/2/3/4 (half- or full-width) at line-start OR
+  // preceded by whitespace (incl. full-width). It must not be followed by
+  // another digit, so "12" isn't a match.
+  const markerRe = /(?:^|[\s　])([1-4１-４])(?![\d０-９])/g;
+  const hits: { digitIdx: number; digit: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = markerRe.exec(text))) {
+    hits.push({ digitIdx: m.index + m[0].length - 1, digit: normDigit(m[1]) });
+  }
+  if (hits.length < 4) return null;
+
+  // Look for a trailing 1→2→3→4 run (search from the last possible start).
+  for (let i = hits.length - 4; i >= 0; i--) {
+    const run = hits.slice(i, i + 4);
+    if (run[0].digit !== "1" || run[1].digit !== "2" || run[2].digit !== "3" || run[3].digit !== "4") continue;
+
+    let qEnd = run[0].digitIdx;
+    while (qEnd > 0 && /[\s　]/.test(text[qEnd - 1])) qEnd--;
+    const newQuestion = text.slice(0, qEnd).replace(/[\s　]+$/u, "");
+    if (newQuestion.trim().length === 0) return null;
+
+    const opts: string[] = [];
+    for (let k = 0; k < 4; k++) {
+      const start = run[k].digitIdx + 1;
+      const end = k < 3 ? run[k + 1].digitIdx : text.length;
+      const body = text.slice(start, end).replace(/^[．.、:：\s　]+/u, "").replace(/[\s　]+$/u, "");
+      if (body.length === 0) return null;
+      opts.push(`${k + 1}. ${body}`);
+    }
+    return { question: newQuestion, options: opts };
+  }
+  return null;
+}
+
+/* Lightweight equality for "are these two option strings basically the same":
+   strip the leading number/punctuation and compare normalized text. */
+function sameOptionBody(a: string, b: string): boolean {
+  const strip = (s: string) => s.replace(/^[1-4１-４][．.、:：\s　]*/u, "").replace(/[\s　]+/gu, "").trim();
+  return strip(a) === strip(b) && strip(a).length > 0;
+}
+
+/* When the AI returns the inline pattern AND also populates options separately,
+   the options usually match. In that case strip the duplicate from question
+   silently. Otherwise leave question alone (user can hit the manual split
+   button if they want). */
+function sanitizeQuestion(q: { question: string; options: string[] }): { question: string; options: string[] } {
+  const split = splitInlineOptions(q.question);
+  if (!split) return q;
+  const optsClean = q.options.filter(o => o && o.trim().length > 0);
+  // Auto-strip only when existing options array looks like the inline ones.
+  if (optsClean.length === 4 && split.options.every((s, i) => sameOptionBody(s, optsClean[i]))) {
+    return { question: split.question, options: q.options };
+  }
+  // Or when options array is empty/short — pull options from the question.
+  if (optsClean.length < 4) {
+    return { question: split.question, options: split.options };
+  }
+  return q;
+}
 
 
 const uploadStats = [
@@ -864,7 +930,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       if (!res.ok) throw new Error(json.error || "Analisis gagal");
 
       const data: AIResult = json.data;
-      const newQs = data.questions ?? [];
+      const newQs = (data.questions ?? []).map(q => ({ ...q, ...sanitizeQuestion(q) }));
       if (newQs.length === 0) {
         setToast({ text: "Nggak ada soal yang ke-detect di file", ok: false });
         setTimeout(() => setToast(null), 2000);
@@ -2200,9 +2266,36 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
                 {/* Soal */}
                 <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                    SOAL (TEKS PERTANYAAN)
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold text-[#bbc6e2]" style={{ fontFamily: "var(--font-space)" }}>
+                      SOAL (TEKS PERTANYAAN)
+                    </label>
+                    {(() => {
+                      const canSplit = !!splitInlineOptions(editDraft.question);
+                      return (
+                        <button
+                          type="button"
+                          disabled={!canSplit}
+                          onClick={() => {
+                            const split = splitInlineOptions(editDraft.question);
+                            if (!split) return;
+                            setEditDraft(d => d ? { ...d, question: split.question, options: split.options } : d);
+                            setToast({ text: "Opsi dipisahkan dari soal", ok: true });
+                            setTimeout(() => setToast(null), 1800);
+                          }}
+                          title={canSplit ? "Deteksi pola 1…2…3…4… di teks soal lalu pindahkan ke field opsi" : "Tidak ada pola opsi yang terdeteksi di teks soal"}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all disabled:opacity-30"
+                          style={{
+                            background: canSplit ? "rgba(107,156,218,0.12)" : "#101b30",
+                            color: canSplit ? "#6b9cda" : "#4a5a7a",
+                            border: `1px solid ${canSplit ? "rgba(107,156,218,0.3)" : "rgba(255,255,255,0.04)"}`,
+                            fontFamily: "var(--font-space)",
+                          }}>
+                          PISAHKAN OPSI
+                        </button>
+                      );
+                    })()}
+                  </div>
                   <textarea
                     value={editDraft.question}
                     onChange={e => setEditDraft(d => d ? { ...d, question: e.target.value } : d)}
@@ -2709,7 +2802,7 @@ export default function AnalisisFoto() {
         if (!res.ok) throw new Error(json.error || "Analisis gagal");
         const data: AIResult = json.data;
         if (i === 0) mainTitle = data.title;
-        allQuestions.push(...data.questions);
+        allQuestions.push(...data.questions.map(q => ({ ...q, ...sanitizeQuestion(q) })));
         if (data.vocabulary) allVocab.push(...data.vocabulary);
       }
 

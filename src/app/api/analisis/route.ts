@@ -54,7 +54,7 @@ TUGAS UTAMA:
 Baca SELURUH teks dalam foto dengan sangat teliti. Ekstrak SEMUA soal yang ada persis seperti tertulis. Jangan buat soal baru, jangan kurangi.
 
 Untuk setiap soal berikan analisis LENGKAP:
-1. Teks soal PERSIS dari foto (dalam huruf Jepang)
+1. Teks soal PERSIS dari foto (dalam huruf Jepang) — HANYA pertanyaan saja, JANGAN ikut sertakan teks pilihan jawaban di field "question".
 2. Semua pilihan jawaban PERSIS dari foto → format "1. xxx", "2. xxx", "3. xxx", "4. xxx"
 3. Jawaban benar ("1"/"2"/"3"/"4")
 4. Penjelasan kenapa jawaban itu BENAR
@@ -74,6 +74,7 @@ PENTING:
 - Ekstrak SEMUA soal, jangan dibatasi jumlahnya
 - Teks soal dan pilihan harus PERSIS dari foto
 - Format "correct" isi angka: "1", "2", "3", atau "4"
+- PEMISAHAN SOAL vs OPSI: Field "question" HANYA berisi kalimat/teks pertanyaan. JANGAN PERNAH menggabungkan baris "1...　2...　3...　4..." atau pilihan jawaban ke dalam "question". Pilihan jawaban HARUS hanya ada di array "options". Ini berlaku khusus untuk soal 読解 di mana opsi sering berdekatan dengan pertanyaan di foto.
 
 EKSTRAK KOSAKATA:
 Selain soal, ekstrak kosakata penting dari foto ke field "vocabulary" (maks 10 kata):
