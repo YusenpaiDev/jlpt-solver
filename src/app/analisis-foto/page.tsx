@@ -1433,7 +1433,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           const hasCatFilter = cats.length > 2;
           if (!hasCatFilter && reviewCount === 0) return null;
           return (
-            <div className="flex items-center gap-2 px-8 pt-6 pb-0 flex-wrap">
+            <div className="flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6 pb-0 flex-wrap">
               {hasCatFilter && cats.map(c => (
                 <button key={c} onClick={() => setCatFilter(c!)}
                   className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
@@ -1483,9 +1483,9 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
                   {/* ── Standalone passage card ── */}
                   {showPassageCard && q.passage && (
-                    <div className="rounded-3xl overflow-hidden"
+                    <div className="rounded-2xl md:rounded-3xl overflow-hidden"
                       style={{ background: "rgba(10,20,40,0.8)", border: "1px solid rgba(94,168,122,0.25)", boxShadow: "0 0 30px rgba(94,168,122,0.06)" }}>
-                      <div className="px-6 py-4 flex items-center justify-between border-b gap-2 flex-wrap"
+                      <div className="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between border-b gap-2 flex-wrap"
                         style={{ borderColor: "rgba(94,168,122,0.15)" }}>
                         <div className="flex items-center gap-2.5">
                           <div className="size-7 rounded-lg flex items-center justify-center"
@@ -1522,8 +1522,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                       {!isPassageCollapsed && (() => {
                         const pKey = `p-${qi}`;
                         return (
-                          <div className="px-6 py-5 text-[17px] whitespace-pre-wrap font-medium"
-                            style={{ fontFamily: "var(--font-jakarta)", color: "#f0fdf4", lineHeight: showFurigana.has(pKey) ? 2.6 : 2 }}>
+                          <div className="px-4 md:px-6 py-4 md:py-5 whitespace-pre-wrap font-medium"
+                            style={{ fontFamily: "var(--font-jakarta)", color: "#f0fdf4", fontSize: "clamp(14px,3.8vw,17px)", lineHeight: showFurigana.has(pKey) ? 2.6 : 2 }}>
                             {showFurigana.has(pKey) && furiganaMarked[pKey]
                               ? renderPassage(furiganaMarked[pKey])
                               : q.passage}
@@ -1544,15 +1544,15 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                     }}>
 
                   {/* Question header strip */}
-                  <div className="px-6 py-5 relative overflow-hidden">
+                  <div className="px-4 md:px-6 py-4 md:py-5 relative overflow-hidden">
                     <div className="absolute inset-0 opacity-[0.08]"
                       style={{ background: `radial-gradient(circle at top left,${accent},transparent 60%)` }} />
                     <div className="absolute top-0 left-0 w-1 h-full rounded-l-3xl"
                       style={{ background: `linear-gradient(180deg,${accent},${accent}40)` }} />
 
-                    <div className="relative flex items-start gap-4">
+                    <div className="relative flex items-start gap-3 md:gap-4">
                       {/* Number badge */}
-                      <div className="size-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 mt-0.5"
+                      <div className="size-8 md:size-9 rounded-xl flex items-center justify-center text-xs md:text-sm font-black shrink-0 mt-0.5"
                         style={{ background: `${accent}20`, color: accent, fontFamily: "var(--font-space)" }}>
                         {qi + 1}
                       </div>
@@ -1624,7 +1624,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                           const useFuri = showFurigana.has(qKey) && furiganaMarked[qKey];
                           return (
                             <p className="font-bold"
-                              style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff", fontSize: useFuri ? "17px" : "18px", lineHeight: useFuri ? 2.4 : 1.6 }}>
+                              style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff", fontSize: useFuri ? "clamp(15px,3.6vw,17px)" : "clamp(16px,4vw,18px)", lineHeight: useFuri ? 2.4 : 1.6 }}>
                               {useFuri ? renderPassage(furiganaMarked[qKey]) : renderQuestion(q.question, accent)}
                             </p>
                           );
@@ -1634,7 +1634,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                   </div>
 
                 {/* Options */}
-                <div className="px-6 pb-5 flex flex-col gap-2.5">
+                <div className="px-4 md:px-6 pb-4 md:pb-5 flex flex-col gap-2 md:gap-2.5">
                   {q.options.map((opt, oi) => {
                     const id = opt.charAt(0);
                     const isSelected = userAns === id;
@@ -1675,14 +1675,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                         <button
                           onClick={() => pick(qi, id)}
                           disabled={isRevealed && !isReview}
-                          className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left transition-all duration-200 ${(isRevealed && !isReview) ? "cursor-default" : "hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"}`}
+                          className={`w-full flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl text-left transition-all duration-200 ${(isRevealed && !isReview) ? "cursor-default" : "hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"}`}
                           style={{ background: bg, border: `1.5px solid ${border}`, color: textColor, boxShadow: shadow }}>
-                          <span className="size-9 rounded-xl flex items-center justify-center text-base font-black shrink-0"
+                          <span className="size-8 md:size-9 rounded-lg md:rounded-xl flex items-center justify-center text-sm md:text-base font-black shrink-0"
                             style={{ background: numBg, color: numColor, fontFamily: "var(--font-space)" }}>
                             {id}
                           </span>
-                          <span className="flex-1 font-semibold pr-8"
-                            style={{ fontFamily: "var(--font-jakarta)", fontSize: useFuri ? "15px" : "16px", lineHeight: useFuri ? 2.2 : 1.5 }}>
+                          <span className="flex-1 font-semibold pr-2 md:pr-8"
+                            style={{ fontFamily: "var(--font-jakarta)", fontSize: useFuri ? "clamp(13px,3.4vw,15px)" : "clamp(14px,3.8vw,16px)", lineHeight: useFuri ? 2.2 : 1.5 }}>
                             {useFuri ? renderPassage(furiganaMarked[opKey]) : optText}
                           </span>
                           {icon}
@@ -1701,7 +1701,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
                 {/* Reveal CTA — locked until user picks an answer */}
                 {!isRevealed && (
-                  <div className="px-6 pb-6 flex flex-col gap-2">
+                  <div className="px-4 md:px-6 pb-4 md:pb-6 flex flex-col gap-2">
                     {!userAns && (
                       <p className="text-center text-[11px] font-semibold"
                         style={{ fontFamily: "var(--font-space)", color: "#94a3b8" }}>
@@ -1710,7 +1710,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                     )}
                     <button
                       onClick={() => reveal(qi)}
-                      className="w-full py-3.5 rounded-2xl text-sm font-black tracking-wider transition-all hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"
+                      className="w-full py-3 md:py-3.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-black tracking-wider transition-all hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"
                       style={{
                         background: `linear-gradient(135deg,${accent}60,${accent}30)`,
                         color: "#ffffff",
@@ -1727,15 +1727,15 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
                 {/* Explanation */}
                 {isRevealed && (
-                  <div className="mx-6 mb-6 rounded-2xl overflow-hidden"
+                  <div className="mx-4 md:mx-6 mb-4 md:mb-6 rounded-xl md:rounded-2xl overflow-hidden"
                     style={{ border: "1px solid rgba(255,255,255,0.05)" }}>
 
                     {/* Jawaban benar */}
-                    <div className="px-5 py-4 flex items-center gap-3"
+                    <div className="px-4 md:px-5 py-3.5 md:py-4 flex items-center gap-2.5 md:gap-3"
                       style={{ background: "rgba(74,222,128,0.12)", borderBottom: "1px solid rgba(74,222,128,0.2)" }}>
-                      <div className="size-9 rounded-xl flex items-center justify-center"
+                      <div className="size-8 md:size-9 rounded-lg md:rounded-xl flex items-center justify-center shrink-0"
                         style={{ background: "rgba(74,222,128,0.25)", boxShadow: "0 0 16px rgba(74,222,128,0.3)" }}>
-                        <Check className="size-5" style={{ color: "#4ade80" }} />
+                        <Check className="size-4 md:size-5" style={{ color: "#4ade80" }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-black tracking-widest"
@@ -1749,7 +1749,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                           const opKey = `o-${qi}-${correctIdx}`;
                           const useFuri = showFurigana.has(opKey) && furiganaMarked[opKey];
                           return (
-                            <p className="font-bold" style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff", fontSize: useFuri ? "15px" : "16px", lineHeight: useFuri ? 2.2 : 1.5 }}>
+                            <p className="font-bold" style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff", fontSize: useFuri ? "clamp(13px,3.4vw,15px)" : "clamp(14px,3.8vw,16px)", lineHeight: useFuri ? 2.2 : 1.5 }}>
                               Pilihan {q.correct} — {useFuri ? renderPassage(furiganaMarked[opKey]) : correctText}
                             </p>
                           );
@@ -1768,28 +1768,28 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                     </div>
 
                     {/* Kenapa benar */}
-                    <div className="px-5 py-4" style={{ background: "rgba(20,60,35,0.32)", borderBottom: "1px solid rgba(74,222,128,0.15)" }}>
+                    <div className="px-4 md:px-5 py-3.5 md:py-4" style={{ background: "rgba(20,60,35,0.32)", borderBottom: "1px solid rgba(74,222,128,0.15)" }}>
                       <p className="text-[11px] font-black mb-2 tracking-wider"
                         style={{ fontFamily: "var(--font-space)", color: "#4ade80", textShadow: "0 0 12px rgba(74,222,128,0.4)" }}>
                         💡 KENAPA BENAR?
                       </p>
-                      <p className="text-[15px] leading-relaxed font-medium" style={{ color: "#ecfdf5" }}>{q.explanation}</p>
+                      <p className="leading-relaxed font-medium" style={{ color: "#ecfdf5", fontSize: "clamp(13px,3.6vw,15px)" }}>{q.explanation}</p>
                     </div>
 
                     {/* Kenapa salah */}
                     {q.why_wrong && (
-                      <div className="px-5 py-4" style={{ background: "rgba(60,20,25,0.32)", borderBottom: "1px solid rgba(248,113,113,0.15)" }}>
+                      <div className="px-4 md:px-5 py-3.5 md:py-4" style={{ background: "rgba(60,20,25,0.32)", borderBottom: "1px solid rgba(248,113,113,0.15)" }}>
                         <p className="text-[11px] font-black mb-2 tracking-wider"
                           style={{ fontFamily: "var(--font-space)", color: "#f87171", textShadow: "0 0 12px rgba(248,113,113,0.4)" }}>
                           ✗ KENAPA PILIHAN LAIN SALAH?
                         </p>
-                        <p className="text-[15px] leading-relaxed font-medium" style={{ color: "#fef2f2" }}>{q.why_wrong}</p>
+                        <p className="leading-relaxed font-medium" style={{ color: "#fef2f2", fontSize: "clamp(13px,3.6vw,15px)" }}>{q.why_wrong}</p>
                       </div>
                     )}
 
                     {/* Grammar points */}
                     {q.grammar_points && q.grammar_points.length > 0 && (
-                      <div className="px-5 py-4" style={{ background: "rgba(25,40,80,0.4)", borderBottom: "1px solid rgba(129,140,248,0.18)" }}>
+                      <div className="px-4 md:px-5 py-3.5 md:py-4" style={{ background: "rgba(25,40,80,0.4)", borderBottom: "1px solid rgba(129,140,248,0.18)" }}>
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-[11px] font-black tracking-wider"
                             style={{ fontFamily: "var(--font-space)", color: "#a5b4fc", textShadow: "0 0 12px rgba(129,140,248,0.4)" }}>
@@ -1836,17 +1836,17 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
                     {/* Tip */}
                     {q.tip && (
-                      <div className="px-5 py-4" style={{ background: "rgba(55,38,8,0.35)" }}>
+                      <div className="px-4 md:px-5 py-3.5 md:py-4" style={{ background: "rgba(55,38,8,0.35)" }}>
                         <p className="text-[11px] font-black mb-2 tracking-wider"
                           style={{ fontFamily: "var(--font-space)", color: "#fbbf24", textShadow: "0 0 12px rgba(251,191,36,0.4)" }}>
                           🎯 TIPS & TRIK UJIAN
                         </p>
-                        <p className="text-[15px] leading-relaxed font-medium" style={{ color: "#fef3c7" }}>{q.tip}</p>
+                        <p className="leading-relaxed font-medium" style={{ color: "#fef3c7", fontSize: "clamp(13px,3.6vw,15px)" }}>{q.tip}</p>
                       </div>
                     )}
 
                     {/* ── Simpan ke Catatan ── */}
-                    <div className="px-5 py-3" style={{ borderTop: "1px solid rgba(107,156,218,0.06)" }}>
+                    <div className="px-4 md:px-5 py-3" style={{ borderTop: "1px solid rgba(107,156,218,0.06)" }}>
                       <button
                         onClick={() => saveNoteToCatatan(qi, q)}
                         disabled={savedNotes.has(qi) || savingNote === qi}
@@ -1874,14 +1874,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             accept="image/*,application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="hidden" onChange={onAddPhotoChange} />
           <button onClick={openAddManual} disabled={addingPhoto}
-            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
+            className="flex items-center justify-center gap-2 py-3 md:py-3.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
             style={{ background: "rgba(94,168,122,0.12)", color: "#5ea87a", border: "1px dashed rgba(94,168,122,0.35)", fontFamily: "var(--font-space)" }}>
             <Plus className="size-4" /> TAMBAH SOAL MANUAL
           </button>
           <button onClick={() => addPhotoRef.current?.click()}
             disabled={addingPhoto}
             title="Upload foto/PDF/Word — AI analisis & append ke sesi ini"
-            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
+            className="flex items-center justify-center gap-2 py-3 md:py-3.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
             style={{ background: "rgba(107,156,218,0.12)", color: "#6b9cda", border: "1px dashed rgba(107,156,218,0.35)", fontFamily: "var(--font-space)" }}>
             {addingPhoto
               ? <><Loader2 className="size-4 animate-spin" /> MENGANALISIS…</>
@@ -1905,11 +1905,11 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {result.vocabulary.map((v, i) => (
-                <div key={i} className="p-4 rounded-2xl flex flex-col gap-2 relative"
+                <div key={i} className="p-3 md:p-4 rounded-xl md:rounded-2xl flex flex-col gap-1.5 md:gap-2 relative"
                   style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.15)" }}>
                   {/* Level badge */}
                   {v.jlpt_level && (
-                    <span className="absolute top-3 right-3 text-[9px] px-1.5 py-0.5 rounded font-bold"
+                    <span className="absolute top-2.5 md:top-3 right-2.5 md:right-3 text-[9px] px-1.5 py-0.5 rounded font-bold"
                       style={{ background: "#1f2a3f", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
                       {v.jlpt_level}
                     </span>
@@ -1918,10 +1918,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                   <p className="text-[11px] text-[#4a5a7a] leading-none"
                     style={{ fontFamily: "var(--font-jakarta)" }}>{v.reading}</p>
                   {/* Word */}
-                  <p className="text-2xl font-black text-[#d7e2ff] leading-none"
+                  <p className="text-xl md:text-2xl font-black text-[#d7e2ff] leading-none"
                     style={{ fontFamily: "var(--font-jakarta)" }}>{v.word}</p>
                   {/* Meaning */}
-                  <p className="text-sm text-[#8a9bbf] leading-snug">{v.meaning}</p>
+                  <p className="text-[13px] md:text-sm text-[#8a9bbf] leading-snug">{v.meaning}</p>
                   {/* Example */}
                   {v.example && (
                     <div className="mt-1 pl-2 border-l-2"
@@ -2218,17 +2218,17 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       {editIdx !== null && editDraft && (
         <>
           <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" onClick={() => !editSaving && closeEdit()} />
-          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
-            <div className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[92vh] flex flex-col"
+          <div className="fixed z-50 inset-0 flex items-center justify-center p-2 md:p-4 pointer-events-none">
+            <div className="w-full max-w-2xl rounded-2xl md:rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[94vh] md:max-h-[92vh] flex flex-col"
               style={{ background: "rgba(8,16,36,0.95)", border: "1px solid rgba(255,255,255,0.07)" }}>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
+              <div className="flex items-center justify-between px-4 md:px-6 py-3.5 md:py-5 border-b shrink-0"
                 style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <div className="flex items-center gap-2.5">
-                  <div className="size-9 rounded-xl flex items-center justify-center"
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="size-8 md:size-9 rounded-lg md:rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: "rgba(107,156,218,0.18)" }}>
-                    <Pencil className="size-4 text-[#6b9cda]" />
+                    <Pencil className="size-3.5 md:size-4 text-[#6b9cda]" />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
@@ -2248,7 +2248,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               </div>
 
               {/* Form */}
-              <div className="overflow-y-auto px-6 py-5 flex flex-col gap-4">
+              <div className="overflow-y-auto px-4 md:px-6 py-4 md:py-5 flex flex-col gap-3.5 md:gap-4">
 
                 {/* Perlu review checkbox */}
                 <label className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer"
@@ -2400,16 +2400,16 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               </div>
 
               {/* Footer */}
-              <div className="flex gap-3 px-6 py-4 border-t shrink-0"
+              <div className="flex gap-2.5 md:gap-3 px-4 md:px-6 py-3.5 md:py-4 border-t shrink-0"
                 style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                 <button onClick={closeEdit} disabled={editSaving}
-                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
+                  className="flex-1 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all disabled:opacity-40"
                   style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
                   Batal
                 </button>
                 <button onClick={saveEdit}
                   disabled={editSaving || !editDraft.question.trim() || !editDraft.explanation.trim()}
-                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
+                  className="flex-1 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
                   style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)" }}>
                   {editSaving
                     ? <><Loader2 className="size-4 animate-spin" /> Menyimpan...</>
