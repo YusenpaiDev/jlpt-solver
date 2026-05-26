@@ -60,16 +60,21 @@ interface ChatMsg {
    Returns null if no clean 4-option pattern is found. */
 function splitInlineOptions(question: string): { question: string; options: string[] } | null {
   const text = question.replace(/\r\n?/g, "\n");
-  const normDigit = (c: string) => ({ "１": "1", "２": "2", "３": "3", "４": "4" } as Record<string,string>)[c] ?? c;
+  const normDigit = (c: string) => ({
+    "１": "1", "２": "2", "３": "3", "４": "4",
+    "①": "1", "②": "2", "③": "3", "④": "4",
+  } as Record<string,string>)[c] ?? c;
 
-  // A marker is a digit 1/2/3/4 (half- or full-width) at line-start OR
-  // preceded by whitespace (incl. full-width). It must not be followed by
-  // another digit, so "12" isn't a match.
-  const markerRe = /(?:^|[\s　])([1-4１-４])(?![\d０-９])/g;
+  // A marker is a digit 1/2/3/4 (half-width, full-width, or circled ①-④) at
+  // line-start OR preceded by whitespace (incl. full-width). Half/full-width
+  // must not be followed by another digit (so "12" isn't a match); circled
+  // digits are inherently single-glyph.
+  const markerRe = /(?:^|[\s　])([1-4１-４])(?![\d０-９])|(?:^|[\s　])([①-④])/g;
   const hits: { digitIdx: number; digit: string }[] = [];
   let m: RegExpExecArray | null;
   while ((m = markerRe.exec(text))) {
-    hits.push({ digitIdx: m.index + m[0].length - 1, digit: normDigit(m[1]) });
+    const digit = m[1] ?? m[2];
+    hits.push({ digitIdx: m.index + m[0].length - 1, digit: normDigit(digit) });
   }
   if (hits.length < 4) return null;
 
@@ -2741,7 +2746,14 @@ export default function AnalisisFoto() {
         .eq("id", id)
         .single();
       if (data?.ai_result) {
-        setResult(data.ai_result as AIResult);
+        // Retroactively clean sessions saved before the inline-options fix
+        // shipped — strip options from `question` field if they look duplicated.
+        const raw = data.ai_result as AIResult;
+        const cleaned: AIResult = {
+          ...raw,
+          questions: (raw.questions ?? []).map(q => ({ ...q, ...sanitizeQuestion(q) })),
+        };
+        setResult(cleaned);
         setResultLevel((data.level ?? null) as Level | null);
         setResultCategory(((data.category === "AI" ? "ai" : data.category) ?? null) as Category | null);
         setSavedSessionId(id);
