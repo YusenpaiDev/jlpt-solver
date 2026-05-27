@@ -1,288 +1,289 @@
 "use client";
 
-import { Sidebar, BottomNav } from "@/components/Sidebar";
-import AppHeader from "@/components/AppHeader";
-import { BookOpen, Type, Sparkles, ArrowUpRight, Lock, Upload, Clock, FileText, Headphones, ScrollText } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
+import {
+  Clock, ArrowRight, BookmarkIcon, Headphones, ScrollText, Lock, Folder, Upload, Lightbulb,
+} from "lucide-react";
 
-interface MateriCard {
-  label: string;
-  kanji: string;
-  sub: string;
+interface BigCardData {
+  id: string;
+  jp: string;
+  title: string;
+  subtitle: string;
   desc: string;
-  accent: string;
-  href: string | null;
-  comingSoon?: boolean;
+  cta: string;
+  accent: "iris" | "amber" | "emerald";
+  progressLabel: string;
+  progressPct: number;
 }
 
-export default function MateriHub() {
-  const cards: MateriCard[] = [
-    {
-      label: "Kotoba",
-      kanji: "語",
-      sub: "KOSAKATA",
-      desc: "Materi kosakata terstruktur per level. Lagi disiapin — kamu bakal bisa upload file kotoba sendiri.",
-      accent: "#5ea87a",
-      href: null,
-      comingSoon: true,
-    },
-    {
-      label: "Bunpou",
-      kanji: "文",
-      sub: "TATA BAHASA",
-      desc: "Grammar JLPT terstruktur per level — pola, contoh, latihan.",
-      accent: "#a67bd4",
-      href: null,
-      comingSoon: true,
-    },
-  ];
+const AVAILABLE: BigCardData[] = [
+  {
+    id: "kotoba",
+    jp: "語",
+    title: "Kotoba",
+    subtitle: "Kosakata terstruktur",
+    desc: "Kotoba dari file lokal kamu (txt/csv/pdf) — di-parse otomatis, dikelompokkan per level & tema, siap dijadikan flashcard.",
+    cta: "Coming Soon",
+    accent: "iris",
+    progressLabel: "Kerjakan persiapan",
+    progressPct: 60,
+  },
+  {
+    id: "bunpou",
+    jp: "文",
+    title: "Bunpou",
+    subtitle: "Tata Bahasa",
+    desc: "Pola grammar JLPT lengkap per level: penjelasan, contoh kalimat, latihan langsung.",
+    cta: "Coming Soon",
+    accent: "amber",
+    progressLabel: "Akan dibuka",
+    progressPct: 22,
+  },
+];
 
-  const upcomingMateri = [
-    { kanji: "字", label: "Kanji",   sub: "Karakter & stroke",  accent: "#e07b4a", icon: Type },
-    { kanji: "聴", label: "Choukai", sub: "Latihan listening",  accent: "#6b9cda", icon: Headphones },
-    { kanji: "読", label: "Dokkai",  sub: "Reading comprehension", accent: "#c05abf", icon: ScrollText },
-  ];
+const MENDATANG = [
+  { id: "kanji",   jp: "字", title: "Kanji",   Icon: BookmarkIcon,  desc: "Karakter per level, urutan stroke, kanji compound." },
+  { id: "choukai", jp: "聴", title: "Choukai", Icon: Headphones,    desc: "Latihan listening dengan audio terstruktur." },
+  { id: "dokkai",  jp: "読", title: "Dokkai",  Icon: ScrollText,    desc: "Teks bacaan panjang per level dengan pembahasan." },
+] as const;
+
+const TIPS: { t: string; d: string; accent: "iris" | "amber" | "emerald" | "rose" }[] = [
+  { t: "Konsisten 15 menit/hari", d: "Lebih efektif daripada cramming sebelum ujian. Streak tetap jalan.", accent: "amber" },
+  { t: "Aktif pakai kotoba baru", d: "Coba bikin 1 kalimat sendiri untuk tiap kata baru — bukan cuma hafal terjemahan.", accent: "iris" },
+  { t: "Mock test mingguan", d: "Sediakan 1 sesi penuh (105 menit) tiap weekend untuk simulasi suasana ujian.", accent: "emerald" },
+];
+
+export default function MateriHub() {
+  const [streak, setStreak] = useState(0);
+  const [userInitial, setUserInitial] = useState("Y");
+  const xp = 820;
+  const xpTarget = 1000;
+
+  // TODO: target dari `profiles.target_level` + `profiles.target_date` saat schema tersedia.
+  const targetLevel: "N1" | "N2" | "N3" | "N4" | "N5" = "N2";
+  const targetDate = "Desember 2026";
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
+      const { data } = await supabase.from("profiles").select("streak").eq("id", user.id).single();
+      if (data) setStreak(data.streak ?? 0);
+    }
+    load();
+  }, []);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ fontFamily: "var(--font-manrope)" }}>
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
 
-      <AppHeader activeHref="/materi" />
+      <main className="app-shell">
+        <UserBar
+          streakDays={streak}
+          xp={xp}
+          xpTarget={xpTarget}
+          avatarLetter={userInitial}
+          isPro
+          hasUnread
+        />
 
-      <div className="flex flex-1 min-h-0">
-        <Sidebar activeHref="/materi" />
-
-        {/* ── Main ── */}
-        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-10 pb-24 lg:pb-10 relative">
-
-          {/* ambient */}
-          <div className="pointer-events-none absolute top-0 right-0 w-[500px] h-[400px] opacity-[0.06] blur-[100px]"
-            style={{ background: "radial-gradient(circle,#a67bd4,transparent 70%)" }} />
-
-          <div className="relative flex flex-col gap-8 max-w-3xl">
-
-            {/* Header */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-[#5ea87a] shadow-[0_0_8px_#5ea87a]" />
-                <span className="text-[10px] font-bold tracking-widest text-[#5ea87a]"
-                  style={{ fontFamily: "var(--font-space)" }}>
-                  MATERI BELAJAR · JLPT
-                </span>
-              </div>
-              <h1 className="text-3xl md:text-5xl font-extrabold leading-tight tracking-tight"
-                style={{ fontFamily: "var(--font-jakarta)" }}>
-                <span className="text-[#d7e2ff]">Pilih materi</span>{" "}
-                <span className="shimmer-text">buat dipelajari.</span>
-              </h1>
-              <p className="text-sm text-[#8a9bbf] max-w-xl leading-relaxed mt-1">
-                Semua materi belajar JLPT kamu — dari kotoba sampai bunpou — terkumpul di sini. Tinggal pilih, langsung mulai.
-              </p>
-            </div>
-
-            {/* Cards grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-              {cards.map((c) => {
-                const CardContent = (
-                  <>
-                    <div className="absolute inset-0 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]"
-                      style={{ background: `radial-gradient(circle at top right,${c.accent},transparent 65%)` }} />
-
-                    <div className="relative flex items-start gap-4">
-                      <div className="size-16 md:size-20 rounded-2xl flex items-center justify-center shrink-0 relative overflow-hidden"
-                        style={{ background: `${c.accent}18`, boxShadow: `0 0 28px ${c.accent}25` }}>
-                        <div className="absolute inset-0"
-                          style={{ background: `radial-gradient(circle,${c.accent}30,transparent 70%)` }} />
-                        <span className="relative font-black leading-none select-none"
-                          style={{ fontSize: "2.5rem", color: c.accent, fontFamily: "var(--font-jakarta)", textShadow: `0 0 30px ${c.accent}80` }}>
-                          {c.kanji}
-                        </span>
-                      </div>
-
-                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-xs font-bold tracking-widest"
-                            style={{ color: c.accent, fontFamily: "var(--font-space)" }}>
-                            {c.sub}
-                          </p>
-                          {c.comingSoon && (
-                            <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                              style={{ background: "rgba(166,123,212,0.15)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-                              <Lock className="size-2.5" /> COMING SOON
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-2xl md:text-3xl font-extrabold text-[#d7e2ff] leading-none"
-                          style={{ fontFamily: "var(--font-jakarta)" }}>
-                          {c.label}
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="relative text-sm text-[#8a9bbf] leading-relaxed mt-5">
-                      {c.desc}
-                    </p>
-
-                    <div className="relative flex items-center gap-1 text-[11px] font-bold mt-5"
-                      style={{ color: c.comingSoon ? "#4a5a7a" : c.accent, fontFamily: "var(--font-space)" }}>
-                      {c.comingSoon ? "BELUM TERSEDIA" : "BUKA"} <ArrowUpRight className="size-3.5" />
-                    </div>
-                  </>
-                );
-
-                const baseStyle = {
-                  background: "rgba(16,27,48,0.65)",
-                  border: `1px solid ${c.accent}25`,
-                  boxShadow: `0 0 30px ${c.accent}0d, inset 0 1px 0 rgba(255,255,255,0.04)`,
-                };
-
-                if (c.href) {
-                  return (
-                    <a key={c.label} href={c.href}
-                      className="group flex flex-col gap-3 p-6 rounded-2xl backdrop-blur-md relative overflow-hidden transition-all hover:scale-[1.01] active:scale-[0.99]"
-                      style={baseStyle}>
-                      {CardContent}
-                    </a>
-                  );
-                }
-                return (
-                  <div key={c.label}
-                    className="group flex flex-col gap-3 p-6 rounded-2xl backdrop-blur-md relative overflow-hidden opacity-70 cursor-not-allowed"
-                    style={baseStyle}>
-                    {CardContent}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Info: upload your own */}
-            <div className="rounded-2xl p-5 flex items-start gap-4 backdrop-blur-md relative overflow-hidden"
-              style={{ background: "rgba(16,27,48,0.55)", border: "1px solid rgba(224,123,74,0.18)" }}>
-              <div className="absolute inset-0 opacity-[0.08]"
-                style={{ background: "radial-gradient(circle at top right,#e07b4a,transparent 60%)" }} />
-              <div className="relative size-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "rgba(224,123,74,0.15)" }}>
-                <Upload className="size-4 text-[#e07b4a]" />
-              </div>
-              <div className="relative flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#d7e2ff] mb-1" style={{ fontFamily: "var(--font-jakarta)" }}>
-                  Mau pake materi kamu sendiri?
-                </p>
-                <p className="text-xs text-[#8a9bbf] leading-relaxed">
-                  Nanti kamu bisa upload file kotoba lokal (txt/csv/pdf) ke sini, terus dijadiin materi belajar yang terstruktur — lengkap sama flashcard, album, dan latihan.
-                </p>
-              </div>
-            </div>
-
-          </div>
-        </main>
-
-        {/* ── Right Sidebar ── */}
-        <aside
-          className="w-[280px] shrink-0 hidden xl:flex flex-col py-6 px-4 overflow-y-auto backdrop-blur-xl"
-          style={{
-            background: "rgba(8,16,36,0.55)",
-            borderLeft: "1px solid rgba(107,156,218,0.1)",
-            boxShadow: "inset 1px 0 0 rgba(255,255,255,0.03)",
-          }}
-        >
-          {/* Section: Upcoming materi */}
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>
-              Materi mendatang
-            </span>
-            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-              {upcomingMateri.length}
-            </span>
-          </div>
-          <p className="text-[10px] text-[#4a5a7a] mb-4 flex items-center gap-1"
-            style={{ fontFamily: "var(--font-space)" }}>
-            <Clock className="size-2.5" />
-            Lagi disiapin, sabar yaa
-          </p>
-
-          <div className="flex flex-col gap-2.5 mb-6">
-            {upcomingMateri.map((m) => {
-              const Icon = m.icon;
-              return (
-                <div key={m.label}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl backdrop-blur-md relative overflow-hidden opacity-75"
-                  style={{ background: "rgba(16,27,48,0.6)", border: `1px solid ${m.accent}20` }}>
-                  <div className="size-9 rounded-lg flex items-center justify-center shrink-0 relative overflow-hidden"
-                    style={{ background: `${m.accent}18` }}>
-                    <span className="relative font-black"
-                      style={{ fontSize: "1.1rem", color: m.accent, fontFamily: "var(--font-jakarta)", textShadow: `0 0 16px ${m.accent}60` }}>
-                      {m.kanji}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-bold text-[#d7e2ff]"
-                        style={{ fontFamily: "var(--font-jakarta)" }}>{m.label}</p>
-                      <Lock className="size-2.5 text-[#4a5a7a]" />
-                    </div>
-                    <p className="text-[10px] text-[#4a5a7a] truncate">{m.sub}</p>
-                  </div>
-                  <Icon className="size-3.5 shrink-0" style={{ color: m.accent, opacity: 0.5 }} />
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Section: Upload tip */}
-          <div className="rounded-2xl p-4 backdrop-blur-md mb-6 relative overflow-hidden"
-            style={{ background: "rgba(16,27,48,0.55)", border: "1px solid rgba(94,168,122,0.18)" }}>
-            <div className="absolute inset-0 opacity-[0.08]"
-              style={{ background: "radial-gradient(circle at top left,#5ea87a,transparent 65%)" }} />
-            <div className="relative flex items-center gap-2 mb-2">
-              <div className="size-7 rounded-lg flex items-center justify-center"
-                style={{ background: "rgba(94,168,122,0.15)" }}>
-                <FileText className="size-3.5 text-[#5ea87a]" />
-              </div>
-              <p className="text-xs font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                Punya file materi?
-              </p>
-            </div>
-            <p className="relative text-[11px] text-[#8a9bbf] leading-relaxed mb-3">
-              Kalau punya kotoba dari buku/PDF/txt, taro di folder <span className="text-[#bbc6e2] font-mono">materi/</span> di project — nanti aku bantu bikin materi belajarnya.
-            </p>
-            <span className="relative text-[10px] font-bold text-[#5ea87a]"
-              style={{ fontFamily: "var(--font-space)" }}>
-              MASIH DRAFT
-            </span>
-          </div>
-
-          {/* Section: Tip */}
-          <div className="rounded-2xl p-4 backdrop-blur-md relative overflow-hidden"
-            style={{ background: "rgba(16,27,48,0.55)", border: "1px solid rgba(107,156,218,0.12)" }}>
-            <div className="absolute inset-0 opacity-[0.07]"
-              style={{ background: "radial-gradient(circle at bottom right,#6b9cda,transparent 65%)" }} />
-            <div className="relative flex items-center gap-2 mb-2">
-              <Sparkles className="size-3.5 text-[#6b9cda]" />
-              <p className="text-xs font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                Tips belajar
-              </p>
-            </div>
-            <p className="relative text-[11px] text-[#8a9bbf] leading-relaxed">
-              Konsisten 15 menit per hari jauh lebih efektif daripada belajar maraton 3 jam sekali sebulan. Pilih satu materi, gass tiap hari.
+        <header className="mat-header">
+          <div>
+            <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Materi" }]} />
+            <h1 className="mat-title">
+              Materi <span className="mat-title-jp">教材</span>
+            </h1>
+            <p className="mat-sub">
+              Materi belajar JLPT terstruktur — bukan kotoba personal kamu (itu di{" "}
+              <Link href="/kamus">Kamus →</Link>). Drop file lokal kamu, biar AI yang pecah jadi materi terstruktur.
             </p>
           </div>
-
-          {/* Spacer for bottom */}
-          <div className="flex-1" />
-
-          {/* Footer hint */}
-          <div className="flex items-center justify-center gap-2 pt-4 opacity-50">
-            <BookOpen className="size-3 text-[#4a5a7a]" />
-            <span className="text-[9px] text-[#4a5a7a] tracking-widest font-bold"
-              style={{ fontFamily: "var(--font-space)" }}>
-              SENSEI · MATERI
-            </span>
+          <div className="mat-stats">
+            <div className="mat-stat-card glass-card">
+              <div className="mat-stat-label">Target kamu</div>
+              <div className="mat-stat-value">
+                <span className={`lv-tag lv-${targetLevel.toLowerCase()}`}>{targetLevel}</span>
+                <span className="mat-stat-meta">{targetDate}</span>
+              </div>
+            </div>
           </div>
-        </aside>
+        </header>
+
+        <div className="mat-grid">
+          <div className="mat-main">
+            <section>
+              <div className="mat-section-head">
+                <h2 className="mat-section-title">
+                  Tersedia <span className="mat-section-count">{AVAILABLE.length}</span>
+                </h2>
+                <span className="mat-section-sub">Klik kartu untuk mulai · sedang dalam persiapan</span>
+              </div>
+              <div className="mat-card-grid">
+                {AVAILABLE.map(c => <BigCard key={c.id} {...c} />)}
+              </div>
+            </section>
+
+            <section>
+              <div className="mat-section-head">
+                <h2 className="mat-section-title">
+                  Materi mendatang <span className="mat-section-count muted-count">{MENDATANG.length}</span>
+                </h2>
+                <span className="mat-section-sub">Lagi disiapin, sabar yaa</span>
+              </div>
+              <div className="mat-soon-grid">
+                {MENDATANG.map(({ id, jp, title, Icon, desc }) => (
+                  <article className="glass-card soon-card" key={id}>
+                    <div className="soon-glyph">
+                      {jp}
+                      <span className="soon-lock"><Lock size={11} strokeWidth={2} /></span>
+                    </div>
+                    <div className="soon-body">
+                      <h4 className="soon-title">
+                        <Icon size={14} strokeWidth={1.6} /> {title}
+                      </h4>
+                      <p className="soon-desc">{desc}</p>
+                    </div>
+                    <span className="soon-status">Pending</span>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <aside className="mat-side">
+            <UploadCTA />
+            <TipsCard />
+            <FolderCard />
+          </aside>
+        </div>
+      </main>
+    </>
+  );
+}
+
+/* ─── Big card (Kotoba / Bunpou) ─── */
+
+function BigCard({ jp, title, subtitle, desc, cta, accent, progressLabel, progressPct }: BigCardData) {
+  return (
+    <article className={`glass-card big-card big-card-${accent} interactive`}>
+      <div className="bc-glyph-stage">
+        <div className={`bc-glow bc-glow-${accent}`} />
+        <div className="bc-glyph">{jp}</div>
+        <span className="bc-soon-badge">Soon</span>
       </div>
+      <div className="bc-body">
+        <div className="bc-eyebrow">{subtitle}</div>
+        <h3 className="bc-title">{title}</h3>
+        <p className="bc-desc">{desc}</p>
 
-      <BottomNav activeHref="/materi" />
+        <div className="bc-progress-row">
+          <div className="bc-progress-meta">
+            <span>{progressLabel}</span>
+            <span className="bc-progress-pct">{progressPct}%</span>
+          </div>
+          <div className="bc-progress-track">
+            <div
+              className={`bc-progress-fill${accent !== "iris" ? ` bcp-${accent}` : ""}`}
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="bc-footer">
+          <span className={`bc-cta bc-cta-${accent}`}>
+            <Clock size={12} strokeWidth={2} /> {cta}
+          </span>
+          <button type="button" className="bc-arrow" aria-label="Buka">
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/* ─── Sidebar cards ─── */
+
+function UploadCTA() {
+  return (
+    <div className="glass-card upload-cta glow-emerald">
+      <div className="upload-cta-icon">
+        <Upload size={20} strokeWidth={2} style={{ color: "var(--accent-emerald)" }} />
+      </div>
+      <h3 className="upload-cta-title">Punya file materi sendiri?</h3>
+      <p className="upload-cta-desc">
+        Drop PDF, CSV, atau TXT — AI akan parse jadi format
+        <code className="upload-code">kanji | reading | arti | level</code>
+        siap di-import ke Kamus atau dijadikan halaman materi.
+      </p>
+      <div className="upload-drop">
+        <Folder size={22} strokeWidth={1.6} style={{ color: "var(--text-tertiary)" }} />
+        <div>
+          <div className="upload-drop-title">Drag &amp; drop file di sini</div>
+          <div className="upload-drop-sub">atau klik untuk pilih · max 10 MB</div>
+        </div>
+      </div>
+      <button
+        type="button"
+        className="btn btn-primary"
+        style={{ width: "100%", justifyContent: "center", marginTop: 12 }}
+      >
+        <Upload size={13} /> Upload file materi
+      </button>
+    </div>
+  );
+}
+
+function TipsCard() {
+  return (
+    <div className="glass-card tips-card">
+      <div className="tips-head">
+        <Lightbulb size={14} strokeWidth={1.8} style={{ color: "var(--accent-amber)" }} />
+        <span className="tips-title">Tips Belajar</span>
+      </div>
+      <div className="tips-list">
+        {TIPS.map(t => (
+          <div key={t.t} className="tip-item">
+            <span className={`tip-dot tip-${t.accent}`} />
+            <div>
+              <div className="tip-t">{t.t}</div>
+              <div className="tip-d">{t.d}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FolderCard() {
+  return (
+    <div className="glass-card folder-card">
+      <div className="folder-head">
+        <Folder size={13} strokeWidth={1.8} style={{ color: "var(--text-tertiary)" }} />
+        <span>
+          Folder lokal · <code>materi/</code>
+        </span>
+      </div>
+      <p className="folder-desc">
+        Folder ini <em>gitignored</em>. Drop file PDF/CSV/TXT ke sini, lalu bilang ke Sensei — file akan
+        di-parse otomatis dan jadi materi terstruktur.
+      </p>
+      <button
+        type="button"
+        className="btn btn-secondary btn-sm"
+        style={{ width: "100%", justifyContent: "center" }}
+      >
+        Buka di Finder
+      </button>
     </div>
   );
 }
