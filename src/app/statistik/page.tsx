@@ -1,399 +1,593 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Sidebar, BottomNav } from "@/components/Sidebar";
+import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
-  BookOpen, BarChart2,
-  Flame, Target, BookMarked, TrendingUp,
-  TrendingDown, Award, Clock, Zap, Loader2,
+  Camera, BarChart3, Zap, BookA, ArrowUp, ArrowDown, Sparkles, Star,
 } from "lucide-react";
-import AppHeader from "@/components/AppHeader";
 
-/* ─── Types ───────────────────────────────────────────────────── */
+type Level = "N1" | "N2" | "N3" | "N4" | "N5";
+type Period = 7 | 30 | 90 | 0; // 0 = all-time
+
 interface RawSession {
   id: string;
-  level: string;
-  category: string;
+  level: Level | null;
+  category: string | null;
   total: number;
   score: number | null;
   created_at: string;
 }
 
-/* ─── Heatmap helpers ─────────────────────────────────────────── */
-const heatColor = (v: number) =>
-  v === 0 ? "rgba(187,198,226,0.06)"
-  : v === 1 ? "#1a3a6f"
-  : v === 2 ? "#2f5a9a"
-  : v === 3 ? "#4a7abf"
-  : "#6b9cda";
-
-function buildEmptyHeatmap(): number[][] {
-  return Array.from({ length: 52 }, () => Array(7).fill(0));
-}
-
-function buildHeatmap(sessions: RawSession[], now: Date): number[][] {
-  const dateMap = new Map<string, number>();
-  sessions.forEach(s => {
-    const date = s.created_at.split("T")[0];
-    dateMap.set(date, (dateMap.get(date) ?? 0) + 1);
-  });
-
-  const startDate = new Date(now);
-  startDate.setDate(startDate.getDate() - 52 * 7 + 1);
-  const dow = startDate.getDay();
-  startDate.setDate(startDate.getDate() - dow); // align to Sunday
-
-  const result: number[][] = [];
-  for (let w = 0; w < 52; w++) {
-    const week: number[] = [];
-    for (let d = 0; d < 7; d++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + w * 7 + d);
-      if (date > now) { week.push(0); continue; }
-      const dateStr = date.toISOString().split("T")[0];
-      const count = dateMap.get(dateStr) ?? 0;
-      week.push(count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : count <= 5 ? 3 : 4);
-    }
-    result.push(week);
-  }
-  return result;
-}
-
-/* ─── Weekly bars helper ─────────────────────────────────────── */
-const DAY_LABELS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
-
-function buildWeeklyBars(sessions: RawSession[], now: Date) {
-  const result = DAY_LABELS.map(day => ({ day, soal: 0, menit: 0 }));
-  const sevenDaysAgo = new Date(now);
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-  sessions.forEach(s => {
-    const date = new Date(s.created_at);
-    if (date < sevenDaysAgo) return;
-    const jsDay = date.getDay();
-    const idx = jsDay === 0 ? 6 : jsDay - 1; // Mon=0 … Sun=6
-    result[idx].soal += s.total ?? 0;
-  });
-  return result;
-}
-
-/* ─── Category accuracy helper ───────────────────────────────── */
-type LucideIcon = typeof BookMarked;
-const catMeta: Record<string, { label: string; color: string; icon: LucideIcon }> = {
-  "文法": { label: "Tata Bahasa", color: "#6b9cda", icon: BookMarked },
-  "語彙": { label: "Kosakata",    color: "#5ea87a", icon: BookOpen  },
-  "読解": { label: "Reading",     color: "#e07b4a", icon: Target    },
-  "文字": { label: "Kanji",       color: "#bbc6e2", icon: Award     },
+const KATEGORI_LABEL: Record<string, string> = {
+  "文法": "Bunpou",
+  "語彙": "Goi",
+  "読解": "Dokkai",
+  "聴解": "Choukai",
+  "文字": "Moji",
 };
 
-function buildCatAccuracy(sessions: RawSession[]) {
-  const catMap = new Map<string, { totalQ: number; totalScore: number }>();
-  sessions.forEach(s => {
-    if (s.score == null || !s.total) return;
-    const prev = catMap.get(s.category) ?? { totalQ: 0, totalScore: 0 };
-    catMap.set(s.category, { totalQ: prev.totalQ + s.total, totalScore: prev.totalScore + s.score });
-  });
-  return Array.from(catMap.entries()).map(([cat, { totalQ, totalScore }]) => {
-    const meta = catMeta[cat] ?? { label: cat, color: "#bbc6e2", icon: BookMarked };
-    return { label: meta.label, pct: Math.round((totalScore / totalQ) * 100), color: meta.color, icon: meta.icon };
-  }).sort((a, b) => b.pct - a.pct);
+const KATEGORI_ORDER = ["文法", "語彙", "読解", "聴解", "文字"] as const;
+const LEVELS_ORDER: Level[] = ["N1", "N2", "N3", "N4", "N5"];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const HOUR_BUCKETS = [
+  { label: "06–09", start: 6 },
+  { label: "09–12", start: 9 },
+  { label: "12–15", start: 12 },
+  { label: "15–18", start: 15 },
+  { label: "18–21", start: 18 },
+  { label: "21–24", start: 21 },
+];
+
+function withinPeriod(iso: string, days: Period): boolean {
+  if (days === 0) return true;
+  const age = (Date.now() - new Date(iso).getTime()) / 86_400_000;
+  return age < days;
 }
 
-/* ─── Month labels for heatmap ────────────────────────────────── */
-const months = ["Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des","Jan","Feb","Mar","Apr"];
+function colorForPct(pct: number): "iris" | "amber" | "emerald" | "rose" {
+  if (pct >= 80) return "emerald";
+  if (pct >= 65) return "amber";
+  if (pct > 0)   return "rose";
+  return "iris";
+}
 
-/* ─── Page ───────────────────────────────────────────────────── */
 export default function Statistik() {
-  const [loading,     setLoading]     = useState(true);
-  const [totalSoal,   setTotalSoal]   = useState(0);
-  const [akurasi,     setAkurasi]     = useState<number | null>(null);
-  const [streak,      setStreak]      = useState(0);
-  const [heatmapData, setHeatmapData] = useState<number[][]>(() => buildEmptyHeatmap());
-  const [weeklyBars,  setWeeklyBars]  = useState(DAY_LABELS.map(day => ({ day, soal: 0, menit: 0 })));
-  const [catAccuracy, setCatAccuracy] = useState<{ label: string; pct: number; color: string; icon: LucideIcon }[]>([]);
+  const [sessions, setSessions] = useState<RawSession[]>([]);
+  const [savedWordsCount, setSavedWordsCount] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [userInitial, setUserInitial] = useState("Y");
+  const [period, setPeriod] = useState<Period>(30);
+  const [loading, setLoading] = useState(true);
+
+  // TODO: target level dari profiles
+  const targetLevel: Level = "N2";
+  const xp = 820;
+  const xpTarget = 1000;
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
+      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
-      const [profileRes, sessionRes] = await Promise.all([
+      const [profileRes, sessionRes, wordsRes] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
-        supabase.from("sessions").select("id,level,category,total,score,created_at")
-          .eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("sessions").select("id, level, category, total, score, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       ]);
-
       if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
-
-      const sessions: RawSession[] = sessionRes.data ?? [];
-      const now = new Date();
-
-      setTotalSoal(sessions.reduce((s, r) => s + (r.total ?? 0), 0));
-
-      const scored = sessions.filter(r => r.score != null && r.total);
-      if (scored.length > 0) {
-        const avg = scored.reduce((s, r) => s + r.score! / r.total, 0) / scored.length;
-        setAkurasi(Math.round(avg * 100));
-      }
-
-      setHeatmapData(buildHeatmap(sessions, now));
-      setWeeklyBars(buildWeeklyBars(sessions, now));
-      setCatAccuracy(buildCatAccuracy(sessions));
+      setSessions((sessionRes.data ?? []) as RawSession[]);
+      setSavedWordsCount(wordsRes.count ?? 0);
       setLoading(false);
     }
     load();
   }, []);
 
-  const activeDays = heatmapData.flat().filter(v => v > 0).length;
-  const weeklySoalTotal = weeklyBars.reduce((s, b) => s + b.soal, 0);
-  const maxSoal = Math.max(...weeklyBars.map(b => b.soal), 1);
+  /* ── Filtered subset for KPIs ── */
+  const inPeriod = useMemo(() => sessions.filter(s => withinPeriod(s.created_at, period)), [sessions, period]);
+  const prevPeriod = useMemo(() => {
+    if (period === 0) return [];
+    return sessions.filter(s =>
+      !withinPeriod(s.created_at, period) && withinPeriod(s.created_at, period * 2)
+    );
+  }, [sessions, period]);
+
+  const totalSoal = inPeriod.reduce((s, r) => s + (r.total ?? 0), 0);
+  const totalSoalPrev = prevPeriod.reduce((s, r) => s + (r.total ?? 0), 0);
+  const totalSoalDelta = totalSoal - totalSoalPrev;
+
+  const scoredNow = inPeriod.filter(s => s.score != null && s.total > 0);
+  const avgAccuracy = scoredNow.length > 0
+    ? Math.round(scoredNow.reduce((acc, s) => acc + (s.score! / s.total) * 100, 0) / scoredNow.length)
+    : null;
+  const scoredPrev = prevPeriod.filter(s => s.score != null && s.total > 0);
+  const avgAccuracyPrev = scoredPrev.length > 0
+    ? Math.round(scoredPrev.reduce((acc, s) => acc + (s.score! / s.total) * 100, 0) / scoredPrev.length)
+    : null;
+  const accuracyDelta = avgAccuracy != null && avgAccuracyPrev != null ? avgAccuracy - avgAccuracyPrev : null;
+
+  /* ── Longest streak (from session dates) ── */
+  const longestStreak = useMemo(() => {
+    if (sessions.length === 0) return 0;
+    const days = new Set(sessions.map(s => s.created_at.slice(0, 10)));
+    const sorted = Array.from(days).sort();
+    let best = 1, cur = 1;
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = new Date(sorted[i - 1] + "T00:00:00").getTime();
+      const today = new Date(sorted[i] + "T00:00:00").getTime();
+      if ((today - prev) / 86_400_000 === 1) {
+        cur++;
+        if (cur > best) best = cur;
+      } else {
+        cur = 1;
+      }
+    }
+    return best;
+  }, [sessions]);
+
+  /* ── Saved words this week delta ── */
+  const wordsDelta = useMemo(() => {
+    // Placeholder — saved_words tidak punya created_at di query kita. Skip delta.
+    return null as number | null;
+  }, []);
+
+  /* ── Monthly trend (last 5 months) ── */
+  const monthlyTrend = useMemo(() => {
+    const now = new Date();
+    const buckets: { m: string; v: number; current: boolean }[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      const count = sessions.filter(s => {
+        const ts = new Date(s.created_at).getTime();
+        return ts >= d.getTime() && ts < next.getTime();
+      }).reduce((sum, s) => sum + (s.total ?? 0), 0);
+      buckets.push({ m: MONTH_NAMES[d.getMonth()], v: count, current: i === 0 });
+    }
+    return buckets;
+  }, [sessions]);
+
+  /* ── Akurasi per kategori (all-time) + delta last 7d vs prev 7d ── */
+  const katAccuracy = useMemo(() => {
+    return KATEGORI_ORDER.map(jp => {
+      const sessAll = sessions.filter(s => s.category === jp && s.score != null && s.total > 0);
+      const totalScore = sessAll.reduce((sum, s) => sum + s.score!, 0);
+      const totalQ = sessAll.reduce((sum, s) => sum + s.total, 0);
+      const pct = totalQ > 0 ? Math.round((totalScore / totalQ) * 100) : 0;
+
+      // Delta: pct in last 7 days vs prev 7 days
+      const last7 = sessAll.filter(s => withinPeriod(s.created_at, 7));
+      const prev7 = sessAll.filter(s =>
+        !withinPeriod(s.created_at, 7) && withinPeriod(s.created_at, 14)
+      );
+      const last7Pct = last7.length > 0
+        ? Math.round((last7.reduce((a, s) => a + s.score!, 0) / last7.reduce((a, s) => a + s.total, 0)) * 100)
+        : null;
+      const prev7Pct = prev7.length > 0
+        ? Math.round((prev7.reduce((a, s) => a + s.score!, 0) / prev7.reduce((a, s) => a + s.total, 0)) * 100)
+        : null;
+      const delta = last7Pct != null && prev7Pct != null ? last7Pct - prev7Pct : null;
+
+      return {
+        jp: jp as string,
+        label: KATEGORI_LABEL[jp] ?? "",
+        pct, delta,
+        soal: totalQ,
+        color: colorForPct(pct),
+        present: sessAll.length > 0,
+      };
+    });
+  }, [sessions]);
+
+  /* ── Level mastery (avg accuracy per level) ── */
+  const levelMastery = useMemo(() => {
+    return LEVELS_ORDER.map(lv => {
+      const sessAll = sessions.filter(s => s.level === lv && s.score != null && s.total > 0);
+      const totalScore = sessAll.reduce((sum, s) => sum + s.score!, 0);
+      const totalQ = sessAll.reduce((sum, s) => sum + s.total, 0);
+      const pct = totalQ > 0 ? Math.round((totalScore / totalQ) * 100) : 0;
+      return { lv, pct, soal: totalQ, target: lv === targetLevel };
+    });
+  }, [sessions, targetLevel]);
+
+  /* ── Records ── */
+  const records = useMemo(() => {
+    if (sessions.length === 0) {
+      return {
+        longestStreak: 0, maxSesiSehari: 0, maxSoalSehari: 0,
+        topAkurasi: null as { pct: number; label: string } | null,
+        bulanTerbaik: null as { name: string; count: number } | null,
+      };
+    }
+    // sesi sehari / soal sehari
+    const perDay = new Map<string, { sesi: number; soal: number }>();
+    sessions.forEach(s => {
+      const k = s.created_at.slice(0, 10);
+      const prev = perDay.get(k) ?? { sesi: 0, soal: 0 };
+      perDay.set(k, { sesi: prev.sesi + 1, soal: prev.soal + (s.total ?? 0) });
+    });
+    const arr = Array.from(perDay.values());
+    const maxSesiSehari = arr.length > 0 ? Math.max(...arr.map(d => d.sesi)) : 0;
+    const maxSoalSehari = arr.length > 0 ? Math.max(...arr.map(d => d.soal)) : 0;
+
+    // top akurasi sesi
+    const scoredArr = sessions.filter(s => s.score != null && s.total > 0)
+      .map(s => ({ pct: Math.round((s.score! / s.total) * 100), label: `${s.level ?? ""} ${s.category ?? ""}`.trim() }))
+      .sort((a, b) => b.pct - a.pct);
+    const topAkurasi = scoredArr[0] ?? null;
+
+    // bulan terbaik
+    const perMonth = new Map<string, number>();
+    sessions.forEach(s => {
+      const d = new Date(s.created_at);
+      const k = `${d.getFullYear()}-${d.getMonth()}`;
+      perMonth.set(k, (perMonth.get(k) ?? 0) + (s.total ?? 0));
+    });
+    const bulanArr = Array.from(perMonth.entries()).sort((a, b) => b[1] - a[1]);
+    const bulanTerbaik = bulanArr[0]
+      ? (() => {
+          const [y, m] = bulanArr[0][0].split("-").map(Number);
+          return { name: `${MONTH_NAMES[m]} ${y}`, count: bulanArr[0][1] };
+        })()
+      : null;
+
+    return { longestStreak, maxSesiSehari, maxSoalSehari, topAkurasi, bulanTerbaik };
+  }, [sessions, longestStreak]);
+
+  /* ── Jam belajar favorit ── */
+  const hourBuckets = useMemo(() => {
+    const counts = new Array(HOUR_BUCKETS.length).fill(0);
+    sessions.forEach(s => {
+      const h = new Date(s.created_at).getHours();
+      const idx = HOUR_BUCKETS.findIndex((b, i) => {
+        const next = HOUR_BUCKETS[i + 1]?.start ?? 24;
+        return h >= b.start && h < next;
+      });
+      if (idx >= 0) counts[idx]++;
+    });
+    const max = Math.max(...counts, 1);
+    return HOUR_BUCKETS.map((b, i) => ({ hour: b.label, v: counts[i] / max, count: counts[i] }));
+  }, [sessions]);
+  const bestHour = hourBuckets.length > 0
+    ? hourBuckets.reduce((best, h) => h.v > best.v ? h : best, hourBuckets[0])
+    : null;
+
+  /* ── Insight: lowest-accuracy category ── */
+  const insight = useMemo(() => {
+    const withData = katAccuracy.filter(k => k.present);
+    if (withData.length === 0) return null;
+    const worst = withData.reduce((w, k) => k.pct < w.pct ? k : w, withData[0]);
+    return worst;
+  }, [katAccuracy]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ fontFamily: "var(--font-manrope)" }}>
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
 
-      <AppHeader activeHref="/statistik" />
+      <main className="app-shell">
+        <UserBar
+          streakDays={streak}
+          xp={xp}
+          xpTarget={xpTarget}
+          avatarLetter={userInitial}
+          isPro
+          hasUnread
+        />
 
-      {/* ── Body ── */}
-      <div className="flex flex-1 min-h-0">
-
-        {/* ── Sidebar ── */}
-        <Sidebar activeHref="/statistik" />
-
-        {/* ── Main ── */}
-        <main className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-5 md:py-7 pb-20 lg:pb-7 relative"
-          style={{}}>
-
-          {/* ambient glows */}
-          <div className="pointer-events-none absolute top-0 left-1/3 w-[500px] h-[300px] opacity-[0.06] blur-[80px]"
-            style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
-          <div className="pointer-events-none absolute bottom-0 right-0 w-[400px] h-[400px] opacity-[0.04] blur-[80px]"
-            style={{ background: "radial-gradient(circle,#8b5abf,transparent 70%)" }} />
-
-          <div className="relative flex flex-col gap-6">
-
-            {/* ── Page title ── */}
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <BarChart2 className="size-4 text-[#6b9cda]" />
-                  <span className="text-[10px] font-semibold text-[#4a5a7a]"
-                    style={{ fontFamily: "var(--font-space)" }}>STATISTIK BELAJAR</span>
-                </div>
-                <h1 className="text-2xl font-extrabold text-[#d7e2ff]"
-                  style={{ fontFamily: "var(--font-jakarta)" }}>Progres Kamu</h1>
-              </div>
-            </div>
-
-            {/* ── Top stat cards ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                {
-                  icon: BookMarked, label: "Total Soal",
-                  value: loading ? "—" : totalSoal.toLocaleString(),
-                  sub: "dari semua sesi", color: "#6b9cda", trend: "up",
-                },
-                {
-                  icon: Target, label: "Akurasi",
-                  value: loading ? "—" : akurasi != null ? `${akurasi}%` : "—",
-                  sub: "rata-rata semua sesi", color: "#5ea87a", trend: "up",
-                },
-                {
-                  icon: Flame, label: "Streak Aktif",
-                  value: loading ? "—" : `${streak} hr`,
-                  sub: "hari berturut-turut", color: "#e07b4a", trend: "up",
-                },
-                {
-                  icon: Clock, label: "Hari Aktif",
-                  value: loading ? "—" : String(activeDays),
-                  sub: "dalam setahun terakhir", color: "#a67bd4", trend: "up",
-                },
-              ].map(({ icon: Icon, label, value, sub, color, trend }) => (
-                <div key={label} className="flex flex-col gap-3 p-4 rounded-2xl relative overflow-hidden"
-                  style={{ background: "#101b30" }}>
-                  <div className="absolute inset-0 opacity-20"
-                    style={{ background: `radial-gradient(circle at top right,${color}30,transparent 70%)` }} />
-                  <div className="relative flex items-center justify-between">
-                    <div className="size-8 rounded-lg flex items-center justify-center"
-                      style={{ background: `${color}18` }}>
-                      <Icon className="size-4" style={{ color }} />
-                    </div>
-                    {loading
-                      ? <Loader2 className="size-3.5 text-[#4a5a7a] animate-spin" />
-                      : trend === "up"
-                        ? <TrendingUp className="size-3.5 text-[#5ea87a]" />
-                        : <TrendingDown className="size-3.5 text-[#e07b4a]" />}
-                  </div>
-                  <div className="relative">
-                    <p className="text-2xl font-extrabold text-[#d7e2ff] leading-none mb-1"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>{value}</p>
-                    <p className="text-[10px] text-[#4a5a7a]"
-                      style={{ fontFamily: "var(--font-space)" }}>{label}</p>
-                  </div>
-                  <p className="relative text-[10px] leading-none" style={{ color }}>{sub}</p>
-                </div>
+        <header className="st-header">
+          <div>
+            <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Statistik" }]} />
+            <h1 className="st-title">
+              Statistik <span className="st-title-jp">統計</span>
+            </h1>
+            <p className="st-sub">Lacak progresnya selama belajar. Update otomatis tiap sesi.</p>
+          </div>
+          <div className="st-period">
+            <span className="st-period-label">Periode</span>
+            <div className="period-pills">
+              {([7, 30, 90, 0] as Period[]).map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`pp-chip${period === p ? " on" : ""}`}
+                  onClick={() => setPeriod(p)}
+                >
+                  {p === 0 ? "Semua" : `${p} hari`}
+                </button>
               ))}
             </div>
+          </div>
+        </header>
 
-            {/* ── Heatmap ── */}
-            <div className="p-5 rounded-2xl overflow-x-auto" style={{ background: "#101b30" }}>
-              <div className="flex items-center justify-between mb-4">
+        <div className="st-kpi-row">
+          <KPICard
+            label="Total Soal Dianalisis"
+            value={loading ? "—" : totalSoal.toLocaleString("id-ID")}
+            delta={totalSoalDelta !== 0 && period !== 0 ? `${totalSoalDelta > 0 ? "+" : ""}${totalSoalDelta}` : null}
+            deltaPositive={totalSoalDelta >= 0}
+            Icon={Camera}
+            accent="iris"
+            sub={period === 0 ? "sepanjang waktu" : `vs ${period} hari sebelumnya`}
+          />
+          <KPICard
+            label="Akurasi Rata-rata"
+            value={loading ? "—" : avgAccuracy != null ? `${avgAccuracy}%` : "—"}
+            delta={accuracyDelta != null && accuracyDelta !== 0 ? `${accuracyDelta > 0 ? "+" : ""}${accuracyDelta}%` : null}
+            deltaPositive={(accuracyDelta ?? 0) >= 0}
+            Icon={BarChart3}
+            accent="emerald"
+            sub={accuracyDelta != null ? `${accuracyDelta >= 0 ? "naik" : "turun"} ${Math.abs(accuracyDelta)} poin` : "belum ada perbandingan"}
+          />
+          <KPICard
+            label="Streak Terpanjang"
+            value={loading ? "—" : String(longestStreak)}
+            valueUnit=" hari"
+            Icon={Zap}
+            accent="amber"
+            sub={`sekarang: ${streak} hari aktif`}
+          />
+          <KPICard
+            label="Kotoba di Kamus"
+            value={loading ? "—" : savedWordsCount.toLocaleString("id-ID")}
+            delta={wordsDelta != null ? `+${wordsDelta}` : null}
+            deltaPositive
+            Icon={BookA}
+            accent="rose"
+            sub="tersimpan otomatis"
+          />
+        </div>
+
+        <div className="st-grid">
+          <div className="st-main">
+            {/* Trend chart */}
+            <section className="glass-card st-card">
+              <div className="st-card-head">
                 <div>
-                  <p className="text-sm font-bold text-[#d7e2ff]"
-                    style={{ fontFamily: "var(--font-jakarta)" }}>Aktivitas Belajar</p>
-                  <p className="text-[10px] text-[#4a5a7a] mt-0.5">
-                    {loading ? "Memuat…" : `${activeDays} hari aktif dalam setahun terakhir`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-[#4a5a7a]">Kurang</span>
-                  {[0,1,2,3,4].map(v => (
-                    <div key={v} className="size-2.5 rounded-sm" style={{ background: heatColor(v) }} />
-                  ))}
-                  <span className="text-[10px] text-[#4a5a7a]">Banyak</span>
+                  <span className="st-card-eyebrow">Trend Bulanan</span>
+                  <h3 className="st-card-title">Soal dianalisis per bulan</h3>
                 </div>
               </div>
+              <TrendChart data={monthlyTrend} />
+            </section>
 
-              {/* Month labels */}
-              <div className="flex gap-[3px] mb-1 ml-7">
-                {months.map((m, i) => (
-                  <div key={i} className="text-[9px] text-[#4a5a7a]"
-                    style={{ width: `${(52 / 12) * 11}px`, fontFamily: "var(--font-space)" }}>
-                    {m}
+            {/* Kategori accuracy */}
+            <section className="glass-card st-card">
+              <div className="st-card-head">
+                <div>
+                  <span className="st-card-eyebrow">Akurasi per Kategori</span>
+                  <h3 className="st-card-title">Mana yang masih bisa di-improve</h3>
+                </div>
+                <Link className="st-link" href="/riwayat-soal">Lihat detail →</Link>
+              </div>
+              <div className="kat-acc-rows">
+                {katAccuracy.map(k => (
+                  <div className="kat-acc-row" key={k.jp}>
+                    <div className="kat-acc-label">
+                      <div className="kar-text">
+                        <span className="kar-jp">{k.jp}</span>
+                        <span className="kar-ro">{k.label}</span>
+                      </div>
+                      <span className="kar-soal">{k.soal} soal</span>
+                    </div>
+                    <div className="kat-acc-bar">
+                      {k.present && (
+                        <div className={`kab-fill cat-${k.color}`} style={{ width: `${k.pct}%` }} />
+                      )}
+                      <div className="kab-marker" style={{ left: "80%" }} title="Target 80%" />
+                    </div>
+                    <div className={`kat-acc-pct kat-pct-${k.color}`}>
+                      {k.present ? `${k.pct}%` : "—"}
+                      {k.delta != null && k.delta !== 0 && (
+                        <span className={`kat-delta ${k.delta > 0 ? "up" : "down"}`}>
+                          {k.delta > 0 ? "+" : ""}{k.delta}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
+              <div className="kat-acc-footer">
+                <span className="kab-marker-legend">
+                  <span className="lg-line" /> Target akurasi (80%)
+                </span>
+              </div>
+            </section>
 
-              <div className="flex gap-[3px]">
-                {/* Day labels */}
-                <div className="flex flex-col gap-[3px] mr-1">
-                  {["S","S","R","K","J","S","M"].map((d, i) => (
-                    <div key={i} className="size-[11px] flex items-center justify-center text-[8px] text-[#4a5a7a]"
-                      style={{ fontFamily: "var(--font-space)" }}>{i % 2 === 0 ? d : ""}</div>
-                  ))}
+            {/* Level mastery */}
+            <section className="glass-card st-card">
+              <div className="st-card-head">
+                <div>
+                  <span className="st-card-eyebrow">Level Mastery</span>
+                  <h3 className="st-card-title">Penguasaan per level JLPT</h3>
                 </div>
-                {/* Grid */}
-                <div className="flex gap-[3px]">
-                  {heatmapData.map((week, wi) => (
-                    <div key={wi} className="flex flex-col gap-[3px]">
-                      {week.map((val, di) => (
-                        <div key={di} className="size-[11px] rounded-sm transition-transform hover:scale-125"
-                          style={{ background: heatColor(val) }} />
-                      ))}
+              </div>
+              <div className="level-progress">
+                {levelMastery.map(l => (
+                  <div
+                    key={l.lv}
+                    className={`lp-row lp-${l.lv.toLowerCase()}${l.target ? " target" : ""}`}
+                  >
+                    <div className="lp-label">
+                      <span className={`lp-tag lv-${l.lv.toLowerCase()}`}>{l.lv}</span>
+                      {l.target && <span className="lp-target-pill">TARGET KAMU</span>}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* ── Middle row: Weekly chart + Category accuracy ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-
-              {/* Weekly bar chart */}
-              <div className="p-5 rounded-2xl" style={{ background: "#101b30" }}>
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <p className="text-sm font-bold text-[#d7e2ff]"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>Soal per Hari</p>
-                    <p className="text-[10px] text-[#4a5a7a] mt-0.5">
-                      {loading ? "Memuat…" : `${weeklySoalTotal} soal minggu ini`}
-                    </p>
-                  </div>
-                  <span className="flex items-center gap-1.5 text-[10px] text-[#4a5a7a]">
-                    <span className="size-2 rounded-sm inline-block" style={{ background: "#4a7abf" }} />
-                    Soal
-                  </span>
-                </div>
-
-                <div className="flex items-end gap-2 h-36">
-                  {weeklyBars.map(({ day, soal }) => (
-                    <div key={day} className="flex-1 flex flex-col items-center gap-1.5">
-                      <div className="w-full flex items-end relative" style={{ height: "112px" }}>
-                        <div className="relative w-full rounded-t-md transition-all"
-                          style={{
-                            height: `${(soal / maxSoal) * 100}%`,
-                            background: soal === Math.max(...weeklyBars.map(b => b.soal))
-                              ? "linear-gradient(180deg,#6b9cda,#4a7abf)"
-                              : "linear-gradient(180deg,#2f5a9a,#1a3a6f)",
-                            minHeight: soal > 0 ? "4px" : "0px",
-                          }} />
+                    <div className="lp-bar-wrap">
+                      <div className="lp-bar">
+                        <div className={`lp-fill lv-bar-${l.lv.toLowerCase()}`} style={{ width: `${l.pct}%` }} />
                       </div>
-                      <span className="text-[10px] text-[#4a5a7a]"
-                        style={{ fontFamily: "var(--font-space)" }}>{day}</span>
+                      <span className="lp-soal">{l.soal} soal</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="lp-pct">{l.pct}%</div>
+                  </div>
+                ))}
               </div>
-
-              {/* Category accuracy */}
-              <div className="p-5 rounded-2xl" style={{ background: "#101b30" }}>
-                <p className="text-sm font-bold text-[#d7e2ff] mb-1"
-                  style={{ fontFamily: "var(--font-jakarta)" }}>Akurasi per Kategori</p>
-                <p className="text-[10px] text-[#4a5a7a] mb-4">semua sesi kamu</p>
-
-                {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-4 animate-spin text-[#4a5a7a]" />
-                  </div>
-                ) : catAccuracy.length === 0 ? (
-                  <p className="text-[11px] text-[#4a5a7a] text-center py-6">Belum ada data</p>
-                ) : (
-                  <div className="flex flex-col gap-3.5">
-                    {catAccuracy.map(({ label, pct, color, icon: Icon }) => (
-                      <div key={label}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <Icon className="size-3" style={{ color }} />
-                            <span className="text-xs text-[#8a9bbf]">{label}</span>
-                          </div>
-                          <span className="text-xs font-bold" style={{ color, fontFamily: "var(--font-jakarta)" }}>
-                            {pct}%
-                          </span>
-                        </div>
-                        <div className="h-1.5 rounded-full" style={{ background: "rgba(187,198,226,0.06)" }}>
-                          <div className="h-1.5 rounded-full transition-all"
-                            style={{ width: `${pct}%`, background: `linear-gradient(90deg,${color}80,${color})` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ── Bottom: AI Insight ── */}
-            <div className="pb-4">
-              <div className="p-4 rounded-2xl relative overflow-hidden"
-                style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(107,156,218,0.15)" }}>
-                <div className="absolute inset-0 opacity-20"
-                  style={{ background: "radial-gradient(circle at bottom right,#4a7abf,transparent 70%)" }} />
-                <div className="relative flex items-start gap-3">
-                  <div className="size-8 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(107,156,218,0.15)" }}>
-                    <Zap className="size-4 text-[#6b9cda]" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-[#d7e2ff] mb-1"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>Insight dari Sensei AI</p>
-                    <p className="text-[11px] text-[#8a9bbf] leading-relaxed">
-                      {akurasi != null && akurasi < 60
-                        ? <>Akurasi kamu masih di bawah 60%. Coba perbanyak latihan soal <span className="text-[#bbc6e2]">tata bahasa</span> dan <span className="text-[#bbc6e2]">kosakata</span> secara rutin setiap hari.</>
-                        : akurasi != null && akurasi >= 80
-                          ? <>Akurasi kamu sudah bagus di <span className="text-[#5ea87a]">{akurasi}%</span>! Pertahankan streak dan tingkatkan latihan <span className="text-[#bbc6e2]">reading</span> untuk mempersiapkan ujian.</>
-                          : <>Terus tingkatkan latihan harianmu. Konsistensi adalah kunci lulus JLPT — target minimal <span className="text-[#bbc6e2]">10 soal per hari</span>.</>
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+            </section>
           </div>
-        </main>
-      </div>
 
-      <BottomNav activeHref="/statistik" />
+          <aside className="st-side">
+            {/* Insight */}
+            <div className="glass-card st-side-card glow-iris">
+              <div className="st-side-head">
+                <Sparkles size={13} fill="var(--accent-iris)" strokeWidth={1.2} style={{ color: "var(--accent-iris)" }} />
+                Insight Sensei
+              </div>
+              {insight ? (
+                <>
+                  <p className="st-insight-title">
+                    Akurasi <strong style={{ color: "var(--text-primary)" }}>{insight.jp} ({insight.label})</strong> paling rendah ({insight.pct}%).
+                  </p>
+                  <p className="st-insight-body">
+                    Coba latih lebih banyak soal kategori ini — atau buka <strong>Analisis Foto</strong> dan analisis materi {insight.label} buat boost akurasi.
+                  </p>
+                  <Link href="/analisis-foto" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
+                    Mulai sesi fokus →
+                  </Link>
+                </>
+              ) : (
+                <p className="st-insight-body">
+                  Belum ada cukup data buat insight. Coba selesaikan beberapa sesi dengan jawaban dulu.
+                </p>
+              )}
+            </div>
+
+            {/* Records */}
+            <div className="glass-card st-side-card">
+              <div className="st-side-head">
+                <Star size={12} fill="var(--accent-amber)" strokeWidth={1} style={{ color: "var(--accent-amber)" }} />
+                Rekor Kamu
+              </div>
+              <ul className="record-list">
+                <li><span>Streak terpanjang</span><strong>{records.longestStreak} hari</strong></li>
+                <li><span>Sesi sehari</span><strong>{records.maxSesiSehari} sesi</strong></li>
+                <li><span>Soal di 1 hari</span><strong>{records.maxSoalSehari} soal</strong></li>
+                <li>
+                  <span>Akurasi tertinggi</span>
+                  <strong>
+                    {records.topAkurasi ? `${records.topAkurasi.pct}% (${records.topAkurasi.label})` : "—"}
+                  </strong>
+                </li>
+                <li>
+                  <span>Bulan terbaik</span>
+                  <strong>{records.bulanTerbaik ? records.bulanTerbaik.name : "—"}</strong>
+                </li>
+              </ul>
+            </div>
+
+            {/* Habits */}
+            <div className="glass-card st-side-card">
+              <div className="st-side-head">Jam Belajar Favorit</div>
+              <div className="time-heatmap">
+                {hourBuckets.map(s => (
+                  <div className="tm-row" key={s.hour}>
+                    <span className="tm-hour">{s.hour}</span>
+                    <div className="tm-track">
+                      <div
+                        className="tm-fill"
+                        style={{ width: `${Math.max(s.v * 100, 2)}%`, opacity: Math.max(s.v, 0.15) }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {bestHour && bestHour.count > 0 ? (
+                <p className="tm-tip">
+                  Kamu paling produktif <strong>jam {bestHour.hour}</strong>.
+                </p>
+              ) : (
+                <p className="tm-tip">Belum ada data sesi yang cukup.</p>
+              )}
+            </div>
+          </aside>
+        </div>
+      </main>
+    </>
+  );
+}
+
+/* ─── Subcomponents ─── */
+
+interface KPIProps {
+  label: string;
+  value: string;
+  valueUnit?: string;
+  delta?: string | null;
+  deltaPositive?: boolean;
+  Icon: typeof Camera;
+  accent: "iris" | "emerald" | "amber" | "rose";
+  sub: string;
+}
+
+function KPICard({ label, value, valueUnit, delta, deltaPositive, Icon, accent, sub }: KPIProps) {
+  return (
+    <div className={`glass-card kpi-card kpi-${accent}`}>
+      <div className="kpi-row">
+        <div className="kpi-icon"><Icon size={15} strokeWidth={1.6} /></div>
+        <span className="kpi-label">{label}</span>
+      </div>
+      <div className="kpi-value">
+        {value}{valueUnit && <span className="kpi-unit">{valueUnit}</span>}
+        {delta && (
+          <span className={`kpi-delta ${deltaPositive ? "up" : "down"}`}>
+            {deltaPositive
+              ? <ArrowUp size={10} strokeWidth={2.6} />
+              : <ArrowDown size={10} strokeWidth={2.6} />}
+            {delta}
+          </span>
+        )}
+      </div>
+      <div className="kpi-sub">{sub}</div>
+    </div>
+  );
+}
+
+function TrendChart({ data }: { data: { m: string; v: number; current: boolean }[] }) {
+  if (data.length === 0) return null;
+  const max = Math.max(...data.map(d => d.v), 1);
+  const w = 100, h = 100;
+  const xs = data.map((_, i) => (i / Math.max(data.length - 1, 1)) * w);
+  const ys = data.map(d => h - (d.v / max) * h * 0.85);
+  const points = xs.map((x, i) => `${x},${ys[i]}`).join(" ");
+  const areaPath = `M0,${h} L${points.replace(/ /g, " L")} L${w},${h} Z`;
+
+  return (
+    <div className="trend-chart">
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="tc-svg">
+        <defs>
+          <linearGradient id="trendArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(221, 65, 36, 0.4)" />
+            <stop offset="100%" stopColor="rgba(221, 65, 36, 0)" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75].map(t => (
+          <line key={t} x1="0" y1={h * t} x2={w} y2={h * t} stroke="rgba(255,255,255,0.05)" strokeWidth="0.3" />
+        ))}
+        <path d={areaPath} fill="url(#trendArea)" />
+        <polyline points={points} fill="none" stroke="var(--accent-iris)" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />
+        {xs.map((x, i) => (
+          <circle
+            key={i}
+            cx={x} cy={ys[i]} r="1.2"
+            fill={data[i].current ? "#FFFFFF" : "var(--accent-iris)"}
+            stroke={data[i].current ? "var(--accent-iris)" : "none"}
+            strokeWidth="0.8"
+          />
+        ))}
+      </svg>
+      <div className="tc-x-axis" style={{ gridTemplateColumns: `repeat(${data.length}, 1fr)` }}>
+        {data.map(d => (
+          <span key={d.m} className={d.current ? "on" : ""}>
+            <strong>{d.v}</strong>
+            <span>{d.m}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
