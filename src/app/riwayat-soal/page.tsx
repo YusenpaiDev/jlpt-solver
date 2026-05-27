@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Sidebar, BottomNav } from "@/components/Sidebar";
+import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
-  Search, Trash2, Clock, BookMarked,
-  SlidersHorizontal, Loader2, RefreshCw,
+  Search, BarChart3, Clock, Star, ChevronRight, History, Camera, Trash2, Loader2, RefreshCw,
 } from "lucide-react";
-import AppHeader from "@/components/AppHeader";
 
-
-/* ─── Types ─────────────────────────────────────────────────── */
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
+type LevelFilter = Level | "Semua";
+type KategoriFilter = "Semua" | "文法" | "語彙" | "読解" | "聴解" | "文字";
+type PeriodFilter = "Semua waktu" | "Hari ini" | "Minggu ini" | "Bulan ini";
 
 interface Session {
   id: string;
@@ -21,65 +21,79 @@ interface Session {
   total: number;
   score: number | null;
   created_at: string;
-  ai_result: { questions: { question: string }[] } | null;
 }
 
-/* ─── Helpers ───────────────────────────────────────────────── */
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins  = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days  = Math.floor(diff / 86_400_000);
-  if (mins  < 1)   return "Baru saja";
-  if (mins  < 60)  return `${mins} menit lalu`;
-  if (hours < 24)  return `${hours} jam lalu`;
-  if (days  === 1) return "Kemarin";
-  if (days  < 7)   return `${days} hari lalu`;
+const KATEGORI_LABEL: Record<string, string> = {
+  "文法": "Bunpou",
+  "語彙": "Goi",
+  "読解": "Dokkai",
+  "聴解": "Choukai",
+  "文字": "Moji",
+};
+
+const CATEGORY_GLYPH: Record<string, string> = {
+  "文法": "文",
+  "語彙": "語",
+  "読解": "読",
+  "聴解": "聴",
+  "文字": "字",
+  "AI": "全",
+};
+
+const LEVEL_OPTS: LevelFilter[] = ["Semua", "N1", "N2", "N3", "N4", "N5"];
+const KATEGORI_OPTS: KategoriFilter[] = ["Semua", "文法", "語彙", "読解", "聴解", "文字"];
+const PERIODE_OPTS: PeriodFilter[] = ["Semua waktu", "Hari ini", "Minggu ini", "Bulan ini"];
+
+const GROUP_ORDER = ["Hari ini", "Kemarin", "Minggu ini", "Lebih lama"] as const;
+type Group = typeof GROUP_ORDER[number];
+
+function dayGroup(iso: string): Group {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days < 1) return "Hari ini";
+  if (days < 2) return "Kemarin";
+  if (days < 7) return "Minggu ini";
+  return "Lebih lama";
+}
+
+function relativeDate(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days < 1) return "Hari ini";
+  if (days < 2) return "Kemarin";
+  if (days < 7) return `${days} hari`;
+  if (days < 30) return `${Math.floor(days / 7)} minggu`;
   return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 }
 
-const categoryMeta: Record<string, { kanji: string; accent: string; from: string; to: string }> = {
-  "文法": { kanji: "文", accent: "#60a5fa", from: "#1e3a8a", to: "#0c1942" },
-  "語彙": { kanji: "語", accent: "#c084fc", from: "#581c87", to: "#1e0f3a" },
-  "文字": { kanji: "字", accent: "#4ade80", from: "#14532d", to: "#0a2a1e" },
-  "読解": { kanji: "読", accent: "#fb923c", from: "#7c2d12", to: "#2e1a06" },
-  "AI":   { kanji: "全", accent: "#22d3ee", from: "#155e75", to: "#062030" },
-};
+function timeStr(iso: string): string {
+  return new Date(iso).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
 
-/* Vibrant gradient palettes — rotate per card index so cards never look identical,
-   even when several sessions share the same category. */
-const cardPalettes: { from: string; to: string; glow: string }[] = [
-  { from: "#1e3a8a", to: "#3b0764", glow: "#60a5fa" }, // blue → purple
-  { from: "#581c87", to: "#831843", glow: "#e879f9" }, // purple → pink
-  { from: "#14532d", to: "#155e75", glow: "#34d399" }, // green → teal
-  { from: "#7c2d12", to: "#831843", glow: "#fb923c" }, // orange → pink
-  { from: "#155e75", to: "#1e3a8a", glow: "#22d3ee" }, // cyan → blue
-  { from: "#831843", to: "#7c2d12", glow: "#f472b6" }, // pink → orange
-  { from: "#3b0764", to: "#14532d", glow: "#a78bfa" }, // deep purple → green
-  { from: "#7c2d12", to: "#1e3a8a", glow: "#fbbf24" }, // orange → blue
-];
+function inPeriod(iso: string, p: PeriodFilter): boolean {
+  const days = (Date.now() - new Date(iso).getTime()) / 86_400_000;
+  switch (p) {
+    case "Hari ini":   return days < 1;
+    case "Minggu ini": return days < 7;
+    case "Bulan ini":  return days < 30;
+    default:           return true;
+  }
+}
 
-const levelColors: Record<Level, { bg: string; text: string; border: string }> = {
-  N1: { bg: "rgba(139,90,191,0.15)",  text: "#b07ad4", border: "rgba(139,90,191,0.3)" },
-  N2: { bg: "rgba(74,122,191,0.15)",  text: "#6b9cda", border: "rgba(74,122,191,0.3)" },
-  N3: { bg: "rgba(58,154,122,0.15)",  text: "#5abf99", border: "rgba(58,154,122,0.3)" },
-  N4: { bg: "rgba(192,132,74,0.15)",  text: "#d4a06a", border: "rgba(192,132,74,0.3)" },
-  N5: { bg: "rgba(74,154,191,0.15)",  text: "#6ab4d4", border: "rgba(74,154,191,0.3)" },
-};
-
-
-/* ─── Page ──────────────────────────────────────────────────── */
 export default function RiwayatSoal() {
-  const [sessions,     setSessions]     = useState<Session[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [fetchError,   setFetchError]   = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<Level | "ALL">("ALL");
-  const [query,        setQuery]        = useState("");
-  const [deletingId,   setDeletingId]   = useState<string | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [userInitial, setUserInitial] = useState("Y");
+  const [query, setQuery] = useState("");
+  const [levelF, setLevelF] = useState<LevelFilter>("Semua");
+  const [kategoriF, setKategoriF] = useState<KategoriFilter>("Semua");
+  const [periodF, setPeriodF] = useState<PeriodFilter>("Semua waktu");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const filters: (Level | "ALL")[] = ["ALL", "N1", "N2", "N3", "N4", "N5"];
+  const xp = 820;
+  const xpTarget = 1000;
 
-  const fetchSessions = async () => {
+  const fetchAll = async () => {
     setLoading(true);
     setFetchError(null);
     try {
@@ -89,20 +103,26 @@ export default function RiwayatSoal() {
         setFetchError("Kamu perlu login untuk melihat riwayat.");
         return;
       }
-      const { data, error } = await supabase
-        .from("sessions")
-        .select("id, level, category, title, total, score, created_at, ai_result")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
-      if (error) throw error;
-      setSessions((data ?? []) as Session[]);
+      const [profileRes, sessionRes] = await Promise.all([
+        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+        supabase.from("sessions")
+          .select("id, level, category, title, total, score, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
+      if (sessionRes.error) throw sessionRes.error;
+      setSessions((sessionRes.data ?? []) as Session[]);
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "Gagal memuat riwayat.");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => { fetchAll(); }, []);
 
   const deleteSession = async (id: string) => {
     setDeletingId(id);
@@ -124,309 +144,446 @@ export default function RiwayatSoal() {
     setSessions([]);
   };
 
-  useEffect(() => { fetchSessions(); }, []);
+  const resetFilters = () => {
+    setLevelF("Semua"); setKategoriF("Semua"); setPeriodF("Semua waktu"); setQuery("");
+  };
 
-  const filtered = sessions.filter(s => {
-    const matchLevel = activeFilter === "ALL" || s.level === activeFilter;
-    const matchQuery = s.title.toLowerCase().includes(query.toLowerCase());
-    return matchLevel && matchQuery;
-  });
-
-  const avgScore = filtered.length > 0 && filtered.some(s => s.score !== null)
-    ? Math.round(
-        filtered.filter(s => s.score !== null && s.total > 0)
-          .reduce((acc, s) => acc + (s.score! / s.total) * 100, 0) /
-        filtered.filter(s => s.score !== null).length
-      )
+  /* Stats */
+  const totalSessions = sessions.length;
+  const totalSoal = sessions.reduce((sum, s) => sum + (s.total ?? 0), 0);
+  const scoredSessions = sessions.filter(s => s.score != null && s.total > 0);
+  const avgAccuracy = scoredSessions.length > 0
+    ? Math.round(scoredSessions.reduce((sum, s) => sum + (s.score! / s.total) * 100, 0) / scoredSessions.length)
     : null;
 
-  /* top category */
-  const catCount = sessions.reduce((acc, s) => {
-    acc[s.category] = (acc[s.category] ?? 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const topCat = Object.entries(catCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+  /* Akurasi per kategori (for sidebar) */
+  const catAccuracy = useMemo(() => {
+    const byCat: Record<string, { sum: number; count: number }> = {};
+    scoredSessions.forEach(s => {
+      const k = s.category;
+      byCat[k] ||= { sum: 0, count: 0 };
+      byCat[k].sum += (s.score! / s.total) * 100;
+      byCat[k].count += 1;
+    });
+    return KATEGORI_OPTS.slice(1).map(k => {
+      const data = byCat[k];
+      return {
+        jp: k as string,
+        label: KATEGORI_LABEL[k] ?? "",
+        pct: data ? Math.round(data.sum / data.count) : 0,
+        present: !!data,
+      };
+    });
+  }, [scoredSessions]);
+
+  /* Activity heatmap: last 12 weeks × 7 days */
+  const activityGrid = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDay = today.getDay(); // current week column
+    const counts = new Map<string, number>();
+    sessions.forEach(s => {
+      const d = new Date(s.created_at);
+      d.setHours(0, 0, 0, 0);
+      const key = d.toISOString().slice(0, 10);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    const weeks: number[][] = [];
+    for (let w = 0; w < 12; w++) {
+      const col: number[] = [];
+      for (let d = 0; d < 7; d++) {
+        const daysAgo = (11 - w) * 7 + ((6 - d) - startDay + 7) % 7;
+        const day = new Date(today);
+        day.setDate(today.getDate() - daysAgo);
+        const key = day.toISOString().slice(0, 10);
+        const n = counts.get(key) ?? 0;
+        const level = n === 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : n === 3 ? 3 : 4;
+        col.push(level);
+      }
+      weeks.push(col);
+    }
+    return weeks;
+  }, [sessions]);
+
+  /* Filter + group */
+  const filtered = sessions.filter(s => {
+    if (levelF !== "Semua" && s.level !== levelF) return false;
+    if (kategoriF !== "Semua" && s.category !== kategoriF) return false;
+    if (!inPeriod(s.created_at, periodF)) return false;
+    if (query && !s.title.toLowerCase().includes(query.toLowerCase())) return false;
+    return true;
+  });
+
+  const grouped = useMemo(() => {
+    const g: Record<Group, Session[]> = { "Hari ini": [], "Kemarin": [], "Minggu ini": [], "Lebih lama": [] };
+    filtered.forEach(s => g[dayGroup(s.created_at)].push(s));
+    return g;
+  }, [filtered]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ fontFamily: "var(--font-manrope)" }}>
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
 
-      <AppHeader activeHref="/riwayat-soal" />
+      <main className="app-shell">
+        <UserBar
+          streakDays={streak}
+          xp={xp}
+          xpTarget={xpTarget}
+          avatarLetter={userInitial}
+          isPro
+          hasUnread
+        />
 
-      {/* Body */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar activeHref="/riwayat-soal" />
-
-        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-
-          {/* Page header */}
-          <div className="px-4 md:px-8 pt-5 md:pt-7 pb-4 md:pb-5 border-b shrink-0"
-            style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <span className="text-[10px] tracking-widest text-[#4a5a7a] block mb-1.5"
-                  style={{ fontFamily: "var(--font-space)" }}>LATIHAN · RIWAYAT</span>
-                <h1 className="text-2xl font-extrabold text-[#d7e2ff]"
-                  style={{ fontFamily: "var(--font-jakarta)" }}>Riwayat Soal</h1>
-                <p className="text-sm text-[#4a5a7a] mt-1">
-                  Semua sesi analisis foto yang pernah kamu lakukan.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={fetchSessions}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-[#4a5a7a] hover:text-[#8a9bbf] hover:bg-white/5 transition-colors"
-                  style={{ fontFamily: "var(--font-space)" }}>
-                  <RefreshCw className="size-3.5" /> REFRESH
-                </button>
-                {sessions.length > 0 && (
-                  <button
-                    onClick={deleteAll}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-red-400 hover:bg-red-500/5 transition-colors"
-                    style={{ fontFamily: "var(--font-space)" }}>
-                    <Trash2 className="size-3.5" /> HAPUS SEMUA
-                  </button>
-                )}
-              </div>
+        <header className="rs-header">
+          <div>
+            <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Riwayat Soal" }]} />
+            <h1 className="rs-title">
+              Riwayat Soal <span className="rs-title-jp">履歴</span>
+            </h1>
+            <p className="rs-sub">
+              Tiap sesi <Link href="/analisis-foto">Analisis Foto</Link> otomatis tersimpan di sini.
+              Klik kartu buat buka kembali soal &amp; pembahasan.
+            </p>
+          </div>
+          <div className="rs-stats">
+            <div className="glass-card rs-stat">
+              <div className="rs-stat-label">Total sesi</div>
+              <div className="rs-stat-value">{loading ? "—" : totalSessions}</div>
             </div>
+            <div className="glass-card rs-stat rs-stat-emerald">
+              <div className="rs-stat-label">Akurasi rata-rata</div>
+              <div className="rs-stat-value">{loading ? "—" : avgAccuracy != null ? `${avgAccuracy}%` : "—"}</div>
+            </div>
+            <div className="glass-card rs-stat">
+              <div className="rs-stat-label">Soal dijawab</div>
+              <div className="rs-stat-value">{loading ? "—" : totalSoal.toLocaleString("id-ID")}</div>
+            </div>
+          </div>
+        </header>
 
-            {/* Search + filter */}
-            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-              <div className="relative w-full md:flex-1 md:max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#4a5a7a]" />
-                <input
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Cari soal..."
-                  className="w-full pl-9 pr-4 py-2 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none"
-                  style={{ background: "#101b30", fontFamily: "var(--font-manrope)" }}
-                />
+        <div className="rs-toolbar">
+          <div className="glass-card rs-search">
+            <Search size={14} strokeWidth={1.6} style={{ color: "var(--text-tertiary)" }} />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Cari sesi · label, kanji, atau tanggal..."
+            />
+            <kbd>⌘K</kbd>
+          </div>
+
+          <div className="rs-filter-row">
+            <FilterGroup
+              label="Level"
+              options={LEVEL_OPTS}
+              value={levelF}
+              onChange={setLevelF}
+              accentByLevel
+            />
+            <FilterGroup
+              label="Kategori"
+              options={KATEGORI_OPTS}
+              value={kategoriF}
+              onChange={setKategoriF}
+            />
+            <FilterGroup
+              label="Periode"
+              options={PERIODE_OPTS}
+              value={periodF}
+              onChange={setPeriodF}
+            />
+            <button type="button" className="reset-link" onClick={resetFilters}>Reset filter</button>
+
+            <button
+              type="button"
+              onClick={fetchAll}
+              className="reset-link"
+              style={{ marginLeft: 0, display: "inline-flex", alignItems: "center", gap: 4 }}
+              title="Refresh data"
+            >
+              <RefreshCw size={11} /> Refresh
+            </button>
+            {sessions.length > 0 && (
+              <button
+                type="button"
+                onClick={deleteAll}
+                className="reset-link"
+                style={{ marginLeft: 0, color: "var(--accent-rose)", display: "inline-flex", alignItems: "center", gap: 4 }}
+              >
+                <Trash2 size={11} /> Hapus semua
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="rs-workspace">
+          <main className="rs-main">
+            {loading && (
+              <div className="empty-state glass-card">
+                <Loader2 size={28} className="animate-spin" style={{ color: "var(--accent-iris)" }} />
+                <p>Memuat riwayat...</p>
               </div>
+            )}
 
-              <div className="flex items-center gap-1 md:gap-1.5 overflow-x-auto -mx-1 px-1 scrollbar-none">
-                {filters.map(f => {
-                  const active = activeFilter === f;
-                  const lc = f !== "ALL" ? levelColors[f as Level] : null;
+            {!loading && fetchError && (
+              <div className="empty-state glass-card">
+                <h3 style={{ color: "var(--accent-rose)" }}>⚠️ {fetchError}</h3>
+                <button type="button" onClick={fetchAll} className="btn btn-secondary btn-sm">
+                  Coba lagi
+                </button>
+              </div>
+            )}
+
+            {!loading && !fetchError && filtered.length === 0 && (
+              <div className="empty-state glass-card">
+                <History size={32} strokeWidth={1.2} style={{ color: "var(--text-tertiary)" }} />
+                <h3>{sessions.length === 0 ? "Belum ada sesi" : "Tidak ada sesi yang cocok"}</h3>
+                <p>
+                  {sessions.length === 0
+                    ? "Upload foto soal JLPT untuk memulai — sesi tersimpan otomatis di sini."
+                    : "Coba ubah filter di atas — atau mulai sesi baru dari Analisis Foto."}
+                </p>
+                <Link href="/analisis-foto" className="btn btn-primary">
+                  <Camera size={14} /> Buka Analisis Foto
+                </Link>
+              </div>
+            )}
+
+            {!loading && !fetchError && filtered.length > 0 && GROUP_ORDER.map(g => {
+              const items = grouped[g];
+              if (!items?.length) return null;
+              return (
+                <section key={g} className="rs-group">
+                  <div className="rs-group-head">
+                    <span className="rs-group-label">{g}</span>
+                    <span className="rs-group-count">{items.length} sesi</span>
+                    <div className="rs-group-line" />
+                  </div>
+                  <div className="rs-cards">
+                    {items.map(s => (
+                      <SessionCard
+                        key={s.id}
+                        s={s}
+                        onDelete={() => deleteSession(s.id)}
+                        deleting={deletingId === s.id}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </main>
+
+          <aside className="rs-side">
+            <div className="glass-card rs-side-card glow-emerald">
+              <div className="rs-side-head">
+                <BarChart3 size={13} strokeWidth={1.8} style={{ color: "var(--accent-emerald)" }} />
+                Akurasi per Kategori
+              </div>
+              <div className="cat-bars">
+                {catAccuracy.map(c => {
+                  const color = c.pct >= 80 ? "emerald" : c.pct >= 65 ? "amber" : c.pct > 0 ? "rose" : "iris";
                   return (
-                    <button key={f}
-                      onClick={() => setActiveFilter(f)}
-                      className="px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0"
-                      style={active && lc ? {
-                        background: lc.bg, color: lc.text,
-                        border: `1px solid ${lc.border}`,
-                        fontFamily: "var(--font-space)",
-                      } : active ? {
-                        background: "rgba(187,198,226,0.12)", color: "#d7e2ff",
-                        border: "1px solid rgba(187,198,226,0.2)",
-                        fontFamily: "var(--font-space)",
-                      } : {
-                        background: "transparent", color: "#4a5a7a",
-                        border: "1px solid transparent",
-                        fontFamily: "var(--font-space)",
-                      }}>
-                      {f}
-                    </button>
+                    <div className="cat-bar-row" key={c.jp}>
+                      <div className="cat-bar-label">
+                        <span className="cat-jp">{c.jp}</span>
+                        <span className="cat-ro">{c.label}</span>
+                      </div>
+                      <div className="cat-bar-track">
+                        {c.present && (
+                          <div className={`cat-bar-fill cat-${color}`} style={{ width: `${c.pct}%` }} />
+                        )}
+                      </div>
+                      <span className={`cat-bar-pct cat-pct-${color}`}>
+                        {c.present ? `${c.pct}%` : "—"}
+                      </span>
+                    </div>
                   );
                 })}
               </div>
-
-              <button className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-[#4a5a7a] hover:text-[#8a9bbf] hover:bg-white/5 transition-colors ml-auto"
-                style={{ fontFamily: "var(--font-space)" }}>
-                <SlidersHorizontal className="size-3.5" /> FILTER
-              </button>
             </div>
-          </div>
 
-          {/* Grid area */}
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5 md:py-6 pb-20 lg:pb-6">
-
-            {/* Loading */}
-            {loading && (
-              <div className="flex flex-col items-center justify-center h-full gap-4">
-                <Loader2 className="size-8 text-[#4a7abf] animate-spin" />
-                <p className="text-sm text-[#4a5a7a]">Memuat riwayat...</p>
+            <div className="glass-card rs-side-card">
+              <div className="rs-side-head">
+                <Clock size={13} strokeWidth={1.8} style={{ color: "var(--accent-iris)" }} />
+                Aktivitas Mingguan
               </div>
-            )}
-
-            {/* Error */}
-            {!loading && fetchError && (
-              <div className="flex flex-col items-center justify-center h-full gap-4">
-                <div className="size-16 rounded-2xl flex items-center justify-center text-3xl"
-                  style={{ background: "#101b30" }}>⚠️</div>
-                <p className="font-semibold text-[#c05050]">{fetchError}</p>
-                <button onClick={fetchSessions}
-                  className="text-xs px-4 py-2 rounded-xl font-semibold transition-colors hover:brightness-110"
-                  style={{ background: "#101b30", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                  COBA LAGI
-                </button>
+              <div className="activity-grid">
+                {activityGrid.map((col, ci) => (
+                  <div className="ag-col" key={ci}>
+                    {col.map((lv, di) => <span key={di} className={`ag-cell lg-${lv}`} />)}
+                  </div>
+                ))}
               </div>
-            )}
-
-            {/* Empty */}
-            {!loading && !fetchError && filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full gap-4">
-                <div className="size-16 rounded-2xl flex items-center justify-center text-3xl"
-                  style={{ background: "#101b30" }}>
-                  {sessions.length === 0 ? "📭" : "🔍"}
+              <div className="grid-legend">
+                <span>Lebih sedikit</span>
+                <div className="legend-dots">
+                  {[0, 1, 2, 3, 4].map(i => <span key={i} className={`legend-dot lg-${i}`} />)}
                 </div>
-                <p className="font-semibold text-[#4a5a7a]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                  {sessions.length === 0
-                    ? "Belum ada sesi analisis"
-                    : "Tidak ada soal ditemukan"}
-                </p>
-                <p className="text-xs text-[#2a354b] text-center">
-                  {sessions.length === 0
-                    ? "Upload foto soal JLPT untuk memulai."
-                    : "Coba ubah filter atau kata kunci pencarian."}
-                </p>
-                {sessions.length === 0 && (
-                  <a href="/analisis-foto"
-                    className="text-xs px-5 py-2 rounded-xl font-bold text-[#071327] mt-1"
-                    style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", fontFamily: "var(--font-space)" }}>
-                    ANALISIS FOTO SEKARANG
-                  </a>
-                )}
+                <span>Lebih banyak</span>
               </div>
-            )}
+            </div>
 
-            {/* Cards */}
-            {!loading && !fetchError && filtered.length > 0 && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                  {filtered.map((s, idx) => {
-                    const meta    = categoryMeta[s.category] ?? categoryMeta["AI"];
-                    const palette = cardPalettes[idx % cardPalettes.length];
-                    const lc      = levelColors[s.level] ?? levelColors.N3;
-                    const pct    = s.score !== null && s.total > 0
-                      ? Math.round((s.score / s.total) * 100)
-                      : null;
-                    const scoreColor = pct === null ? "#4a5a7a"
-                      : pct >= 80 ? "#5ea87a"
-                      : pct >= 60 ? "#c0844a"
-                      : "#c05050";
-                    const scoreBg = pct === null ? "rgba(74,90,122,0.15)"
-                      : pct >= 80 ? "rgba(94,168,122,0.18)"
-                      : pct >= 60 ? "rgba(192,132,74,0.18)"
-                      : "rgba(192,80,80,0.18)";
-                    const preview = s.ai_result?.questions?.[0]?.question ?? "";
+            <div className="glass-card rs-side-card">
+              <div className="rs-side-head">
+                <Star size={13} strokeWidth={1.8} fill="var(--accent-amber)" style={{ color: "var(--accent-amber)" }} />
+                Soal Dibintangi
+              </div>
+              <p className="starred-empty">
+                Belum ada soal yang dibintangi.
+                <br />
+                Tandai soal favorit di halaman Analisis Foto.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </>
+  );
+}
 
-                    return (
-                      <div key={s.id}
-                        className="group relative flex flex-col rounded-2xl overflow-hidden transition-all hover:scale-[1.03] hover:-translate-y-0.5 cursor-pointer"
-                        style={{
-                          background: "#101b30",
-                          boxShadow: `0 0 0 1px ${palette.glow}25, 0 8px 28px ${palette.glow}10`,
-                        }}>
+/* ─── Subcomponents ─── */
 
-                        {/* Thumbnail */}
-                        <a href={`/analisis-foto?session=${s.id}`}
-                          className="h-32 relative overflow-hidden block"
-                          style={{ background: `linear-gradient(135deg, ${palette.from} 0%, ${palette.to} 100%)` }}>
-
-                          <div className="absolute inset-0"
-                            style={{ background: `radial-gradient(ellipse at 25% 30%, ${palette.glow}40, transparent 60%)` }} />
-                          <div className="absolute inset-0"
-                            style={{ background: `radial-gradient(ellipse at 80% 90%, ${palette.glow}25, transparent 55%)` }} />
-
-                          {/* fake text lines */}
-                          <div className="absolute left-3 top-10 flex flex-col gap-1.5 w-[55%]">
-                            <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.07)", width: "90%" }} />
-                            <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)", width: "75%" }} />
-                            <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.04)", width: "60%" }} />
-                          </div>
-
-                          {preview && (
-                            <p className="absolute left-3 top-9 text-[9px] leading-relaxed w-[58%] line-clamp-2"
-                              style={{ color: "rgba(215,226,255,0.35)", fontFamily: "var(--font-jakarta)" }}>
-                              {preview}
-                            </p>
-                          )}
-
-                          <span className="absolute -bottom-2 right-1 text-[72px] font-black leading-none select-none"
-                            style={{ color: `${palette.glow}30`, fontFamily: "var(--font-jakarta)", textShadow: `0 0 24px ${palette.glow}30` }}>
-                            {meta.kanji}
-                          </span>
-
-                          <span className="absolute bottom-2.5 left-2.5 text-[9px] px-2 py-0.5 rounded-full font-bold"
-                            style={{ background: lc.bg, color: lc.text, border: `1px solid ${lc.border}`, fontFamily: "var(--font-space)" }}>
-                            JLPT {s.level}
-                          </span>
-
-                          {pct !== null && (
-                            <span className="absolute top-2.5 right-2.5 text-[10px] px-2 py-0.5 rounded-full font-bold"
-                              style={{ background: scoreBg, color: scoreColor, fontFamily: "var(--font-space)" }}>
-                              {pct}%
-                            </span>
-                          )}
-                        </a>
-
-                        {/* Info */}
-                        <div className="px-3.5 py-3 flex flex-col gap-2">
-                          <p className="text-sm font-semibold text-[#d7e2ff] leading-tight truncate"
-                            style={{ fontFamily: "var(--font-jakarta)" }}>
-                            {s.title}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1 text-[10px] text-[#4a5a7a]">
-                              <BookMarked className="size-3" />
-                              <span style={{ color: scoreColor, fontFamily: "var(--font-space)" }}>
-                                {s.score !== null ? `${s.score}/${s.total}` : `${s.total}`}
-                              </span>
-                              <span className="text-[#2a354b]">
-                                {s.score !== null ? "benar" : "soal"}
-                              </span>
-                            </span>
-                            <span className="flex items-center gap-1 text-[10px] text-[#4a5a7a]"
-                              style={{ fontFamily: "var(--font-space)" }}>
-                              <Clock className="size-3" />{relativeTime(s.created_at)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Delete button — appears on hover */}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                          disabled={deletingId === s.id}
-                          className="absolute top-2 left-2 size-6 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:brightness-125"
-                          style={{ background: "rgba(192,80,80,0.75)" }}>
-                          {deletingId === s.id
-                            ? <Loader2 className="size-3 text-white animate-spin" />
-                            : <Trash2 className="size-3 text-white" />}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Stats row */}
-                <div className="flex items-center gap-3 mb-4 px-1">
-                  {[
-                    { label: "Sesi latihan",      value: `${filtered.length}` },
-                    { label: "Rata-rata skor",     value: avgScore !== null ? `${avgScore}%` : "—" },
-                    { label: "Kategori terbanyak", value: topCat },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                      style={{ background: "#101b30" }}>
-                      <span className="text-sm font-bold text-[#d7e2ff]"
-                        style={{ fontFamily: "var(--font-jakarta)" }}>{value}</span>
-                      <span className="text-[10px] text-[#4a5a7a]"
-                        style={{ fontFamily: "var(--font-space)" }}>{label}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Footer info */}
-                <div className="flex items-center justify-end pb-2">
-                  <span className="text-[10px] text-[#2a354b]" style={{ fontFamily: "var(--font-space)" }}>
-                    {filtered.length} dari {sessions.length} sesi · SORT: TERBARU ↓
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-        </main>
+function FilterGroup<T extends string>({
+  label, options, value, onChange, accentByLevel,
+}: {
+  label: string;
+  options: readonly T[];
+  value: T;
+  onChange: (v: T) => void;
+  accentByLevel?: boolean;
+}) {
+  return (
+    <div className="filter-group">
+      <span className="fg-label">{label}</span>
+      <div className="fg-chips">
+        {options.map(opt => {
+          const active = value === opt;
+          const lvCls = accentByLevel && /^N[1-5]$/.test(opt) ? `fg-chip-${opt.toLowerCase()}` : "";
+          return (
+            <button
+              key={opt}
+              type="button"
+              className={`fg-chip ${active ? "on" : ""} ${lvCls}`}
+              onClick={() => onChange(opt)}
+            >
+              {opt}
+            </button>
+          );
+        })}
       </div>
-      <BottomNav activeHref="/riwayat-soal" />
+    </div>
+  );
+}
+
+function SessionCard({
+  s, onDelete, deleting,
+}: { s: Session; onDelete: () => void; deleting: boolean }) {
+  const pct = s.score != null && s.total > 0 ? Math.round((s.score / s.total) * 100) : null;
+  const tone: "good" | "mid" | "bad" | "none" =
+    pct == null ? "none"
+    : pct >= 85 ? "good"
+    : pct >= 65 ? "mid"
+    : "bad";
+  const kategoriRo = KATEGORI_LABEL[s.category] ?? "";
+  const glyph = CATEGORY_GLYPH[s.category] ?? "全";
+  const lvLower = s.level.toLowerCase();
+
+  return (
+    <Link href={`/analisis-foto?session=${s.id}`} className={`glass-card rs-card rs-card-${tone}`}>
+      <div>
+        <div className={`rs-glyph rs-glyph-${tone}`}>{glyph}</div>
+      </div>
+
+      <div className="rs-card-main">
+        <div className="rs-tags">
+          <span className={`lv-tag-mini lv-${lvLower}`}>{s.level}</span>
+          {kategoriRo && (
+            <span className="rs-kategori">
+              <span className="rs-kategori-jp">{s.category}</span>
+              <span className="rs-kategori-ro">{kategoriRo}</span>
+            </span>
+          )}
+        </div>
+        <h3 className="rs-card-title">{s.title}</h3>
+        <div className="rs-meta">
+          <span className="rs-meta-item">
+            <Clock size={10} strokeWidth={1.8} style={{ color: "var(--text-tertiary)" }} />
+            {relativeDate(s.created_at)} · {timeStr(s.created_at)}
+          </span>
+          <span className="rs-meta-item">
+            <span className="rs-meta-dot" />
+            {s.total} soal
+          </span>
+        </div>
+      </div>
+
+      <div className="rs-card-score">
+        {pct != null ? (
+          <>
+            <ScoreRing accuracy={pct} tone={tone === "none" ? "mid" : tone} />
+            <div className="rs-score-meta">
+              <div className="rs-score-fraction">
+                <strong>{s.score}</strong>
+                <span>/ {s.total}</span>
+              </div>
+              <div className="rs-score-label">benar</div>
+            </div>
+          </>
+        ) : (
+          <div className="rs-score-meta">
+            <div className="rs-score-fraction" style={{ color: "var(--text-tertiary)" }}>
+              <strong>—</strong>
+            </div>
+            <div className="rs-score-label">belum</div>
+          </div>
+        )}
+      </div>
+
+      <button type="button" className="rs-card-cta" aria-label="Buka sesi">
+        <ChevronRight size={14} strokeWidth={2} />
+      </button>
+
+      <button
+        type="button"
+        className="rs-card-del"
+        aria-label="Hapus sesi"
+        title="Hapus sesi ini"
+        disabled={deleting}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
+      >
+        {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+      </button>
+    </Link>
+  );
+}
+
+function ScoreRing({ accuracy, tone }: { accuracy: number; tone: "good" | "mid" | "bad" }) {
+  const r = 22;
+  const c = 2 * Math.PI * r;
+  const offset = c - (accuracy / 100) * c;
+  const color =
+    tone === "good" ? "var(--accent-emerald)"
+    : tone === "mid" ? "var(--accent-amber)"
+    : "var(--accent-rose)";
+  return (
+    <div className="rs-ring">
+      <svg width="60" height="60" viewBox="0 0 60 60">
+        <circle cx="30" cy="30" r={r} stroke="var(--surface-2)" strokeWidth="4" fill="none" />
+        <circle
+          cx="30" cy="30" r={r}
+          stroke={color} strokeWidth="4" fill="none"
+          strokeDasharray={c} strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform="rotate(-90 30 30)"
+          style={{ filter: `drop-shadow(0 0 6px ${color})`, transition: "stroke-dashoffset 600ms cubic-bezier(0.16,1,0.3,1)" }}
+        />
+      </svg>
+      <span className="rs-ring-pct" style={{ color }}>
+        {accuracy}<span className="rs-ring-pct-sym">%</span>
+      </span>
     </div>
   );
 }
