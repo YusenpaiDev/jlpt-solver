@@ -1,216 +1,298 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Sidebar, BottomNav } from "@/components/Sidebar";
+import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
-  Search, BookOpen, Zap,
-  X, Brain, RotateCcw, CheckCircle2, XCircle,
-  Trash2, Loader2, Plus, BookmarkPlus, Filter, Sparkles, Pencil, Save,
-  ChevronLeft, ChevronRight, Shuffle, Layers, FolderOpen, Upload, FileText, Copy,
+  Search, BookA, BookOpen, ChevronRight, ChevronLeft, Layers, Zap, Wand2, Plus, Upload,
+  X, Edit3, Trash2, Calendar, Camera, Shuffle, Check, Loader2, BarChart3,
 } from "lucide-react";
-import AppHeader from "@/components/AppHeader";
 
-/* ─── Types ──────────────────────────────────────────────────── */
+type Level = "N1" | "N2" | "N3" | "N4" | "N5";
+type LevelFilter = Level | "ALL";
+
 interface SavedWord {
   id: string;
   kanji: string;
   reading: string | null;
   meaning: string;
-  example: string | null;
   level: string | null;
-  image_url: string | null;
+  example: string | null;
   created_at: string;
 }
 
-/* ─── Accent palette ─────────────────────────────────────────── */
-const ACCENTS = [
-  "#4a7abf","#8b5abf","#5ea87a","#e07b4a","#c05abf",
-  "#6b9cda","#a67bd4","#4a9abf","#bbc6e2","#3a9a7a",
-];
-const accentFor = (idx: number) => ACCENTS[idx % ACCENTS.length];
+type SortMode = "newest" | "alpha" | "level";
+type FlashMode = "picker" | "card" | null;
 
-const LEVEL_FILTERS = ["ALL","N1","N2","N3","N4","N5"];
 const ALBUM_SIZE = 50;
+const DECK_COLORS = ["iris", "purple", "emerald", "amber", "rose", "iris", "emerald", "amber", "purple", "rose"] as const;
+const LEVEL_OPTS: LevelFilter[] = ["ALL", "N1", "N2", "N3", "N4", "N5"];
 
-/* ─── QuizCepat ─────────────────────────────────────────────── */
-function QuizCepat({ word, allWords }: { word: SavedWord; allWords: SavedWord[] }) {
-  const [phase,   setPhase]   = useState<"idle"|"answer"|"done">("idle");
-  const [picked,  setPicked]  = useState<number | null>(null);
-  const [options, setOptions] = useState<string[]>([]);
-
-  useEffect(() => {
-    const correct = word.meaning.split(";")[0].trim();
-    const wrong = allWords
-      .filter(w => w.id !== word.id)
-      .map(w => w.meaning.split(";")[0].trim())
-      .filter(m => m !== correct)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3);
-    setOptions([correct, ...wrong].sort(() => Math.random() - 0.5));
-    setPhase("idle");
-    setPicked(null);
-  }, [word.id, allWords]);
-
-  if (options.length < 2) return null;
-
-  const correctIdx = options.indexOf(word.meaning.split(";")[0].trim());
-
-  return (
-    <div className="p-5 rounded-2xl" style={{ background: "#101b30" }}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Brain className="size-4 text-[#a67bd4]" />
-          <p className="text-xs font-bold text-[#d7e2ff]"
-            style={{ fontFamily: "var(--font-jakarta)" }}>Quiz Cepat</p>
-        </div>
-        {phase !== "idle" && (
-          <button onClick={() => { setPhase("idle"); setPicked(null); }}
-            className="flex items-center gap-1 text-[10px] text-[#4a5a7a] hover:text-[#bbc6e2] transition-colors"
-            style={{ fontFamily: "var(--font-space)" }}>
-            <RotateCcw className="size-3" /> ULANGI
-          </button>
-        )}
-      </div>
-
-      {phase === "idle" ? (
-        <div className="flex flex-col items-center gap-3 py-2">
-          <p className="text-sm text-[#8a9bbf] text-center">
-            Apa arti dari{" "}
-            <span className="font-bold text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>{word.kanji}</span>?
-          </p>
-          <button onClick={() => setPhase("answer")}
-            className="px-5 py-2 rounded-xl text-xs font-bold transition-all hover:brightness-110"
-            style={{ background: "rgba(166,123,212,0.2)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-            MULAI QUIZ
-          </button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-[#4a5a7a] mb-1" style={{ fontFamily: "var(--font-space)" }}>
-            Pilih arti yang tepat:
-          </p>
-          {options.map((opt, i) => {
-            const isCorrect  = i === correctIdx;
-            const isPicked   = picked === i;
-            const showResult = phase === "done";
-            let bg = "#0d1929", color = "#8a9bbf", border = "transparent";
-            if (showResult && isCorrect)             { bg = "rgba(94,168,122,0.12)";  color = "#5ea87a"; border = "rgba(94,168,122,0.3)"; }
-            if (showResult && isPicked && !isCorrect){ bg = "rgba(224,90,90,0.1)";   color = "#e05a5a"; border = "rgba(224,90,90,0.3)"; }
-            return (
-              <button key={i} disabled={phase === "done"}
-                onClick={() => { setPicked(i); setPhase("done"); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-left transition-all"
-                style={{ background: bg, color, border: `1px solid ${border}` }}>
-                {showResult && isCorrect   && <CheckCircle2 className="size-3.5 shrink-0 text-[#5ea87a]" />}
-                {showResult && isPicked && !isCorrect && <XCircle className="size-3.5 shrink-0 text-[#e05a5a]" />}
-                {(!showResult || (!isCorrect && !isPicked)) && (
-                  <span className="size-4 rounded flex items-center justify-center text-[9px] font-bold shrink-0"
-                    style={{ background: "rgba(187,198,226,0.06)", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                    {["A","B","C","D"][i]}
-                  </span>
-                )}
-                <span style={{ fontFamily: "var(--font-manrope)" }}>{opt}</span>
-              </button>
-            );
-          })}
-          {phase === "done" && (
-            <p className={`text-[11px] mt-1 font-semibold ${picked === correctIdx ? "text-[#5ea87a]" : "text-[#e05a5a]"}`}>
-              {picked === correctIdx ? "Benar! Kamu ingat kata ini." : "Salah. Coba review sekali lagi."}
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
+function relativeDate(iso: string) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days < 1) return "Hari ini";
+  if (days < 2) return "Kemarin";
+  if (days < 30) return `${days} hari lalu`;
+  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 }
 
-/* ─── Page ────────────────────────────────────────────────────── */
 export default function Kamus() {
-  const [query,        setQuery]       = useState("");
-  const [activeLevel,  setLevel]       = useState("ALL");
-  const [selected,     setSelected]    = useState<string | null>(null);
-  const [words,        setWords]       = useState<SavedWord[]>([]);
-  const [loading,      setLoading]     = useState(true);
-  const [deletingId,   setDeletingId]  = useState<string | null>(null);
-  const [addOpen,      setAddOpen]     = useState(false);
-  const [adding,       setAdding]      = useState(false);
-  const [addError,     setAddError]    = useState<string | null>(null);
-  const [genReading,   setGenReading]  = useState(false);
-  const [genAll,       setGenAll]      = useState(false);
-  const [genProgress,  setGenProgress] = useState(0);
-  const [editMode,     setEditMode]    = useState(false);
-  const [editForm,     setEditForm]    = useState({ reading:"", meaning:"", level:"" });
-  const [editSaving,   setEditSaving]  = useState(false);
-  const [editGenRead,  setEditGenRead] = useState(false);
-  const [flashMode,    setFlashMode]   = useState(false);
-  const [flashIdx,     setFlashIdx]    = useState(0);
-  const [flipped,      setFlipped]     = useState(false);
-  const [flashOrder,   setFlashOrder]  = useState<number[]>([]);
-  const [flashDragX,   setFlashDragX]  = useState(0);
-  const [albumPickerOpen, setAlbumPickerOpen] = useState(false);
-  const [activeAlbum,  setActiveAlbum] = useState<{ idx: number; total: number } | null>(null);
-  const [cleanupOpen,  setCleanupOpen] = useState(false);
-  const [cleanupSel,   setCleanupSel]  = useState<Set<string>>(new Set());
-  const [cleanupBusy,  setCleanupBusy] = useState(false);
-  const [bulkOpen,     setBulkOpen]    = useState(false);
-  const [bulkText,     setBulkText]    = useState("");
-  const [bulkAdding,   setBulkAdding]  = useState(false);
-  const [bulkProgress, setBulkProgress]= useState({ done: 0, total: 0 });
-  const [bulkResult,   setBulkResult]  = useState<{ added: number; skipped: number; failed: number } | null>(null);
-  const [form,         setForm]        = useState({ kanji:"", reading:"", meaning:"", example:"", level:"" });
-  const [formImage,    setFormImage]   = useState<File | null>(null);
-  const [imagePreview, setImagePreview]= useState<string | null>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const bulkFileRef   = useRef<HTMLInputElement>(null);
-  const flashSwipe    = useRef({ x: 0, dx: 0, swiped: false });
+  /* Data */
+  const [words, setWords] = useState<SavedWord[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  /* ── Load from Supabase ── */
+  /* UI state */
+  const [query, setQuery] = useState("");
+  const [levelF, setLevelF] = useState<LevelFilter>("ALL");
+  const [sort, setSort] = useState<SortMode>("newest");
+  const [activeAlbum, setActiveAlbum] = useState<"all" | number>("all");
+  const [selected, setSelected] = useState<string | null>(null);
+
+  /* Flash */
+  const [flashMode, setFlashMode] = useState<FlashMode>(null);
+  const [flashDeckId, setFlashDeckId] = useState<"all" | number>("all");
+  const [flashIdx, setFlashIdx] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [shuffled, setShuffled] = useState(false);
+  const [flashOrder, setFlashOrder] = useState<number[]>([]);
+
+  /* Modal: add */
+  const [addOpen, setAddOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [addErr, setAddErr] = useState<string | null>(null);
+  const [genReading, setGenReading] = useState(false);
+  const [form, setForm] = useState({ kanji: "", reading: "", meaning: "", level: "", example: "" });
+
+  /* Modal: edit */
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ kanji: "", reading: "", meaning: "", level: "" });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editGenRead, setEditGenRead] = useState(false);
+
+  /* Furigana batch */
+  const [genAllRunning, setGenAllRunning] = useState(false);
+  const [genProgress, setGenProgress] = useState(0);
+
+  /* User bar */
+  const [streak, setStreak] = useState(0);
+  const [userInitial, setUserInitial] = useState("Y");
+  const xp = 820;
+  const xpTarget = 1000;
+
+  /* Load */
   useEffect(() => {
     (async () => {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data: d1 } = await supabase
-          .from("saved_words")
-          .select("id, kanji, reading, meaning, level, created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        const data = (d1 ?? []).map(w => ({ ...w, example: null, image_url: null })) as SavedWord[];
-        const ws = (data ?? []) as SavedWord[];
+        setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
+
+        const [profileRes, wordsRes] = await Promise.all([
+          supabase.from("profiles").select("streak").eq("id", user.id).single(),
+          supabase
+            .from("saved_words")
+            .select("id, kanji, reading, meaning, level, example, created_at")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false }),
+        ]);
+        if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
+        const ws = (wordsRes.data ?? []) as SavedWord[];
         setWords(ws);
-        if (ws.length > 0 && typeof window !== "undefined" && window.innerWidth >= 768) {
-          setSelected(ws[0].id);
-        }
+        if (ws.length > 0) setSelected(ws[0].id);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  /* ── Filtered list ── */
-  const filtered = useMemo(() => words.filter(w => {
-    const q = query.toLowerCase();
-    const matchQ = q === "" ||
-      w.kanji.includes(query) ||
-      (w.reading ?? "").includes(query) ||
-      w.meaning.toLowerCase().includes(q);
-    const matchL = activeLevel === "ALL" || w.level === activeLevel;
-    return matchQ && matchL;
-  }), [words, query, activeLevel]);
+  /* Decks (chunks of 50) */
+  const decks = useMemo(() => {
+    const out: { id: number; count: number; color: typeof DECK_COLORS[number]; preview: SavedWord[]; incomplete: boolean }[] = [];
+    for (let i = 0; i < words.length; i += ALBUM_SIZE) {
+      const chunk = words.slice(i, i + ALBUM_SIZE);
+      const id = Math.floor(i / ALBUM_SIZE) + 1;
+      out.push({
+        id,
+        count: chunk.length,
+        color: DECK_COLORS[(id - 1) % DECK_COLORS.length],
+        preview: chunk.slice(0, 3),
+        incomplete: chunk.length < ALBUM_SIZE,
+      });
+    }
+    return out;
+  }, [words]);
 
-  /* ── Detail ── */
-  const detailIdx = words.findIndex(w => w.id === selected);
-  const detail    = detailIdx >= 0 ? words[detailIdx] : null;
-  const accent    = detail ? accentFor(detailIdx) : "#4a7abf";
+  /* Filtered + sorted list */
+  const filtered = useMemo(() => {
+    let result = words;
 
-  /* ── Generate furigana semua kata ── */
+    if (activeAlbum !== "all") {
+      const start = (activeAlbum - 1) * ALBUM_SIZE;
+      result = result.slice(start, start + ALBUM_SIZE);
+    }
+    if (levelF !== "ALL") {
+      result = result.filter(w => w.level === levelF);
+    }
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      result = result.filter(w =>
+        w.kanji.includes(query) ||
+        (w.reading ?? "").includes(query) ||
+        w.meaning.toLowerCase().includes(q)
+      );
+    }
+    if (sort === "alpha") {
+      result = [...result].sort((a, b) => a.kanji.localeCompare(b.kanji, "ja"));
+    } else if (sort === "level") {
+      const order: Record<string, number> = { N5: 0, N4: 1, N3: 2, N2: 3, N1: 4 };
+      result = [...result].sort((a, b) => (order[a.level ?? ""] ?? 99) - (order[b.level ?? ""] ?? 99));
+    }
+    return result;
+  }, [words, activeAlbum, levelF, query, sort]);
+
+  const detail = useMemo(() => words.find(w => w.id === selected) ?? null, [words, selected]);
+
+  /* Counts per level */
+  const levelCounts = useMemo(() => {
+    const counts: Record<LevelFilter, number> = { ALL: words.length, N1: 0, N2: 0, N3: 0, N4: 0, N5: 0 };
+    words.forEach(w => {
+      if (w.level && counts[w.level as Level] != null) counts[w.level as Level]++;
+    });
+    return counts;
+  }, [words]);
+
+  const missingFurigana = words.filter(w => !w.reading).length;
+
+  /* ── Add word ── */
+  const autoGenReadingForAdd = async () => {
+    if (!form.kanji.trim() || genReading) return;
+    setGenReading(true);
+    try {
+      const res = await fetch("/api/furigana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: form.kanji.trim(), withMeaning: !form.meaning.trim() }),
+      });
+      const json = await res.json();
+      setForm(f => ({
+        ...f,
+        reading: json.reading ?? f.reading,
+        meaning: !f.meaning && json.meaning ? json.meaning : f.meaning,
+      }));
+    } catch { /* ignore */ }
+    finally { setGenReading(false); }
+  };
+
+  const closeAdd = () => {
+    setAddOpen(false);
+    setAddErr(null);
+    setForm({ kanji: "", reading: "", meaning: "", level: "", example: "" });
+  };
+
+  const addWord = async () => {
+    if (!form.kanji.trim() || !form.meaning.trim()) {
+      setAddErr("Kanji dan arti wajib diisi.");
+      return;
+    }
+    setAdding(true);
+    setAddErr(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setAddErr("Login dulu."); return; }
+      const { data, error } = await supabase.from("saved_words").insert({
+        user_id: user.id,
+        kanji: form.kanji.trim(),
+        reading: form.reading.trim() || null,
+        meaning: form.meaning.trim(),
+        level: form.level || null,
+        example: form.example.trim() || null,
+      }).select("id, kanji, reading, meaning, level, example, created_at").single();
+
+      if (error) {
+        setAddErr(error.code === "23505" ? "Kata ini sudah ada." : `Gagal: ${error.message}`);
+        return;
+      }
+      const w = data as SavedWord;
+      setWords(prev => [w, ...prev]);
+      setSelected(w.id);
+      closeAdd();
+    } catch (err) {
+      setAddErr(err instanceof Error ? err.message : "Error");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  /* ── Edit ── */
+  const openEdit = () => {
+    if (!detail) return;
+    setEditForm({
+      kanji: detail.kanji,
+      reading: detail.reading ?? "",
+      meaning: detail.meaning,
+      level: detail.level ?? "",
+    });
+    setEditOpen(true);
+  };
+
+  const autoGenReadingForEdit = async () => {
+    if (!editForm.kanji.trim() || editGenRead) return;
+    setEditGenRead(true);
+    try {
+      const res = await fetch("/api/furigana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: editForm.kanji.trim(), withMeaning: true }),
+      });
+      const json = await res.json();
+      setEditForm(f => ({
+        ...f,
+        reading: json.reading ?? f.reading,
+        meaning: json.meaning ?? f.meaning,
+      }));
+    } catch { /* ignore */ }
+    finally { setEditGenRead(false); }
+  };
+
+  const saveEdit = async () => {
+    if (!detail || !editForm.meaning.trim() || editSaving) return;
+    setEditSaving(true);
+    try {
+      const supabase = createClient();
+      await supabase.from("saved_words").update({
+        reading: editForm.reading.trim() || null,
+        meaning: editForm.meaning.trim(),
+        level: editForm.level || null,
+      }).eq("id", detail.id);
+      setWords(prev => prev.map(w => w.id === detail.id
+        ? { ...w, reading: editForm.reading.trim() || null, meaning: editForm.meaning.trim(), level: editForm.level || null }
+        : w));
+      setEditOpen(false);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  /* ── Delete ── */
+  const deleteWord = async (id: string) => {
+    if (!confirm("Hapus kata ini dari kamus?")) return;
+    try {
+      await createClient().from("saved_words").delete().eq("id", id);
+      setWords(prev => {
+        const next = prev.filter(w => w.id !== id);
+        if (selected === id) setSelected(next[0]?.id ?? null);
+        return next;
+      });
+    } catch { /* ignore */ }
+  };
+
+  /* ── Generate all furigana ── */
   const genAllFurigana = async () => {
     const missing = words.filter(w => !w.reading);
-    if (missing.length === 0 || genAll) return;
-    setGenAll(true);
+    if (missing.length === 0 || genAllRunning) return;
+    setGenAllRunning(true);
     setGenProgress(0);
     const supabase = createClient();
     for (let i = 0; i < missing.length; i++) {
@@ -229,1642 +311,838 @@ export default function Kamus() {
       } catch { /* skip */ }
       setGenProgress(i + 1);
     }
-    setGenAll(false);
+    setGenAllRunning(false);
   };
 
-  /* ── Auto furigana ── */
-  const autoFurigana = async () => {
-    if (!form.kanji.trim() || genReading) return;
-    setGenReading(true);
-    try {
-      const res = await fetch("/api/furigana", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word: form.kanji.trim() }),
-      });
-      const json = await res.json();
-      if (json.reading) setForm(f => ({ ...f, reading: json.reading }));
-    } catch { /* ignore */ }
-    finally { setGenReading(false); }
-  };
-
-  /* ── Photo handler ── */
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFormImage(file);
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-
-  const closeAdd = () => {
-    setAddOpen(false); setAddError(null); setFormImage(null); setImagePreview(null);
-    setForm({ kanji:"", reading:"", meaning:"", example:"", level:"" });
-    if (photoInputRef.current) photoInputRef.current.value = "";
-  };
-
-  /* ── Add word ── */
-  const addWord = async () => {
-    if (!form.kanji.trim() || !form.meaning.trim()) { setAddError("単語 dan 意味 wajib diisi."); return; }
-    setAdding(true); setAddError(null);
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setAddError("Login dulu untuk menyimpan kata."); return; }
-
-      let imageUrl: string | null = null;
-      if (formImage) {
-        const ext  = formImage.name.split(".").pop() ?? "jpg";
-        const path = `${user.id}/${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("kamus-images").upload(path, formImage, { contentType: formImage.type });
-        if (upErr) throw upErr;
-        imageUrl = supabase.storage.from("kamus-images").getPublicUrl(path).data.publicUrl;
-      }
-
-      const { data, error } = await supabase.from("saved_words").insert({
-        user_id: user.id,
-        kanji:   form.kanji.trim(),
-        reading: form.reading.trim()  || null,
-        meaning: form.meaning.trim(),
-        example: form.example.trim()  || null,
-        level:   form.level           || null,
-        image_url: imageUrl,
-      }).select("id, kanji, reading, meaning, example, level, image_url, created_at").single();
-
-      if (error) {
-        if (error.code === "23505") setAddError("Kata ini sudah ada di kamus."); else throw error;
-        return;
-      }
-      const newWord = data as SavedWord;
-      setWords(w => [newWord, ...w]);
-      setSelected(newWord.id);
-      closeAdd();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setAddError(`Gagal menyimpan: ${msg}`);
-    }
-    finally  { setAdding(false); }
-  };
-
-  /* ── Edit: open ── */
-  const openEdit = () => {
-    if (!detail) return;
-    setEditForm({ reading: detail.reading ?? "", meaning: detail.meaning, level: detail.level ?? "" });
-    setEditMode(true);
-  };
-
-  /* ── Edit: AI re-generate reading + meaning ── */
-  const autoGenEdit = async () => {
-    if (!detail || editGenRead) return;
-    setEditGenRead(true);
-    try {
-      const res = await fetch("/api/furigana", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word: detail.kanji, withMeaning: true }),
-      });
-      const json = await res.json();
-      if (json.reading) setEditForm(f => ({ ...f, reading: json.reading }));
-      if (json.meaning) setEditForm(f => ({ ...f, meaning: json.meaning }));
-    } catch { /* ignore */ }
-    finally { setEditGenRead(false); }
-  };
-
-  /* ── Edit: save ── */
-  const saveEdit = async () => {
-    if (!detail || editSaving) return;
-    if (!editForm.meaning.trim()) return;
-    setEditSaving(true);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.from("saved_words").update({
-        reading: editForm.reading.trim() || null,
-        meaning: editForm.meaning.trim(),
-        level:   editForm.level || null,
-      }).eq("id", detail.id);
-      if (error) throw error;
-      setWords(prev => prev.map(w => w.id === detail.id
-        ? { ...w, reading: editForm.reading.trim() || null, meaning: editForm.meaning.trim(), level: editForm.level || null }
-        : w));
-      setEditMode(false);
-    } catch { /* ignore */ }
-    finally { setEditSaving(false); }
-  };
-
-  /* ── Delete word ── */
-  const deleteWord = async (id: string) => {
-    setDeletingId(id);
-    try {
-      await createClient().from("saved_words").delete().eq("id", id);
-      setWords(prev => {
-        const next = prev.filter(w => w.id !== id);
-        if (selected === id) setSelected(next[0]?.id ?? null);
-        return next;
-      });
-    } finally { setDeletingId(null); }
-  };
-
-  /* ── Bulk import parser ── */
-  type BulkRow = { kanji: string; reading: string | null; meaning: string; level: string | null };
-  const bulkParsed: BulkRow[] = useMemo(() => {
-    if (!bulkText.trim()) return [];
-    const validLevels = new Set(["N1","N2","N3","N4","N5"]);
-    return bulkText
-      .split(/\r?\n/)
-      .map(line => line.trim())
-      .filter(line => line && !line.startsWith("#"))
-      .map(line => {
-        const parts = line.split(/\s*[|\t]\s*/).map(p => p.trim());
-        const [kanji, reading, meaning, level] = parts;
-        return {
-          kanji: kanji ?? "",
-          reading: reading || null,
-          meaning: meaning ?? "",
-          level: level && validLevels.has(level.toUpperCase()) ? level.toUpperCase() : null,
-        };
-      })
-      .filter(r => r.kanji && r.meaning);
-  }, [bulkText]);
-
-  const closeBulk = () => {
-    setBulkOpen(false);
-    setBulkText("");
-    setBulkResult(null);
-    setBulkProgress({ done: 0, total: 0 });
-    if (bulkFileRef.current) bulkFileRef.current.value = "";
-  };
-
-  /* ── Duplicate detection (by exact kanji) ── */
-  const dupGroups = useMemo(() => {
-    const map = new Map<string, SavedWord[]>();
-    for (const w of words) {
-      const key = w.kanji.trim();
-      if (!key) continue;
-      const arr = map.get(key) ?? [];
-      arr.push(w);
-      map.set(key, arr);
-    }
-    return Array.from(map.values())
-      .filter(g => g.length > 1)
-      .map(g => [...g].sort((a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      ));
-  }, [words]);
-
-  const dupExtraCount = dupGroups.reduce((s, g) => s + (g.length - 1), 0);
-
-  const openCleanup = () => {
-    // Default: keep the oldest in each group, select the rest for deletion.
-    const next = new Set<string>();
-    for (const group of dupGroups) {
-      for (let i = 1; i < group.length; i++) next.add(group[i].id);
-    }
-    setCleanupSel(next);
-    setCleanupOpen(true);
-  };
-
-  const closeCleanup = () => {
-    setCleanupOpen(false);
-    setCleanupSel(new Set());
-  };
-
-  const toggleCleanupId = (id: string) => {
-    setCleanupSel(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const submitCleanup = async () => {
-    if (cleanupSel.size === 0 || cleanupBusy) return;
-    setCleanupBusy(true);
-    try {
-      const ids = Array.from(cleanupSel);
-      const supabase = createClient();
-      const { error } = await supabase.from("saved_words").delete().in("id", ids);
-      if (!error) {
-        setWords(prev => {
-          const next = prev.filter(w => !cleanupSel.has(w.id));
-          if (selected && cleanupSel.has(selected)) setSelected(next[0]?.id ?? null);
-          return next;
-        });
-        closeCleanup();
-      }
-    } finally {
-      setCleanupBusy(false);
-    }
-  };
-
-  /* ── CSV parser (handles "quoted, fields") ── */
-  const parseCSV = (text: string): string[][] => {
-    const rows: string[][] = [];
-    let current: string[] = [];
-    let field = "";
-    let inQuotes = false;
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (inQuotes) {
-        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
-        else if (c === '"') { inQuotes = false; }
-        else { field += c; }
-      } else {
-        if (c === '"') { inQuotes = true; }
-        else if (c === ',') { current.push(field); field = ""; }
-        else if (c === '\n' || c === '\r') {
-          if (c === '\r' && text[i + 1] === '\n') i++;
-          current.push(field);
-          if (current.some(f => f.trim())) rows.push(current);
-          current = []; field = "";
-        } else { field += c; }
-      }
-    }
-    if (field || current.length > 0) { current.push(field); rows.push(current); }
-    return rows;
-  };
-
-  const handleBulkFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const raw = await file.text();
-    const isCSV = file.name.toLowerCase().endsWith(".csv");
-    if (isCSV) {
-      const rows = parseCSV(raw);
-      const normalized = rows
-        .map(r => r.map(f => f.trim()).filter(Boolean).join(" | "))
-        .filter(Boolean)
-        .join("\n");
-      setBulkText(normalized);
-    } else {
-      setBulkText(raw);
-    }
-  };
-
-  const submitBulk = async () => {
-    if (bulkParsed.length === 0 || bulkAdding) return;
-    setBulkAdding(true);
-    setBulkResult(null);
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setBulkAdding(false); return; }
-
-      const existing = new Set(words.map(w => w.kanji));
-      const fresh = bulkParsed.filter(r => !existing.has(r.kanji));
-      const skipped = bulkParsed.length - fresh.length;
-
-      setBulkProgress({ done: 0, total: fresh.length });
-      let added = 0, failed = 0;
-      const accumulated: SavedWord[] = [];
-      const CHUNK = 50;
-      for (let i = 0; i < fresh.length; i += CHUNK) {
-        const chunk = fresh.slice(i, i + CHUNK).map(r => ({
-          user_id: user.id,
-          kanji:   r.kanji,
-          reading: r.reading,
-          meaning: r.meaning,
-          level:   r.level,
-        }));
-        const { data, error } = await supabase
-          .from("saved_words")
-          .insert(chunk)
-          .select("id, kanji, reading, meaning, level, created_at");
-        if (error) { failed += chunk.length; }
-        else if (data) {
-          added += data.length;
-          accumulated.push(...(data.map(d => ({ ...d, example: null, image_url: null })) as SavedWord[]));
-        }
-        setBulkProgress({ done: Math.min(i + CHUNK, fresh.length), total: fresh.length });
-      }
-      if (accumulated.length > 0) {
-        setWords(prev => [...accumulated, ...prev]);
-      }
-      setBulkResult({ added, skipped, failed });
-    } finally {
-      setBulkAdding(false);
-    }
-  };
-
-  /* ── Flash card ── */
-  // Indices into `filtered`, sorted by creation time ASC (oldest first)
-  // so albums stay stable when new kotoba get added (they slot into the last album).
-  const ascIndices = useMemo(() => {
-    return filtered
-      .map((_, i) => i)
-      .sort((a, b) => new Date(filtered[a].created_at).getTime() - new Date(filtered[b].created_at).getTime());
-  }, [filtered]);
-  const albumCount = Math.max(1, Math.ceil(filtered.length / ALBUM_SIZE));
-
-  const enterFlash = () => {
-    if (filtered.length === 0) return;
-    if (filtered.length <= ALBUM_SIZE) {
-      startAlbum(0);
-    } else {
-      setAlbumPickerOpen(true);
-    }
-  };
-
-  const startAlbum = (albumIdx: number) => {
-    const start = albumIdx * ALBUM_SIZE;
-    const end   = Math.min(start + ALBUM_SIZE, ascIndices.length);
-    const order = ascIndices.slice(start, end);
-    setFlashOrder(order);
-    setActiveAlbum({ idx: albumIdx, total: albumCount });
+  /* ── Flash mode ── */
+  const openFlash = () => { setFlashMode("picker"); };
+  const pickDeck = (deckId: "all" | number) => {
+    setFlashDeckId(deckId);
     setFlashIdx(0);
     setFlipped(false);
-    setFlashMode(true);
-    setEditMode(false);
-    setAlbumPickerOpen(false);
+    setShuffled(false);
+    setFlashOrder([]);
+    setFlashMode("card");
   };
 
-  const startAll = () => {
-    setFlashOrder(filtered.map((_, i) => i));
-    setActiveAlbum(null);
-    setFlashIdx(0);
-    setFlipped(false);
-    setFlashMode(true);
-    setEditMode(false);
-    setAlbumPickerOpen(false);
-  };
+  const flashWords = useMemo(() => {
+    if (flashDeckId === "all") return words;
+    const start = (flashDeckId - 1) * ALBUM_SIZE;
+    return words.slice(start, start + ALBUM_SIZE);
+  }, [flashDeckId, words]);
 
-  const shuffleFlash = () => {
-    setFlashOrder(prev => [...prev].sort(() => Math.random() - 0.5));
+  const flashSequence = useMemo(() => {
+    // shuffled order is precomputed in toggleShuffle (event handler — allowed
+    // to be impure), so this useMemo stays pure. Fall back to natural order
+    // when shuffled is off or flashOrder is stale.
+    if (!shuffled || flashOrder.length !== flashWords.length) {
+      return flashWords.map((_, i) => i);
+    }
+    return flashOrder;
+  }, [shuffled, flashWords, flashOrder]);
+
+  const flashWord = flashWords[flashSequence[flashIdx]];
+
+  const toggleShuffle = () => {
+    if (!shuffled) {
+      setFlashOrder(flashWords.map((_, i) => i).sort(() => Math.random() - 0.5));
+    }
+    setShuffled(s => !s);
     setFlashIdx(0);
     setFlipped(false);
   };
 
-  const flashWord = flashOrder.length > 0 ? filtered[flashOrder[flashIdx]] : null;
-  const flashAccent = flashWord ? accentFor(words.findIndex(w => w.id === flashWord.id)) : "#4a7abf";
+  const flashNext = () => {
+    setFlipped(false);
+    setTimeout(() => setFlashIdx(i => Math.min(flashWords.length - 1, i + 1)), 60);
+  };
+  const flashPrev = () => {
+    setFlipped(false);
+    setTimeout(() => setFlashIdx(i => Math.max(0, i - 1)), 60);
+  };
 
-  /* ── Render ── */
+  /* Keyboard shortcuts for flash mode */
+  useEffect(() => {
+    if (flashMode !== "card") return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") flashPrev();
+      else if (e.key === "ArrowRight") flashNext();
+      else if (e.key === " ") { e.preventDefault(); setFlipped(f => !f); }
+      else if (e.key === "s" || e.key === "S") toggleShuffle();
+      else if (e.key === "Escape") setFlashMode(null);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashMode, flashWords.length]);
+
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ fontFamily: "var(--font-manrope)" }}>
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
 
-      <AppHeader activeHref="/kamus" />
+      <main className="app-shell">
+        <UserBar
+          streakDays={streak}
+          xp={xp}
+          xpTarget={xpTarget}
+          avatarLetter={userInitial}
+          isPro
+          hasUnread
+        />
 
-      {/* ── Body ── */}
-      <div className="flex flex-1 min-h-0">
-
-        <Sidebar activeHref="/kamus" />
-
-        {/* ── Split: list + detail ── */}
-        <div className="flex flex-1 min-h-0">
-
-          {/* ── Left: search + list ── (full width on mobile when nothing selected & not in flash mode) */}
-          <div className={`w-full md:w-[340px] shrink-0 flex flex-col md:border-r ${(selected || flashMode) ? "hidden md:flex" : "flex"}`}
-            style={{ background: "#0a1525", borderColor: "rgba(255,255,255,0.03)" }}>
-
-            {/* Search + filters */}
-            <div className="p-4 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-              <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#4a5a7a]" />
-                <input
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Cari kanji, kana, atau arti..."
-                  className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                  style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                  onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                  onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-                />
-                {query && (
-                  <button onClick={() => setQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a5a7a] hover:text-[#8a9bbf]">
-                    <X className="size-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Level filter */}
-              <div className="flex gap-1 flex-wrap">
-                <Filter className="size-3.5 text-[#4a5a7a] mt-1 shrink-0" />
-                {LEVEL_FILTERS.map(l => (
-                  <button key={l} onClick={() => setLevel(l)}
-                    className="px-2 py-1 rounded-lg text-[10px] font-bold transition-all"
-                    style={activeLevel === l
-                      ? { background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", color: "#071327", fontFamily: "var(--font-space)" }
-                      : { background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Count + Actions */}
-            <div className="px-4 py-3 border-b flex flex-col gap-2.5"
-              style={{ borderColor: "rgba(255,255,255,0.03)", background: "#0a1525" }}>
-
-              {/* Top row: count + furigana + duplikat */}
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-[#8a9bbf] whitespace-nowrap"
-                  style={{ fontFamily: "var(--font-space)" }}>
-                  {loading ? "MEMUAT…" : `${filtered.length} KATA`}
-                </span>
-                <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                  {dupExtraCount > 0 && (
-                    <button onClick={openCleanup}
-                      title={`${dupExtraCount} duplikat ditemukan — klik untuk bersihkan`}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
-                      style={{ background: "rgba(224,90,90,0.12)", color: "#e05a5a", fontFamily: "var(--font-space)" }}>
-                      <Copy className="size-3" /> {dupExtraCount} DUPLIKAT
-                    </button>
-                  )}
-                  {words.some(w => !w.reading) && (
-                    <button onClick={genAllFurigana} disabled={genAll}
-                      title="Auto-generate furigana untuk semua kata"
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-50"
-                      style={{ background: "rgba(166,123,212,0.12)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-                      {genAll
-                        ? <><Loader2 className="size-3 animate-spin" /> {genProgress}/{words.filter(w=>!w.reading).length}</>
-                        : <><Sparkles className="size-3" /> FURIGANA</>}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom row: 3 primary actions */}
-              <div className="grid grid-cols-3 gap-1.5">
-                <button onClick={enterFlash} disabled={filtered.length === 0}
-                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-black transition-all hover:brightness-110 disabled:opacity-40 active:scale-95"
-                  style={{
-                    background: "linear-gradient(135deg, #6366f1, #a855f7)",
-                    color: "#ffffff",
-                    boxShadow: "0 0 14px rgba(168,85,247,0.45), 0 2px 6px rgba(99,102,241,0.35)",
-                    fontFamily: "var(--font-space)",
-                    textShadow: "0 0 8px rgba(255,255,255,0.5)",
-                  }}>
-                  <Layers className="size-3.5" /> FLASH
-                </button>
-                <button onClick={() => { setBulkOpen(true); setBulkResult(null); }}
-                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all hover:brightness-110 active:scale-95"
-                  style={{ background: "rgba(224,123,74,0.13)", color: "#e07b4a", border: "1px solid rgba(224,123,74,0.2)", fontFamily: "var(--font-space)" }}>
-                  <Upload className="size-3.5" /> IMPORT
-                </button>
-                <button onClick={() => { setAddOpen(true); setAddError(null); }}
-                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all hover:brightness-110 active:scale-95"
-                  style={{ background: "rgba(94,168,122,0.13)", color: "#5ea87a", border: "1px solid rgba(94,168,122,0.2)", fontFamily: "var(--font-space)" }}>
-                  <Plus className="size-3.5" /> TAMBAH
-                </button>
-              </div>
-            </div>
-
-            {/* List */}
-            <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="size-5 text-[#4a5a7a] animate-spin" />
-                </div>
-              ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 gap-3 px-4 text-center">
-                  <BookOpen className="size-8 text-[#2a354b]" />
-                  <p className="text-xs text-[#4a5a7a]">
-                    {words.length === 0
-                      ? "Belum ada kata tersimpan.\nAnalisis foto soal untuk auto-simpan kosakata!"
-                      : "Tidak ada hasil untuk pencarian ini."}
-                  </p>
-                  {words.length === 0 && (
-                    <a href="/analisis-foto"
-                      className="text-[10px] px-3 py-1.5 rounded-lg font-bold transition-all hover:brightness-110"
-                      style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                      BUKA ANALISIS FOTO →
-                    </a>
-                  )}
-                </div>
-              ) : (
-                filtered.map((w, listIdx) => {
-                  const wordIdx = words.findIndex(x => x.id === w.id);
-                  const ac = accentFor(wordIdx);
-                  return (
-                    <button key={w.id} onClick={() => { setSelected(w.id); setFlashMode(false); setEditMode(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b hover:bg-white/[0.02]"
-                      style={{
-                        borderColor: "rgba(255,255,255,0.03)",
-                        background: selected === w.id && !flashMode ? "rgba(74,122,191,0.08)" : "transparent",
-                        boxShadow: selected === w.id && !flashMode ? "inset 2px 0 0 #4a7abf" : "none",
-                      }}>
-                      <span className="text-[9px] text-[#2a354b] w-5 text-right shrink-0 font-mono"
-                        style={{ fontFamily: "var(--font-space)" }}>{listIdx + 1}</span>
-                      <div className="size-10 rounded-xl flex items-center justify-center shrink-0 text-lg font-black overflow-hidden"
-                        style={{ background: `${ac}15`, color: ac, fontFamily: "var(--font-jakarta)" }}>
-                        {w.image_url
-                          ? <img src={w.image_url} alt={w.kanji} className="w-full h-full object-cover" />
-                          : w.kanji.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-sm font-bold text-[#d7e2ff]"
-                            style={{ fontFamily: "var(--font-jakarta)" }}>{w.kanji}</span>
-                          {w.level && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                              style={{ background: `${ac}20`, color: ac, fontFamily: "var(--font-space)" }}>
-                              {w.level}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-[#4a5a7a] truncate">
-                          {w.reading ? `${w.reading} · ` : ""}{w.meaning.split(";")[0]}
-                        </p>
-                      </div>
-                      <button
-                        onClick={e => { e.stopPropagation(); deleteWord(w.id); }}
-                        disabled={deletingId === w.id}
-                        className="p-1.5 rounded-lg opacity-0 hover:opacity-100 transition-all hover:bg-red-500/10 disabled:opacity-40 shrink-0"
-                        title="Hapus dari kamus">
-                        {deletingId === w.id
-                          ? <Loader2 className="size-3 text-[#4a5a7a] animate-spin" />
-                          : <Trash2 className="size-3 text-[#dc5050]" />}
-                      </button>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+        <header className="kk-header">
+          <div>
+            <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Kamus" }]} />
+            <h1 className="kk-title">
+              Kamus <span className="kk-title-jp">辞書</span>
+            </h1>
+            <p className="kk-sub">
+              Kotoba pribadi kamu — auto-saved dari Analisis Foto, atau tambah sendiri.
+              Pakai FLASH buat hafalan cepat — kotoba dipecah jadi dek 50 kata.
+            </p>
           </div>
-
-          {/* ── Right: detail panel ── (hidden on mobile when no word selected) */}
-          <div className={`flex-1 pb-20 lg:pb-7 relative ${flashMode ? "flex flex-col items-center justify-center px-4 md:px-6 py-6 md:py-8" : `overflow-y-auto px-4 md:px-8 py-5 md:py-7 ${selected ? "block" : "hidden md:block"}`}`}
-            style={{}}>
-
-            {/* ambient */}
-            <div className="pointer-events-none absolute top-0 right-0 w-[400px] h-[300px] opacity-[0.05] blur-[80px]"
-              style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
-
-            {/* ── Flash card view ── */}
-            {flashMode && flashWord && (
-              <div className="relative w-full max-w-2xl flex flex-col items-center gap-6">
-
-                {/* Top bar */}
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                      {flashIdx + 1} / {flashOrder.length}
-                    </span>
-                    {activeAlbum && (
-                      <button onClick={() => { setFlashMode(false); setAlbumPickerOpen(true); }}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all hover:brightness-110"
-                        style={{ background: `${flashAccent}20`, color: flashAccent, fontFamily: "var(--font-space)" }}
-                        title="Ganti album">
-                        <FolderOpen className="size-3" /> ALBUM {activeAlbum.idx + 1}/{activeAlbum.total}
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={shuffleFlash}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
-                      style={{ background: "rgba(74,122,191,0.12)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                      <Shuffle className="size-3" /> ACAK
-                    </button>
-                    <button onClick={() => setFlashMode(false)}
-                      className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors">
-                      <X className="size-4 text-[#4a5a7a]" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Card with 3D flip */}
-                {(() => {
-                  const len = flashWord.kanji.length;
-                  const frontSize = len <= 2 ? "6rem" : len <= 4 ? "4.5rem" : len <= 7 ? "3rem" : "2rem";
-                  const backSize  = len <= 2 ? "4rem"  : len <= 4 ? "3rem"   : len <= 7 ? "2.2rem" : "1.6rem";
-                  const SWIPE_THRESHOLD = 60;
-                  return (
-                    <div className="w-full" style={{ perspective: "1200px" }}>
-                      <div
-                        onClick={() => {
-                          // Skip click if it was actually a swipe
-                          if (flashSwipe.current.swiped) { flashSwipe.current.swiped = false; return; }
-                          setFlipped(f => !f);
-                        }}
-                        onTouchStart={(e) => {
-                          flashSwipe.current.x = e.touches[0].clientX;
-                          flashSwipe.current.dx = 0;
-                          flashSwipe.current.swiped = false;
-                        }}
-                        onTouchMove={(e) => {
-                          flashSwipe.current.dx = e.touches[0].clientX - flashSwipe.current.x;
-                          setFlashDragX(flashSwipe.current.dx);
-                        }}
-                        onTouchEnd={() => {
-                          const dx = flashSwipe.current.dx;
-                          if (Math.abs(dx) > SWIPE_THRESHOLD) {
-                            flashSwipe.current.swiped = true;
-                            if (dx < 0) {
-                              setFlashIdx(i => Math.min(flashOrder.length - 1, i + 1));
-                            } else {
-                              setFlashIdx(i => Math.max(0, i - 1));
-                            }
-                            setFlipped(false);
-                          }
-                          setFlashDragX(0);
-                        }}
-                        className="relative w-full cursor-pointer touch-pan-y select-none"
-                        style={{
-                          height: "clamp(360px, 45vh, 480px)",
-                          transformStyle: "preserve-3d",
-                          transition: flashDragX === 0
-                            ? "transform 0.55s cubic-bezier(0.4,0.2,0.2,1)"
-                            : "none",
-                          transform: `translateX(${flashDragX}px) rotateY(${flipped ? 180 : 0}deg)`,
-                          opacity: 1 - Math.min(0.4, Math.abs(flashDragX) / 400),
-                        }}>
-
-                        {/* Front — kanji only */}
-                        <div className="absolute inset-0 rounded-3xl flex flex-col items-center justify-center gap-5 p-8"
-                          style={{
-                            background: "#101b30",
-                            border: `1px solid ${flashAccent}30`,
-                            boxShadow: `0 0 80px ${flashAccent}20`,
-                            backfaceVisibility: "hidden",
-                          }}>
-                          <div className="absolute inset-0 opacity-12 rounded-3xl"
-                            style={{ background: `radial-gradient(circle at center,${flashAccent},transparent 65%)` }} />
-                          {flashWord.level && (
-                            <span className="text-[10px] px-2.5 py-1 rounded-full font-bold relative"
-                              style={{ background: `${flashAccent}20`, color: flashAccent, fontFamily: "var(--font-space)" }}>
-                              JLPT {flashWord.level}
-                            </span>
-                          )}
-                          <span className="relative font-black leading-tight text-center px-4"
-                            style={{ fontSize: frontSize, color: flashAccent, fontFamily: "var(--font-jakarta)", textShadow: `0 0 50px ${flashAccent}70` }}>
-                            {flashWord.kanji}
-                          </span>
-                          <p className="text-[11px] text-[#2a354b] relative" style={{ fontFamily: "var(--font-space)" }}>
-                            KETUK UNTUK LIHAT JAWABAN
-                          </p>
-                        </div>
-
-                        {/* Back — reading + meaning */}
-                        <div className="absolute inset-0 rounded-3xl flex flex-col items-center justify-center gap-5 p-8"
-                          style={{
-                            background: "#101b30",
-                            border: `1px solid ${flashAccent}30`,
-                            boxShadow: `0 0 80px ${flashAccent}20`,
-                            backfaceVisibility: "hidden",
-                            transform: "rotateY(180deg)",
-                          }}>
-                          <div className="absolute inset-0 opacity-12 rounded-3xl"
-                            style={{ background: `radial-gradient(circle at center,${flashAccent},transparent 65%)` }} />
-                          <span className="relative font-black leading-tight text-center"
-                            style={{ fontSize: backSize, color: flashAccent, fontFamily: "var(--font-jakarta)" }}>
-                            {flashWord.kanji}
-                          </span>
-                          {flashWord.reading && (
-                            <p className="relative text-xl text-[#8a9bbf] text-center" style={{ fontFamily: "var(--font-jakarta)" }}>
-                              {flashWord.reading}
-                            </p>
-                          )}
-                          <div className="relative w-full px-4 py-3 rounded-2xl text-center"
-                            style={{ background: "rgba(8,16,36,0.6)" }}>
-                            <p className="text-lg text-[#d7e2ff] font-semibold leading-snug" style={{ fontFamily: "var(--font-manrope)" }}>
-                              {flashWord.meaning}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Navigation */}
-                <div className="flex items-center gap-3 w-full">
-                  <button
-                    onClick={() => { setFlashIdx(i => Math.max(0, i - 1)); setFlipped(false); }}
-                    disabled={flashIdx === 0}
-                    className="size-14 rounded-2xl flex items-center justify-center transition-all disabled:opacity-30 hover:brightness-110"
-                    style={{ background: "#101b30" }}>
-                    <ChevronLeft className="size-6 text-[#6b9cda]" />
-                  </button>
-                  <button
-                    onClick={() => setFlipped(f => !f)}
-                    className="flex-1 py-4 rounded-2xl text-sm font-bold transition-all hover:brightness-110"
-                    style={{ background: "rgba(74,122,191,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                    {flipped ? "SEMBUNYIKAN" : "LIHAT JAWABAN"}
-                  </button>
-                  <button
-                    onClick={() => { setFlashIdx(i => Math.min(flashOrder.length - 1, i + 1)); setFlipped(false); }}
-                    disabled={flashIdx === flashOrder.length - 1}
-                    className="size-14 rounded-2xl flex items-center justify-center transition-all disabled:opacity-30 hover:brightness-110"
-                    style={{ background: "#101b30" }}>
-                    <ChevronRight className="size-6 text-[#6b9cda]" />
-                  </button>
-                </div>
-
-                {/* Progress dots */}
-                <div className="flex gap-1 flex-wrap justify-center max-w-xs">
-                  {flashOrder.slice(Math.max(0, flashIdx - 4), flashIdx + 5).map((_, i) => {
-                    const absIdx = Math.max(0, flashIdx - 4) + i;
-                    return (
-                      <div key={absIdx}
-                        className="rounded-full transition-all"
-                        style={{
-                          width: absIdx === flashIdx ? "20px" : "6px",
-                          height: "6px",
-                          background: absIdx === flashIdx ? flashAccent : "rgba(74,122,191,0.2)",
-                        }} />
-                    );
-                  })}
-                </div>
-              </div>
+          <div className="kk-header-right">
+            <div className="kk-count-pill">
+              <span className="kk-count-num">{words.length}</span>
+              <span className="kk-count-label">KATA</span>
+            </div>
+            {missingFurigana > 0 && (
+              <button
+                type="button"
+                className="kk-furi-chip"
+                onClick={genAllFurigana}
+                disabled={genAllRunning}
+              >
+                <Wand2 size={11} strokeWidth={2} />
+                {genAllRunning ? `FURIGANA ${genProgress}/${missingFurigana}` : "FURIGANA"}
+                <span className="kk-furi-count">{missingFurigana}</span>
+              </button>
             )}
+          </div>
+        </header>
 
-            {!flashMode && (editMode && detail ? (
-              /* ── Edit mode panel ── */
-              <div className="relative flex flex-col gap-5 max-w-2xl">
-                {/* Header */}
-                <div className="p-5 rounded-2xl" style={{ background: "#101b30" }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(107,156,218,0.15)" }}>
-                        <Pencil className="size-4 text-[#6b9cda]" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>Edit Kata</p>
-                        <p className="text-[11px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-jakarta)" }}>{detail.kanji}</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setEditMode(false)}
-                      className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors">
-                      <X className="size-4 text-[#4a5a7a]" />
-                    </button>
-                  </div>
+        <div className="kk-toolbar">
+          <button type="button" className="tb-btn tb-flash" onClick={openFlash} disabled={words.length === 0}>
+            <span><Zap size={15} fill="currentColor" strokeWidth={0.8} />FLASH</span>
+            <span className="tb-meta">Mode Hafalan</span>
+          </button>
+          <button type="button" className="tb-btn tb-import" disabled title="Coming soon — bulk import">
+            <span><Upload size={14} strokeWidth={2} />IMPORT</span>
+            <span className="tb-meta">Bulk paste / file</span>
+          </button>
+          <button type="button" className="tb-btn tb-tambah" onClick={() => setAddOpen(true)}>
+            <span><Plus size={14} strokeWidth={2.4} />TAMBAH</span>
+            <span className="tb-meta">Satu per satu</span>
+          </button>
+        </div>
 
-                  {/* AI re-generate */}
-                  <button onClick={autoGenEdit} disabled={editGenRead}
-                    className="w-full mb-5 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 hover:brightness-110"
-                    style={{ background: "rgba(166,123,212,0.15)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-                    {editGenRead ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-                    {editGenRead ? "GENERATING..." : "AUTO-GENERATE DENGAN AI"}
-                  </button>
+        <div className="kk-workspace">
+          <FilterRail
+            decks={decks}
+            activeAlbum={activeAlbum}
+            setActiveAlbum={setActiveAlbum}
+            levelCounts={levelCounts}
+            levelF={levelF}
+            setLevelF={setLevelF}
+            totalWords={words.length}
+          />
 
-                  {/* Reading */}
-                  <div className="mb-4">
-                    <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                      読み方 · CARA BACA
-                    </label>
-                    <input
-                      value={editForm.reading}
-                      onChange={e => setEditForm(f => ({ ...f, reading: e.target.value }))}
-                      placeholder="hiragana..."
-                      className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                      style={{ background: "#0d1929", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                      onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-                    />
-                  </div>
+          <WordList
+            words={filtered}
+            selected={selected}
+            setSelected={setSelected}
+            query={query}
+            setQuery={setQuery}
+            sort={sort}
+            setSort={setSort}
+            loading={loading}
+            totalWords={words.length}
+          />
 
-                  {/* Meaning */}
-                  <div className="mb-4">
-                    <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                      意味 · ARTI <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      value={editForm.meaning}
-                      onChange={e => setEditForm(f => ({ ...f, meaning: e.target.value }))}
-                      placeholder="Arti dalam Bahasa Indonesia"
-                      className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                      style={{ background: "#0d1929", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                      onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-                    />
-                  </div>
-
-                  {/* Level */}
-                  <div className="mb-5">
-                    <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                      LEVEL JLPT
-                    </label>
-                    <div className="flex gap-2">
-                      {["","N1","N2","N3","N4","N5"].map(l => (
-                        <button key={l} onClick={() => setEditForm(f => ({ ...f, level: l }))}
-                          className="flex-1 py-2 rounded-xl text-[11px] font-bold transition-all"
-                          style={editForm.level === l
-                            ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)", fontFamily: "var(--font-space)" }
-                            : { background: "#0d1929", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)", fontFamily: "var(--font-space)" }}>
-                          {l || "—"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-3">
-                    <button onClick={() => setEditMode(false)}
-                      className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all"
-                      style={{ background: "#0d1929", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                      Batal
-                    </button>
-                    <button onClick={saveEdit}
-                      disabled={editSaving || !editForm.meaning.trim()}
-                      className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
-                      style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)" }}>
-                      {editSaving ? <><Loader2 className="size-4 animate-spin" /> Menyimpan...</> : <><Save className="size-4" /> SIMPAN</>}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : !detail ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 opacity-40">
-                <BookOpen className="size-12 text-[#4a5a7a]" />
-                <p className="text-sm text-[#4a5a7a]">
-                  {loading ? "Memuat kamus…" : "Pilih kata dari daftar"}
+          {detail ? (
+            <DetailCard
+              word={detail}
+              allWords={words}
+              onEdit={openEdit}
+              onDelete={() => deleteWord(detail.id)}
+            />
+          ) : !loading && words.length === 0 ? (
+            <aside className="kk-detail">
+              <div className="glass-card detail-hero">
+                <div className="detail-hero-bg" />
+                <p style={{ position: "relative", color: "var(--text-tertiary)", fontSize: 13, padding: "40px 20px" }}>
+                  Belum ada kata. Tambah pertama lewat <strong style={{ color: "var(--accent-emerald)" }}>TAMBAH</strong>{" "}
+                  atau biarkan auto-saved dari Analisis Foto.
                 </p>
               </div>
-            ) : (
-              <div className="relative flex flex-col gap-5 max-w-2xl">
-
-                {/* Mobile back button */}
-                <button onClick={() => setSelected(null)}
-                  className="md:hidden flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg w-fit -mb-2"
-                  style={{ background: "rgba(74,122,191,0.12)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                  <ChevronLeft className="size-3.5" /> KEMBALI
-                </button>
-
-                {/* ── Header entry ── */}
-                <div className="p-6 rounded-2xl relative overflow-hidden"
-                  style={{ background: "#101b30" }}>
-                  <div className="absolute inset-0 opacity-15"
-                    style={{ background: `radial-gradient(circle at top right,${accent}50,transparent 65%)` }} />
-                  <div className="relative flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4 md:gap-5 flex-1 min-w-0">
-                      {/* Big kanji */}
-                      <div className="size-20 md:size-28 rounded-2xl flex items-center justify-center shrink-0 relative overflow-hidden"
-                        style={{ background: `${accent}18`, boxShadow: `0 0 40px ${accent}30` }}>
-                        {detail.image_url ? (
-                          <img src={detail.image_url} alt={detail.kanji} className="w-full h-full object-cover" />
-                        ) : (
-                          <>
-                            <div className="absolute inset-0"
-                              style={{ background: `radial-gradient(circle,${accent}25,transparent 70%)` }} />
-                            <span className="relative font-black leading-none select-none"
-                              style={{ fontSize: "3.5rem", color: accent, fontFamily: "var(--font-jakarta)", textShadow: `0 0 30px ${accent}80` }}>
-                              {detail.kanji.charAt(0)}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h2 className="text-3xl md:text-4xl font-extrabold text-[#d7e2ff] leading-none mb-2"
-                          style={{ fontFamily: "var(--font-jakarta)" }}>{detail.kanji}</h2>
-                        {detail.reading && (
-                          <p className="text-base md:text-lg text-[#8a9bbf] mb-1">{detail.reading}</p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {detail.level && (
-                            <span className="text-[10px] px-2.5 py-1 rounded-full font-bold"
-                              style={{ background: `${accent}25`, color: accent, fontFamily: "var(--font-space)" }}>
-                              JLPT {detail.level}
-                            </span>
-                          )}
-                          <span className="text-[10px] px-2.5 py-1 rounded-full"
-                            style={{ background: "#1f2a3f", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                            {new Date(detail.created_at).toLocaleDateString("id-ID", { day:"numeric", month:"short", year:"numeric" })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <button
-                        onClick={openEdit}
-                        className="size-9 rounded-xl flex items-center justify-center transition-all hover:bg-[#4a7abf]/10"
-                        style={{ background: "rgba(8,16,36,0.55)" }}
-                        title="Edit kata">
-                        <Pencil className="size-4 text-[#6b9cda]" />
-                      </button>
-                      <button
-                        onClick={() => deleteWord(detail.id)}
-                        disabled={deletingId === detail.id}
-                        className="size-9 rounded-xl flex items-center justify-center transition-all hover:bg-red-500/10 disabled:opacity-40"
-                        style={{ background: "rgba(8,16,36,0.55)" }}
-                        title="Hapus dari kamus">
-                        {deletingId === detail.id
-                          ? <Loader2 className="size-4 text-[#4a5a7a] animate-spin" />
-                          : <Trash2 className="size-4 text-[#dc5050]" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Arti ── */}
-                <div className="p-5 rounded-2xl" style={{ background: "#101b30" }}>
-                  <p className="text-[10px] font-bold text-[#4a5a7a] mb-2"
-                    style={{ fontFamily: "var(--font-space)" }}>ARTI</p>
-                  <p className="text-base text-[#d7e2ff] leading-relaxed"
-                    style={{ fontFamily: "var(--font-jakarta)" }}>{detail.meaning}</p>
-                </div>
-
-                {/* ── Contoh kalimat (jika ada) ── */}
-                {detail.example && (
-                  <div className="p-5 rounded-2xl" style={{ background: "#101b30" }}>
-                    <p className="text-[10px] font-bold text-[#4a5a7a] mb-3"
-                      style={{ fontFamily: "var(--font-space)" }}>CONTOH KALIMAT</p>
-                    <div className="p-4 rounded-2xl relative overflow-hidden"
-                      style={{ background: "rgba(8,16,36,0.55)" }}>
-                      <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-full"
-                        style={{ background: accent }} />
-                      <p className="text-sm text-[#d7e2ff] leading-relaxed"
-                        style={{ fontFamily: "var(--font-jakarta)" }}>{detail.example}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Kata terkait (same level) ── */}
-                {(() => {
-                  const related = words
-                    .filter(w => w.id !== detail.id && w.level === detail.level && w.level)
-                    .slice(0, 4);
-                  if (related.length === 0) return null;
-                  return (
-                    <div className="p-5 rounded-2xl" style={{ background: "#101b30" }}>
-                      <p className="text-[10px] font-bold text-[#4a5a7a] mb-3"
-                        style={{ fontFamily: "var(--font-space)" }}>
-                        KATA LAIN LEVEL {detail.level}
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        {related.map(w => {
-                          const ri = words.findIndex(x => x.id === w.id);
-                          const ra = accentFor(ri);
-                          return (
-                            <button key={w.id} onClick={() => setSelected(w.id)}
-                              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all hover:brightness-110 w-full text-left"
-                              style={{ background: "rgba(8,16,36,0.55)" }}>
-                              <span className="font-bold" style={{ color: ra, fontFamily: "var(--font-jakarta)" }}>
-                                {w.kanji}
-                              </span>
-                              {w.reading && (
-                                <span className="text-xs text-[#4a5a7a] truncate">{w.reading}</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* ── Tip AI ── */}
-                <div className="p-5 rounded-2xl relative overflow-hidden"
-                  style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(107,156,218,0.12)" }}>
-                  <div className="absolute inset-0 opacity-15"
-                    style={{ background: `radial-gradient(circle at top right,${accent},transparent 70%)` }} />
-                  <div className="relative flex items-start gap-3">
-                    <div className="size-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: `${accent}20` }}>
-                      <Zap className="size-4" style={{ color: accent }} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#d7e2ff] mb-1.5"
-                        style={{ fontFamily: "var(--font-jakarta)" }}>Tips Belajar</p>
-                      <p className="text-[11px] text-[#8a9bbf] leading-relaxed">
-                        Kata ini tersimpan dari sesi analisis atau kamu tambahkan sendiri.
-                        Coba gunakan dalam kalimat sendiri agar lebih mudah diingat!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Quiz Cepat ── */}
-                {words.length >= 2 && <QuizCepat word={detail} allWords={words} />}
-
-              </div>
-            ))}
-          </div>
+            </aside>
+          ) : null}
         </div>
-      </div>
 
-      {/* Floating FLASH button (mobile only) — gampang ke-spot, ngambang di atas BottomNav */}
-      {!flashMode && !selected && !addOpen && filtered.length > 0 && (
-        <button onClick={enterFlash}
-          className="md:hidden fixed bottom-20 right-5 z-30 flex items-center gap-2 px-5 py-3.5 rounded-full font-black text-sm transition-all hover:brightness-110 active:scale-95"
-          style={{
-            background: "linear-gradient(135deg, #6366f1, #a855f7)",
-            color: "#ffffff",
-            boxShadow: "0 0 32px rgba(168,85,247,0.6), 0 8px 20px rgba(99,102,241,0.45), inset 0 1px 0 rgba(255,255,255,0.2)",
-            fontFamily: "var(--font-space)",
-            textShadow: "0 0 8px rgba(255,255,255,0.5)",
-          }}>
-          <Layers className="size-4" /> FLASH MODE
-        </button>
-      )}
-
-      <BottomNav activeHref="/kamus" />
-
-      {/* ── Modal Pilih Album ── */}
-      {albumPickerOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setAlbumPickerOpen(false)} />
-          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
-            <div className="w-full max-w-md rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[85vh] flex flex-col"
-              style={{ background: "rgba(8,16,36,0.92)", border: "1px solid rgba(255,255,255,0.07)" }}>
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
-                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <div className="flex items-center gap-2.5">
-                  <div className="size-9 rounded-xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.25))" }}>
-                    <FolderOpen className="size-4 text-[#a855f7]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>Pilih Album</p>
-                    <p className="text-[10px] text-[#4a5a7a]">{filtered.length} kata · {ALBUM_SIZE} per album</p>
-                  </div>
-                </div>
-                <button onClick={() => setAlbumPickerOpen(false)}
-                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors">
-                  <X className="size-4 text-[#4a5a7a]" />
+        {/* Add modal */}
+        {addOpen && (
+          <div className="kk-modal-overlay" onClick={closeAdd}>
+            <div className="kk-modal" onClick={e => e.stopPropagation()}>
+              <div className="kk-modal-head">
+                <h2>Tambah Kata Baru</h2>
+                <button type="button" className="modal-close" onClick={closeAdd} aria-label="Tutup">
+                  <X size={14} />
                 </button>
               </div>
-
-              {/* Album list */}
-              <div className="overflow-y-auto px-4 py-4 flex flex-col gap-2">
-                {Array.from({ length: albumCount }, (_, i) => {
-                  const start = i * ALBUM_SIZE;
-                  const end   = Math.min(start + ALBUM_SIZE, ascIndices.length);
-                  const count = end - start;
-                  const ac    = accentFor(i);
-                  const preview = ascIndices.slice(start, start + 4).map(idx => filtered[idx].kanji);
-                  const isLast = i === albumCount - 1;
-                  return (
-                    <button key={i} onClick={() => startAlbum(i)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:brightness-110 active:scale-[0.98] text-left"
-                      style={{ background: "#101b30", border: `1px solid ${ac}25` }}>
-                      <div className="size-11 rounded-xl flex items-center justify-center shrink-0 font-black text-lg"
-                        style={{ background: `${ac}20`, color: ac, fontFamily: "var(--font-space)" }}>
-                        {i + 1}
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                            Album {i + 1}
-                          </p>
-                          <p className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                            {count} kata
-                          </p>
-                          {isLast && count < ALBUM_SIZE && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                              style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                              MASIH NAMBAH
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {preview.map((k, pi) => (
-                            <span key={pi}
-                              className="text-[11px] font-bold px-1.5 py-0.5 rounded-md truncate max-w-[5rem]"
-                              style={{ background: `${ac}12`, color: ac, fontFamily: "var(--font-jakarta)" }}>
-                              {k}
-                            </span>
-                          ))}
-                          {count > preview.length && (
-                            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                              +{count - preview.length}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="size-4 text-[#4a5a7a] shrink-0" />
-                    </button>
-                  );
-                })}
-
-                {/* All button */}
-                <button onClick={startAll}
-                  className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:brightness-110 active:scale-[0.98] text-left mt-2"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15))",
-                    border: "1px solid rgba(168,85,247,0.3)",
-                  }}>
-                  <div className="size-11 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
-                    <Layers className="size-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                      Semua Kata
-                    </p>
-                    <p className="text-[11px] text-[#a67bd4]" style={{ fontFamily: "var(--font-space)" }}>
-                      {filtered.length} kata sekaligus (tanpa album)
-                    </p>
-                  </div>
-                  <ChevronRight className="size-4 text-[#a67bd4] shrink-0" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Modal Cleanup Duplikat ── */}
-      {cleanupOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => !cleanupBusy && closeCleanup()} />
-          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
-            <div className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[92vh] flex flex-col"
-              style={{ background: "rgba(8,16,36,0.92)", border: "1px solid rgba(255,255,255,0.07)" }}>
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
-                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <div className="flex items-center gap-2.5">
-                  <div className="size-9 rounded-xl flex items-center justify-center"
-                    style={{ background: "rgba(224,90,90,0.18)" }}>
-                    <Copy className="size-4 text-[#e05a5a]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                      Bersihkan Duplikat
-                    </p>
-                    <p className="text-[10px] text-[#4a5a7a]">
-                      {dupGroups.length} grup · {dupExtraCount} entri bisa dihapus
-                    </p>
-                  </div>
-                </div>
-                <button onClick={closeCleanup} disabled={cleanupBusy}
-                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors disabled:opacity-30">
-                  <X className="size-4 text-[#4a5a7a]" />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="overflow-y-auto px-5 py-4 flex flex-col gap-3">
-
-                {/* Hint */}
-                <div className="rounded-2xl px-4 py-3 flex items-start gap-2.5"
-                  style={{ background: "rgba(224,90,90,0.06)", border: "1px solid rgba(224,90,90,0.15)" }}>
-                  <FileText className="size-4 text-[#e05a5a] shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-[#bbc6e2] leading-relaxed">
-                    Yang paling lama di tiap grup tetap (centang otomatis off). Centang entri yang mau dihapus, terus tekan tombol di bawah.
+              <div className="kk-modal-body">
+                {addErr && (
+                  <p style={{ color: "var(--accent-rose)", fontSize: 12, margin: 0, padding: "8px 12px", background: "rgba(164,36,59,0.08)", borderRadius: 8 }}>
+                    ⚠️ {addErr}
                   </p>
-                </div>
-
-                {/* Duplicate groups */}
-                {dupGroups.length === 0 ? (
-                  <div className="rounded-2xl p-8 flex flex-col items-center gap-2 text-center"
-                    style={{ background: "#101b30" }}>
-                    <CheckCircle2 className="size-8 text-[#5ea87a]" />
-                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                      Bersih, nggak ada duplikat!
-                    </p>
-                  </div>
-                ) : dupGroups.map((group, gi) => {
-                  const ac = accentFor(gi);
-                  return (
-                    <div key={group[0].kanji + gi} className="rounded-2xl overflow-hidden"
-                      style={{ background: "#101b30", border: `1px solid ${ac}25` }}>
-                      {/* Group header */}
-                      <div className="flex items-center gap-3 px-4 py-3"
-                        style={{ background: `${ac}10`, borderBottom: `1px solid ${ac}15` }}>
-                        <span className="font-black text-xl"
-                          style={{ color: ac, fontFamily: "var(--font-jakarta)" }}>
-                          {group[0].kanji}
-                        </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ background: `${ac}20`, color: ac, fontFamily: "var(--font-space)" }}>
-                          {group.length} ENTRI
-                        </span>
-                      </div>
-
-                      {/* Group entries */}
-                      <div className="flex flex-col">
-                        {group.map((w, wi) => {
-                          const checked = cleanupSel.has(w.id);
-                          const isOldest = wi === 0;
-                          return (
-                            <button key={w.id}
-                              onClick={() => toggleCleanupId(w.id)}
-                              disabled={cleanupBusy}
-                              className="flex items-center gap-3 px-4 py-2.5 text-left transition-all border-t hover:bg-white/[0.02] disabled:opacity-50"
-                              style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-                              {/* Checkbox */}
-                              <div className="size-4 rounded shrink-0 flex items-center justify-center transition-all"
-                                style={{
-                                  background: checked ? "#e05a5a" : "transparent",
-                                  border: checked ? "1px solid #e05a5a" : "1px solid rgba(187,198,226,0.2)",
-                                }}>
-                                {checked && <X className="size-3 text-white" />}
-                              </div>
-                              {/* Info */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs text-[#8a9bbf]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                                    {w.reading || "—"}
-                                  </span>
-                                  <span className="text-[#4a5a7a]">·</span>
-                                  <span className="text-xs text-[#d7e2ff] truncate" style={{ fontFamily: "var(--font-manrope)" }}>
-                                    {w.meaning}
-                                  </span>
-                                  {w.level && (
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                                      style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                                      {w.level}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                                    {new Date(w.created_at).toLocaleString("id-ID", { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" })}
-                                  </span>
-                                  {isOldest && (
-                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                                      style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                                      PALING LAMA
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Footer actions */}
-              <div className="flex gap-3 px-6 py-4 border-t shrink-0"
-                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <button onClick={closeCleanup} disabled={cleanupBusy}
-                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
-                  style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                  Batal
-                </button>
-                <button onClick={submitCleanup}
-                  disabled={cleanupBusy || cleanupSel.size === 0}
-                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
-                  style={{ background: "linear-gradient(135deg,#a04040,#dc5050)", color: "#fff", fontFamily: "var(--font-space)" }}>
-                  {cleanupBusy
-                    ? <><Loader2 className="size-4 animate-spin" /> Menghapus...</>
-                    : <><Trash2 className="size-4" /> HAPUS {cleanupSel.size} KATA</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Modal Bulk Import ── */}
-      {bulkOpen && (
-        <>
-          <input ref={bulkFileRef} type="file" accept=".txt,.csv,text/plain,text/csv" className="hidden" onChange={handleBulkFile} />
-          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => !bulkAdding && closeBulk()} />
-          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
-            <div className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[92vh] flex flex-col"
-              style={{ background: "rgba(8,16,36,0.92)", border: "1px solid rgba(255,255,255,0.07)" }}>
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
-                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <div className="flex items-center gap-2.5">
-                  <div className="size-9 rounded-xl flex items-center justify-center"
-                    style={{ background: "rgba(224,123,74,0.18)" }}>
-                    <Upload className="size-4 text-[#e07b4a]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>Import Banyak Kotoba</p>
-                    <p className="text-[10px] text-[#4a5a7a]">Paste daftar kata · 1 baris = 1 kata</p>
-                  </div>
-                </div>
-                <button onClick={closeBulk} disabled={bulkAdding}
-                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors disabled:opacity-30">
-                  <X className="size-4 text-[#4a5a7a]" />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="overflow-y-auto px-6 py-5 flex flex-col gap-4">
-
-                {/* Format hint */}
-                <div className="rounded-2xl px-4 py-3 flex items-start gap-2.5"
-                  style={{ background: "rgba(224,123,74,0.08)", border: "1px solid rgba(224,123,74,0.18)" }}>
-                  <FileText className="size-4 text-[#e07b4a] shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-[#e07b4a] mb-1" style={{ fontFamily: "var(--font-space)" }}>FORMAT</p>
-                    <p className="text-[11px] text-[#bbc6e2] leading-relaxed font-mono">
-                      kanji <span className="text-[#4a5a7a]">|</span> reading <span className="text-[#4a5a7a]">|</span> arti <span className="text-[#4a5a7a]">|</span> level
-                    </p>
-                    <p className="text-[10px] text-[#4a5a7a] mt-1">
-                      Reading & level opsional. Pakai <span className="text-[#bbc6e2]">|</span> atau tab sebagai pemisah. Baris kosong & baris dengan # diabaikan.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Textarea */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-bold text-[#bbc6e2]" style={{ fontFamily: "var(--font-space)" }}>
-                      DAFTAR KOTOBA
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-                        {bulkParsed.length} kata terdeteksi
-                      </span>
-                      <button onClick={() => bulkFileRef.current?.click()} disabled={bulkAdding}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 disabled:opacity-40"
-                        style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                        <Upload className="size-3" /> UPLOAD .TXT / .CSV
-                      </button>
-                    </div>
-                  </div>
-                  <textarea
-                    value={bulkText}
-                    onChange={e => setBulkText(e.target.value)}
-                    disabled={bulkAdding}
-                    placeholder={"諦める | あきらめる | menyerah | N3\n勉強 | べんきょう | belajar | N5\n会議 | かいぎ | rapat | N4"}
-                    rows={10}
-                    className="w-full px-4 py-3 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all resize-y"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)", lineHeight: 1.7 }}
-                    onFocus={e => e.currentTarget.style.borderColor = "rgba(224,123,74,0.4)"}
-                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-                  />
-                </div>
-
-                {/* Preview */}
-                {bulkParsed.length > 0 && !bulkResult && (
-                  <div className="rounded-2xl p-3 flex flex-col gap-1.5"
-                    style={{ background: "#101b30", border: "1px solid rgba(94,168,122,0.15)" }}>
-                    <p className="text-[10px] font-bold text-[#5ea87a] mb-1" style={{ fontFamily: "var(--font-space)" }}>
-                      PREVIEW (5 pertama)
-                    </p>
-                    {bulkParsed.slice(0, 5).map((r, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[11px]">
-                        <span className="font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>{r.kanji}</span>
-                        {r.reading && <span className="text-[#8a9bbf]">({r.reading})</span>}
-                        <span className="text-[#4a5a7a]">·</span>
-                        <span className="text-[#bbc6e2] truncate">{r.meaning}</span>
-                        {r.level && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold ml-auto shrink-0"
-                            style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                            {r.level}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                    {bulkParsed.length > 5 && (
-                      <p className="text-[10px] text-[#4a5a7a] mt-1">+ {bulkParsed.length - 5} kata lainnya…</p>
-                    )}
-                  </div>
                 )}
-
-                {/* Progress */}
-                {bulkAdding && bulkProgress.total > 0 && (
-                  <div className="rounded-2xl p-4 flex flex-col gap-2"
-                    style={{ background: "#101b30", border: "1px solid rgba(107,156,218,0.2)" }}>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-bold text-[#6b9cda]" style={{ fontFamily: "var(--font-space)" }}>
-                        MENGIMPOR…
-                      </span>
-                      <span className="text-[#bbc6e2] font-mono">{bulkProgress.done} / {bulkProgress.total}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(74,122,191,0.15)" }}>
-                      <div className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${(bulkProgress.done / bulkProgress.total) * 100}%`,
-                          background: "linear-gradient(90deg, #6366f1, #a855f7)",
-                        }} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Result */}
-                {bulkResult && (
-                  <div className="rounded-2xl p-4 flex flex-col gap-2"
-                    style={{ background: "#101b30", border: "1px solid rgba(94,168,122,0.25)" }}>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="size-4 text-[#5ea87a]" />
-                      <span className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                        Selesai!
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mt-1">
-                      <div className="rounded-xl px-3 py-2 text-center" style={{ background: "rgba(94,168,122,0.1)" }}>
-                        <p className="text-lg font-black text-[#5ea87a]" style={{ fontFamily: "var(--font-jakarta)" }}>{bulkResult.added}</p>
-                        <p className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>DITAMBAH</p>
-                      </div>
-                      <div className="rounded-xl px-3 py-2 text-center" style={{ background: "rgba(166,123,212,0.1)" }}>
-                        <p className="text-lg font-black text-[#a67bd4]" style={{ fontFamily: "var(--font-jakarta)" }}>{bulkResult.skipped}</p>
-                        <p className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>DUPLIKAT</p>
-                      </div>
-                      <div className="rounded-xl px-3 py-2 text-center" style={{ background: "rgba(224,90,90,0.1)" }}>
-                        <p className="text-lg font-black text-[#e05a5a]" style={{ fontFamily: "var(--font-jakarta)" }}>{bulkResult.failed}</p>
-                        <p className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>GAGAL</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-1">
-                  <button onClick={closeBulk} disabled={bulkAdding}
-                    className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
-                    style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                    {bulkResult ? "Tutup" : "Batal"}
-                  </button>
-                  {!bulkResult && (
-                    <button onClick={submitBulk} disabled={bulkAdding || bulkParsed.length === 0}
-                      className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
-                      style={{ background: "linear-gradient(135deg,#c0654a,#e07b4a)", color: "#fff", fontFamily: "var(--font-space)" }}>
-                      {bulkAdding
-                        ? <><Loader2 className="size-4 animate-spin" /> Mengimpor...</>
-                        : <><Upload className="size-4" /> IMPORT {bulkParsed.length} KATA</>}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Modal Tambah Kosakata ── */}
-      {addOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={closeAdd} />
-          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-
-          <div className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none">
-            <div className="w-full max-w-md rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[90vh] flex flex-col"
-              style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.07)" }}>
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b shrink-0"
-                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl flex items-center justify-center"
-                    style={{ background: "rgba(94,168,122,0.15)" }}>
-                    <BookmarkPlus className="size-4 text-[#5ea87a]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#d7e2ff]"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>Tambah Kosakata</p>
-                    <p className="text-[10px] text-[#4a5a7a]">Simpan ke kamus pribadimu</p>
-                  </div>
-                </div>
-                <button onClick={closeAdd}
-                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors">
-                  <X className="size-4 text-[#4a5a7a]" />
-                </button>
-              </div>
-
-              {/* Form */}
-              <div className="overflow-y-auto px-6 py-5 flex flex-col gap-4">
-
-                {/* 単語 */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block"
-                    style={{ fontFamily: "var(--font-space)" }}>
-                    単語 · KOSAKATA <span className="text-red-400">*</span>
-                  </label>
-                  <input autoFocus
+                <FieldGroup label="Kanji / Kata">
+                  <input
+                    className="pg-input"
                     value={form.kanji}
                     onChange={e => setForm(f => ({ ...f, kanji: e.target.value }))}
-                    placeholder="諦める"
-                    className="w-full px-4 py-2.5 rounded-xl text-lg font-bold text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
-                    onFocus={e => e.currentTarget.style.borderColor = "rgba(94,168,122,0.4)"}
-                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
+                    placeholder="密接"
+                    autoFocus
                   />
-                </div>
-
-                {/* 読み方 */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block"
-                    style={{ fontFamily: "var(--font-space)" }}>
-                    読み方 · CARA BACA
-                  </label>
-                  <div className="flex gap-2">
+                </FieldGroup>
+                <FieldGroup label="Reading (furigana)" hint="kosongkan buat auto-generate">
+                  <div style={{ display: "flex", gap: 8 }}>
                     <input
+                      className="pg-input"
                       value={form.reading}
                       onChange={e => setForm(f => ({ ...f, reading: e.target.value }))}
-                      placeholder="あきらめる"
-                      className="flex-1 px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                      style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                      onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
+                      placeholder="みっせつ"
+                      style={{ flex: 1 }}
                     />
                     <button
                       type="button"
-                      onClick={autoFurigana}
-                      disabled={genReading || !form.kanji.trim()}
-                      title="Auto-generate furigana dari kanji"
-                      className="px-3 py-2.5 rounded-xl flex items-center gap-1.5 text-[10px] font-bold transition-all disabled:opacity-40 shrink-0"
-                      style={{ background: "rgba(166,123,212,0.15)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-                      {genReading
-                        ? <Loader2 className="size-3.5 animate-spin" />
-                        : <Sparkles className="size-3.5" />}
-                      AUTO
+                      className="btn btn-secondary btn-sm"
+                      onClick={autoGenReadingForAdd}
+                      disabled={!form.kanji.trim() || genReading}
+                      style={{ whiteSpace: "nowrap" }}
+                    >
+                      {genReading ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
+                      Auto
                     </button>
                   </div>
-                </div>
-
-                {/* 意味 */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block"
-                    style={{ fontFamily: "var(--font-space)" }}>
-                    意味 · ARTI <span className="text-red-400">*</span>
-                  </label>
-                  <input
+                </FieldGroup>
+                <FieldGroup label="Arti">
+                  <textarea
+                    className="pg-input pg-textarea"
                     value={form.meaning}
                     onChange={e => setForm(f => ({ ...f, meaning: e.target.value }))}
-                    placeholder="Menyerah; berhenti mencoba"
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                    onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-                    onKeyDown={e => e.key === "Enter" && addWord()}
+                    placeholder="erat, intim, berhubungan dekat"
                   />
+                </FieldGroup>
+                <div className="pg-field-row">
+                  <FieldGroup label="Level JLPT">
+                    <select
+                      className="pg-input"
+                      value={form.level}
+                      onChange={e => setForm(f => ({ ...f, level: e.target.value }))}
+                    >
+                      <option value="">— pilih —</option>
+                      <option value="N1">N1</option>
+                      <option value="N2">N2</option>
+                      <option value="N3">N3</option>
+                      <option value="N4">N4</option>
+                      <option value="N5">N5</option>
+                    </select>
+                  </FieldGroup>
+                  <FieldGroup label="Contoh kalimat (opsional)">
+                    <input
+                      className="pg-input"
+                      value={form.example}
+                      onChange={e => setForm(f => ({ ...f, example: e.target.value }))}
+                      placeholder="..."
+                    />
+                  </FieldGroup>
                 </div>
-
-                {/* Contoh */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block"
-                    style={{ fontFamily: "var(--font-space)" }}>
-                    CONTOH KALIMAT
-                  </label>
-                  <input
-                    value={form.example}
-                    onChange={e => setForm(f => ({ ...f, example: e.target.value }))}
-                    placeholder="諦めずに続けてください。"
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
-                    onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-                  />
-                </div>
-
-                {/* Level */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block"
-                    style={{ fontFamily: "var(--font-space)" }}>
-                    LEVEL JLPT
-                  </label>
-                  <div className="flex gap-2">
-                    {["","N1","N2","N3","N4","N5"].map(l => (
-                      <button key={l} onClick={() => setForm(f => ({ ...f, level: l }))}
-                        className="flex-1 py-2 rounded-xl text-[11px] font-bold transition-all"
-                        style={form.level === l
-                          ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)", fontFamily: "var(--font-space)" }
-                          : { background: "#101b30", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)", fontFamily: "var(--font-space)" }}>
-                        {l || "—"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Foto */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block"
-                    style={{ fontFamily: "var(--font-space)" }}>FOTO · OPSIONAL</label>
-                  {imagePreview ? (
-                    <div className="relative rounded-2xl overflow-hidden" style={{ background: "#101b30" }}>
-                      <img src={imagePreview} alt="preview" className="w-full max-h-52 object-contain" />
-                      <button
-                        onClick={() => { setFormImage(null); setImagePreview(null); if (photoInputRef.current) photoInputRef.current.value = ""; }}
-                        className="absolute top-2 right-2 size-7 rounded-lg flex items-center justify-center bg-black/60 hover:bg-black/80 transition-colors">
-                        <X className="size-3.5 text-white" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => photoInputRef.current?.click()}
-                      className="w-full rounded-2xl flex flex-col items-center justify-center gap-2.5 py-7 transition-all hover:brightness-110"
-                      style={{ background: "#101b30", border: "1.5px dashed rgba(187,198,226,0.15)" }}>
-                      <div className="size-10 rounded-xl flex items-center justify-center"
-                        style={{ background: "rgba(107,156,218,0.1)" }}>
-                        <Plus className="size-5 text-[#6b9cda]" />
-                      </div>
-                      <p className="text-sm font-semibold text-[#8a9bbf]"
-                        style={{ fontFamily: "var(--font-jakarta)" }}>Tap untuk tambah foto</p>
-                    </button>
-                  )}
-                </div>
-
-                {addError && <p className="text-xs text-red-400 px-1">{addError}</p>}
-
-                {/* Buttons */}
-                <div className="flex gap-3 pb-1">
-                  <button onClick={closeAdd}
-                    className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all"
-                    style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                    Batal
-                  </button>
-                  <button onClick={addWord}
-                    disabled={adding || !form.kanji.trim() || !form.meaning.trim()}
-                    className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40"
-                    style={{ background: "linear-gradient(135deg,#2a5a3a,#3a8a5a)", color: "#d7e2ff", fontFamily: "var(--font-space)" }}>
-                    {adding
-                      ? <><Loader2 className="size-4 animate-spin" /> Menyimpan...</>
-                      : <><BookmarkPlus className="size-4" /> SIMPAN</>}
-                  </button>
-                </div>
+              </div>
+              <div className="kk-modal-foot">
+                <button type="button" className="btn btn-ghost btn-sm" onClick={closeAdd}>Batal</button>
+                <button type="button" className="btn btn-primary" onClick={addWord} disabled={adding}>
+                  {adding ? "Menyimpan..." : "Tambah ke kamus"}
+                </button>
               </div>
             </div>
           </div>
-        </>
+        )}
+
+        {/* Edit modal */}
+        {editOpen && detail && (
+          <div className="kk-modal-overlay" onClick={() => setEditOpen(false)}>
+            <div className="kk-modal" onClick={e => e.stopPropagation()}>
+              <div className="kk-modal-head">
+                <h2>Edit · {detail.kanji}</h2>
+                <button type="button" className="modal-close" onClick={() => setEditOpen(false)} aria-label="Tutup">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="kk-modal-body">
+                <FieldGroup label="Reading">
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      className="pg-input"
+                      value={editForm.reading}
+                      onChange={e => setEditForm(f => ({ ...f, reading: e.target.value }))}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={autoGenReadingForEdit}
+                      disabled={editGenRead}
+                    >
+                      {editGenRead ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
+                      AI
+                    </button>
+                  </div>
+                </FieldGroup>
+                <FieldGroup label="Arti">
+                  <textarea
+                    className="pg-input pg-textarea"
+                    value={editForm.meaning}
+                    onChange={e => setEditForm(f => ({ ...f, meaning: e.target.value }))}
+                  />
+                </FieldGroup>
+                <FieldGroup label="Level JLPT">
+                  <select
+                    className="pg-input"
+                    value={editForm.level}
+                    onChange={e => setEditForm(f => ({ ...f, level: e.target.value }))}
+                  >
+                    <option value="">— pilih —</option>
+                    <option value="N1">N1</option>
+                    <option value="N2">N2</option>
+                    <option value="N3">N3</option>
+                    <option value="N4">N4</option>
+                    <option value="N5">N5</option>
+                  </select>
+                </FieldGroup>
+              </div>
+              <div className="kk-modal-foot">
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditOpen(false)}>Batal</button>
+                <button type="button" className="btn btn-primary" onClick={saveEdit} disabled={editSaving}>
+                  {editSaving ? "Menyimpan..." : "Simpan"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Flash overlay */}
+      {flashMode === "picker" && (
+        <FlashPicker
+          words={words}
+          decks={decks}
+          onClose={() => setFlashMode(null)}
+          onPick={pickDeck}
+        />
       )}
+      {flashMode === "card" && flashWord && (
+        <FlashCardView
+          word={flashWord}
+          deckId={flashDeckId}
+          deckCount={decks.length}
+          idx={flashIdx}
+          total={flashWords.length}
+          flipped={flipped}
+          shuffled={shuffled}
+          onFlip={() => setFlipped(f => !f)}
+          onNext={flashNext}
+          onPrev={flashPrev}
+          onToggleShuffle={toggleShuffle}
+          onJump={(i) => { setFlipped(false); setFlashIdx(i); }}
+          onClose={() => setFlashMode(null)}
+          onBackToPicker={() => setFlashMode("picker")}
+        />
+      )}
+    </>
+  );
+}
+
+/* ─── Subcomponents ─── */
+
+function FieldGroup({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="pg-field">
+      <label className="pg-field-label">
+        {label}{hint && <span className="pg-field-hint">· {hint}</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function FilterRail({
+  decks, activeAlbum, setActiveAlbum, levelCounts, levelF, setLevelF, totalWords,
+}: {
+  decks: { id: number; count: number; incomplete: boolean }[];
+  activeAlbum: "all" | number;
+  setActiveAlbum: (v: "all" | number) => void;
+  levelCounts: Record<LevelFilter, number>;
+  levelF: LevelFilter;
+  setLevelF: (v: LevelFilter) => void;
+  totalWords: number;
+}) {
+  return (
+    <div className="kk-filter-rail glass-card">
+      <div className="rail-section">
+        <div className="rail-label">
+          <Layers size={11} strokeWidth={1.8} />
+          <span>Dek hafalan</span>
+        </div>
+        <ul className="rail-list">
+          <li
+            className={`rail-item${activeAlbum === "all" ? " on" : ""}`}
+            onClick={() => setActiveAlbum("all")}
+          >
+            <BookA size={13} strokeWidth={1.8} />
+            <span className="rail-item-label">Semua Kata</span>
+            <span className="rail-item-count">{totalWords}</span>
+          </li>
+          {decks.map(d => (
+            <li
+              key={d.id}
+              className={`rail-item${activeAlbum === d.id ? " on" : ""}`}
+              onClick={() => setActiveAlbum(d.id)}
+            >
+              <span className="rail-item-label">Dek {d.id}</span>
+              <span className="rail-item-count">{d.count}</span>
+              {d.incomplete && <span className="rail-badge">+</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="rail-divider" />
+
+      <div className="rail-section">
+        <div className="rail-label">
+          <BarChart3 size={11} strokeWidth={1.8} />
+          <span>Level</span>
+        </div>
+        <div className="rail-level-grid">
+          {LEVEL_OPTS.map(lv => (
+            <button
+              key={lv}
+              type="button"
+              className={`level-chip lc-${lv === "ALL" ? "iris" : lv.toLowerCase()}${levelF === lv ? " on" : ""}`}
+              onClick={() => setLevelF(lv)}
+            >
+              <span className="lc-label">{lv === "ALL" ? "Semua" : lv}</span>
+              <span className="lc-count">{levelCounts[lv]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WordList({
+  words, selected, setSelected, query, setQuery, sort, setSort, loading, totalWords,
+}: {
+  words: SavedWord[];
+  selected: string | null;
+  setSelected: (id: string) => void;
+  query: string;
+  setQuery: (q: string) => void;
+  sort: SortMode;
+  setSort: (s: SortMode) => void;
+  loading: boolean;
+  totalWords: number;
+}) {
+  return (
+    <section className="kk-list-section glass-card">
+      <div className="list-head">
+        <div className="list-search">
+          <Search size={13} strokeWidth={1.6} style={{ color: "var(--text-tertiary)" }} />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Cari kata, reading, atau arti..."
+          />
+        </div>
+        <div className="list-sort">
+          <span className="sort-label">Urutan:</span>
+          <button type="button" className={`sort-chip${sort === "newest" ? " on" : ""}`} onClick={() => setSort("newest")}>Terbaru</button>
+          <button type="button" className={`sort-chip${sort === "alpha" ? " on" : ""}`} onClick={() => setSort("alpha")}>A–Z</button>
+          <button type="button" className={`sort-chip${sort === "level" ? " on" : ""}`} onClick={() => setSort("level")}>Level</button>
+        </div>
+      </div>
+
+      <div className="word-table-head">
+        <span>KATA</span>
+        <span>READING</span>
+        <span>ARTI</span>
+        <span style={{ textAlign: "right" }}>LEVEL</span>
+      </div>
+
+      <ul className="word-list">
+        {loading ? (
+          <li style={{ padding: "32px", textAlign: "center", color: "var(--text-tertiary)" }}>
+            <Loader2 className="animate-spin" size={20} />
+          </li>
+        ) : words.length === 0 ? (
+          <li style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-tertiary)", fontSize: 12.5 }}>
+            {totalWords === 0
+              ? "Belum ada kata. Klik TAMBAH atau auto-save dari Analisis Foto."
+              : "Tidak ada kata cocok dengan filter."}
+          </li>
+        ) : words.map(w => (
+          <li
+            key={w.id}
+            className={`word-row${selected === w.id ? " on" : ""}`}
+            onClick={() => setSelected(w.id)}
+          >
+            <span className="word-kanji">{w.kanji}</span>
+            <span className="word-reading">{w.reading ?? "—"}</span>
+            <span className="word-meaning">{w.meaning}</span>
+            <span className="word-right">
+              {w.level && <span className={`lv-tag-mini lv-${w.level.toLowerCase()}`}>{w.level}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function DetailCard({
+  word, allWords, onEdit, onDelete,
+}: {
+  word: SavedWord; allWords: SavedWord[]; onEdit: () => void; onDelete: () => void;
+}) {
+  return (
+    <aside className="kk-detail">
+      <div className="glass-card detail-hero">
+        <div className="detail-hero-bg" />
+        <div className="detail-hero-actions">
+          <button type="button" className="dh-icon-btn" title="Edit" onClick={onEdit}>
+            <Edit3 size={13} />
+          </button>
+          <button type="button" className="dh-icon-btn danger" title="Hapus" onClick={onDelete}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+        {word.level && (
+          <span className={`detail-level lv-${word.level.toLowerCase()}`}>{word.level}</span>
+        )}
+        {word.reading && <div className="detail-reading">{word.reading}</div>}
+        <h2 className="detail-kanji">{word.kanji}</h2>
+        <p className="detail-meaning">{word.meaning}</p>
+        <div className="detail-meta">
+          <span className="dm-item">
+            <Calendar size={11} strokeWidth={1.8} style={{ color: "var(--text-tertiary)" }} />
+            Ditambah {relativeDate(word.created_at)}
+          </span>
+          <span className="dm-item">
+            <Camera size={11} strokeWidth={1.8} style={{ color: "var(--accent-iris)" }} />
+            Tersimpan
+          </span>
+        </div>
+      </div>
+
+      {word.example && (
+        <div className="glass-card detail-example">
+          <div className="dx-head">
+            <BookOpen size={12} strokeWidth={1.6} style={{ color: "var(--accent-iris)" }} />
+            Contoh kalimat
+          </div>
+          <p className="dx-jp font-jp-sans">
+            {renderExample(word.example, word.kanji)}
+          </p>
+        </div>
+      )}
+
+      <QuizCepat key={word.id} word={word} pool={allWords} />
+
+      <RelatedWords word={word} allWords={allWords} />
+    </aside>
+  );
+}
+
+function renderExample(text: string, kanji: string): React.ReactNode {
+  if (!kanji || !text.includes(kanji)) return text;
+  const parts = text.split(kanji);
+  return parts.flatMap((p, i) =>
+    i === 0 ? [p] : [<span className="dx-hl" key={i}>{kanji}</span>, p]
+  );
+}
+
+function QuizCepat({ word, pool }: { word: SavedWord; pool: SavedWord[] }) {
+  // Lazy init shuffles options once at mount. Parent passes key={word.id} so
+  // a different word remounts this component, regenerating choices and
+  // resetting picked. Keeps Math.random() out of render and useMemo.
+  const [picked, setPicked] = useState<number | null>(null);
+  const [choices] = useState<SavedWord[]>(() => {
+    const others = pool
+      .filter(w => w.id !== word.id && w.meaning.trim())
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    return [word, ...others].sort(() => Math.random() - 0.5);
+  });
+
+  if (choices.length < 2) return null;
+
+  return (
+    <div className="glass-card detail-quiz glow-iris">
+      <div className="dq-head">
+        <div className="dq-title">
+          <Zap size={12} fill="var(--accent-amber)" strokeWidth={1.2} style={{ color: "var(--accent-amber)" }} />
+          Quiz Cepat
+        </div>
+        <button type="button" className="dq-skip" onClick={() => setPicked(null)}>Reset →</button>
+      </div>
+      <div className="dq-prompt">
+        Apa arti dari <span className="dq-kanji font-jp-sans">{word.kanji}</span>?
+      </div>
+      <ul className="dq-options">
+        {choices.map((c, i) => {
+          const isPicked = picked === i;
+          const isCorrect = c.id === word.id;
+          let cls = "";
+          if (picked != null) {
+            if (isCorrect) cls = "correct";
+            else if (isPicked) cls = "wrong";
+          }
+          return (
+            <li
+              key={c.id}
+              className={`dq-opt ${cls}`}
+              onClick={() => picked == null && setPicked(i)}
+            >
+              <span className="dq-bullet">{String.fromCharCode(65 + i)}</span>
+              <span>{c.meaning}</span>
+              {picked != null && isCorrect && <Check size={14} strokeWidth={2.2} style={{ color: "var(--accent-emerald)" }} />}
+              {isPicked && !isCorrect && <X size={14} strokeWidth={2.2} style={{ color: "var(--accent-rose)" }} />}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function RelatedWords({ word, allWords }: { word: SavedWord; allWords: SavedWord[] }) {
+  const related = useMemo(() => {
+    if (!word.level) return [];
+    return allWords
+      .filter(w => w.level === word.level && w.id !== word.id)
+      .slice(0, 4);
+  }, [word, allWords]);
+
+  if (related.length === 0) return null;
+
+  return (
+    <div className="glass-card detail-example" style={{ padding: "16px 18px" }}>
+      <div className="dx-head" style={{ display: "flex", justifyContent: "space-between" }}>
+        <span>Kata lain level <strong style={{ color: "var(--text-primary)" }}>{word.level}</strong></span>
+      </div>
+      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+        {related.map(w => (
+          <li
+            key={w.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1.2fr) auto",
+              gap: 10,
+              alignItems: "center",
+              padding: "8px 10px",
+              borderRadius: 8,
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <span className="font-jp-sans" style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text-primary)" }}>{w.kanji}</span>
+              {w.reading && (
+                <span className="font-jp-sans" style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{w.reading}</span>
+              )}
+            </div>
+            <span style={{ fontSize: 11.5, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {w.meaning}
+            </span>
+            <ChevronRight size={12} style={{ color: "var(--text-tertiary)" }} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ─── Flash overlay ─── */
+
+function FlashPicker({
+  words, decks, onClose, onPick,
+}: {
+  words: SavedWord[];
+  decks: { id: number; count: number; color: typeof DECK_COLORS[number]; preview: SavedWord[]; incomplete: boolean }[];
+  onClose: () => void;
+  onPick: (id: "all" | number) => void;
+}) {
+  return (
+    <div className="flash-mask" role="dialog" onClick={onClose}>
+      <div className="flash-picker" onClick={e => e.stopPropagation()}>
+        <header className="fp-head">
+          <div className="fp-head-icon">
+            <Layers size={16} strokeWidth={1.8} style={{ color: "var(--accent-iris)" }} />
+          </div>
+          <div className="fp-head-text">
+            <h2>Pilih Dek</h2>
+            <p>{words.length} kata · {ALBUM_SIZE} per dek · Pilih dek yang mau dihafalin sekarang</p>
+          </div>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Tutup">
+            <X size={14} />
+          </button>
+        </header>
+
+        <div className="fp-list">
+          <button type="button" className="fp-card fp-card-all" onClick={() => onPick("all")}>
+            <span className="fp-num"><BookA size={16} strokeWidth={1.8} style={{ color: "var(--accent-iris)" }} /></span>
+            <div className="fp-card-body">
+              <div className="fp-card-head">
+                <strong>Semua Kata</strong>
+                <span className="fp-count">{words.length} kata</span>
+              </div>
+              <p className="fp-card-desc">Hafalin dari paling baru — tanpa dipecah</p>
+            </div>
+            <ChevronRight size={16} style={{ color: "var(--text-tertiary)" }} />
+          </button>
+
+          {decks.map(d => (
+            <button
+              key={d.id}
+              type="button"
+              className={`fp-card fp-color-${d.color}`}
+              onClick={() => onPick(d.id)}
+            >
+              <span className={`fp-num fp-num-${d.color}`}>{d.id}</span>
+              <div className="fp-card-body">
+                <div className="fp-card-head">
+                  <strong>Dek {d.id}</strong>
+                  <span className="fp-count">{d.count} kata</span>
+                  {d.incomplete && <span className="fp-badge">MASIH NAMBAH</span>}
+                </div>
+                <div className="fp-preview-row">
+                  {d.preview.map(w => (
+                    <span key={w.id} className={`fp-prev-chip fp-prev-${d.color}`}>{w.kanji}</span>
+                  ))}
+                  {d.count > 3 && <span className="fp-prev-more">+{d.count - 3}</span>}
+                </div>
+              </div>
+              <ChevronRight size={16} style={{ color: "var(--text-tertiary)" }} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FlashCardView({
+  word, deckId, deckCount, idx, total, flipped, shuffled,
+  onFlip, onNext, onPrev, onToggleShuffle, onJump, onClose, onBackToPicker,
+}: {
+  word: SavedWord;
+  deckId: "all" | number;
+  deckCount: number;
+  idx: number; total: number;
+  flipped: boolean; shuffled: boolean;
+  onFlip: () => void; onNext: () => void; onPrev: () => void;
+  onToggleShuffle: () => void;
+  onJump: (i: number) => void;
+  onClose: () => void;
+  onBackToPicker: () => void;
+}) {
+  const isFirst = idx === 0;
+  const isLast = idx === total - 1;
+  const dotsStart = Math.max(0, Math.min(idx - 4, total - 9));
+  const dots = Array.from({ length: Math.min(9, total) }, (_, i) => dotsStart + i);
+  const lvCls = word.level ? `lv-${word.level.toLowerCase()}` : "";
+
+  return (
+    <div className="flash-mask flash-card-mask" role="dialog">
+      <header className="flash-topbar">
+        <button type="button" className="flash-chip" onClick={onBackToPicker}>
+          <Layers size={11} strokeWidth={1.8} />
+          DEK {deckId === "all" ? "SEMUA" : `${deckId}/${deckCount}`}
+        </button>
+        <div className="flash-counter">
+          {String(idx + 1).padStart(2, "0")} <span className="fc-sep">/</span> {String(total).padStart(2, "0")}
+        </div>
+        <div className="flash-top-actions">
+          <button type="button" className={`flash-chip${shuffled ? " on" : ""}`} onClick={onToggleShuffle}>
+            <Shuffle size={11} strokeWidth={1.8} />
+            ACAK
+            {shuffled && <Check size={9} strokeWidth={2.4} />}
+          </button>
+          <button type="button" className="flash-close" onClick={onClose} aria-label="Tutup">
+            <X size={14} />
+          </button>
+        </div>
+      </header>
+
+      <main className="flash-stage">
+        <div
+          className={`flash-card${flipped ? " flipped" : ""}`}
+          onClick={onFlip}
+          role="button"
+          tabIndex={0}
+          aria-label="Klik untuk balik kartu"
+        >
+          <div className="fc-side fc-front">
+            {word.level && <span className={`fc-level ${lvCls}`}>{word.level}</span>}
+            <div className="fc-bg" />
+            <h2 className="fc-kanji">{word.kanji}</h2>
+            <span className="fc-hint">Klik buat lihat jawaban</span>
+          </div>
+          <div className="fc-side fc-back">
+            {word.level && <span className={`fc-level ${lvCls}`}>{word.level}</span>}
+            <div className="fc-back-bg" />
+            {word.reading && <div className="fc-reading">{word.reading}</div>}
+            <h2 className="fc-kanji fc-kanji-back">{word.kanji}</h2>
+            <p className="fc-meaning">{word.meaning}</p>
+            {word.example && (
+              <div className="fc-example font-jp-sans">{word.example}</div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      <footer className="flash-controls">
+        <button type="button" className="flash-arrow" onClick={onPrev} disabled={isFirst} aria-label="Sebelumnya">
+          <ChevronLeft size={16} strokeWidth={2} />
+        </button>
+        <div className="flash-center">
+          <div className="flash-dots">
+            {dotsStart > 0 && <span className="dot-spill">…</span>}
+            {dots.map(i => (
+              <span
+                key={i}
+                className={`flash-dot${i === idx ? " on" : ""}${i < idx ? " done" : ""}`}
+                onClick={() => onJump(i)}
+              />
+            ))}
+            {dotsStart + 9 < total && <span className="dot-spill">…</span>}
+          </div>
+          <button type="button" className="flash-flip-cta" onClick={onFlip}>
+            {flipped ? "SEMBUNYIKAN" : "LIHAT JAWABAN"}
+          </button>
+        </div>
+        <button type="button" className="flash-arrow" onClick={onNext} disabled={isLast} aria-label="Berikutnya">
+          <ChevronRight size={16} strokeWidth={2} />
+        </button>
+      </footer>
+
+      <div className="flash-hint-row">
+        <span><kbd>←</kbd> <kbd>→</kbd> Navigasi</span>
+        <span><kbd>Space</kbd> Flip</span>
+        <span><kbd>S</kbd> Acak</span>
+        <span><kbd>Esc</kbd> Keluar</span>
+      </div>
     </div>
   );
 }
