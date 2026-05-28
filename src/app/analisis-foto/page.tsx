@@ -2165,209 +2165,186 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         )}
       </div>
 
-      {/* ─── Edit Modal per Soal ─── */}
+      {/* ─── Edit Modal per Soal (v2) ─── */}
       {editIdx !== null && editDraft && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" onClick={() => !editSaving && closeEdit()} />
-          <div className="fixed z-50 inset-0 flex items-center justify-center p-2 md:p-4 pointer-events-none">
-            <div className="w-full max-w-2xl rounded-2xl md:rounded-3xl overflow-hidden pointer-events-auto shadow-2xl max-h-[94vh] md:max-h-[92vh] flex flex-col"
-              style={{ background: "rgba(8,16,36,0.95)", border: "1px solid rgba(255,255,255,0.07)" }}>
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 md:px-6 py-3.5 md:py-5 border-b shrink-0"
-                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="size-8 md:size-9 rounded-lg md:rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(107,156,218,0.18)" }}>
-                    <Pencil className="size-3.5 md:size-4 text-[#6b9cda]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>
-                      {editIdx >= result.questions.length ? "Tambah Soal Manual" : `Edit Soal #${editIdx + 1}`}
-                    </p>
-                    <p className="text-[10px] text-[#4a5a7a]">
-                      {editIdx >= result.questions.length
-                        ? "Ketik soal + opsi + jawaban + penjelasan dari nol"
-                        : "Perbaiki field manual kalau AI kurang akurat"}
-                    </p>
-                  </div>
+          <div className="af-modal-overlay" onClick={() => !editSaving && closeEdit()} />
+          <div className="af-modal" role="dialog">
+            <header className="af-modal-head">
+              <div className="af-modal-head-left">
+                <div className="af-modal-head-icon">
+                  <Pencil size={16} strokeWidth={1.8} />
                 </div>
-                <button onClick={closeEdit} disabled={editSaving}
-                  className="size-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors disabled:opacity-30">
-                  <X className="size-4 text-[#4a5a7a]" />
-                </button>
+                <div>
+                  <h2 className="af-modal-title">
+                    {editIdx >= result.questions.length ? "Tambah Soal Manual" : `Edit Soal #${editIdx + 1}`}
+                  </h2>
+                  <p className="af-modal-sub">
+                    {editIdx >= result.questions.length
+                      ? "Ketik soal + opsi + jawaban + penjelasan dari nol"
+                      : "Perbaiki field manual kalau AI kurang akurat"}
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={closeEdit}
+                disabled={editSaving}
+                aria-label="Tutup"
+              >
+                <X size={14} />
+              </button>
+            </header>
 
-              {/* Form */}
-              <div className="overflow-y-auto px-4 md:px-6 py-4 md:py-5 flex flex-col gap-3.5 md:gap-4">
+            <div className="af-modal-body">
+              <button
+                type="button"
+                className={`af-modal-flag-row${editDraft.needs_review ? " on" : ""}`}
+                onClick={() => setEditDraft(d => d ? { ...d, needs_review: !d.needs_review } : d)}
+              >
+                <span className={`af-mfr-check${editDraft.needs_review ? " on" : ""}`}>
+                  {editDraft.needs_review && <Check size={10} strokeWidth={3} style={{ color: "#0E1116" }} />}
+                </span>
+                <Flag size={13} strokeWidth={1.8} />
+                TANDAI PERLU REVIEW
+              </button>
 
-                {/* Perlu review checkbox */}
-                <label className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer"
-                  style={{ background: editDraft.needs_review ? "rgba(224,123,74,0.12)" : "#101b30", border: `1px solid ${editDraft.needs_review ? "rgba(224,123,74,0.3)" : "rgba(255,255,255,0.04)"}` }}>
-                  <input type="checkbox"
-                    checked={!!editDraft.needs_review}
-                    onChange={e => setEditDraft(d => d ? { ...d, needs_review: e.target.checked } : d)}
-                    className="accent-[#e07b4a]"
-                  />
-                  <Flag className="size-3.5 text-[#e07b4a]" />
-                  <span className="text-xs font-bold text-[#d7e2ff]" style={{ fontFamily: "var(--font-space)" }}>
-                    TANDAI PERLU REVIEW
-                  </span>
-                </label>
-
-                {/* Soal */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-bold text-[#bbc6e2]" style={{ fontFamily: "var(--font-space)" }}>
-                      SOAL (TEKS PERTANYAAN)
-                    </label>
-                    {(() => {
-                      const canSplit = !!splitInlineOptions(editDraft.question);
-                      return (
-                        <button
-                          type="button"
-                          disabled={!canSplit}
-                          onClick={() => {
-                            const split = splitInlineOptions(editDraft.question);
-                            if (!split) return;
-                            setEditDraft(d => d ? { ...d, question: split.question, options: split.options } : d);
-                            setToast({ text: "Opsi dipisahkan dari soal", ok: true });
-                            setTimeout(() => setToast(null), 1800);
-                          }}
-                          title={canSplit ? "Deteksi pola 1…2…3…4… di teks soal lalu pindahkan ke field opsi" : "Tidak ada pola opsi yang terdeteksi di teks soal"}
-                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all disabled:opacity-30"
-                          style={{
-                            background: canSplit ? "rgba(107,156,218,0.12)" : "#101b30",
-                            color: canSplit ? "#6b9cda" : "#4a5a7a",
-                            border: `1px solid ${canSplit ? "rgba(107,156,218,0.3)" : "rgba(255,255,255,0.04)"}`,
-                            fontFamily: "var(--font-space)",
-                          }}>
-                          PISAHKAN OPSI
-                        </button>
-                      );
-                    })()}
-                  </div>
-                  <textarea
-                    value={editDraft.question}
-                    onChange={e => setEditDraft(d => d ? { ...d, question: e.target.value } : d)}
-                    rows={3}
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-y"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
-                  />
-                </div>
-
-                {/* Options */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                    PILIHAN JAWABAN
-                  </label>
-                  <div className="flex flex-col gap-2">
-                    {editDraft.options.map((opt, oi) => (
-                      <div key={oi} className="flex items-center gap-2">
-                        <button onClick={() => setEditDraft(d => d ? { ...d, correct: String(oi + 1) } : d)}
-                          title={`Tandai sebagai jawaban benar`}
-                          className="size-6 rounded-md flex items-center justify-center shrink-0 transition-all"
-                          style={editDraft.correct === String(oi + 1)
-                            ? { background: "#5ea87a", color: "#fff" }
-                            : { background: "#101b30", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.06)" }}>
-                          {editDraft.correct === String(oi + 1) ? <Check className="size-3.5" /> : oi + 1}
-                        </button>
-                        <input
-                          value={opt}
-                          onChange={e => setEditDraft(d => {
-                            if (!d) return d;
-                            const next = [...d.options];
-                            next[oi] = e.target.value;
-                            return { ...d, options: next };
-                          })}
-                          className="flex-1 px-3 py-2 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none"
-                          style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-jakarta)" }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-[#4a5a7a] mt-1.5">Klik nomor di kiri buat tandai jawaban benar (sekarang: <span className="text-[#5ea87a] font-bold">{editDraft.correct}</span>)</p>
-                </div>
-
-                {/* Explanation */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                    PENJELASAN
-                  </label>
-                  <textarea
-                    value={editDraft.explanation}
-                    onChange={e => setEditDraft(d => d ? { ...d, explanation: e.target.value } : d)}
-                    rows={4}
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-y leading-relaxed"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                  />
-                </div>
-
-                {/* Why wrong */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                    KENAPA PILIHAN LAIN SALAH
-                  </label>
-                  <textarea
-                    value={editDraft.why_wrong ?? ""}
-                    onChange={e => setEditDraft(d => d ? { ...d, why_wrong: e.target.value } : d)}
-                    rows={3}
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-y leading-relaxed"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                  />
-                </div>
-
-                {/* Tip */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                    TIPS UJIAN
-                  </label>
-                  <textarea
-                    value={editDraft.tip ?? ""}
-                    onChange={e => setEditDraft(d => d ? { ...d, tip: e.target.value } : d)}
-                    rows={2}
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-y leading-relaxed"
-                    style={{ background: "#101b30", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                  />
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label className="text-[10px] font-bold text-[#bbc6e2] mb-1.5 block" style={{ fontFamily: "var(--font-space)" }}>
-                    KATEGORI
-                  </label>
-                  <div className="flex gap-2 flex-wrap">
-                    {(["文法","語彙","文字","読解"] as const).map(c => (
-                      <button key={c} onClick={() => setEditDraft(d => d ? { ...d, category: c } : d)}
-                        className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
-                        style={editDraft.category === c
-                          ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)", fontFamily: "var(--font-space)" }
-                          : { background: "#101b30", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)", fontFamily: "var(--font-space)" }}>
-                        {c}
+              <div className="af-modal-field">
+                <div className="af-mf-head">
+                  <label>SOAL (teks pertanyaan)</label>
+                  {(() => {
+                    const canSplit = !!splitInlineOptions(editDraft.question);
+                    return (
+                      <button
+                        type="button"
+                        className={`af-mf-action${canSplit ? " on" : ""}`}
+                        disabled={!canSplit}
+                        onClick={() => {
+                          const split = splitInlineOptions(editDraft.question);
+                          if (!split) return;
+                          setEditDraft(d => d ? { ...d, question: split.question, options: split.options } : d);
+                          setToast({ text: "Opsi dipisahkan dari soal", ok: true });
+                          setTimeout(() => setToast(null), 1800);
+                        }}
+                        title={canSplit
+                          ? "Deteksi pola 1…2…3…4… di teks soal lalu pindahkan ke field opsi"
+                          : "Tidak ada pola opsi yang terdeteksi di teks soal"}
+                      >
+                        PISAHKAN OPSI
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })()}
+                </div>
+                <textarea
+                  className="af-modal-textarea font-jp-sans"
+                  rows={3}
+                  value={editDraft.question}
+                  onChange={e => setEditDraft(d => d ? { ...d, question: e.target.value } : d)}
+                />
+              </div>
+
+              <div className="af-modal-field">
+                <label>PILIHAN JAWABAN</label>
+                <p className="af-mf-hint">
+                  Klik nomor di kiri buat tandai jawaban benar (sekarang:{" "}
+                  <strong style={{ color: "var(--accent-emerald)" }}>{editDraft.correct}</strong>)
+                </p>
+                <div className="af-modal-opt-list">
+                  {editDraft.options.map((opt, oi) => (
+                    <div key={oi} className="af-modal-opt-row">
+                      <button
+                        type="button"
+                        className={`af-modal-opt-num${editDraft.correct === String(oi + 1) ? " correct" : ""}`}
+                        onClick={() => setEditDraft(d => d ? { ...d, correct: String(oi + 1) } : d)}
+                        title="Tandai jawaban benar"
+                      >
+                        {editDraft.correct === String(oi + 1)
+                          ? <Check size={11} strokeWidth={3} />
+                          : oi + 1}
+                      </button>
+                      <input
+                        className="af-modal-input font-jp-sans"
+                        value={opt}
+                        onChange={e => setEditDraft(d => {
+                          if (!d) return d;
+                          const next = [...d.options];
+                          next[oi] = e.target.value;
+                          return { ...d, options: next };
+                        })}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="flex gap-2.5 md:gap-3 px-4 md:px-6 py-3.5 md:py-4 border-t shrink-0"
-                style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <button onClick={closeEdit} disabled={editSaving}
-                  className="flex-1 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all disabled:opacity-40"
-                  style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                  Batal
-                </button>
-                <button onClick={saveEdit}
-                  disabled={editSaving || !editDraft.question.trim() || !editDraft.explanation.trim()}
-                  className="flex-1 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:brightness-110"
-                  style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)" }}>
-                  {editSaving
-                    ? <><Loader2 className="size-4 animate-spin" /> Menyimpan...</>
-                    : <><Save className="size-4" /> SIMPAN</>}
-                </button>
+              <div className="af-modal-field">
+                <label>PENJELASAN</label>
+                <textarea
+                  className="af-modal-textarea"
+                  rows={4}
+                  value={editDraft.explanation}
+                  onChange={e => setEditDraft(d => d ? { ...d, explanation: e.target.value } : d)}
+                />
+              </div>
+
+              <div className="af-modal-field">
+                <label>KENAPA PILIHAN LAIN SALAH</label>
+                <textarea
+                  className="af-modal-textarea"
+                  rows={3}
+                  value={editDraft.why_wrong ?? ""}
+                  onChange={e => setEditDraft(d => d ? { ...d, why_wrong: e.target.value } : d)}
+                />
+              </div>
+
+              <div className="af-modal-field">
+                <label>TIPS UJIAN</label>
+                <textarea
+                  className="af-modal-textarea"
+                  rows={2}
+                  value={editDraft.tip ?? ""}
+                  onChange={e => setEditDraft(d => d ? { ...d, tip: e.target.value } : d)}
+                />
+              </div>
+
+              <div className="af-modal-field">
+                <label>KATEGORI</label>
+                <div className="af-modal-cat-row">
+                  {(["文法", "語彙", "文字", "読解"] as const).map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`af-modal-cat-chip font-jp-sans${editDraft.category === c ? " on" : ""}`}
+                      onClick={() => setEditDraft(d => d ? { ...d, category: c } : d)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
+
+            <footer className="af-modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={closeEdit}
+                disabled={editSaving}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={saveEdit}
+                disabled={editSaving || !editDraft.question.trim() || !editDraft.explanation.trim()}
+              >
+                {editSaving
+                  ? <><Loader2 className="size-4 animate-spin" /> Menyimpan...</>
+                  : <><Save size={13} strokeWidth={2.4} /> SIMPAN</>}
+              </button>
+            </footer>
           </div>
         </>
       )}
