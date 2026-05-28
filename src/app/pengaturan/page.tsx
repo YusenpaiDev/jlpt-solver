@@ -1,77 +1,95 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Sidebar, BottomNav } from "@/components/Sidebar";
+import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
-  Settings, ArrowUpRight,
-  User, Target, Calendar, CreditCard, BellRing,
-  Clock, BookMarked, Languages, Shield, Download,
-  Trash2, ChevronRight, Check, AlertTriangle, Loader2, Camera,
+  User, Zap, Wand2, Bell, CreditCard, Shield, Trash2, ChevronRight, Camera, Check, Sparkles,
 } from "lucide-react";
-import AppHeader from "@/components/AppHeader";
 
-const settingSections = [
-  { id: "profil",      label: "Profil & Akun",       icon: User      },
-  { id: "notifikasi",  label: "Notifikasi",           icon: BellRing  },
-  { id: "belajar",     label: "Preferensi Belajar",  icon: BookMarked},
-  { id: "tampilan",    label: "Tampilan",             icon: Settings  },
-  { id: "privasi",     label: "Privasi & Data",       icon: Shield    },
-];
+type Level = "N1" | "N2" | "N3" | "N4" | "N5";
+
+const SECTIONS = [
+  { id: "profile",  label: "Profil",         Icon: User },
+  { id: "target",   label: "Target Belajar", Icon: Zap },
+  { id: "ai",       label: "Preferensi AI",  Icon: Wand2 },
+  { id: "notif",    label: "Notifikasi",     Icon: Bell },
+  { id: "sub",      label: "Langganan",      Icon: CreditCard },
+  { id: "privacy",  label: "Privasi & Data", Icon: Shield },
+  { id: "danger",   label: "Danger Zone",    Icon: Trash2, danger: true },
+] as const;
+
+type SectionId = typeof SECTIONS[number]["id"];
 
 export default function Pengaturan() {
-  const [activeSection, setActiveSection] = useState("profil");
+  const [active, setActive] = useState<SectionId>("profile");
+  const [streak, setStreak] = useState(0);
+  const [userInitial, setUserInitial] = useState("Y");
+  const xp = 820;
+  const xpTarget = 1000;
 
-  /* Profil */
-  const [nama,         setNama]         = useState("");
-  const [email,        setEmail]        = useState("");
-  const [targetLevel,  setTargetLevel]  = useState("N2");
-  const [ujianDate,    setUjianDate]    = useState("");
-  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(null);
-  const [avatarPreview,   setAvatarPreview]   = useState<string | null>(null);
+  /* Profile */
+  const [nama, setNama] = useState("");
+  const [email, setEmail] = useState("");
+  const [bahasaUi, setBahasaUi] = useState("Bahasa Indonesia");
+  const [bio, setBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [loadingProfile,  setLoadingProfile]  = useState(true);
-  const [saving,          setSaving]          = useState(false);
+
+  /* Target */
+  const [targetLevel, setTargetLevel] = useState<Level>("N2");
+  const [ujianDate, setUjianDate] = useState("");
+  const [waktuPerHari, setWaktuPerHari] = useState(30);
+  const [kategoriFokus, setKategoriFokus] = useState<string[]>(["文法", "語彙", "読解"]);
+
+  /* AI prefs */
+  const [aiStyle, setAiStyle] = useState<"concise" | "balanced" | "detailed">("balanced");
+  const [aiLang, setAiLang] = useState<"id" | "id-jp" | "jp">("id-jp");
+  const [autoExtract, setAutoExtract] = useState(true);
+  const [furiganaMode, setFuriganaMode] = useState<"all" | "level" | "off">("all");
+
+  /* Notif */
+  const [notifDaily, setNotifDaily] = useState(true);
+  const [notifStreak, setNotifStreak] = useState(true);
+  const [notifMateri, setNotifMateri] = useState(false);
+  const [notifWeekly, setNotifWeekly] = useState(true);
+  const [notifPush, setNotifPush] = useState(false);
+
+  /* Privacy */
+  const [privLeaderboard, setPrivLeaderboard] = useState(false);
+  const [privShareFriends, setPrivShareFriends] = useState(true);
+  const [privAiTraining, setPrivAiTraining] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* Notifikasi */
-  const [notifStreak,  setNotifStreak]  = useState(true);
-  const [notifReview,  setNotifReview]  = useState(true);
-  const [notifUpdate,  setNotifUpdate]  = useState(false);
-  const [jamPengingat, setJamPengingat] = useState("20:00");
-
-  /* Preferensi belajar */
-  const [kategoriFokus, setKategoriFokus] = useState<string[]>(["文法", "語彙"]);
-  const [jumlahSoal,    setJumlahSoal]    = useState(10);
-  const [furigana,      setFurigana]      = useState(true);
-  const [bahasaJelaskan, setBahasaJelaskan] = useState<"id" | "en">("id");
-
-  /* Tampilan */
-  const [fontSize, setFontSize] = useState<"kecil" | "sedang" | "besar">("sedang");
-
-  /* Saved toast */
-  const [saved, setSaved] = useState(false);
   function showSaved() {
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 1800);
   }
 
-  /* Load profile from Supabase */
+  /* Load profile */
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoadingProfile(false); return; }
+      if (!user) return;
+      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
       setEmail(user.email ?? "");
-      const { data } = await supabase.from("profiles")
-        .select("username,target_level,avatar_url")
-        .eq("id", user.id).single();
-      if (data) {
-        setNama(data.username ?? "");
-        setTargetLevel(data.target_level ?? "N2");
-        setAvatarUrl(data.avatar_url ?? null);
+      const { data: profile } = await supabase.from("profiles")
+        .select("username, target_level, avatar_url, streak")
+        .eq("id", user.id)
+        .single();
+      if (profile) {
+        setNama(profile.username ?? "");
+        setTargetLevel((profile.target_level as Level) ?? "N2");
+        setAvatarUrl(profile.avatar_url ?? null);
+        setStreak(profile.streak ?? 0);
       }
-      setLoadingProfile(false);
     }
     load();
   }, []);
@@ -79,11 +97,9 @@ export default function Pengaturan() {
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // local preview
     const reader = new FileReader();
     reader.onload = ev => setAvatarPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
-    // upload to supabase storage
     setUploadingAvatar(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -96,530 +112,600 @@ export default function Pengaturan() {
         const url = urlData.publicUrl + `?t=${Date.now()}`;
         setAvatarUrl(url);
         await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+        showSaved();
       }
     }
     setUploadingAvatar(false);
   }
 
-  async function handleSaveProfil() {
+  async function handleSaveProfile() {
     setSaving(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from("profiles")
-        .update({ username: nama, target_level: targetLevel })
+        .update({ username: nama })
         .eq("id", user.id);
     }
     setSaving(false);
     showSaved();
   }
 
-  const levels = ["N1","N2","N3","N4","N5"];
-  const kategoris = ["文法","語彙","文字","読解"];
+  async function handleSaveTarget() {
+    setSaving(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("profiles")
+        .update({ target_level: targetLevel })
+        .eq("id", user.id);
+    }
+    setSaving(false);
+    showSaved();
+  }
 
   function toggleKategori(k: string) {
-    setKategoriFokus(prev =>
-      prev.includes(k) ? prev.filter(x => x !== k) : [...prev, k]
-    );
+    setKategoriFokus(prev => prev.includes(k) ? prev.filter(x => x !== k) : [...prev, k]);
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ fontFamily: "var(--font-manrope)" }}>
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
 
-      <AppHeader activeHref="/pengaturan" />
+      <main className="app-shell">
+        <UserBar
+          streakDays={streak}
+          xp={xp}
+          xpTarget={xpTarget}
+          avatarLetter={userInitial}
+          isPro
+          hasUnread
+        />
 
-      {/* ── Body ── */}
-      <div className="flex flex-1 min-h-0">
+        <header className="pg-header">
+          <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Pengaturan" }]} />
+          <h1 className="pg-title">
+            Pengaturan <span className="pg-title-jp">設定</span>
+          </h1>
+          <p className="pg-sub">Atur profil, target belajar, preferensi AI, dan langganan kamu.</p>
+        </header>
 
-        {/* ── Left Nav Sidebar ── */}
-        <Sidebar activeHref="/pengaturan" />
+        <div className="pg-grid">
+          <aside className="pg-nav glass-card">
+            <ul className="pg-nav-list">
+              {SECTIONS.map(s => {
+                const isActive = active === s.id;
+                const isDanger = "danger" in s && s.danger;
+                return (
+                  <li
+                    key={s.id}
+                    className={`pg-nav-item${isActive ? " on" : ""}${isDanger ? " danger" : ""}`}
+                    onClick={() => setActive(s.id)}
+                  >
+                    <s.Icon size={14} strokeWidth={1.6} />
+                    <span>{s.label}</span>
+                    {isActive && <ChevronRight size={12} strokeWidth={2} />}
+                  </li>
+                );
+              })}
+            </ul>
+          </aside>
 
-        {/* ── Settings Layout ── */}
-        <div className="flex flex-1 min-h-0">
+          <div className="pg-main">
+            {active === "profile" && (
+              <ProfileSection
+                nama={nama} setNama={setNama}
+                email={email} setEmail={setEmail}
+                bahasaUi={bahasaUi} setBahasaUi={setBahasaUi}
+                bio={bio} setBio={setBio}
+                avatarUrl={avatarUrl}
+                avatarPreview={avatarPreview}
+                uploadingAvatar={uploadingAvatar}
+                userInitial={userInitial}
+                fileInputRef={fileInputRef}
+                onAvatarChange={handleAvatarChange}
+                onSave={handleSaveProfile}
+                saving={saving}
+              />
+            )}
+            {active === "target" && (
+              <TargetSection
+                targetLevel={targetLevel} setTargetLevel={setTargetLevel}
+                ujianDate={ujianDate} setUjianDate={setUjianDate}
+                waktuPerHari={waktuPerHari} setWaktuPerHari={setWaktuPerHari}
+                kategoriFokus={kategoriFokus} toggleKategori={toggleKategori}
+                onSave={handleSaveTarget}
+                saving={saving}
+              />
+            )}
+            {active === "ai" && (
+              <AISection
+                aiStyle={aiStyle} setAiStyle={setAiStyle}
+                aiLang={aiLang} setAiLang={setAiLang}
+                autoExtract={autoExtract} setAutoExtract={setAutoExtract}
+                furiganaMode={furiganaMode} setFuriganaMode={setFuriganaMode}
+                onSave={showSaved}
+              />
+            )}
+            {active === "notif" && (
+              <NotifSection
+                daily={notifDaily} setDaily={setNotifDaily}
+                streakWarn={notifStreak} setStreakWarn={setNotifStreak}
+                materi={notifMateri} setMateri={setNotifMateri}
+                weekly={notifWeekly} setWeekly={setNotifWeekly}
+                push={notifPush} setPush={setNotifPush}
+              />
+            )}
+            {active === "sub" && <SubscriptionSection />}
+            {active === "privacy" && (
+              <PrivacySection
+                leaderboard={privLeaderboard} setLeaderboard={setPrivLeaderboard}
+                shareFriends={privShareFriends} setShareFriends={setPrivShareFriends}
+                aiTraining={privAiTraining} setAiTraining={setPrivAiTraining}
+              />
+            )}
+            {active === "danger" && <DangerSection />}
+          </div>
+        </div>
 
-          {/* Section nav */}
-          <div className="hidden md:flex w-[200px] shrink-0 flex-col gap-1 py-6 px-3 border-r"
-            style={{ background: "#0a1525", borderColor: "rgba(255,255,255,0.03)" }}>
-            <p className="text-[9px] font-bold text-[#2a354b] px-3 mb-2"
-              style={{ fontFamily: "var(--font-space)" }}>PENGATURAN</p>
-            {settingSections.map(({ id, label, icon: Icon }) => (
-              <button key={id} onClick={() => setActiveSection(id)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left transition-all w-full"
-                style={activeSection === id
-                  ? { background: "rgba(74,122,191,0.12)", color: "#d7e2ff", boxShadow: "inset 2px 0 0 #4a7abf" }
-                  : { color: "#8a9bbf" }}>
-                <Icon className={`size-4 shrink-0 ${activeSection === id ? "text-[#6b9cda]" : "text-[#4a5a7a]"}`} />
-                {label}
+        {saved && (
+          <div className="pg-saved-toast">
+            <Check size={14} strokeWidth={2.4} /> Tersimpan
+          </div>
+        )}
+      </main>
+    </>
+  );
+}
+
+/* ─── Common subcomponents ─── */
+
+function Card({ title, desc, children, footer }: {
+  title: string; desc?: string; children?: React.ReactNode; footer?: React.ReactNode;
+}) {
+  return (
+    <div className="glass-card pg-card">
+      <div className="pg-card-head">
+        <h3>{title}</h3>
+        {desc && <p>{desc}</p>}
+      </div>
+      {children && <div className="pg-card-body">{children}</div>}
+      {footer && <div>{footer}</div>}
+    </div>
+  );
+}
+
+function Field({ label, hint, children }: {
+  label: string; hint?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="pg-field">
+      <label className="pg-field-label">
+        {label}{hint && <span className="pg-field-hint">· {hint}</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function SaveBtn({ onSave, saving, children = "Simpan perubahan" }: {
+  onSave: () => void; saving?: boolean; children?: React.ReactNode;
+}) {
+  return (
+    <div className="pg-save-row">
+      <button type="button" className="btn btn-ghost btn-sm">Batal</button>
+      <button type="button" className="btn btn-primary" onClick={onSave} disabled={saving}>
+        {saving ? "Menyimpan..." : children}
+      </button>
+    </div>
+  );
+}
+
+interface RadioOption<T extends string> { v: T; t: string; d?: string }
+function RadioGroup<T extends string>({ name, options, value, onChange }: {
+  name: string; options: RadioOption<T>[]; value: T; onChange: (v: T) => void;
+}) {
+  return (
+    <div className="pg-radio-group">
+      {options.map(o => (
+        <label key={o.v} className={`pg-radio${value === o.v ? " on" : ""}`}>
+          <input
+            type="radio"
+            name={name}
+            value={o.v}
+            checked={value === o.v}
+            onChange={() => onChange(o.v)}
+            style={{ display: "none" }}
+          />
+          <div className="pg-radio-dot" />
+          <div className="pg-radio-meta">
+            <div className="pg-radio-title">{o.t}</div>
+            {o.d && <div className="pg-radio-desc">{o.d}</div>}
+          </div>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function Toggle({ label, sub, on, onChange }: {
+  label: string; sub?: string; on: boolean; onChange: (on: boolean) => void;
+}) {
+  return (
+    <div className="pg-toggle-row" onClick={() => onChange(!on)}>
+      <div>
+        <div className="pg-toggle-label">{label}</div>
+        {sub && <div className="pg-toggle-sub">{sub}</div>}
+      </div>
+      <div className={`pg-toggle${on ? " on" : ""}`}>
+        <div className="pg-toggle-knob" />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Profile section ─── */
+
+function ProfileSection({
+  nama, setNama, email, setEmail, bahasaUi, setBahasaUi, bio, setBio,
+  avatarUrl, avatarPreview, uploadingAvatar, userInitial, fileInputRef,
+  onAvatarChange, onSave, saving,
+}: {
+  nama: string; setNama: (v: string) => void;
+  email: string; setEmail: (v: string) => void;
+  bahasaUi: string; setBahasaUi: (v: string) => void;
+  bio: string; setBio: (v: string) => void;
+  avatarUrl: string | null;
+  avatarPreview: string | null;
+  uploadingAvatar: boolean;
+  userInitial: string;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  const displayAvatar = avatarPreview || avatarUrl;
+  return (
+    <>
+      <Card title="Profil" desc="Info dasar tentang kamu — terlihat di sertifikat & leaderboard">
+        <div className="pg-avatar-row">
+          <div className="pg-avatar-big">
+            {displayAvatar
+              ? <Image src={displayAvatar} alt="avatar" width={72} height={72} unoptimized />
+              : userInitial}
+          </div>
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={onAvatarChange}
+            />
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+            >
+              <Camera size={12} /> {uploadingAvatar ? "Mengunggah..." : "Ganti foto"}
+            </button>
+            <p className="pg-avatar-hint">JPG / PNG · max 2 MB</p>
+          </div>
+        </div>
+        <Field label="Nama tampilan">
+          <input className="pg-input" value={nama} onChange={e => setNama(e.target.value)} />
+        </Field>
+        <div className="pg-field-row">
+          <Field label="Email" hint="Login & notifikasi">
+            <input className="pg-input" value={email} onChange={e => setEmail(e.target.value)} disabled />
+          </Field>
+          <Field label="Bahasa antarmuka">
+            <select className="pg-input" value={bahasaUi} onChange={e => setBahasaUi(e.target.value)}>
+              <option>Bahasa Indonesia</option>
+              <option>English</option>
+              <option>日本語</option>
+            </select>
+          </Field>
+        </div>
+        <Field label="Bio singkat" hint="Optional · 160 karakter">
+          <textarea
+            className="pg-input pg-textarea"
+            maxLength={160}
+            value={bio}
+            onChange={e => setBio(e.target.value)}
+            placeholder="Belajar N2, target Desember 2026. Fokus reading & vocab."
+          />
+        </Field>
+      </Card>
+      <SaveBtn onSave={onSave} saving={saving} />
+    </>
+  );
+}
+
+/* ─── Target section ─── */
+
+function TargetSection({
+  targetLevel, setTargetLevel, ujianDate, setUjianDate, waktuPerHari, setWaktuPerHari,
+  kategoriFokus, toggleKategori, onSave, saving,
+}: {
+  targetLevel: Level; setTargetLevel: (l: Level) => void;
+  ujianDate: string; setUjianDate: (d: string) => void;
+  waktuPerHari: number; setWaktuPerHari: (n: number) => void;
+  kategoriFokus: string[]; toggleKategori: (k: string) => void;
+  onSave: () => void; saving: boolean;
+}) {
+  const KATEGORIS = [
+    { jp: "文法", label: "Bunpou" },
+    { jp: "語彙", label: "Goi" },
+    { jp: "読解", label: "Dokkai" },
+    { jp: "聴解", label: "Choukai" },
+    { jp: "文字", label: "Moji" },
+  ];
+  return (
+    <>
+      <Card title="Target Belajar" desc="AI akan tune kesulitan soal & rekomendasi sesuai target">
+        <Field label="Target level JLPT">
+          <div className="pg-lv-grid">
+            {(["N5", "N4", "N3", "N2", "N1"] as Level[]).map(lv => (
+              <button
+                key={lv}
+                type="button"
+                className={`pg-lv-tile lvt-${lv.toLowerCase()}${targetLevel === lv ? " on" : ""}`}
+                onClick={() => setTargetLevel(lv)}
+              >
+                <span className="pg-lv-letter">{lv}</span>
+                {targetLevel === lv && (
+                  <span className="lvt-check">
+                    <Check size={10} strokeWidth={3} style={{ color: "#0E1116" }} />
+                  </span>
+                )}
               </button>
             ))}
           </div>
+        </Field>
+        <Field label="Tanggal target ujian">
+          <input
+            className="pg-input"
+            type="date"
+            value={ujianDate}
+            onChange={e => setUjianDate(e.target.value)}
+          />
+        </Field>
+        <Field label="Waktu belajar per hari (target)" hint="AI akan ingatin kalau kurang">
+          <div className="pg-range-wrap">
+            <input
+              type="range"
+              min={5}
+              max={120}
+              step={5}
+              value={waktuPerHari}
+              onChange={e => setWaktuPerHari(Number(e.target.value))}
+              className="pg-range"
+            />
+            <span className="pg-range-val">{waktuPerHari} menit</span>
+          </div>
+        </Field>
+        <Field label="Fokus area">
+          <div className="pg-focus-grid">
+            {KATEGORIS.map(k => {
+              const on = kategoriFokus.includes(k.jp);
+              return (
+                <button
+                  key={k.jp}
+                  type="button"
+                  className={`pg-focus-tile${on ? " on" : ""}`}
+                  onClick={() => toggleKategori(k.jp)}
+                >
+                  <span className="font-jp-sans">{k.jp}</span>
+                  <span>{k.label}</span>
+                  {on && (
+                    <span className="focus-check">
+                      <Check size={9} strokeWidth={3} style={{ color: "white" }} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+      </Card>
+      <SaveBtn onSave={onSave} saving={saving} />
+    </>
+  );
+}
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-8 pb-20 lg:pb-8 relative" style={{}}>
-            <div className="pointer-events-none absolute top-0 left-1/3 w-[400px] h-[300px] opacity-[0.04] blur-[80px]"
-              style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
+/* ─── AI prefs section ─── */
 
-            <div className="relative max-w-2xl flex flex-col gap-6">
+function AISection({
+  aiStyle, setAiStyle, aiLang, setAiLang,
+  autoExtract, setAutoExtract, furiganaMode, setFuriganaMode, onSave,
+}: {
+  aiStyle: "concise" | "balanced" | "detailed";
+  setAiStyle: (v: "concise" | "balanced" | "detailed") => void;
+  aiLang: "id" | "id-jp" | "jp";
+  setAiLang: (v: "id" | "id-jp" | "jp") => void;
+  autoExtract: boolean;
+  setAutoExtract: (v: boolean) => void;
+  furiganaMode: "all" | "level" | "off";
+  setFuriganaMode: (v: "all" | "level" | "off") => void;
+  onSave: () => void;
+}) {
+  return (
+    <>
+      <Card title="Preferensi AI" desc="Atur bagaimana Sensei AI berkomunikasi dengan kamu">
+        <Field label="Gaya penjelasan">
+          <RadioGroup
+            name="style"
+            value={aiStyle}
+            onChange={setAiStyle}
+            options={[
+              { v: "concise",  t: "Singkat",  d: "Penjelasan to-the-point, fokus jawaban" },
+              { v: "balanced", t: "Seimbang", d: "Penjelasan + 1-2 contoh tambahan (rekomendasi)" },
+              { v: "detailed", t: "Detail",   d: "Penjelasan panjang + breakdown gramatikal lengkap" },
+            ]}
+          />
+        </Field>
+        <Field label="Bahasa pembahasan">
+          <RadioGroup
+            name="lang"
+            value={aiLang}
+            onChange={setAiLang}
+            options={[
+              { v: "id",    t: "Bahasa Indonesia",        d: "Pembahasan full Indonesia" },
+              { v: "id-jp", t: "Indonesia + Japanese",    d: "Indonesia untuk penjelasan, contoh dalam Jepang" },
+              { v: "jp",    t: "日本語のみ",               d: "Mode immersi penuh — penjelasan dalam Jepang" },
+            ]}
+          />
+        </Field>
+        <Field label="Auto-extract kosakata">
+          <Toggle
+            label="Simpan kosakata otomatis dari setiap foto"
+            sub="Max 10 kata per foto · auto-saved ke Kamus"
+            on={autoExtract}
+            onChange={setAutoExtract}
+          />
+        </Field>
+        <Field label="Tampilan furigana default">
+          <RadioGroup
+            name="furi"
+            value={furiganaMode}
+            onChange={setFuriganaMode}
+            options={[
+              { v: "all",   t: "Selalu tampilkan" },
+              { v: "level", t: "Berdasarkan level kanji" },
+              { v: "off",   t: "Sembunyikan" },
+            ]}
+          />
+        </Field>
+      </Card>
+      <SaveBtn onSave={onSave} />
+    </>
+  );
+}
 
-              {/* ── PROFIL ── */}
-              {activeSection === "profil" && (
-                <>
-                  <div>
-                    <h2 className="text-xl font-bold text-[#d7e2ff] mb-1"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>Profil & Akun</h2>
-                    <p className="text-sm text-[#4a5a7a]">Informasi pribadi dan target belajar kamu.</p>
-                  </div>
+/* ─── Notification section ─── */
 
-                  {/* Avatar + nama */}
-                  <div className="p-6 rounded-2xl flex items-center gap-5"
-                    style={{ background: "#101b30" }}>
-                    {/* Hidden file input — accepts image from camera/gallery/file */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarChange}
-                    />
-                    <div className="relative shrink-0 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                      {(avatarPreview || avatarUrl) ? (
-                        <img
-                          src={avatarPreview ?? avatarUrl!}
-                          alt="Avatar"
-                          className="size-16 rounded-2xl object-cover ring-2 ring-[#2f4865]"
-                        />
-                      ) : (
-                        <div className="size-16 rounded-2xl flex items-center justify-center text-2xl font-black text-[#071327] ring-2 ring-[#2f4865]"
-                          style={{ background: "linear-gradient(135deg,#bbc6e2,#4a7abf)" }}>
-                          {loadingProfile ? <Loader2 className="size-6 animate-spin text-[#071327]" /> : (nama[0]?.toUpperCase() || "?")}
-                        </div>
-                      )}
-                      <div className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ background: "rgba(0,0,0,0.5)" }}>
-                        {uploadingAvatar
-                          ? <Loader2 className="size-5 text-white animate-spin" />
-                          : <Camera className="size-5 text-white" />}
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-[#d7e2ff] mb-1">{loadingProfile ? "…" : (nama || "—")}</p>
-                      <p className="text-xs text-[#4a5a7a] mb-3">{email}</p>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingAvatar}
-                        className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all hover:brightness-110 disabled:opacity-50"
-                        style={{ background: "#1f2a3f", color: "#8a9bbf", fontFamily: "var(--font-space)" }}>
-                        {uploadingAvatar ? "MENGUNGGAH..." : "GANTI FOTO"}
-                      </button>
-                    </div>
-                  </div>
+function NotifSection({
+  daily, setDaily, streakWarn, setStreakWarn, materi, setMateri,
+  weekly, setWeekly, push, setPush,
+}: {
+  daily: boolean; setDaily: (v: boolean) => void;
+  streakWarn: boolean; setStreakWarn: (v: boolean) => void;
+  materi: boolean; setMateri: (v: boolean) => void;
+  weekly: boolean; setWeekly: (v: boolean) => void;
+  push: boolean; setPush: (v: boolean) => void;
+}) {
+  return (
+    <Card title="Notifikasi" desc="Kapan kamu mau di-ping">
+      <Toggle label="Reminder belajar harian"             sub="Setiap hari jam 19:00 (sesuaikan di bawah)" on={daily} onChange={setDaily} />
+      <Toggle label="Streak akan hilang"                  sub="2 jam sebelum streak putus"                on={streakWarn} onChange={setStreakWarn} />
+      <Toggle label="Materi baru tersedia"                sub="Kalau materi favorit kamu di-update"       on={materi} onChange={setMateri} />
+      <Toggle label="Insight mingguan via email"          sub="Setiap Senin pagi — rangkuman progress"   on={weekly} onChange={setWeekly} />
+      <Toggle label="Push notification mobile"            sub="Belum tersedia — coming soon"              on={push} onChange={setPush} />
+    </Card>
+  );
+}
 
-                  {/* Form */}
-                  <div className="p-6 rounded-2xl flex flex-col gap-4" style={{ background: "#101b30" }}>
-                    <Field label="NAMA" value={nama} onChange={setNama} />
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-[#4a5a7a]"
-                        style={{ fontFamily: "var(--font-space)" }}>EMAIL</label>
-                      <input readOnly value={email}
-                        className="px-4 py-2.5 rounded-xl text-sm text-[#4a5a7a] outline-none cursor-not-allowed"
-                        style={{ background: "#0a111e", border: "1px solid rgba(187,198,226,0.05)", fontFamily: "var(--font-manrope)" }} />
-                      <p className="text-[10px] text-[#2a354b]">Email tidak bisa diubah dari sini.</p>
-                    </div>
-                  </div>
+/* ─── Subscription section (placeholder) ─── */
 
-                  {/* Target level */}
-                  <div className="p-6 rounded-2xl flex flex-col gap-4" style={{ background: "#101b30" }}>
-                    <div>
-                      <p className="text-xs font-bold text-[#bbc6e2] mb-1"
-                        style={{ fontFamily: "var(--font-space)" }}>TARGET LEVEL</p>
-                      <p className="text-[11px] text-[#4a5a7a]">Level JLPT yang sedang kamu persiapkan.</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {levels.map(l => (
-                        <button key={l} onClick={() => setTargetLevel(l)}
-                          className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
-                          style={targetLevel === l
-                            ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)" }
-                            : { background: "rgba(8,16,36,0.55)", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          {l}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tanggal ujian */}
-                  <div className="p-6 rounded-2xl flex flex-col gap-3" style={{ background: "#101b30" }}>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="size-4 text-[#6b9cda]" />
-                      <p className="text-xs font-bold text-[#bbc6e2]"
-                        style={{ fontFamily: "var(--font-space)" }}>TANGGAL UJIAN JLPT</p>
-                    </div>
-                    <input type="date" value={ujianDate} onChange={e => setUjianDate(e.target.value)}
-                      className="px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] outline-none"
-                      style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)", colorScheme: "dark" }} />
-                    {ujianDate && (
-                      <p className="text-xs text-[#5ea87a]">
-                        {Math.ceil((new Date(ujianDate).getTime() - Date.now()) / 86400000)} hari lagi menuju ujian
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Langganan */}
-                  <div className="p-6 rounded-2xl relative overflow-hidden"
-                    style={{ background: "#101b30", border: "1px solid rgba(107,156,218,0.12)" }}>
-                    <div className="absolute inset-0 opacity-10"
-                      style={{ background: "radial-gradient(circle at top right,#4a7abf,transparent 60%)" }} />
-                    <div className="relative flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-xl flex items-center justify-center"
-                          style={{ background: "rgba(107,156,218,0.15)" }}>
-                          <CreditCard className="size-5 text-[#6b9cda]" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-[#d7e2ff]">Paket Gratis</p>
-                          <p className="text-xs text-[#4a5a7a]">5 analisis tersisa bulan ini</p>
-                        </div>
-                      </div>
-                      <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-[#071327] transition-all hover:brightness-110"
-                        style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", fontFamily: "var(--font-space)" }}>
-                        UPGRADE <ArrowUpRight className="size-3" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <SaveButton onSave={handleSaveProfil} saving={saving} />
-                </>
-              )}
-
-              {/* ── NOTIFIKASI ── */}
-              {activeSection === "notifikasi" && (
-                <>
-                  <div>
-                    <h2 className="text-xl font-bold text-[#d7e2ff] mb-1"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>Notifikasi</h2>
-                    <p className="text-sm text-[#4a5a7a]">Atur kapan dan apa yang ingin kamu terima.</p>
-                  </div>
-
-                  <div className="p-6 rounded-2xl flex flex-col gap-5" style={{ background: "#101b30" }}>
-                    <Toggle
-                      icon="🔥" label="Pengingat Streak"
-                      desc="Notif harian kalau kamu belum latihan — biar streak-mu gak putus."
-                      value={notifStreak} onChange={setNotifStreak} />
-                    <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
-                    <Toggle
-                      icon="🗂️" label="Review Jadwal"
-                      desc="Ingatkan kata-kata yang perlu diulang hari ini berdasarkan spaced repetition."
-                      value={notifReview} onChange={setNotifReview} />
-                    <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
-                    <Toggle
-                      icon="✨" label="Update Fitur & Promo"
-                      desc="Info fitur baru, tips eksklusif, dan penawaran premium."
-                      value={notifUpdate} onChange={setNotifUpdate} />
-                  </div>
-
-                  {/* Jam pengingat */}
-                  <div className="p-6 rounded-2xl flex flex-col gap-3" style={{ background: "#101b30" }}>
-                    <div className="flex items-center gap-2">
-                      <Clock className="size-4 text-[#6b9cda]" />
-                      <p className="text-xs font-bold text-[#bbc6e2]"
-                        style={{ fontFamily: "var(--font-space)" }}>JAM PENGINGAT HARIAN</p>
-                    </div>
-                    <p className="text-[11px] text-[#4a5a7a]">Notifikasi streak dan review akan dikirim pada jam ini.</p>
-                    <input type="time" value={jamPengingat} onChange={e => setJamPengingat(e.target.value)}
-                      className="px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] outline-none w-36"
-                      style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)", colorScheme: "dark" }} />
-                  </div>
-
-                  <SaveButton onSave={showSaved} />
-                </>
-              )}
-
-              {/* ── PREFERENSI BELAJAR ── */}
-              {activeSection === "belajar" && (
-                <>
-                  <div>
-                    <h2 className="text-xl font-bold text-[#d7e2ff] mb-1"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>Preferensi Belajar</h2>
-                    <p className="text-sm text-[#4a5a7a]">Sesuaikan pengalaman belajar dengan gaya kamu.</p>
-                  </div>
-
-                  {/* Kategori fokus */}
-                  <div className="p-6 rounded-2xl flex flex-col gap-4" style={{ background: "#101b30" }}>
-                    <div>
-                      <p className="text-xs font-bold text-[#bbc6e2] mb-1"
-                        style={{ fontFamily: "var(--font-space)" }}>KATEGORI FOKUS</p>
-                      <p className="text-[11px] text-[#4a5a7a]">Pilih kategori yang ingin diprioritaskan. Bisa lebih dari satu.</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {kategoris.map(k => {
-                        const active = kategoriFokus.includes(k);
-                        return (
-                          <button key={k} onClick={() => toggleKategori(k)}
-                            className="flex-1 py-3 rounded-xl text-sm font-black transition-all"
-                            style={active
-                              ? { background: "rgba(107,156,218,0.15)", color: "#6b9cda", border: "1px solid rgba(107,156,218,0.35)" }
-                              : { background: "rgba(8,16,36,0.55)", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
-                            {k}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Jumlah soal */}
-                  <div className="p-6 rounded-2xl flex flex-col gap-4" style={{ background: "#101b30" }}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-bold text-[#bbc6e2] mb-1"
-                          style={{ fontFamily: "var(--font-space)" }}>JUMLAH SOAL PER SESI</p>
-                        <p className="text-[11px] text-[#4a5a7a]">Berapa soal yang ingin dikerjakan tiap sesi latihan.</p>
-                      </div>
-                      <span className="text-2xl font-extrabold text-[#d7e2ff]"
-                        style={{ fontFamily: "var(--font-jakarta)" }}>{jumlahSoal}</span>
-                    </div>
-                    <input type="range" min={5} max={30} step={5}
-                      value={jumlahSoal} onChange={e => setJumlahSoal(Number(e.target.value))}
-                      className="w-full accent-[#4a7abf]" />
-                    <div className="flex justify-between text-[10px] text-[#2a354b]"
-                      style={{ fontFamily: "var(--font-space)" }}>
-                      {[5,10,15,20,25,30].map(v => <span key={v}>{v}</span>)}
-                    </div>
-                  </div>
-
-                  {/* Furigana + Bahasa */}
-                  <div className="p-6 rounded-2xl flex flex-col gap-5" style={{ background: "#101b30" }}>
-                    <Toggle
-                      icon="あ" label="Tampilkan Furigana"
-                      desc="Tampilkan bacaan hiragana di atas kanji pada contoh kalimat."
-                      value={furigana} onChange={setFurigana} />
-                    <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Languages className="size-4 text-[#6b9cda]" />
-                        <p className="text-sm font-semibold text-[#d7e2ff]">Bahasa Penjelasan</p>
-                      </div>
-                      <p className="text-[11px] text-[#4a5a7a] mb-3">Bahasa yang digunakan AI untuk menjelaskan soal.</p>
-                      <div className="flex gap-2">
-                        {[{v:"id",l:"🇮🇩 Indonesia"},{v:"en",l:"🇬🇧 English"}].map(({v,l}) => (
-                          <button key={v} onClick={() => setBahasaJelaskan(v as "id"|"en")}
-                            className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
-                            style={bahasaJelaskan === v
-                              ? { background: "rgba(107,156,218,0.15)", color: "#6b9cda", border: "1px solid rgba(107,156,218,0.35)" }
-                              : { background: "rgba(8,16,36,0.55)", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
-                            {l}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <SaveButton onSave={showSaved} />
-                </>
-              )}
-
-              {/* ── TAMPILAN ── */}
-              {activeSection === "tampilan" && (
-                <>
-                  <div>
-                    <h2 className="text-xl font-bold text-[#d7e2ff] mb-1"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>Tampilan</h2>
-                    <p className="text-sm text-[#4a5a7a]">Sesuaikan tampilan aplikasi.</p>
-                  </div>
-
-                  <div className="p-6 rounded-2xl flex flex-col gap-4" style={{ background: "#101b30" }}>
-                    <div>
-                      <p className="text-xs font-bold text-[#bbc6e2] mb-1"
-                        style={{ fontFamily: "var(--font-space)" }}>UKURAN FONT</p>
-                      <p className="text-[11px] text-[#4a5a7a] mb-4">Ukuran teks yang ditampilkan di seluruh aplikasi.</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {(["kecil","sedang","besar"] as const).map(f => (
-                        <button key={f} onClick={() => setFontSize(f)}
-                          className="flex-1 py-3 rounded-xl transition-all capitalize"
-                          style={{
-                            fontSize: f === "kecil" ? "11px" : f === "sedang" ? "13px" : "15px",
-                            fontWeight: fontSize === f ? 700 : 400,
-                            background: fontSize === f ? "rgba(107,156,218,0.12)" : "#0d1929",
-                            color: fontSize === f ? "#6b9cda" : "#4a5a7a",
-                            border: `1px solid ${fontSize === f ? "rgba(107,156,218,0.3)" : "rgba(255,255,255,0.04)"}`,
-                          }}>
-                          {f === "kecil" ? "Kecil" : f === "sedang" ? "Sedang" : "Besar"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tema */}
-                  <div className="p-6 rounded-2xl" style={{ background: "#101b30" }}>
-                    <p className="text-xs font-bold text-[#bbc6e2] mb-1"
-                      style={{ fontFamily: "var(--font-space)" }}>TEMA</p>
-                    <p className="text-[11px] text-[#4a5a7a] mb-4">Pilih tema warna aplikasi.</p>
-                    <div className="flex gap-2">
-                      {[
-                        { id:"dark",  label:"Dark",  preview:"#071327" },
-                        { id:"navy",  label:"Navy",  preview:"#0a1628" },
-                        { id:"amoled",label:"AMOLED",preview:"#000000" },
-                      ].map(t => (
-                        <button key={t.id}
-                          className="flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all"
-                          style={t.id === "dark"
-                            ? { background: "rgba(107,156,218,0.12)", border: "1px solid rgba(107,156,218,0.3)" }
-                            : { background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <div className="size-8 rounded-lg"
-                            style={{ background: t.preview, outline: t.id === "dark" ? "2px solid #4a7abf" : "2px solid transparent" }} />
-                          <span className="text-[11px]"
-                            style={{ color: t.id === "dark" ? "#6b9cda" : "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                            {t.label}
-                          </span>
-                          {t.id === "dark" && <Check className="size-3 text-[#6b9cda]" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <SaveButton onSave={showSaved} />
-                </>
-              )}
-
-              {/* ── PRIVASI & DATA ── */}
-              {activeSection === "privasi" && (
-                <>
-                  <div>
-                    <h2 className="text-xl font-bold text-[#d7e2ff] mb-1"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>Privasi & Data</h2>
-                    <p className="text-sm text-[#4a5a7a]">Kelola data belajar dan akun kamu.</p>
-                  </div>
-
-                  <div className="p-6 rounded-2xl flex flex-col gap-4" style={{ background: "#101b30" }}>
-                    <ActionRow
-                      icon={<Download className="size-4 text-[#6b9cda]" />}
-                      label="Export Data Belajar"
-                      desc="Unduh seluruh riwayat soal, statistik, dan kata favorit dalam format JSON."
-                      action="EXPORT" actionColor="#6b9cda" />
-                    <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
-                    <ActionRow
-                      icon={<Target className="size-4 text-[#e07b4a]" />}
-                      label="Reset Progress"
-                      desc="Hapus semua statistik dan mulai dari awal. Riwayat soal tetap tersimpan."
-                      action="RESET" actionColor="#e07b4a" />
-                  </div>
-
-                  {/* Hapus akun */}
-                  <div className="p-6 rounded-2xl relative overflow-hidden"
-                    style={{ background: "#101b30", border: "1px solid rgba(224,90,90,0.12)" }}>
-                    <div className="absolute inset-0 opacity-5"
-                      style={{ background: "radial-gradient(circle at bottom right,#e05a5a,transparent 60%)" }} />
-                    <div className="relative flex items-start gap-4">
-                      <div className="size-10 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: "rgba(224,90,90,0.1)" }}>
-                        <Trash2 className="size-4 text-[#e05a5a]" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-[#d7e2ff] mb-1">Hapus Akun</p>
-                        <p className="text-[11px] text-[#4a5a7a] leading-relaxed mb-4">
-                          Akun dan seluruh datamu akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
-                        </p>
-                        <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:brightness-110"
-                          style={{ background: "rgba(224,90,90,0.12)", color: "#e05a5a", border: "1px solid rgba(224,90,90,0.2)", fontFamily: "var(--font-space)" }}>
-                          <AlertTriangle className="size-3" /> HAPUS AKUN
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-            </div>
+function SubscriptionSection() {
+  return (
+    <>
+      <div className="glass-card pg-sub-hero">
+        <div className="pg-sub-hero-bg" />
+        <div className="pg-sub-hero-row">
+          <div>
+            <span className="pg-sub-eyebrow">
+              <Sparkles size={11} fill="currentColor" strokeWidth={1} /> Plan saat ini
+            </span>
+            <h2 className="pg-sub-title">Sensei Free</h2>
+            <p className="pg-sub-desc">
+              Kamu sedang di plan Free · 10 analisis foto/hari · 50 kotoba di Kamus
+            </p>
+          </div>
+          <div className="pg-sub-price">
+            <span className="pg-price-amount">Rp 0</span>
+            <span className="pg-price-period">/ selamanya</span>
           </div>
         </div>
-      </div>
-
-      <BottomNav activeHref="/pengaturan" />
-
-      {/* Saved toast */}
-      {saved && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold shadow-xl"
-          style={{ background: "#1f2a3f", color: "#5ea87a", border: "1px solid rgba(94,168,122,0.25)" }}>
-          <Check className="size-4" /> Pengaturan disimpan
+        <div className="pg-sub-meta">
+          <div><span>Plan</span><strong>Free</strong></div>
+          <div><span>Limit harian</span><strong>10 analisis</strong></div>
+          <div><span>Upgrade tersedia</span><strong>Pro & Lifetime</strong></div>
         </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Sub-components ─────────────────────────────────────────── */
-function Field({ label, value, onChange, type = "text" }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-bold text-[#4a5a7a]"
-        style={{ fontFamily: "var(--font-space)" }}>{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)}
-        className="px-4 py-2.5 rounded-xl text-sm text-[#d7e2ff] outline-none transition-all"
-        style={{
-          background: "rgba(8,16,36,0.55)",
-          border: "1px solid rgba(187,198,226,0.08)",
-          fontFamily: "var(--font-manrope)",
-        }}
-        onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-        onBlur={e => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-      />
-    </div>
-  );
-}
-
-function Toggle({ icon, label, desc, value, onChange }: {
-  icon: string; label: string; desc: string;
-  value: boolean; onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center gap-4">
-      <span className="text-xl shrink-0">{icon}</span>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-[#d7e2ff] mb-0.5">{label}</p>
-        <p className="text-[11px] text-[#4a5a7a] leading-relaxed">{desc}</p>
+        <div className="pg-sub-actions">
+          <Link href="/premium" className="btn btn-primary btn-sm">
+            <Sparkles size={12} /> Upgrade ke Pro
+          </Link>
+          <Link href="/premium" className="btn btn-secondary btn-sm">Lihat semua plan</Link>
+        </div>
       </div>
-      <button onClick={() => onChange(!value)}
-        className="shrink-0 w-11 h-6 rounded-full transition-all relative"
-        style={{ background: value ? "#4a7abf" : "#1f2a3f" }}>
-        <div className="absolute top-1 size-4 rounded-full transition-all"
-          style={{ background: value ? "#d7e2ff" : "#4a5a7a", left: value ? "calc(100% - 20px)" : "4px" }} />
-      </button>
-    </div>
+
+      <Card title="Riwayat tagihan" desc="Belum ada tagihan — kamu masih di plan Free">
+        <p style={{ fontSize: 12.5, color: "var(--text-tertiary)", margin: 0 }}>
+          Setelah upgrade ke Pro/Lifetime, invoice & receipt akan muncul di sini.
+        </p>
+      </Card>
+    </>
   );
 }
 
-function ActionRow({ icon, label, desc, action, actionColor }: {
-  icon: React.ReactNode; label: string; desc: string; action: string; actionColor: string;
+/* ─── Privacy section ─── */
+
+function PrivacySection({
+  leaderboard, setLeaderboard, shareFriends, setShareFriends, aiTraining, setAiTraining,
+}: {
+  leaderboard: boolean; setLeaderboard: (v: boolean) => void;
+  shareFriends: boolean; setShareFriends: (v: boolean) => void;
+  aiTraining: boolean; setAiTraining: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center gap-4">
-      <div className="size-10 rounded-xl flex items-center justify-center shrink-0"
-        style={{ background: "rgba(187,198,226,0.06)" }}>{icon}</div>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-[#d7e2ff] mb-0.5">{label}</p>
-        <p className="text-[11px] text-[#4a5a7a] leading-relaxed">{desc}</p>
-      </div>
-      <button className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all hover:brightness-110"
-        style={{ background: `${actionColor}15`, color: actionColor, fontFamily: "var(--font-space)" }}>
-        {action} <ChevronRight className="size-3" />
-      </button>
-    </div>
+    <>
+      <Card title="Privasi" desc="Atur apa yang dilihat orang lain">
+        <Toggle label="Tampilkan profil di leaderboard publik" sub="Kalau off, masih kelihatan oleh teman"             on={leaderboard}   onChange={setLeaderboard} />
+        <Toggle label="Bagikan progress ke teman"              sub="Teman bisa lihat streak & XP kamu"                  on={shareFriends}  onChange={setShareFriends} />
+        <Toggle label="Foto soal boleh dipakai untuk training AI" sub="Anonim, tidak terikat akun kamu · membantu akurasi AI" on={aiTraining}    onChange={setAiTraining} />
+      </Card>
+      <Card title="Data kamu" desc="Export atau hapus data sesuai keinginan">
+        <div className="pg-data-row">
+          <button type="button" className="btn btn-secondary btn-sm">Export semua kotoba (CSV)</button>
+          <button type="button" className="btn btn-secondary btn-sm">Export riwayat soal (PDF)</button>
+          <button type="button" className="btn btn-secondary btn-sm">Export catatan (Markdown ZIP)</button>
+        </div>
+      </Card>
+    </>
   );
 }
 
-function SaveButton({ onSave, saving = false }: { onSave: () => void; saving?: boolean }) {
+/* ─── Danger Zone ─── */
+
+function DangerSection() {
   return (
-    <button onClick={onSave} disabled={saving}
-      className="self-start flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:brightness-110 disabled:opacity-60"
-      style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)" }}>
-      {saving
-        ? <><Loader2 className="size-4 animate-spin" /> MENYIMPAN…</>
-        : <><Check className="size-4" /> SIMPAN PERUBAHAN</>}
-    </button>
+    <Card title="Danger Zone" desc="Aksi yang tidak bisa diundo — pastikan kamu yakin">
+      <div className="danger-row">
+        <div>
+          <div className="danger-title">Reset semua progress</div>
+          <p className="danger-desc">Hapus semua riwayat soal, streak, XP, statistik. Kotoba & catatan tetap aman.</p>
+        </div>
+        <button type="button" className="btn btn-secondary btn-sm danger-link">Reset progress</button>
+      </div>
+      <div className="danger-row">
+        <div>
+          <div className="danger-title">Hapus semua kotoba</div>
+          <p className="danger-desc">Hapus semua entry di Kamus kamu. Tidak bisa di-recover.</p>
+        </div>
+        <button type="button" className="btn btn-secondary btn-sm danger-link">Hapus kotoba</button>
+      </div>
+      <div className="danger-row strong">
+        <div>
+          <div className="danger-title">Hapus akun permanen</div>
+          <p className="danger-desc">Semua data kamu — profil, kotoba, sesi, catatan, statistik — akan dihapus permanen dari server kami dalam 30 hari.</p>
+        </div>
+        <button type="button" className="btn danger-btn btn-sm">Hapus akun</button>
+      </div>
+    </Card>
   );
 }
-
-import type React from "react";
