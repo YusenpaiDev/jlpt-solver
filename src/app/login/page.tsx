@@ -1,20 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, ArrowRight, Sparkles, TrendingUp, Camera, BarChart2, Flame, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Mail, Lock, Eye, EyeOff, User as UserIcon, ArrowRight, Check, Sparkles,
+  Shield, Zap, AlertCircle,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { AuroraBackground } from "@/components/v2";
 
-const avatarColors = ["#4a7abf", "#8b5abf", "#3a9a7a", "#c0844a", "#c05abf"];
+type Mode = "signin" | "signup";
+type Level = "N5" | "N4" | "N3" | "N2" | "N1";
 
 export default function Login() {
-  const [mode, setMode]           = useState<"login" | "register">("login");
-  const [showPass, setShowPass]   = useState(false);
-  const [email, setEmail]         = useState("");
-  const [password, setPassword]   = useState("");
-  const [username, setUsername]   = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
-  const [success, setSuccess]     = useState<string | null>(null);
+  const router = useRouter();
+  const [mode, setMode] = useState<Mode>("signin");
+  const [showPass, setShowPass] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [targetLevel, setTargetLevel] = useState<Level>("N2");
+  const [agreed, setAgreed] = useState(true);
+  const [remember, setRemember] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -25,26 +36,31 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (mode === "login") {
+      if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        window.location.href = "/";
+        router.push("/");
       } else {
+        if (!agreed) {
+          setError("Setujui syarat & privasi dulu.");
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { username: username || email.split("@")[0] } },
+          options: { data: { username: username || email.split("@")[0], target_level: targetLevel } },
         });
         if (error) throw error;
-        setSuccess("Cek email kamu untuk konfirmasi akun, lalu login.");
-        setMode("login");
+        setSuccess("Cek email kamu untuk konfirmasi akun, lalu masuk.");
+        setMode("signin");
+        setPassword("");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan";
-      if (msg.includes("Invalid login credentials")) setError("Email atau kata sandi salah.");
-      else if (msg.includes("Email not confirmed")) setError("Email belum dikonfirmasi. Cek inbox kamu dan klik link konfirmasi dari Supabase.");
-      else if (msg.includes("User already registered")) setError("Email sudah terdaftar. Silakan login.");
-      else if (msg.includes("Password should be")) setError("Kata sandi minimal 6 karakter.");
+      if (msg.includes("Invalid login credentials")) setError("Email atau password salah.");
+      else if (msg.includes("Email not confirmed")) setError("Email belum dikonfirmasi. Cek inbox kamu untuk link konfirmasi.");
+      else if (msg.includes("User already registered")) setError("Email sudah terdaftar. Silakan masuk.");
+      else if (msg.includes("Password should be")) setError("Password minimal 6 karakter.");
       else setError(msg);
     } finally {
       setLoading(false);
@@ -52,284 +68,359 @@ export default function Login() {
   }
 
   async function handleGoogle() {
+    setError(null);
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/` },
     });
   }
 
+  const passwordStrength = password.length === 0 ? 0
+    : password.length < 6 ? 1
+    : password.length < 8 ? 2
+    : /[A-Z]/.test(password) && /[0-9]/.test(password) ? 3
+    : 2;
+
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setError(null);
+    setSuccess(null);
+  };
+
   return (
-    <div className="text-[#d7e2ff] min-h-screen md:grid md:grid-cols-2 bg-space"
-      style={{ fontFamily: "var(--font-manrope)" }}>
+    <>
+      <AuroraBackground />
+      <div className="lg-shell">
+        <main className="lg-form-pane">
+          <Link href="/" className="lg-brand">
+            <div className="lg-brand-mark">先</div>
+            <div className="lg-brand-text">
+              <span className="lg-brand-name">Sensei</span>
+              <span className="lg-brand-tag">JLPT · AI</span>
+            </div>
+          </Link>
 
-
-      {/* ── Left panel ── */}
-      <div className="hidden md:flex flex-col justify-center h-full gap-8 px-14 py-16 relative overflow-hidden">
-
-        <div className="pointer-events-none absolute bottom-0 left-0 w-[500px] h-[500px] opacity-[0.1] blur-[90px]"
-          style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
-        <div className="pointer-events-none absolute top-1/3 right-0 w-[300px] h-[300px] opacity-[0.07] blur-[70px]"
-          style={{ background: "radial-gradient(circle,#8b5abf,transparent 70%)" }} />
-        <div className="animate-float3 pointer-events-none absolute right-[-20px] top-[15%] text-[260px] font-black leading-none select-none"
-          style={{ color: "transparent", WebkitTextStroke: "1px rgba(107,156,218,0.08)", fontFamily: "var(--font-jakarta)" }}>
-          学
-        </div>
-        {/* Floating mini kanji */}
-        <div className="animate-float pointer-events-none absolute left-[60%] top-[20%] text-5xl font-black select-none opacity-[0.06]"
-          style={{ color: "#6b9cda", fontFamily: "var(--font-jakarta)" }}>語</div>
-        <div className="animate-float2 pointer-events-none absolute left-[75%] top-[60%] text-4xl font-black select-none opacity-[0.05]"
-          style={{ color: "#a67bd4", fontFamily: "var(--font-jakarta)" }}>文</div>
-
-        {/* Logo */}
-        <div className="relative flex items-center gap-2.5">
-          <div className="size-7 rounded-lg flex items-center justify-center text-xs font-black text-[#071327]"
-            style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)" }}>S</div>
-          <div>
-            <p className="text-sm font-bold text-[#d7e2ff] leading-none"
-              style={{ fontFamily: "var(--font-jakarta)" }}>Sensei JLPT</p>
-            <p className="text-[9px] text-[#4a5a7a] tracking-widest mt-0.5"
-              style={{ fontFamily: "var(--font-space)" }}>THE INTELLIGENT SENSEI</p>
-          </div>
-        </div>
-
-        {/* Hero */}
-        <div className="relative flex flex-col gap-6">
-          <div className="flex items-center gap-2 self-start px-3 py-1.5 rounded-full"
-            style={{ background: "#1f2a3f" }}>
-            <Sparkles className="size-3 text-[#bbc6e2]" />
-            <span className="text-[10px] font-semibold text-[#bbc6e2]"
-              style={{ fontFamily: "var(--font-space)" }}>N2 VOCABULARY FOCUS</span>
+          <div className="lg-tabs">
+            <button
+              type="button"
+              className={`lg-tab${mode === "signin" ? " on" : ""}`}
+              onClick={() => switchMode("signin")}
+            >
+              Masuk
+            </button>
+            <button
+              type="button"
+              className={`lg-tab${mode === "signup" ? " on" : ""}`}
+              onClick={() => switchMode("signup")}
+            >
+              Daftar
+              <span className="lg-tab-pill">Gratis</span>
+            </button>
           </div>
 
-          <h1 className="text-[2.4rem] font-extrabold leading-[1.1] tracking-tight text-[#d7e2ff] animate-fade-in"
-            style={{ fontFamily: "var(--font-jakarta)" }}>
-            Belajar JLPT lebih{" "}
-            <span style={{ background: "linear-gradient(135deg,#5ea87a,#3a9a6a)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              cerdas
-            </span>
-            {" "}dan lebih{" "}
-            <span className="shimmer-text">cepat.</span>
-          </h1>
+          <div className="lg-form-wrap">
+            {mode === "signin" ? (
+              <>
+                <h1 className="lg-title">Selamat datang kembali.</h1>
+                <p className="lg-sub">
+                  Lanjutkan progres belajarmu — tinggal sedikit lagi ke target JLPT.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="lg-title">Mulai belajar smart.</h1>
+                <p className="lg-sub">
+                  Gratis selamanya — 10 analisis foto/hari + 50 kotoba. Upgrade kapan aja.
+                </p>
+              </>
+            )}
 
-          <p className="text-sm text-[#8a9bbf] leading-relaxed">
-            AI yang memahami kelemahan kamu dan melatih tepat sasaran setiap hari.
-          </p>
-
-          <div className="flex flex-col gap-2.5">
-            {[
-              { icon: Camera,    accent: "#4a7abf", title: "Analisis foto soal",    desc: "Upload soal, AI langsung jelaskan",       badge: "AI",  badgeBg: "rgba(74,122,191,0.2)",  badgeColor: "#6b9cda" },
-              { icon: BarChart2, accent: "#8b5abf", title: "Lacak progres N2 kamu", desc: "Statistik detail per kategori soal",      badge: "Pro", badgeBg: "rgba(139,90,191,0.2)", badgeColor: "#b07ad4" },
-              { icon: Flame,     accent: "#5ea87a", title: "Streak harian",          desc: "Konsisten setiap hari menuju N2",         badge: null,  badgeBg: "",                      badgeColor: "" },
-            ].map(({ icon: Icon, accent, title, desc, badge, badgeBg, badgeColor }) => (
-              <div key={title}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl relative overflow-hidden backdrop-blur-md"
-                style={{ background: "rgba(16,27,48,0.6)", border: "1px solid rgba(107,156,218,0.08)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}>
-                <div className="absolute inset-0 opacity-30"
-                  style={{ background: `radial-gradient(circle at left,${accent}18,transparent 60%)` }} />
-                <div className="relative size-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: `${accent}20` }}>
-                  <Icon className="size-4" style={{ color: accent }} />
-                </div>
-                <div className="relative flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[#d7e2ff]" style={{ fontFamily: "var(--font-jakarta)" }}>{title}</p>
-                  <p className="text-[10px] text-[#4a5a7a]">{desc}</p>
-                </div>
-                {badge && (
-                  <span className="relative text-[9px] px-2 py-0.5 rounded-full font-bold shrink-0"
-                    style={{ background: badgeBg, color: badgeColor, fontFamily: "var(--font-space)" }}>
-                    {badge}
-                  </span>
-                )}
+            {error && (
+              <div className="lg-error">
+                <AlertCircle size={14} strokeWidth={1.8} /> {error}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Social proof */}
-        <div className="relative flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center">
-              {avatarColors.map((c, i) => (
-                <div key={i}
-                  className="size-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white"
-                  style={{ background: `linear-gradient(135deg,${c},${c}99)`, borderColor: "#071327", marginLeft: i === 0 ? 0 : -8, zIndex: avatarColors.length - i, position: "relative" }}>
-                  {["A","B","C","D","E"][i]}
-                </div>
-              ))}
-            </div>
-            <span className="flex items-center gap-1.5 text-xs text-[#8a9bbf]">
-              <TrendingUp className="size-3.5 text-[#5ea87a]" />
-              +91k pelajar aktif belajar bareng setiap hari
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {["N5","N4","N3","N2","N1"].map((l, i) => (
-              <div key={l} className="px-2.5 py-1 rounded-full text-[10px] font-bold"
-                style={{ background: i === 3 ? "linear-gradient(135deg,#bbc6e2,#6b8cba)" : "#1f2a3f", color: i === 3 ? "#071327" : "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                {l}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Right panel ── */}
-      <div className="flex flex-col justify-center min-h-screen px-6 py-10 md:px-16 relative backdrop-blur-xl"
-        style={{ background: "rgba(8,16,36,0.7)", borderLeft: "1px solid rgba(107,156,218,0.08)" }}>
-
-        <div className="pointer-events-none absolute top-0 right-0 w-[400px] h-[300px] opacity-[0.05] blur-[80px]"
-          style={{ background: "radial-gradient(circle,#bbc6e2,transparent 70%)" }} />
-
-        <div className="w-full max-w-sm mx-auto relative">
-
-          {/* Tab toggle */}
-          <div className="flex mb-8 p-1 rounded-xl backdrop-blur-md"
-            style={{ background: "rgba(20,35,70,0.5)", border: "1px solid rgba(107,156,218,0.12)" }}>
-            {(["login","register"] as const).map(m => (
-              <button key={m} onClick={() => { setMode(m); setError(null); setSuccess(null); }}
-                className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={mode === m ? {
-                  background: "linear-gradient(135deg,#0d1929,#162030)",
-                  color: "#d7e2ff",
-                  boxShadow: "0 1px 6px rgba(0,0,0,0.4)",
-                  fontFamily: "var(--font-jakarta)",
-                } : {
-                  color: "#4a5a7a",
-                  fontFamily: "var(--font-jakarta)",
-                }}>
-                {m === "login" ? "Masuk" : "Daftar"}
-              </button>
-            ))}
-          </div>
-
-          {/* Heading */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-extrabold text-[#d7e2ff] mb-1"
-              style={{ fontFamily: "var(--font-jakarta)" }}>
-              {mode === "login" ? "Selamat Datang" : "Buat Akun Baru"}
-            </h2>
-            <p className="text-sm text-[#4a5a7a]">
-              {mode === "login"
-                ? "Masuk untuk melanjutkan perjalanan belajar kamu."
-                : "Gratis selamanya. Upgrade kapan saja."}
-            </p>
-          </div>
-
-          {/* Error / success */}
-          {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-red-300"
-              style={{ background: "rgba(192,80,80,0.12)", border: "1px solid rgba(192,80,80,0.2)" }}>
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-green-300"
-              style={{ background: "rgba(94,168,122,0.12)", border: "1px solid rgba(94,168,122,0.2)" }}>
-              {success}
-            </div>
-          )}
-
-          {/* Form */}
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-
-            {mode === "register" && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-[#4a5a7a]"
-                  style={{ fontFamily: "var(--font-space)" }}>NAMA PENGGUNA</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="namakamu"
-                  className="w-full px-4 py-3 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                  style={{ background: "#1f2a3f", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                  onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-                />
+            )}
+            {success && (
+              <div className="lg-success">
+                <Check size={14} strokeWidth={2.2} /> {success}
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold text-[#4a5a7a]"
-                style={{ fontFamily: "var(--font-space)" }}>ALAMAT EMAIL</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="kamu@email.com"
-                required
-                className="w-full px-4 py-3 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                style={{ background: "#1f2a3f", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                onBlur={e => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
-              />
+            <div className="lg-social">
+              <button
+                type="button"
+                className="lg-social-btn"
+                onClick={handleGoogle}
+                disabled={loading}
+              >
+                <GoogleLogo />
+                {mode === "signin" ? "Lanjut" : "Daftar"} dengan Google
+              </button>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-semibold text-[#4a5a7a]"
-                  style={{ fontFamily: "var(--font-space)" }}>KATA SANDI</label>
-                {mode === "login" && (
-                  <a href="#" className="text-[11px] text-[#4a7abf] hover:text-[#6b9cda] transition-colors">
-                    Lupa sandi?
-                  </a>
-                )}
-              </div>
-              <div className="relative">
+            <div className="lg-divider">
+              <span>atau pakai email</span>
+            </div>
+
+            <form className="lg-form" onSubmit={handleSubmit}>
+              {mode === "signup" && (
+                <FormField label="Nama">
+                  <span className="lg-field-icon"><UserIcon size={14} /></span>
+                  <input
+                    type="text"
+                    placeholder="Nama lengkap kamu"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    autoFocus
+                  />
+                </FormField>
+              )}
+              <FormField label="Email">
+                <span className="lg-field-icon"><Mail size={14} /></span>
+                <input
+                  type="email"
+                  placeholder="kamu@gmail.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  autoFocus={mode === "signin"}
+                  required
+                />
+              </FormField>
+              <FormField
+                label="Password"
+                footer={
+                  mode === "signin"
+                    ? <button type="button" className="lg-forgot">Lupa password?</button>
+                    : (password.length > 0
+                        ? <PasswordStrength level={passwordStrength} />
+                        : <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>Minimal 8 karakter, kombinasi huruf besar + angka</span>)
+                }
+              >
+                <span className="lg-field-icon"><Lock size={14} /></span>
                 <input
                   type={showPass ? "text" : "password"}
+                  placeholder={mode === "signin" ? "••••••••" : "Minimal 8 karakter"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 pr-11 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none transition-all"
-                  style={{ background: "#1f2a3f", border: "1px solid rgba(187,198,226,0.08)", fontFamily: "var(--font-manrope)" }}
-                  onFocus={e => e.currentTarget.style.borderColor = "rgba(107,156,218,0.4)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "rgba(187,198,226,0.08)"}
                 />
-                <button type="button"
+                <button
+                  type="button"
+                  className="lg-eye"
                   onClick={() => setShowPass(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a5a7a] hover:text-[#8a9bbf] transition-colors">
-                  {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  aria-label={showPass ? "Sembunyikan password" : "Tampilkan password"}
+                >
+                  {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
-              </div>
-            </div>
+              </FormField>
 
-            <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all hover:brightness-110 mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(135deg,#3a9a6a,#5ea87a)", boxShadow: "0 0 24px rgba(94,168,122,0.35)", fontFamily: "var(--font-jakarta)" }}>
-              {loading
-                ? <Loader2 className="size-4 animate-spin" />
-                : <>{mode === "login" ? "Masuk" : "Buat Akun"} <ArrowRight className="size-4" /></>
-              }
-            </button>
-          </form>
+              {mode === "signup" && (
+                <div className="lg-field">
+                  <label className="lg-field-label">Target level JLPT</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+                    {(["N5", "N4", "N3", "N2", "N1"] as Level[]).map(lv => (
+                      <button
+                        key={lv}
+                        type="button"
+                        className={`pg-lv-tile${targetLevel === lv ? " on" : ""}`}
+                        onClick={() => setTargetLevel(lv)}
+                        style={{ padding: 10 }}
+                      >
+                        <span className="pg-lv-letter" style={{ fontSize: 14 }}>{lv}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
-            <span className="text-xs text-[#2a354b]">atau masuk dengan</span>
-            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+              {mode === "signin" ? (
+                <label className="lg-remember">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={e => setRemember(e.target.checked)}
+                  />
+                  <span>Tetap login di device ini</span>
+                </label>
+              ) : (
+                <label className="lg-remember">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={e => setAgreed(e.target.checked)}
+                  />
+                  <span>
+                    Setuju dengan <a href="#" onClick={e => e.preventDefault()}>Syarat</a> &amp;{" "}
+                    <a href="#" onClick={e => e.preventDefault()}>Privasi</a>
+                  </span>
+                </label>
+              )}
+
+              <button type="submit" className="lg-primary-cta" disabled={loading}>
+                {loading ? (
+                  <>Memproses...</>
+                ) : mode === "signin" ? (
+                  <>Masuk <ArrowRight size={14} strokeWidth={2} /></>
+                ) : (
+                  <><Sparkles size={13} fill="white" strokeWidth={1.2} /> Buat akun &amp; mulai</>
+                )}
+              </button>
+            </form>
+
+            <p className="lg-switch">
+              {mode === "signin" ? (
+                <>Belum punya akun? <button type="button" onClick={() => switchMode("signup")}>Daftar gratis →</button></>
+              ) : (
+                <>Sudah punya akun? <button type="button" onClick={() => switchMode("signin")}>Masuk →</button></>
+              )}
+            </p>
           </div>
 
-          {/* Google OAuth */}
-          <button onClick={handleGoogle}
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl text-sm font-semibold text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5 transition-all mb-7"
-            style={{ background: "#1f2a3f", border: "1px solid rgba(187,198,226,0.06)", fontFamily: "var(--font-manrope)" }}>
-            <span className="font-black text-base" style={{ fontFamily: "sans-serif" }}>G</span>
-            Lanjutkan dengan Google
-          </button>
+          <footer className="lg-footer">
+            <span>© 2026 Sensei JLPT</span>
+            <span className="lg-footer-sep">·</span>
+            <a href="#" onClick={e => e.preventDefault()}>Syarat</a>
+            <a href="#" onClick={e => e.preventDefault()}>Privasi</a>
+            <a href="#" onClick={e => e.preventDefault()}>Bantuan</a>
+          </footer>
+        </main>
 
-          <p className="text-center text-sm text-[#4a5a7a]">
-            {mode === "login" ? "Belum punya akun? " : "Sudah punya akun? "}
-            <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(null); setSuccess(null); }}
-              className="font-semibold text-[#6b9cda] hover:text-[#bbc6e2] transition-colors">
-              {mode === "login" ? "Daftar Sekarang" : "Masuk"}
-            </button>
-          </p>
+        <VisualPanel />
+      </div>
+    </>
+  );
+}
+
+/* ─── Subcomponents ─── */
+
+function FormField({
+  label, footer, children,
+}: { label: string; footer?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="lg-field">
+      <label className="lg-field-label">{label}</label>
+      <div className="lg-field-input">{children}</div>
+      {footer && <div className="lg-field-footer">{footer}</div>}
+    </div>
+  );
+}
+
+function PasswordStrength({ level }: { level: number }) {
+  const label = level === 1 ? "Lemah" : level === 2 ? "Sedang" : level >= 3 ? "Bagus" : "—";
+  const color = level === 1 ? "var(--accent-rose)" : level === 2 ? "var(--accent-amber)" : "var(--accent-emerald)";
+  return (
+    <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ flex: 1, display: "flex", gap: 3, height: 4 }}>
+        {[1, 2, 3, 4].map(i => (
+          <span
+            key={i}
+            style={{
+              flex: 1,
+              borderRadius: 2,
+              background: i <= level ? color : "var(--surface-2)",
+              boxShadow: i <= level ? `0 0 4px ${color}` : "none",
+            }}
+          />
+        ))}
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 600, color }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function VisualPanel() {
+  return (
+    <section className="lg-visual">
+      <div className="lg-visual-bg" />
+
+      <div className="lg-kanji-stage">
+        <div className="lg-kanji-glow" />
+        <div className="lg-kanji-glyph">学</div>
+      </div>
+
+      <div className="lg-mini-card lg-mini-1">
+        <div className="lg-mini-head">
+          <span className="lg-mini-tag">N2</span>
+          <span className="lg-mini-meta">11/12</span>
+        </div>
+        <div className="lg-mini-jp">読解 Mock</div>
+        <div className="lg-mini-bar"><span style={{ width: "92%" }} /></div>
+      </div>
+
+      <div className="lg-mini-card lg-mini-2">
+        <div className="lg-mini-streak">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="url(#flameLg)" aria-hidden>
+            <defs>
+              <linearGradient id="flameLg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#E8C57E" />
+                <stop offset="0.6" stopColor="#D4A04A" />
+                <stop offset="1" stopColor="#A4243B" />
+              </linearGradient>
+            </defs>
+            <path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4-1 4 3 4 3 1 0-3-2-4 0-7z" />
+          </svg>
+          <span>5 hari streak</span>
         </div>
       </div>
-    </div>
+
+      <div className="lg-mini-card lg-mini-3">
+        <div className="lg-mini-eyebrow">Kosakata baru</div>
+        <div className="lg-mini-kanji">諦</div>
+        <div className="lg-mini-reading">あきら・める</div>
+      </div>
+
+      <div className="lg-visual-content">
+        <span className="lg-visual-eyebrow">
+          <Sparkles size={11} fill="currentColor" strokeWidth={1} />
+          Sensei JLPT
+        </span>
+        <h2 className="lg-visual-title">
+          Foto soal.<br />
+          Dapatkan pembahasan.<br />
+          <span className="grad">Hafal lebih cepat.</span>
+        </h2>
+
+        <ul className="lg-visual-bullets">
+          <li>
+            <span className="lvb-icon iris"><Zap size={11} strokeWidth={1.6} /></span>
+            Analisis foto soal Jepang dalam detik
+          </li>
+          <li>
+            <span className="lvb-icon emerald"><Check size={11} strokeWidth={2.4} /></span>
+            Kotoba auto-tersimpan ke Kamus
+          </li>
+          <li>
+            <span className="lvb-icon amber"><Shield size={11} strokeWidth={1.6} /></span>
+            14 hari free trial, cancel kapan saja
+          </li>
+        </ul>
+
+        <div className="lg-visual-social-proof">
+          <div className="lg-avatars">
+            {["B", "R", "P", "M", "+"].map((a, i) => (
+              <span key={i} className={`lg-mini-avatar lg-av-${i}`}>{a}</span>
+            ))}
+          </div>
+          <div className="lg-proof-text">
+            <strong>2,400+ pelajar</strong>
+            <span>sudah lulus JLPT pakai Sensei</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GoogleLogo() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden>
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34.5 6 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+      <path fill="#FF3D00" d="M6.3 14.7L13 19.5C14.7 14.9 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34.5 6 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 14-5.4l-6.5-5.5c-1.9 1.5-4.4 2.4-7.5 2.4-5.3 0-9.7-3.1-11.3-7.6l-6.6 5C9.6 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2.1-2.1 3.9-3.9 5.1h0l6.5 5.5c-.5.4 7.1-5.2 7.1-14.6 0-1.3-.1-2.4-.4-3.5z" />
+    </svg>
   );
 }
