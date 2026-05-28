@@ -7,7 +7,7 @@ import KamusFlashCard from "@/components/KamusFlashCard";
 import {
   Camera, Bell, Upload, ArrowUpRight,
   CheckCircle2, Circle, Sparkles,
-  ChevronLeft, RotateCcw,
+  ChevronLeft, ChevronDown, RotateCcw,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck,
   BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
 } from "lucide-react";
@@ -1538,336 +1538,282 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                     </div>
                   )}
 
-                  {/* ── Question card ── */}
-                  <div className="rounded-3xl overflow-hidden transition-all"
-                    style={{
-                      background: isRevealed ? `rgba(16,27,48,0.75)` : "rgba(16,27,48,0.55)",
-                      backdropFilter: "blur(16px)",
-                      WebkitBackdropFilter: "blur(16px)",
-                      border: `1px solid ${isRevealed ? `${accent}45` : "rgba(107,156,218,0.12)"}`,
-                      boxShadow: isRevealed ? `0 0 40px ${accent}20, 0 4px 24px rgba(0,0,0,0.3)` : "0 4px 16px rgba(0,0,0,0.2)",
-                    }}>
-
-                  {/* Question header strip */}
-                  <div className="px-4 md:px-6 py-4 md:py-5 relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-[0.08]"
-                      style={{ background: `radial-gradient(circle at top left,${accent},transparent 60%)` }} />
-                    <div className="absolute top-0 left-0 w-1 h-full rounded-l-3xl"
-                      style={{ background: `linear-gradient(180deg,${accent},${accent}40)` }} />
-
-                    <div className="relative flex items-start gap-3 md:gap-4">
-                      {/* Number badge */}
-                      <div className="size-8 md:size-9 rounded-xl flex items-center justify-center text-xs md:text-sm font-black shrink-0 mt-0.5"
-                        style={{ background: `${accent}20`, color: accent, fontFamily: "var(--font-space)" }}>
-                        {qi + 1}
+                  {/* ── Question card v2 ── */}
+                  <article className="glass-card qc-v2">
+                    <div className="qc-v2-head">
+                      <span className="qc-v2-num">{qi + 1}</span>
+                      {q.category && (
+                        <span className="qc-v2-cat-tag">{q.category}</span>
+                      )}
+                      {(() => {
+                        const qKey = `q-${qi}`;
+                        const on = showFurigana.has(qKey);
+                        const loading = furiganaLoading.has(qKey);
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => toggleFurigana(qKey, q.question)}
+                            disabled={loading}
+                            className={`qc-furi-toggle${on ? " on" : ""}`}
+                            title="Toggle furigana di soal"
+                          >
+                            {loading
+                              ? <Loader2 className="size-2.5 animate-spin" />
+                              : <span className="furi-jp">ふ</span>}
+                            SOAL
+                            {on && !loading && <Check size={10} strokeWidth={2.4} />}
+                          </button>
+                        );
+                      })()}
+                      {(() => {
+                        const optKeys = q.options.map((_, oi) => `o-${qi}-${oi}`);
+                        const allOn = optKeys.every(k => showFurigana.has(k));
+                        const anyLoading = optKeys.some(k => furiganaLoading.has(k));
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => toggleAllOptions(qi, q.options)}
+                            disabled={anyLoading}
+                            className={`qc-furi-toggle furi-opsi${allOn ? " on" : ""}`}
+                            title="Toggle furigana di semua pilihan"
+                          >
+                            {anyLoading
+                              ? <Loader2 className="size-2.5 animate-spin" />
+                              : <span className="furi-jp">ふ</span>}
+                            OPSI
+                            {allOn && !anyLoading && <Check size={10} strokeWidth={2.4} />}
+                          </button>
+                        );
+                      })()}
+                      <div className="qc-v2-actions">
+                        <button
+                          type="button"
+                          onClick={() => toggleReviewFlag(qi)}
+                          disabled={savingFlagIdx === qi}
+                          title={q.needs_review ? "Lepas tanda review" : "Tandai perlu review"}
+                          className={`qc-act review${q.needs_review ? " on" : ""}`}
+                        >
+                          <Flag size={12} strokeWidth={1.8} /> REVIEW
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(qi)}
+                          title="Edit soal manual"
+                          className="qc-act edit"
+                        >
+                          <Pencil size={12} strokeWidth={1.8} /> EDIT
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteQuestion(qi)}
+                          title="Hapus soal"
+                          className="qc-act delete"
+                        >
+                          <Trash2 size={12} strokeWidth={1.8} />
+                        </button>
                       </div>
+                    </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          {q.category && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold inline-block"
-                              style={{ background: `${accent}20`, color: accent, fontFamily: "var(--font-space)" }}>
-                              {q.category}
+                    {(() => {
+                      const qKey = `q-${qi}`;
+                      const useFuri = showFurigana.has(qKey) && furiganaMarked[qKey];
+                      return (
+                        <p className="qc-v2-prompt font-jp-sans">
+                          {useFuri
+                            ? renderPassage(furiganaMarked[qKey])
+                            : renderQuestion(q.question, accent)}
+                        </p>
+                      );
+                    })()}
+
+                    <div className="qc-v2-options">
+                      {q.options.map((opt, oi) => {
+                        const id = opt.charAt(0);
+                        const isSelected = userAns === id;
+                        const isCorrect = id === q.correct;
+                        const optText = opt.slice(2).trim();
+                        const opKey = `o-${qi}-${oi}`;
+                        const useFuri = showFurigana.has(opKey) && furiganaMarked[opKey];
+
+                        let cls = "";
+                        if (isRevealed) {
+                          if (isCorrect) cls = "correct";
+                          else if (isSelected) cls = "wrong";
+                          else cls = "dim";
+                        } else if (isSelected) cls = "picked";
+
+                        return (
+                          <div
+                            key={opt}
+                            role="button"
+                            tabIndex={0}
+                            className={`qc-v2-option ${cls}`}
+                            onClick={() => { if (!isRevealed || isReview) pick(qi, id); }}
+                            onKeyDown={(e) => {
+                              if ((e.key === "Enter" || e.key === " ") && (!isRevealed || isReview)) {
+                                e.preventDefault();
+                                pick(qi, id);
+                              }
+                            }}
+                          >
+                            <span className="qc-v2-bullet">{id}</span>
+                            <span className="qc-v2-opt-text font-jp-sans">
+                              {useFuri ? renderPassage(furiganaMarked[opKey]) : optText}
                             </span>
-                          )}
-                          {(() => {
-                            const qKey = `q-${qi}`;
-                            return (
-                              <button
-                                onClick={() => toggleFurigana(qKey, q.question)}
-                                disabled={furiganaLoading.has(qKey)}
-                                className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all disabled:opacity-50"
-                                style={{ background: showFurigana.has(qKey) ? "rgba(138,180,232,0.22)" : "rgba(138,180,232,0.1)", color: "#8ab4e8", fontFamily: "var(--font-space)" }}>
-                                {furiganaLoading.has(qKey) ? <Loader2 className="size-2.5 animate-spin" /> : "ふ"}
-                                {furiganaLoading.has(qKey) ? "SOAL…" : showFurigana.has(qKey) ? "SOAL ✓" : "SOAL"}
-                              </button>
-                            );
-                          })()}
-                          {(() => {
-                            const optKeys = q.options.map((_, oi) => `o-${qi}-${oi}`);
-                            const allShowing = optKeys.every(k => showFurigana.has(k));
-                            const anyLoading = optKeys.some(k => furiganaLoading.has(k));
-                            return (
-                              <button
-                                onClick={() => toggleAllOptions(qi, q.options)}
-                                disabled={anyLoading}
-                                className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all disabled:opacity-50"
-                                style={{ background: allShowing ? "rgba(166,123,212,0.22)" : "rgba(166,123,212,0.1)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-                                {anyLoading ? <Loader2 className="size-2.5 animate-spin" /> : "ふ"}
-                                {anyLoading ? "OPSI…" : allShowing ? "OPSI ✓" : "OPSI"}
-                              </button>
-                            );
-                          })()}
-                          <div className="flex items-center gap-1.5 ml-auto">
-                            <button onClick={() => toggleReviewFlag(qi)}
-                              disabled={savingFlagIdx === qi}
-                              title={q.needs_review ? "Sudah ditandai perlu review — klik untuk lepas" : "Tandai soal ini perlu direview/diedit"}
-                              className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all hover:brightness-110 disabled:opacity-50"
-                              style={q.needs_review
-                                ? { background: "rgba(224,123,74,0.2)", color: "#e07b4a", border: "1px solid rgba(224,123,74,0.35)", fontFamily: "var(--font-space)" }
-                                : { background: "rgba(74,90,122,0.12)", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                              <Flag className="size-2.5" />
-                              {q.needs_review ? "REVIEW ✓" : "REVIEW"}
-                            </button>
-                            <button onClick={() => openEdit(qi)}
-                              title="Edit soal manual"
-                              className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all hover:brightness-110"
-                              style={{ background: "rgba(107,156,218,0.12)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                              <Pencil className="size-2.5" /> EDIT
-                            </button>
-                            <button onClick={() => deleteQuestion(qi)}
-                              title="Hapus soal ini"
-                              className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold transition-all hover:brightness-110"
-                              style={{ background: "rgba(220,80,80,0.12)", color: "#dc5050", fontFamily: "var(--font-space)" }}>
-                              <Trash2 className="size-2.5" />
+                            {isRevealed && isCorrect && (
+                              <Check size={16} strokeWidth={2.4} style={{ color: "var(--accent-emerald)" }} />
+                            )}
+                            {isRevealed && isSelected && !isCorrect && (
+                              <X size={16} strokeWidth={2.4} style={{ color: "var(--accent-rose)" }} />
+                            )}
+                            <span
+                              className="qc-opt-copy"
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(optText, `Opsi ${id} tersalin`); }}
+                              role="button"
+                              tabIndex={-1}
+                              title="Salin teks opsi"
+                            >
+                              <Copy size={12} />
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {!isRevealed && (
+                      <>
+                        <div className="qc-v2-hint">
+                          <span className="qc-hint-emoji">💪</span>
+                          Pilih jawaban dulu sebelum lihat pembahasan
+                        </div>
+                        <button
+                          type="button"
+                          className="qc-reveal-btn"
+                          onClick={() => reveal(qi)}
+                          disabled={!userAns}
+                        >
+                          <span className="reveal-emoji">🔥</span>
+                          <span>LIHAT JAWABAN &amp; PEMBAHASAN</span>
+                          <ChevronDown size={14} strokeWidth={2.4} />
+                        </button>
+                      </>
+                    )}
+
+                    {isRevealed && (() => {
+                      const correctOpt = q.options.find(o => o.startsWith(q.correct));
+                      const correctText = correctOpt?.slice(2).trim() ?? "";
+                      const correctIdx = q.options.findIndex(o => o.startsWith(q.correct));
+                      const correctOpKey = `o-${qi}-${correctIdx}`;
+                      const useFuri = showFurigana.has(correctOpKey) && furiganaMarked[correctOpKey];
+                      const isUserCorrect = userAns === q.correct;
+                      return (
+                        <section className="qc-pembahasan">
+                          <div className="pb-result-badge">
+                            <span className={`prb-icon ${isUserCorrect ? "good" : "bad"}`}>
+                              {isUserCorrect
+                                ? <Check size={14} strokeWidth={2.6} />
+                                : <X size={14} strokeWidth={2.6} />}
+                            </span>
+                            <div className="prb-text">
+                              <strong>
+                                {isUserCorrect
+                                  ? "Mantap, kamu benar!"
+                                  : `Coba lagi — yang benar nomor ${q.correct}`}
+                              </strong>
+                              <span>
+                                Jawaban: <em>Pilihan {q.correct} — {useFuri ? renderPassage(furiganaMarked[correctOpKey]) : correctText}</em>
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(`Pilihan ${q.correct} — ${correctText}`, "Jawaban tersalin")}
+                              title="Salin jawaban"
+                              className="qc-opt-copy"
+                              style={{ opacity: 1 }}
+                            >
+                              <Copy size={12} />
                             </button>
                           </div>
-                        </div>
-                        {/* Question text — blanks highlighted, with optional furigana */}
-                        {(() => {
-                          const qKey = `q-${qi}`;
-                          const useFuri = showFurigana.has(qKey) && furiganaMarked[qKey];
-                          return (
-                            <p className="font-bold"
-                              style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff", fontSize: useFuri ? "clamp(15px,3.6vw,17px)" : "clamp(16px,4vw,18px)", lineHeight: useFuri ? 2.4 : 1.6 }}>
-                              {useFuri ? renderPassage(furiganaMarked[qKey]) : renderQuestion(q.question, accent)}
-                            </p>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
 
-                {/* Options */}
-                <div className="px-4 md:px-6 pb-4 md:pb-5 flex flex-col gap-2 md:gap-2.5">
-                  {q.options.map((opt, oi) => {
-                    const id = opt.charAt(0);
-                    const isSelected = userAns === id;
-                    const isCorrect = id === q.correct;
-                    const optText = opt.slice(2).trim();
-                    const opKey = `o-${qi}-${oi}`;
-                    const useFuri = showFurigana.has(opKey) && furiganaMarked[opKey];
-
-                    let bg = "rgba(99,102,241,0.06)";
-                    let border = "rgba(129,140,248,0.18)";
-                    let textColor = "#e0e7ff";
-                    let numBg = "rgba(129,140,248,0.18)";
-                    let numColor = "#a5b4fc";
-                    let shadow = "none";
-                    let icon = null as React.ReactNode;
-
-                    if (isRevealed && isCorrect) {
-                      bg = "rgba(74,222,128,0.18)"; border = "rgba(74,222,128,0.55)";
-                      textColor = "#f0fdf4"; numBg = "rgba(74,222,128,0.35)"; numColor = "#4ade80";
-                      shadow = "0 0 24px rgba(74,222,128,0.25), inset 0 0 16px rgba(74,222,128,0.05)";
-                      icon = <Check className="size-5 shrink-0" style={{ color: "#4ade80" }} />;
-                    } else if (isRevealed && isSelected && !isCorrect) {
-                      bg = "rgba(248,113,113,0.15)"; border = "rgba(248,113,113,0.5)";
-                      textColor = "#fef2f2"; numBg = "rgba(248,113,113,0.3)"; numColor = "#f87171";
-                      shadow = "0 0 20px rgba(248,113,113,0.2)";
-                      icon = <X className="size-5 shrink-0" style={{ color: "#f87171" }} />;
-                    } else if (isRevealed && !isCorrect) {
-                      bg = "rgba(100,116,139,0.05)"; border = "rgba(100,116,139,0.15)";
-                      textColor = "#94a3b8";
-                    } else if (!isRevealed && isSelected) {
-                      bg = `${accent}25`; border = `${accent}80`;
-                      textColor = "#ffffff"; numBg = `${accent}50`; numColor = "#ffffff";
-                      shadow = `0 0 24px ${accent}40, inset 0 0 12px ${accent}10`;
-                    }
-
-                    return (
-                      <div key={opt} className="relative group/opt">
-                        <button
-                          onClick={() => pick(qi, id)}
-                          disabled={isRevealed && !isReview}
-                          className={`w-full flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl text-left transition-all duration-200 ${(isRevealed && !isReview) ? "cursor-default" : "hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"}`}
-                          style={{ background: bg, border: `1.5px solid ${border}`, color: textColor, boxShadow: shadow }}>
-                          <span className="size-8 md:size-9 rounded-lg md:rounded-xl flex items-center justify-center text-sm md:text-base font-black shrink-0"
-                            style={{ background: numBg, color: numColor, fontFamily: "var(--font-space)" }}>
-                            {id}
-                          </span>
-                          <span className="flex-1 font-semibold pr-2 md:pr-8"
-                            style={{ fontFamily: "var(--font-jakarta)", fontSize: useFuri ? "clamp(13px,3.4vw,15px)" : "clamp(14px,3.8vw,16px)", lineHeight: useFuri ? 2.2 : 1.5 }}>
-                            {useFuri ? renderPassage(furiganaMarked[opKey]) : optText}
-                          </span>
-                          {icon}
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); copyToClipboard(optText, `Opsi ${id} tersalin`); }}
-                          title="Salin teks opsi ini"
-                          className="absolute top-2 right-2 size-7 rounded-lg flex items-center justify-center opacity-0 group-hover/opt:opacity-100 transition-all hover:bg-white/10"
-                          style={{ background: "rgba(8,16,36,0.6)" }}>
-                          <Copy className="size-3 text-[#bbc6e2]" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Reveal CTA — locked until user picks an answer */}
-                {!isRevealed && (
-                  <div className="px-4 md:px-6 pb-4 md:pb-6 flex flex-col gap-2">
-                    {!userAns && (
-                      <p className="text-center text-[11px] font-semibold"
-                        style={{ fontFamily: "var(--font-space)", color: "#94a3b8" }}>
-                        💪 Pilih jawaban dulu sebelum lihat pembahasan
-                      </p>
-                    )}
-                    <button
-                      onClick={() => reveal(qi)}
-                      className="w-full py-3 md:py-3.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-black tracking-wider transition-all hover:brightness-125 hover:scale-[1.01] active:scale-[0.99]"
-                      style={{
-                        background: `linear-gradient(135deg,${accent}60,${accent}30)`,
-                        color: "#ffffff",
-                        border: `1.5px solid ${accent}90`,
-                        boxShadow: `0 0 28px ${accent}40, inset 0 1px 0 rgba(255,255,255,0.1)`,
-                        fontFamily: "var(--font-space)",
-                        textShadow: `0 0 12px ${accent}90`,
-                        cursor: "pointer",
-                      }}>
-                      🔥 LIHAT JAWABAN &amp; PEMBAHASAN ↓
-                    </button>
-                  </div>
-                )}
-
-                {/* Explanation */}
-                {isRevealed && (
-                  <div className="mx-4 md:mx-6 mb-4 md:mb-6 rounded-xl md:rounded-2xl overflow-hidden"
-                    style={{ border: "1px solid rgba(255,255,255,0.05)" }}>
-
-                    {/* Jawaban benar */}
-                    <div className="px-4 md:px-5 py-3.5 md:py-4 flex items-center gap-2.5 md:gap-3"
-                      style={{ background: "rgba(74,222,128,0.12)", borderBottom: "1px solid rgba(74,222,128,0.2)" }}>
-                      <div className="size-8 md:size-9 rounded-lg md:rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: "rgba(74,222,128,0.25)", boxShadow: "0 0 16px rgba(74,222,128,0.3)" }}>
-                        <Check className="size-4 md:size-5" style={{ color: "#4ade80" }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black tracking-widest"
-                          style={{ fontFamily: "var(--font-space)", color: "#4ade80", textShadow: "0 0 10px rgba(74,222,128,0.4)" }}>
-                          ✨ JAWABAN BENAR
-                        </p>
-                        {(() => {
-                          const correctOpt = q.options.find(o => o.startsWith(q.correct));
-                          const correctText = correctOpt?.slice(2).trim() ?? "";
-                          const correctIdx = q.options.findIndex(o => o.startsWith(q.correct));
-                          const opKey = `o-${qi}-${correctIdx}`;
-                          const useFuri = showFurigana.has(opKey) && furiganaMarked[opKey];
-                          return (
-                            <p className="font-bold" style={{ fontFamily: "var(--font-jakarta)", color: "#f8faff", fontSize: useFuri ? "clamp(13px,3.4vw,15px)" : "clamp(14px,3.8vw,16px)", lineHeight: useFuri ? 2.2 : 1.5 }}>
-                              Pilihan {q.correct} — {useFuri ? renderPassage(furiganaMarked[opKey]) : correctText}
-                            </p>
-                          );
-                        })()}
-                      </div>
-                      <button onClick={() => {
-                        const correctOpt = q.options.find(o => o.startsWith(q.correct));
-                        const correctText = correctOpt?.slice(2).trim() ?? "";
-                        copyToClipboard(`Pilihan ${q.correct} — ${correctText}`, "Jawaban tersalin");
-                      }}
-                        title="Salin jawaban"
-                        className="size-8 rounded-lg flex items-center justify-center shrink-0 transition-all hover:brightness-110"
-                        style={{ background: "rgba(74,222,128,0.18)" }}>
-                        <Copy className="size-3.5 text-[#4ade80]" />
-                      </button>
-                    </div>
-
-                    {/* Kenapa benar */}
-                    <div className="px-4 md:px-5 py-3.5 md:py-4" style={{ background: "rgba(20,60,35,0.32)", borderBottom: "1px solid rgba(74,222,128,0.15)" }}>
-                      <p className="text-[11px] font-black mb-2 tracking-wider"
-                        style={{ fontFamily: "var(--font-space)", color: "#4ade80", textShadow: "0 0 12px rgba(74,222,128,0.4)" }}>
-                        💡 KENAPA BENAR?
-                      </p>
-                      <p className="leading-relaxed font-medium" style={{ color: "#ecfdf5", fontSize: "clamp(13px,3.6vw,15px)" }}>{q.explanation}</p>
-                    </div>
-
-                    {/* Kenapa salah */}
-                    {q.why_wrong && (
-                      <div className="px-4 md:px-5 py-3.5 md:py-4" style={{ background: "rgba(60,20,25,0.32)", borderBottom: "1px solid rgba(248,113,113,0.15)" }}>
-                        <p className="text-[11px] font-black mb-2 tracking-wider"
-                          style={{ fontFamily: "var(--font-space)", color: "#f87171", textShadow: "0 0 12px rgba(248,113,113,0.4)" }}>
-                          ✗ KENAPA PILIHAN LAIN SALAH?
-                        </p>
-                        <p className="leading-relaxed font-medium" style={{ color: "#fef2f2", fontSize: "clamp(13px,3.6vw,15px)" }}>{q.why_wrong}</p>
-                      </div>
-                    )}
-
-                    {/* Grammar points */}
-                    {q.grammar_points && q.grammar_points.length > 0 && (
-                      <div className="px-4 md:px-5 py-3.5 md:py-4" style={{ background: "rgba(25,40,80,0.4)", borderBottom: "1px solid rgba(129,140,248,0.18)" }}>
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-[11px] font-black tracking-wider"
-                            style={{ fontFamily: "var(--font-space)", color: "#a5b4fc", textShadow: "0 0 12px rgba(129,140,248,0.4)" }}>
-                            📚 POIN GRAMMAR / KOSAKATA
-                          </p>
-                          <span className="text-[10px] text-[#2a354b]" style={{ fontFamily: "var(--font-space)" }}>
-                            + simpan ke kamus
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {q.grammar_points.map((gp, i) => {
-                            const isSavedWord = savedWords.has(gp.jp);
-                            const isSavingThis = savingWord === gp.jp;
-                            return (
-                            <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl group/chip"
-                              style={{ background: isSavedWord ? "rgba(94,168,122,0.12)" : "#1f2a3f",
-                                border: isSavedWord ? "1px solid rgba(94,168,122,0.25)" : "1px solid transparent" }}>
-                              <div className="flex flex-col leading-tight">
-                                <span className="text-sm font-bold"
-                                  style={{ fontFamily: "var(--font-jakarta)", color: isSavedWord ? "#5ea87a" : "#d7e2ff" }}>{gp.jp}</span>
-                                {gp.reading && (
-                                  <span className="text-[10px] text-[#4a5a7a]">{gp.reading}</span>
-                                )}
-                              </div>
-                              <span className="text-xs text-[#4a5a7a]">=</span>
-                              <span className="text-xs text-[#8a9bbf]">{gp.id}</span>
-                              <button
-                                onClick={() => saveWord(gp.jp, gp.id)}
-                                disabled={isSavedWord || isSavingThis}
-                                className="ml-1 transition-all disabled:opacity-50"
-                                title={isSavedWord ? "Sudah di kamus" : "Simpan ke Kamus"}>
-                                {isSavingThis
-                                  ? <Loader2 className="size-3.5 text-[#4a5a7a] animate-spin" />
-                                  : isSavedWord
-                                    ? <BookmarkCheck className="size-3.5 text-[#5ea87a]" />
-                                    : <BookmarkPlus className="size-3.5 text-[#4a5a7a] hover:text-[#6b9cda] transition-colors" />}
-                              </button>
+                          <div className="qc-pb-section pb-good">
+                            <div className="qc-pb-head">
+                              <Sparkles size={13} strokeWidth={1.8} fill="currentColor" /> KENAPA BENAR
                             </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                            <p className="qc-pb-body">{q.explanation}</p>
+                          </div>
 
-                    {/* Tip */}
-                    {q.tip && (
-                      <div className="px-4 md:px-5 py-3.5 md:py-4" style={{ background: "rgba(55,38,8,0.35)" }}>
-                        <p className="text-[11px] font-black mb-2 tracking-wider"
-                          style={{ fontFamily: "var(--font-space)", color: "#fbbf24", textShadow: "0 0 12px rgba(251,191,36,0.4)" }}>
-                          🎯 TIPS & TRIK UJIAN
-                        </p>
-                        <p className="leading-relaxed font-medium" style={{ color: "#fef3c7", fontSize: "clamp(13px,3.6vw,15px)" }}>{q.tip}</p>
-                      </div>
-                    )}
+                          {q.why_wrong && (
+                            <div className="qc-pb-section pb-bad">
+                              <div className="qc-pb-head">
+                                <X size={13} strokeWidth={2} /> PILIHAN LAIN SALAH
+                              </div>
+                              <p className="qc-pb-body">{q.why_wrong}</p>
+                            </div>
+                          )}
 
-                    {/* ── Simpan ke Catatan ── */}
-                    <div className="px-4 md:px-5 py-3" style={{ borderTop: "1px solid rgba(107,156,218,0.06)" }}>
-                      <button
-                        onClick={() => saveNoteToCatatan(qi, q)}
-                        disabled={savedNotes.has(qi) || savingNote === qi}
-                        className="flex items-center gap-1.5 text-[11px] font-bold transition-all disabled:opacity-50 hover:brightness-110"
-                        style={savedNotes.has(qi)
-                          ? { color: "#5ea87a", fontFamily: "var(--font-space)" }
-                          : { color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-                        {savingNote === qi
-                          ? <Loader2 className="size-3 animate-spin" />
-                          : savedNotes.has(qi) ? "✓" : "📝"}
-                        {savedNotes.has(qi) ? "TERSIMPAN DI CATATAN" : savingNote === qi ? "MENYIMPAN…" : "SIMPAN KE CATATAN"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                          {q.grammar_points && q.grammar_points.length > 0 && (
+                            <div className="qc-pb-section" style={{ background: "rgba(85,112,181,0.05)", border: "1px solid rgba(85,112,181,0.22)" }}>
+                              <div className="qc-pb-head" style={{ color: "var(--accent-cyan)" }}>
+                                <BookOpen size={12} strokeWidth={1.8} /> POIN GRAMMAR / KOSAKATA
+                              </div>
+                              <div className="qc-pb-grammar">
+                                {q.grammar_points.map((gp, i) => {
+                                  const isSavedWord = savedWords.has(gp.jp);
+                                  const isSavingThis = savingWord === gp.jp;
+                                  return (
+                                    <div key={i} className="qc-pb-grammar-row">
+                                      <span className="qc-pb-grammar-jp">{gp.jp}</span>
+                                      {gp.reading && <span className="qc-pb-grammar-reading">{gp.reading}</span>}
+                                      <span className="qc-pb-grammar-meaning">{gp.id}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => saveWord(gp.jp, gp.id)}
+                                        disabled={isSavedWord || isSavingThis}
+                                        className="dh-icon-btn"
+                                        style={{ width: 26, height: 26 }}
+                                        title={isSavedWord ? "Sudah di Kamus" : "Simpan ke Kamus"}
+                                      >
+                                        {isSavingThis
+                                          ? <Loader2 className="size-3 animate-spin" />
+                                          : isSavedWord
+                                            ? <BookmarkCheck size={12} style={{ color: "var(--accent-emerald)" }} />
+                                            : <BookmarkPlus size={12} />}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {q.tip && (
+                            <div className="qc-pb-section pb-tips">
+                              <div className="qc-pb-head">
+                                <Sparkles size={12} strokeWidth={1} fill="currentColor" /> TIPS UJIAN
+                              </div>
+                              <p className="qc-pb-body">{q.tip}</p>
+                            </div>
+                          )}
+
+                          <div className="qc-pb-footer">
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => saveNoteToCatatan(qi, q)}
+                              disabled={savedNotes.has(qi) || savingNote === qi}
+                            >
+                              {savingNote === qi
+                                ? <Loader2 className="size-3 animate-spin" />
+                                : savedNotes.has(qi)
+                                  ? <Check size={12} />
+                                  : <BookmarkPlus size={12} />}
+                              {savedNotes.has(qi) ? "Tersimpan di Catatan" : savingNote === qi ? "Menyimpan..." : "Simpan ke Catatan"}
+                            </button>
+                          </div>
+                        </section>
+                      );
+                    })()}
+                  </article>
               </div>
             );
           });
