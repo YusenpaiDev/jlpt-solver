@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Sparkles, Check, X, Zap, ArrowRight, Camera, BarChart2,
-  BookOpen, Flame, Brain, Shield, Headphones, Star, Loader2,
-} from "lucide-react";
-import AppHeader from "@/components/AppHeader";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
+import { Check, X, Sparkles, Star } from "lucide-react";
 
 /* ─── Midtrans Snap types ─────────────────────────────────────── */
 declare global {
@@ -21,432 +21,407 @@ declare global {
   }
 }
 
-/* ─── Plan data ───────────────────────────────────────────────── */
-const plans = [
+type Cycle = "monthly" | "yearly";
+type PlanColor = "slate" | "iris" | "gold";
+
+interface PlanFeature {
+  t: string;
+  on: boolean;
+  highlight?: boolean;
+}
+
+interface Plan {
+  id: "free" | "pro" | "lifetime";
+  name: string;
+  tagline: string;
+  monthly: number | null;
+  yearly?: number | null;
+  yearlyDiscount?: number;
+  lifetimePrice?: number;
+  cta: string;
+  color: PlanColor;
+  popular?: boolean;
+  features: PlanFeature[];
+}
+
+const PLANS: Plan[] = [
   {
-    id: "gratis",
-    name: "Gratis",
-    desc: "Untuk mulai belajar JLPT",
-    priceMonthly: 0,
-    priceYearly: 0,
-    yearlyTotal: 0,
-    accent: "#4a5a7a",
-    gradient: "linear-gradient(135deg,#1f2a3f,#101b30)",
-    cta: "Mulai Gratis",
-    ctaStyle: { background: "#1f2a3f", color: "#bbc6e2" },
-    popular: false,
+    id: "free",
+    name: "Sensei Free",
+    tagline: "Buat eksplor & latihan ringan",
+    monthly: 0,
+    yearly: 0,
+    cta: "Plan kamu sekarang",
+    color: "slate",
     features: [
-      { text: "15 analisis foto per bulan",       ok: true  },
-      { text: "Kamus dasar (N5–N4)",              ok: true  },
-      { text: "Statistik mingguan",               ok: true  },
-      { text: "Latihan kilat harian",             ok: true  },
-      { text: "Analisis foto unlimited",          ok: false },
-      { text: "Statistik detail & heatmap",       ok: false },
-      { text: "Kamus lengkap N1–N5",              ok: false },
-      { text: "Lembar tugas otomatis",            ok: false },
-      { text: "Mock test N1–N5",                  ok: false },
-      { text: "Konsultasi soal 1-on-1",           ok: false },
+      { t: "10 analisis foto / hari", on: true },
+      { t: "50 kotoba di Kamus", on: true },
+      { t: "Latihan kilat dasar", on: true },
+      { t: "5 chat Sensei AI / hari", on: true },
+      { t: "Materi struktural (Kotoba, Bunpou)", on: false },
+      { t: "Sensei chat unlimited", on: false },
+      { t: "Export PDF / CSV", on: false },
+      { t: "Statistik lanjutan", on: false },
+      { t: "Prioritas AI (lebih cepat)", on: false },
     ],
   },
   {
     id: "pro",
-    name: "Pro",
-    desc: "Untuk belajar serius setiap hari",
-    priceMonthly: 49000,
-    priceYearly: 33000,
-    yearlyTotal: 399000,
-    accent: "#6b9cda",
-    gradient: "linear-gradient(135deg,#1a3a6f,#0f1a2e)",
-    cta: "Mulai Pro",
-    ctaStyle: { background: "linear-gradient(135deg,#4a7abf,#6b9cda)", color: "#fff" },
+    name: "Sensei Pro",
+    tagline: "Untuk persiapan ujian serius",
+    monthly: 89_000,
+    yearly: 79_000,
+    yearlyDiscount: 11,
+    cta: "Pilih Pro",
     popular: true,
+    color: "iris",
     features: [
-      { text: "Analisis foto unlimited",          ok: true  },
-      { text: "Kamus lengkap N1–N5",              ok: true  },
-      { text: "Statistik detail & heatmap",       ok: true  },
-      { text: "Lembar tugas otomatis AI",         ok: true  },
-      { text: "Spaced repetition review",         ok: true  },
-      { text: "Streak & sistem XP",               ok: true  },
-      { text: "Laporan progres PDF",              ok: true  },
-      { text: "Mock test N1–N5",                  ok: false },
-      { text: "Analisis kesalahan mendalam AI",   ok: false },
-      { text: "Konsultasi soal 1-on-1",           ok: false },
+      { t: "Analisis foto unlimited", on: true, highlight: true },
+      { t: "Kotoba unlimited di Kamus", on: true, highlight: true },
+      { t: "Sensei chat unlimited", on: true, highlight: true },
+      { t: "Semua materi struktural", on: true },
+      { t: "Latihan kilat + AI personalize", on: true },
+      { t: "Export PDF / CSV / Anki", on: true },
+      { t: "Statistik lanjutan + insight", on: true },
+      { t: "Prioritas AI (2× lebih cepat)", on: true },
+      { t: "Akses fitur beta lebih dulu", on: true },
     ],
   },
   {
-    id: "sensei",
-    name: "Sensei",
-    desc: "Untuk yang ingin lulus dengan pasti",
-    priceMonthly: 149000,
-    priceYearly: 67000,
-    yearlyTotal: 799000,
-    accent: "#bbc6e2",
-    gradient: "linear-gradient(135deg,#2a1a4f,#0f0a25)",
-    cta: "Jadi Sensei",
-    ctaStyle: { background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", color: "#071327" },
-    popular: false,
+    id: "lifetime",
+    name: "Sensei Lifetime",
+    tagline: "Bayar sekali, pakai selamanya",
+    monthly: null,
+    lifetimePrice: 1_490_000,
+    cta: "Beli Lifetime",
+    color: "gold",
     features: [
-      { text: "Analisis foto unlimited",          ok: true  },
-      { text: "Kamus lengkap N1–N5",              ok: true  },
-      { text: "Statistik detail & heatmap",       ok: true  },
-      { text: "Lembar tugas otomatis AI",         ok: true  },
-      { text: "Spaced repetition review",         ok: true  },
-      { text: "Streak & sistem XP",               ok: true  },
-      { text: "Laporan progres PDF",              ok: true  },
-      { text: "Mock test N1–N5 lengkap",          ok: true  },
-      { text: "Analisis kesalahan mendalam AI",   ok: true  },
-      { text: "Konsultasi soal 1-on-1",           ok: true  },
+      { t: "Semua fitur Pro · selamanya", on: true, highlight: true },
+      { t: "Tidak ada perpanjangan", on: true, highlight: true },
+      { t: "Fitur baru gratis selamanya", on: true, highlight: true },
+      { t: "Priority support", on: true },
+      { t: "Akses Discord komunitas exclusive", on: true },
+      { t: "Sertifikat digital pencapaian", on: true },
+      { t: "+ semua fitur Pro", on: true },
     ],
   },
 ];
 
-/* ─── Feature highlights ──────────────────────────────────────── */
-const highlights = [
-  { icon: Camera,     label: "Analisis Foto AI",      desc: "Upload soal, AI jelaskan grammar & vocab secara instan",       color: "#4a7abf" },
-  { icon: BarChart2,  label: "Statistik Mendalam",    desc: "Heatmap aktivitas, akurasi per kategori, spaced repetition",   color: "#5ea87a" },
-  { icon: BookOpen,   label: "Kamus N1–N5 Lengkap",   desc: "8.000+ kata dengan contoh kalimat, furigana, dan stroke order", color: "#a67bd4" },
-  { icon: Brain,      label: "Lembar Tugas Otomatis", desc: "AI buat soal latihan berdasarkan kelemahanmu",                  color: "#e07b4a" },
-  { icon: Flame,      label: "Streak & Gamifikasi",   desc: "Jaga motivasi dengan streak harian dan sistem XP",              color: "#c05abf" },
-  { icon: Shield,     label: "Progres Tersimpan",     desc: "Data belajarmu tersimpan aman dan bisa diakses dari mana saja", color: "#6b9cda" },
+interface CompareRow {
+  label: string;
+  free: string | boolean;
+  pro: string | boolean;
+  life: string | boolean;
+}
+
+const COMPARE: CompareRow[] = [
+  { label: "Analisis foto",            free: "10 / hari",  pro: "Unlimited",   life: "Unlimited" },
+  { label: "Kotoba di Kamus",          free: "50 max",     pro: "Unlimited",   life: "Unlimited" },
+  { label: "Sensei AI chat",           free: "5 / hari",   pro: "Unlimited",   life: "Unlimited" },
+  { label: "Materi struktural",        free: false,        pro: true,          life: true },
+  { label: "Export (PDF/CSV/Anki)",    free: false,        pro: true,          life: true },
+  { label: "Statistik lanjutan",       free: false,        pro: true,          life: true },
+  { label: "Prioritas AI",             free: false,        pro: "Standard ×2", life: "Standard ×2" },
+  { label: "Akses fitur beta",         free: false,        pro: true,          life: true },
+  { label: "Discord komunitas",        free: false,        pro: false,         life: true },
+  { label: "Sertifikat digital",       free: false,        pro: false,         life: true },
 ];
 
-/* ─── FAQ ─────────────────────────────────────────────────────── */
-const faqs = [
-  { q: "Apakah bisa cancel kapan saja?",              a: "Ya, kamu bisa cancel langganan kapan saja tanpa biaya tambahan. Akses Pro tetap aktif sampai akhir periode." },
-  { q: "Metode pembayaran apa yang tersedia?",        a: "Transfer bank, GoPay, OVO, Dana, QRIS, dan kartu kredit/debit Visa/Mastercard." },
-  { q: "Apa bedanya Pro dan Sensei?",                 a: "Sensei menambahkan laporan progres PDF bulanan dan akses prioritas ke tim dukungan kami." },
-  { q: "Ada trial gratis untuk Pro?",                 a: "Ya! Kamu bisa coba Pro gratis selama 7 hari tanpa perlu memasukkan info pembayaran." },
+const FAQ = [
+  { q: "Bisa cancel kapan saja?",                    a: "Bisa banget. Bisa di-cancel langsung dari /pengaturan dan kamu tetap dapat akses Pro sampai akhir periode billing." },
+  { q: "Kalau downgrade, kotoba & catatan saya hilang?", a: "Nggak. Semua data kamu aman selamanya. Cuma fitur Pro yang non-aktif. Kalau resub, semua langsung balik." },
+  { q: "Pakai metode pembayaran apa?",               a: "Visa/Mastercard, GoPay, OVO, Dana, transfer bank, bahkan QRIS — semua via Midtrans." },
+  { q: "Ada garansi uang kembali?",                  a: "Ya — 14 hari refund tanpa pertanyaan. Email aja support@senseijlpt.id." },
+  { q: "Bedanya Pro vs Lifetime apa?",               a: "Fitur identik. Pro = subscription. Lifetime = bayar sekali, akses semua fitur Pro selamanya termasuk fitur masa depan." },
 ];
 
+const fmt = (n: number) => "Rp " + n.toLocaleString("id-ID");
 
 export default function Premium() {
-  const [yearly,    setYearly]    = useState(false);
-  const [openFaq,   setOpenFaq]   = useState<number | null>(null);
-  const [paying,    setPaying]    = useState<string | null>(null); // planId being processed
-  const [snapError, setSnapError] = useState<string | null>(null);
+  const router = useRouter();
+  const [cycle, setCycle] = useState<Cycle>("monthly");
+  const [paying, setPaying] = useState<string | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [userInitial, setUserInitial] = useState("Y");
+  // TODO: load actual plan dari profiles.plan; default "free" untuk sementara
+  const currentPlan: "free" | "pro" | "lifetime" = "free";
+  const xp = 820;
+  const xpTarget = 1000;
 
-  // TODO: load Midtrans/Xendit Snap.js di sini saat API key sudah siap
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
+      const { data } = await supabase.from("profiles").select("streak").eq("id", user.id).single();
+      if (data) setStreak(data.streak ?? 0);
+      // TODO: load actual plan from profiles.plan once schema has it
+    }
+    load();
+  }, []);
 
   const handlePay = async (planId: string) => {
-    setSnapError(null);
     setPaying(planId);
-    // TODO: ganti dengan Midtrans/Xendit saat API key sudah siap
-    await new Promise(r => setTimeout(r, 2000));
-    window.location.href = "/premium/sukses";
+    // TODO: ganti dengan Midtrans/Xendit saat API key siap
+    await new Promise(r => setTimeout(r, 1500));
+    router.push("/premium/sukses");
   };
 
   return (
-    <div className="min-h-screen text-[#d7e2ff]"
-      style={{ fontFamily: "var(--font-manrope)" }}>
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
 
-      <AppHeader activeHref="/premium" />
+      <main className="app-shell">
+        <UserBar
+          streakDays={streak}
+          xp={xp}
+          xpTarget={xpTarget}
+          avatarLetter={userInitial}
+          hasUnread
+        />
 
-      <div className="max-w-5xl mx-auto px-6 pb-24">
-
-        {/* ── Hero ── */}
-        <div className="text-center pt-20 pb-16 relative">
-          {/* glow blobs */}
-          <div className="pointer-events-none absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[300px] opacity-[0.07] blur-[80px]"
-            style={{ background: "radial-gradient(circle,#6b8cba,transparent 70%)" }} />
-
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6"
-            style={{ background: "#101b30" }}>
-            <Sparkles className="size-3 text-[#bbc6e2]" />
-            <span className="text-[10px] font-semibold text-[#bbc6e2]"
-              style={{ fontFamily: "var(--font-space)" }}>PILIH PLAN KAMU</span>
+        <header className="pr-header">
+          <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Premium" }]} />
+          <div className="pr-eyebrow">
+            <Sparkles size={11} fill="currentColor" strokeWidth={1} />
+            Upgrade ke Pro
           </div>
-
-          <h1 className="text-[3.2rem] font-extrabold leading-[1.1] tracking-tight mb-4"
-            style={{ fontFamily: "var(--font-jakarta)" }}>
-            Belajar JLPT tanpa batas,{" "}
-            <span style={{
-              background: "linear-gradient(135deg,#6b9cda,#bbc6e2,#a67bd4)",
-              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            }}>
-              lulus lebih cepat.
-            </span>
+          <h1 className="pr-title">
+            Belajar JLPT <span className="pr-title-jp">真剣に</span>.<br />
+            Sensei <span className="pr-grad">tanpa batas</span>.
           </h1>
-          <p className="text-base text-[#8a9bbf] max-w-lg mx-auto leading-relaxed mb-8">
-            Mulai gratis, upgrade kapan saja. Tidak ada kontrak, tidak ada biaya tersembunyi.
+          <p className="pr-sub">
+            Lepas semua limit. Analisis berapa pun foto kamu. Tanya Sensei AI sebanyak yang mau.
+            Akses semua materi struktural. Mulai dari Rp 79.000/bulan.
           </p>
 
-          {/* Billing toggle */}
-          <div className="inline-flex items-center gap-1 p-1 rounded-full"
-            style={{ background: "#101b30" }}>
-            <button onClick={() => setYearly(false)}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold transition-all"
-              style={!yearly ? { background: "#1f2a3f", color: "#d7e2ff" } : { color: "#4a5a7a" }}>
-              Bulanan
+          <div className="pr-toggle">
+            <button
+              type="button"
+              className={`pr-toggle-btn ${cycle === "monthly" ? "on" : ""}`}
+              onClick={() => setCycle("monthly")}
+            >
+              Bayar bulanan
             </button>
-            <button onClick={() => setYearly(true)}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all"
-              style={yearly ? { background: "#1f2a3f", color: "#d7e2ff" } : { color: "#4a5a7a" }}>
-              Tahunan
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                style={{ background: "rgba(94,168,122,0.2)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                HEMAT 20%
-              </span>
+            <button
+              type="button"
+              className={`pr-toggle-btn ${cycle === "yearly" ? "on" : ""}`}
+              onClick={() => setCycle("yearly")}
+            >
+              Bayar tahunan
+              <span className="pr-toggle-save">Hemat 11%</span>
             </button>
           </div>
+        </header>
+
+        <div className="pr-plan-grid">
+          {PLANS.map(plan => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              cycle={cycle}
+              isCurrent={currentPlan === plan.id}
+              paying={paying === plan.id}
+              onPay={() => handlePay(plan.id)}
+            />
+          ))}
         </div>
 
-        {/* ── Error banner ── */}
-        {snapError && (
-          <div className="mb-6 px-5 py-3 rounded-2xl text-sm text-red-300 flex items-center gap-3"
-            style={{ background: "rgba(192,80,80,0.12)", border: "1px solid rgba(192,80,80,0.25)" }}>
-            <X className="size-4 shrink-0 text-red-400" />
-            {snapError}
-            <button onClick={() => setSnapError(null)} className="ml-auto text-red-400 hover:text-red-300">
-              <X className="size-3.5" />
-            </button>
+        <section className="pr-compare">
+          <div className="pr-compare-head">
+            <h2 className="pr-section-title">Bandingkan semua fitur</h2>
+            <p className="pr-section-sub">Lengkap, jujur — tanpa marketing fluff</p>
           </div>
-        )}
-
-        {/* ── Pricing cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-12 md:mb-20">
-          {plans.map(plan => {
-            const planKey = plan.id === "gratis" ? null
-              : `${plan.id}-${yearly ? "yearly" : "monthly"}`;
-            const isLoading = paying === planKey;
-
-            return (
-            <div key={plan.id}
-              className="flex flex-col rounded-2xl overflow-hidden relative"
-              style={{
-                background: plan.gradient,
-                boxShadow: plan.popular ? `0 0 40px ${plan.accent}25` : "none",
-                border: plan.popular ? `1px solid ${plan.accent}40` : "1px solid rgba(255,255,255,0.04)",
-              }}>
-
-              {plan.popular && (
-                <div className="absolute top-0 inset-x-0 h-0.5"
-                  style={{ background: `linear-gradient(90deg,transparent,${plan.accent},transparent)` }} />
-              )}
-
-              {plan.popular && (
-                <div className="absolute -top-px left-1/2 -translate-x-1/2">
-                  <div className="px-3 py-1 rounded-b-lg text-[10px] font-bold"
-                    style={{ background: plan.accent, color: "#071327", fontFamily: "var(--font-space)" }}>
-                    PALING POPULER
-                  </div>
-                </div>
-              )}
-
-              <div className="p-6 flex flex-col flex-1">
-                {/* Plan header */}
-                <div className="mb-6 mt-2">
-                  <p className="text-xs font-bold mb-1" style={{ color: plan.accent, fontFamily: "var(--font-space)" }}>
-                    {plan.name.toUpperCase()}
-                  </p>
-                  <p className="text-xs text-[#4a5a7a] mb-5">{plan.desc}</p>
-
-                  <div className="flex items-end gap-1">
-                    <span className="text-4xl font-extrabold text-[#d7e2ff]"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>
-                      {plan.priceMonthly === 0
-                        ? "Rp 0"
-                        : `Rp ${(yearly ? plan.priceYearly : plan.priceMonthly).toLocaleString("id-ID")}`}
-                    </span>
-                    {plan.priceMonthly > 0 && (
-                      <span className="text-xs text-[#4a5a7a] mb-1.5">/bln</span>
-                    )}
-                  </div>
-                  {plan.priceMonthly > 0 && (
-                    <div className="flex items-center gap-2 mt-1">
-                      {yearly ? (
-                        <>
-                          <p className="text-[10px] text-[#4a5a7a]">
-                            Ditagih Rp {plan.yearlyTotal.toLocaleString("id-ID")}/tahun
-                          </p>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                            style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                            HEMAT {Math.round((1 - plan.priceYearly / plan.priceMonthly) * 100)}%
-                          </span>
-                        </>
-                      ) : (
-                        <p className="text-[10px] text-[#4a5a7a]">
-                          atau Rp {plan.yearlyTotal.toLocaleString("id-ID")}/tahun
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* CTA */}
-                <button
-                  onClick={() => planKey && handlePay(planKey)}
-                  disabled={isLoading || !!paying}
-                  className="w-full py-2.5 rounded-xl text-sm font-bold mb-6 transition-all hover:brightness-110 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{ ...plan.ctaStyle, fontFamily: "var(--font-jakarta)" }}>
-                  {isLoading
-                    ? <><Loader2 className="size-3.5 animate-spin" /> Memproses...</>
-                    : <>{plan.cta} <ArrowRight className="size-3.5" /></>}
-                </button>
-
-                {/* Features */}
-                <div className="flex flex-col gap-2.5 flex-1">
-                  {plan.features.map((f, i) => (
-                    <div key={i} className="flex items-start gap-2.5">
-                      {f.ok
-                        ? <Check className="size-3.5 mt-0.5 shrink-0" style={{ color: plan.accent }} />
-                        : <X className="size-3.5 mt-0.5 shrink-0 text-[#2a354b]" />
-                      }
-                      <span className={`text-xs leading-relaxed ${f.ok ? "text-[#8a9bbf]" : "text-[#2a354b]"}`}>
-                        {f.text}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className="cmp-table glass-card">
+            <div className="cmp-row cmp-head">
+              <span className="cmp-feature">Fitur</span>
+              <span className="cmp-col">Free</span>
+              <span className="cmp-col pop">Pro</span>
+              <span className="cmp-col gold">Lifetime</span>
             </div>
-          ); })}
-        </div>
-
-        {/* ── Feature highlights ── */}
-        <div className="mb-20">
-          <div className="text-center mb-10">
-            <p className="text-[10px] font-semibold text-[#4a5a7a] mb-3"
-              style={{ fontFamily: "var(--font-space)" }}>SEMUA YANG KAMU BUTUHKAN</p>
-            <h2 className="text-2xl font-extrabold text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>
-              Fitur yang bikin belajar terasa beda
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {highlights.map(({ icon: Icon, label, desc, color }) => (
-              <div key={label} className="p-5 rounded-2xl relative overflow-hidden"
-                style={{ background: "#101b30" }}>
-                <div className="absolute inset-0 opacity-10"
-                  style={{ background: `radial-gradient(circle at top left,${color},transparent 70%)` }} />
-                <div className="relative">
-                  <div className="size-9 rounded-xl flex items-center justify-center mb-3"
-                    style={{ background: `${color}20` }}>
-                    <Icon className="size-4" style={{ color }} />
-                  </div>
-                  <p className="text-sm font-bold text-[#d7e2ff] mb-1.5"
-                    style={{ fontFamily: "var(--font-jakarta)" }}>{label}</p>
-                  <p className="text-xs text-[#4a5a7a] leading-relaxed">{desc}</p>
-                </div>
+            {COMPARE.map(r => (
+              <div className="cmp-row" key={r.label}>
+                <span className="cmp-feature">{r.label}</span>
+                <span className="cmp-col">{renderCell(r.free)}</span>
+                <span className="cmp-col pop">{renderCell(r.pro)}</span>
+                <span className="cmp-col gold">{renderCell(r.life)}</span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* ── Testimonials ── */}
-        <div className="mb-20">
-          <div className="text-center mb-10">
-            <p className="text-[10px] font-semibold text-[#4a5a7a] mb-3"
-              style={{ fontFamily: "var(--font-space)" }}>TESTIMONI NYATA</p>
-            <h2 className="text-2xl font-extrabold text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>
-              Mereka sudah lulus. Sekarang giliranmu.
-            </h2>
+        <section className="pr-testi-section">
+          <h2 className="pr-section-title centered">Dari para Senpai 先輩</h2>
+          <div className="pr-testi-grid">
+            <Testi
+              quote="Sensei nge-detect grammar yang gw udah salah berkali-kali di mock test. Akurasi langsung naik 18%."
+              name="Bella · N2 (lulus 2026/03)"
+              avatar="B"
+              color="iris"
+            />
+            <Testi
+              quote="Best Rp 79k yang gw spend tahun ini. Kayak punya tutor pribadi 24/7 — gw bisa foto soal jam berapa aja."
+              name="Reza · prep N1"
+              avatar="R"
+              color="amber"
+            />
+            <Testi
+              quote="Kamus auto-save dari foto = game changer. Vocab gw tumbuh 3× lebih cepat dibanding pake Anki manual."
+              name="Putri · N3 → N2"
+              avatar="P"
+              color="emerald"
+            />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { name: "Rizki A.", level: "Lulus N3", score: "142/180", avatar: "R", color: "#4a7abf",
-                text: "Dalam 3 bulan pakai Sensei JLPT, analisis foto soalnya bikin aku ngerti grammar yang selama ini bingung." },
-              { name: "Putri N.", level: "Lulus N2", score: "155/180", avatar: "P", color: "#5ea87a",
-                text: "Statistik detail dan heatmap-nya bikin aku tahu persis mana yang harus difokus. Worth banget!" },
-              { name: "Dimas K.", level: "Target N1", score: "Pro User", avatar: "D", color: "#a67bd4",
-                text: "Kamus dengan stroke order dan quiz cepat-nya beda level dibanding app lain. Gak menyesal upgrade." },
-            ].map(({ name, level, score, avatar, color, text }) => (
-              <div key={name} className="p-5 rounded-2xl relative overflow-hidden"
-                style={{ background: "#101b30" }}>
-                <div className="absolute inset-0 opacity-10"
-                  style={{ background: `radial-gradient(circle at bottom right,${color},transparent 70%)` }} />
-                <div className="relative">
-                  <div className="flex gap-0.5 mb-3">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="size-3 fill-[#f59e0b] text-[#f59e0b]" />
-                    ))}
-                  </div>
-                  <p className="text-xs text-[#8a9bbf] leading-relaxed mb-4">"{text}"</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                        style={{ background: `linear-gradient(135deg,${color},${color}99)` }}>{avatar}</div>
-                      <div>
-                        <p className="text-xs font-bold text-[#d7e2ff]"
-                          style={{ fontFamily: "var(--font-jakarta)" }}>{name}</p>
-                        <p className="text-[10px] text-[#4a5a7a]">{level}</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-1 rounded-full"
-                      style={{ background: `${color}20`, color, fontFamily: "var(--font-space)" }}>
-                      {score}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        </section>
 
-        {/* ── FAQ ── */}
-        <div className="mb-20">
-          <div className="text-center mb-10">
-            <p className="text-[10px] font-semibold text-[#4a5a7a] mb-3"
-              style={{ fontFamily: "var(--font-space)" }}>FAQ</p>
-            <h2 className="text-2xl font-extrabold text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>Pertanyaan yang sering ditanya</h2>
+        <section className="pr-faq-section">
+          <h2 className="pr-section-title">Pertanyaan yang sering ditanya</h2>
+          <div className="pr-faq-list">
+            {FAQ.map((f, i) => <FaqItem key={i} item={f} />)}
           </div>
-          <div className="flex flex-col gap-3 max-w-2xl mx-auto">
-            {faqs.map((faq, i) => (
-              <button key={i} onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="text-left p-5 rounded-2xl transition-all"
-                style={{ background: "#101b30" }}>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm font-semibold text-[#d7e2ff]"
-                    style={{ fontFamily: "var(--font-jakarta)" }}>{faq.q}</p>
-                  <span className="size-5 rounded-full flex items-center justify-center shrink-0 text-sm"
-                    style={{ background: "#1f2a3f", color: "#4a5a7a" }}>
-                    {openFaq === i ? "−" : "+"}
-                  </span>
-                </div>
-                {openFaq === i && (
-                  <p className="text-xs text-[#8a9bbf] leading-relaxed mt-3">{faq.a}</p>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        </section>
 
-        {/* ── Bottom CTA ── */}
-        <div className="text-center py-16 px-8 rounded-3xl relative overflow-hidden"
-          style={{ background: "#101b30" }}>
-          <div className="pointer-events-none absolute inset-0 opacity-10"
-            style={{ background: "radial-gradient(circle at center,#6b8cba,transparent 70%)" }} />
-          <div className="pointer-events-none absolute top-0 inset-x-0 h-px"
-            style={{ background: "linear-gradient(90deg,transparent,#bbc6e2,transparent)" }} />
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5"
-              style={{ background: "#1f2a3f" }}>
-              <Headphones className="size-3 text-[#bbc6e2]" />
-              <span className="text-[10px] font-semibold text-[#bbc6e2]"
-                style={{ fontFamily: "var(--font-space)" }}>7 HARI TRIAL GRATIS</span>
-            </div>
-            <h2 className="text-3xl font-extrabold text-[#d7e2ff] mb-3"
-              style={{ fontFamily: "var(--font-jakarta)" }}>
-              Siap taklukan JLPT?
-            </h2>
-            <p className="text-sm text-[#8a9bbf] mb-8">
-              Coba Pro gratis 7 hari. Tidak perlu kartu kredit.
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <button className="flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-sm transition-all hover:brightness-110"
-                style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", color: "#071327", fontFamily: "var(--font-jakarta)" }}>
-                <Zap className="size-4" /> Mulai Trial Gratis
+        <section className="pr-cta-footer glass-card">
+          <div className="pr-cta-bg" />
+          <div className="pr-cta-content">
+            <h2>Mulai 14 hari free trial.</h2>
+            <p>Cancel kapan saja. Tanpa kartu kredit kalau trial. Tanpa hidden cost.</p>
+            <div className="pr-cta-row">
+              <button
+                type="button"
+                className="btn btn-primary btn-lg"
+                disabled={paying != null}
+                onClick={() => handlePay("pro")}
+              >
+                <Sparkles size={14} fill="currentColor" strokeWidth={1.2} />
+                {paying === "pro" ? "Memproses..." : "Coba Pro 14 hari gratis"}
               </button>
-              <button className="px-7 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-white/5"
-                style={{ border: "1px solid rgba(255,255,255,0.08)", color: "#8a9bbf" }}>
-                Lihat Demo
-              </button>
+              <Link href="#compare" className="btn btn-secondary btn-lg">
+                Bandingkan plan dulu →
+              </Link>
             </div>
           </div>
-        </div>
+        </section>
+      </main>
+    </>
+  );
+}
 
+/* ─── Subcomponents ─── */
+
+function PlanCard({
+  plan, cycle, isCurrent, paying, onPay,
+}: { plan: Plan; cycle: Cycle; isCurrent: boolean; paying: boolean; onPay: () => void }) {
+  const isLifetime = plan.id === "lifetime";
+  const price = isLifetime
+    ? plan.lifetimePrice ?? 0
+    : (cycle === "yearly" ? (plan.yearly ?? 0) : (plan.monthly ?? 0));
+
+  return (
+    <article className={`glass-card pr-plan plan-${plan.color}${plan.popular ? " popular" : ""}`}>
+      {plan.popular && (
+        <span className="plan-pop-badge">
+          <Star size={9} fill="white" strokeWidth={0} /> PALING POPULER
+        </span>
+      )}
+      {isCurrent && <span className="plan-current-badge">Aktif</span>}
+
+      <div>
+        <h3 className="plan-name">{plan.name}</h3>
+        <p className="plan-tagline">{plan.tagline}</p>
       </div>
+
+      <div className="plan-price">
+        {price === 0 ? (
+          <>
+            <span className="plan-amount">Rp 0</span>
+            <span className="plan-period">selamanya</span>
+          </>
+        ) : isLifetime ? (
+          <>
+            <span className="plan-amount">{fmt(price)}</span>
+            <span className="plan-period">bayar sekali</span>
+          </>
+        ) : (
+          <>
+            <span className="plan-amount">{fmt(price)}</span>
+            <span className="plan-period">/ bulan</span>
+            {cycle === "yearly" && plan.monthly != null && (
+              <span className="plan-original">{fmt(plan.monthly)}</span>
+            )}
+          </>
+        )}
+      </div>
+
+      <button
+        type="button"
+        className={`plan-cta plan-cta-${plan.color}`}
+        disabled={isCurrent || paying}
+        onClick={onPay}
+      >
+        {isCurrent ? "Plan kamu sekarang" : paying ? "Memproses..." : plan.cta}
+        {!isCurrent && !paying && !isLifetime && plan.id !== "free" && (
+          <span className="plan-cta-arrow">→</span>
+        )}
+      </button>
+
+      <ul className="plan-features">
+        {plan.features.map(f => (
+          <li key={f.t} className={f.on ? (f.highlight ? "on highlight" : "on") : "off"}>
+            {f.on
+              ? <Check size={13} strokeWidth={2.4} />
+              : <X size={13} strokeWidth={2} />}
+            <span>{f.t}</span>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+function renderCell(v: string | boolean) {
+  if (v === true)  return <Check size={14} strokeWidth={2.4} style={{ color: "var(--accent-emerald)" }} />;
+  if (v === false) return <X size={13} strokeWidth={2} style={{ color: "var(--text-muted)" }} />;
+  return <span className="cmp-val">{v}</span>;
+}
+
+function Testi({
+  quote, name, avatar, color,
+}: { quote: string; name: string; avatar: string; color: "iris" | "amber" | "emerald" }) {
+  return (
+    <article className={`glass-card testi-card testi-${color}`}>
+      <div className="testi-stars">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Star key={i} size={13} fill="var(--accent-amber)" strokeWidth={0} />
+        ))}
+      </div>
+      <p className="testi-quote">&ldquo;{quote}&rdquo;</p>
+      <div className="testi-attribution">
+        <div className={`testi-avatar testi-av-${color}`}>{avatar}</div>
+        <span>{name}</span>
+      </div>
+    </article>
+  );
+}
+
+function FaqItem({ item }: { item: { q: string; a: string } }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      className={`pr-faq-item${open ? " open" : ""}`}
+      onClick={() => setOpen(o => !o)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(o => !o); } }}
+    >
+      <div className="pr-faq-q">
+        <h4>{item.q}</h4>
+        <span className="pr-faq-chev">{open ? "−" : "+"}</span>
+      </div>
+      {open && <p className="pr-faq-a">{item.a}</p>}
     </div>
   );
 }

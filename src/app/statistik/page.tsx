@@ -40,7 +40,7 @@ const HOUR_BUCKETS = [
   { label: "21–24", start: 21 },
 ];
 
-function withinPeriod(iso: string, days: Period): boolean {
+function withinPeriod(iso: string, days: number): boolean {
   if (days === 0) return true;
   const age = (Date.now() - new Date(iso).getTime()) / 86_400_000;
   return age < days;
