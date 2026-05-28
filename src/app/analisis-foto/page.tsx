@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Sidebar, BottomNav } from "@/components/Sidebar";
+import { AuroraBackground, NavRail, BottomNav, UserBar } from "@/components/v2";
 import KamusFlashCard from "@/components/KamusFlashCard";
 import {
   Camera, Bell, Upload, ArrowUpRight,
@@ -500,7 +500,7 @@ function SetupView({
             KATEGORI SOALNYA APA?
           </p>
           <p className="text-[11px] text-[#4a5a7a] mb-3">
-            Kalau tidak tahu, pilih "AI deteksi" — Sensei yang akan tentukan sendiri.
+            Kalau tidak tahu, pilih &ldquo;AI deteksi&rdquo; — Sensei yang akan tentukan sendiri.
           </p>
           <div className="flex gap-2">
             {categories.map(({ value, label, sub }) => (
@@ -2578,6 +2578,20 @@ export default function AnalisisFoto() {
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const camInputRef    = useRef<HTMLInputElement>(null);
   const [camModalOpen, setCamModalOpen] = useState(false);
+  const [userInitial, setUserInitial] = useState("Y");
+  const [streak, setStreak] = useState(0);
+
+  /* Load user info for v2 UserBar */
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
+      const { data } = await supabase.from("profiles").select("streak").eq("id", user.id).single();
+      if (data) setStreak(data.streak ?? 0);
+    })();
+  }, []);
 
   /* Split text at paragraph boundaries, max ~4000 chars per chunk */
   const chunkDocxText = (text: string, maxChars = 4000): string[] => {
@@ -2905,142 +2919,27 @@ export default function AnalisisFoto() {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ fontFamily: "var(--font-manrope)" }}>
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0 border-b"
-        style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-        <div className="flex items-center gap-4 md:gap-8">
-          <a href="/" className="flex items-center gap-2.5">
-            <div className="relative size-7 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-lg opacity-60 blur-sm"
-                style={{ background: "linear-gradient(135deg,#4a7abf,#8b5abf)" }} />
-              <div className="relative size-7 rounded-lg flex items-center justify-center font-black text-[11px]"
-                style={{ background: "linear-gradient(135deg,#1a3a6f,#3a1a6f)", border: "1px solid rgba(107,156,218,0.4)", color: "#bbc6e2" }}>先</div>
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-[13px] font-extrabold tracking-tight text-[#d7e2ff]"
-                style={{ fontFamily: "var(--font-jakarta)" }}>Sensei</span>
-              <span className="text-[9px] font-bold tracking-widest"
-                style={{ fontFamily: "var(--font-space)", color: "#4a7abf" }}>JLPT · AI</span>
-            </div>
-          </a>
-          <nav className="hidden md:flex items-center gap-0.5">
-            {[
-              { label: "Materi",  href: "/materi" },
-              { label: "Latihan", href: "/lembar-tugas" },
-              { label: "Pro",     href: "/premium" },
-            ].map((item) => (
-              <a key={item.label} href={item.href}
-                className="px-3 py-1.5 text-sm rounded-lg text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5 transition-colors">
-                {item.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-        <div className="flex items-center gap-2">
-          <a href="/premium" className="hidden sm:flex text-[11px] px-4 py-1.5 rounded-full font-medium border transition-colors hover:bg-white/5"
-            style={{ borderColor: "rgba(255,255,255,0.1)", color: "#bbc6e2", fontFamily: "var(--font-space)" }}>
-            Langganan
-          </a>
-
-          {/* Bell + dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setNotifOpen(o => !o)}
-              className="relative size-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors">
-              <Bell className="size-4 text-[#8a9bbf]" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 size-4 rounded-full flex items-center justify-center text-[8px] font-black text-white"
-                  style={{ background: "#e05a5a" }}>
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-
-            {notifOpen && (
-              <>
-                {/* Backdrop */}
-                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-
-                {/* Panel */}
-                <div className="absolute right-0 top-10 z-50 w-[320px] rounded-2xl overflow-hidden shadow-2xl"
-                  style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.07)" }}>
-
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3"
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                    <div className="flex items-center gap-2">
-                      <Bell className="size-3.5 text-[#6b9cda]" />
-                      <span className="text-sm font-bold text-[#d7e2ff]"
-                        style={{ fontFamily: "var(--font-jakarta)" }}>Notifikasi</span>
-                      {unreadCount > 0 && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                          style={{ background: "rgba(224,90,90,0.2)", color: "#e05a5a", fontFamily: "var(--font-space)" }}>
-                          {unreadCount} baru
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setReadIds(new Set(notifs.map(n => n.id)))}
-                      className="text-[10px] text-[#4a5a7a] hover:text-[#bbc6e2] transition-colors"
-                      style={{ fontFamily: "var(--font-space)" }}>
-                      TANDAI SEMUA
-                    </button>
-                  </div>
-
-                  {/* List */}
-                  <div className="flex flex-col">
-                    {notifs.map(n => {
-                      const isRead = readIds.has(n.id);
-                      return (
-                        <button key={n.id}
-                          onClick={() => setReadIds(prev => new Set([...prev, n.id]))}
-                          className="flex items-start gap-3 px-4 py-3 text-left transition-all hover:bg-white/[0.03] w-full"
-                          style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                          {/* Dot unread */}
-                          <div className="shrink-0 mt-1 size-1.5 rounded-full"
-                            style={{ background: isRead ? "transparent" : "#6b9cda" }} />
-                          {/* Icon */}
-                          <span className="text-base shrink-0 leading-none mt-0.5">{n.icon}</span>
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-semibold mb-0.5 ${isRead ? "text-[#8a9bbf]" : "text-[#d7e2ff]"}`}
-                              style={{ fontFamily: "var(--font-jakarta)" }}>
-                              {n.title}
-                            </p>
-                            <p className="text-[11px] text-[#4a5a7a] leading-relaxed">{n.desc}</p>
-                            <p className="text-[10px] mt-1" style={{ color: n.color, fontFamily: "var(--font-space)" }}>
-                              {n.time}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Footer */}
-                  <div className="px-4 py-2.5 text-center"
-                    style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                    <button className="text-[11px] text-[#4a5a7a] hover:text-[#6b9cda] transition-colors"
-                      style={{ fontFamily: "var(--font-space)" }}>
-                      LIHAT SEMUA NOTIFIKASI
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="size-8 rounded-full flex items-center justify-center text-xs font-bold text-[#071327] ring-2 ring-[#2f4865]"
-            style={{ background: "linear-gradient(135deg,#bbc6e2,#4a7abf)" }}>A</div>
-        </div>
-      </header>
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
 
       {/* Hidden file inputs */}
-      <input ref={fileInputRef} type="file" accept="image/*,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleFileChange} />
-      <input ref={camInputRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <input
+        ref={camInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
       {/* Desktop camera modal */}
       {camModalOpen && (
@@ -3050,9 +2949,17 @@ export default function AnalisisFoto() {
         />
       )}
 
-      {/* Body */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar activeHref="/analisis-foto" />
+      <main className="app-shell">
+        <UserBar
+          streakDays={streak}
+          xp={820}
+          xpTarget={1000}
+          avatarLetter={userInitial}
+          isPro
+          hasUnread={unreadCount > 0}
+          onBellClick={() => setNotifOpen(o => !o)}
+        />
+
         {stage === "upload" && (
           <UploadView
             onUpload={handleUpload}
@@ -3061,6 +2968,7 @@ export default function AnalisisFoto() {
             error={apiError}
           />
         )}
+
         {stage === "setup" && (
           <SetupView
             onStart={handleStart}
@@ -3071,14 +2979,14 @@ export default function AnalisisFoto() {
             onRemoveFile={(idx) => setFiles(prev => prev.filter((_, i) => i !== idx))}
           />
         )}
+
         {loadingSession && (
-          <div className="flex-1 flex items-center justify-center gap-3">
-            <Loader2 className="size-6 text-[#4a7abf] animate-spin" />
-            <span className="text-sm text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
-              Memuat sesi...
-            </span>
+          <div className="af-analyzing">
+            <div className="af-analyzing-spinner" />
+            <p className="af-analyzing-title">Memuat sesi...</p>
           </div>
         )}
+
         {!loadingSession && stage === "analyzing" && (
           <AnalyzingView
             imageUrl={files[currentAnalyzingIdx - 1]?.url}
@@ -3087,6 +2995,7 @@ export default function AnalisisFoto() {
             onCancel={handleCancel}
           />
         )}
+
         {!loadingSession && stage === "result" && result && (
           <ResultView
             result={result}
@@ -3101,9 +3010,8 @@ export default function AnalisisFoto() {
             sessionCategory={resultCategory}
           />
         )}
-      </div>
-
-      <BottomNav activeHref="/analisis-foto" />
-    </div>
+      </main>
+    </>
   );
 }
+
