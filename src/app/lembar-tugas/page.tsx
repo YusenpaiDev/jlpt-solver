@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { BottomNav } from "@/components/Sidebar";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
-  CheckCircle2, XCircle, BookOpen, ArrowLeft, ArrowRight,
-  LayoutList, Sparkles, ChevronDown, Clock, Star, X,
-  Loader2, Wand2, RotateCcw, Check,
+  Check, X, ChevronLeft, ChevronRight, Clock, History, Sparkles, Wand2, Flag, Pause,
+  BookOpen, BookA, Zap, NotebookPen,
 } from "lucide-react";
 
-/* ─── Types ───────────────────────────────────────────────────── */
 type Difficulty = "mudah" | "sedang" | "sulit";
-type Category   = "全" | "語彙" | "文法" | "文字" | "読解";
+type CategoryAll = "全" | "語彙" | "文法" | "文字" | "読解";
+type Level = "N1" | "N2" | "N3" | "N4" | "N5";
+type Stage = "setup" | "generating" | "quiz";
 
-type Option = { text: string; correct: boolean };
-type Soal = {
+interface Option { text: string; correct: boolean }
+interface Soal {
   id: number;
   no: string;
   category: string;
@@ -28,115 +29,148 @@ type Soal = {
     grammar: { term: string; meaning: string }[];
     tips: string;
   };
-};
-
-type Stage = "setup" | "generating" | "quiz";
+}
 
 interface RiwayatItem {
   id: string;
   title: string;
   category: string;
+  level: string;
   total: number;
   score: number | null;
   created_at: string;
 }
 
-/* ─── Constants ───────────────────────────────────────────────── */
-const LEVELS    = ["N1","N2","N3","N4","N5"] as const;
-const CATS: { value: Category; label: string; kanji: string; color: string }[] = [
-  { value: "全",  label: "Semua",      kanji: "全", color: "#6b8cba" },
-  { value: "語彙", label: "Kosakata",  kanji: "語", color: "#4a7abf" },
-  { value: "文法", label: "Tata Bahasa",kanji: "文", color: "#5ea87a" },
-  { value: "文字", label: "Kanji",     kanji: "字", color: "#a67bd4" },
-  { value: "読解", label: "Reading",   kanji: "読", color: "#e07b4a" },
+const LEVELS: { lv: Level; desc: string }[] = [
+  { lv: "N5", desc: "Pemula" },
+  { lv: "N4", desc: "Dasar" },
+  { lv: "N3", desc: "Menengah" },
+  { lv: "N2", desc: "Tinggi" },
+  { lv: "N1", desc: "Mahir" },
 ];
-const COUNTS = [5, 7, 10];
 
-const diffColor: Record<Difficulty, string> = {
-  mudah: "#5ea87a", sedang: "#e07b4a", sulit: "#e05a5a",
-};
-const catColor: Record<string, string> = {
-  語彙: "#4a7abf", 文法: "#5ea87a", 読解: "#e07b4a", 文字: "#a67bd4",
-};
+const KATEGORIS: { jp: Exclude<CategoryAll, "全">; label: string; desc: string; Icon: typeof BookOpen; tone: "iris" | "emerald" | "amber" | "rose" }[] = [
+  { jp: "文法", label: "Bunpou",  desc: "Tata bahasa, pola, partikel",  Icon: BookOpen,    tone: "iris" },
+  { jp: "語彙", label: "Goi",     desc: "Kosakata, sinonim, kolokasi",  Icon: BookA,       tone: "emerald" },
+  { jp: "文字", label: "Moji",    desc: "Kanji reading + writing",      Icon: Zap,         tone: "amber" },
+  { jp: "読解", label: "Dokkai",  desc: "Reading comprehension",        Icon: NotebookPen, tone: "rose" },
+];
 
-function relativeTime(iso: string) {
-  const diff  = Date.now() - new Date(iso).getTime();
-  const mins  = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days  = Math.floor(diff / 86_400_000);
-  if (mins  < 1)   return "Baru saja";
-  if (mins  < 60)  return `${mins} menit lalu`;
-  if (hours < 24)  return `${hours} jam lalu`;
-  if (days  === 1) return "Kemarin";
-  return `${days} hari lalu`;
+const COUNTS = [5, 10, 15, 20, 30];
+
+function fmtTime(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-/* ─── Page ────────────────────────────────────────────────────── */
+function relativeDate(iso: string) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days < 1) return "Hari ini";
+  if (days < 2) return "Kemarin";
+  if (days < 7) return `${days} hari`;
+  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+}
+
+function scoreTone(score: number | null, total: number): "good" | "mid" | "bad" | "none" {
+  if (score == null || total === 0) return "none";
+  const pct = score / total;
+  if (pct >= 0.85) return "good";
+  if (pct >= 0.65) return "mid";
+  return "bad";
+}
+
 export default function LembarTugas() {
-  /* Setup state */
-  const [level,    setLevel]    = useState<string>("N2");
-  const [category, setCategory] = useState<Category>("全");
-  const [count,    setCount]    = useState(7);
+  const [stage, setStage] = useState<Stage>("setup");
 
-  /* Quiz state */
-  const [stage,    setStage]    = useState<Stage>("setup");
+  /* Setup */
+  const [level, setLevel] = useState<Level>("N2");
+  const [kategori, setKategori] = useState<CategoryAll>("文法");
+  const [count, setCount] = useState(10);
+  const [timerOn, setTimerOn] = useState(true);
+
+  /* Quiz */
   const [soalList, setSoalList] = useState<Soal[]>([]);
-  const [current,  setCurrent]  = useState(0);
-  const [answers,  setAnswers]  = useState<Record<number, number>>({});
-  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
-  const [view,     setView]     = useState<"single" | "all">("single");
-  const [error,    setError]    = useState<string | null>(null);
+  const [current, setCurrent] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [flagged, setFlagged] = useState<Set<number>>(new Set());
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  /* Sidebar state */
-  const [riwayatOpen, setRiwayatOpen] = useState(false);
-  const [riwayat,     setRiwayat]     = useState<RiwayatItem[]>([]);
-  const [saving,      setSaving]      = useState(false);
-  const [saved,       setSaved]       = useState(false);
+  /* Shared */
+  const [streak, setStreak] = useState(0);
+  const [userInitial, setUserInitial] = useState("Y");
+  const [riwayat, setRiwayat] = useState<RiwayatItem[]>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const xp = 820;
+  const xpTarget = 1000;
 
-  /* Load user target_level + riwayat on mount */
+  /* Load profile + history */
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
+      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
       const [profileRes, sessionRes] = await Promise.all([
-        supabase.from("profiles").select("target_level").eq("id", user.id).single(),
+        supabase.from("profiles").select("target_level, streak").eq("id", user.id).single(),
         supabase.from("sessions")
-          .select("id,title,category,total,score,created_at")
+          .select("id, title, category, level, total, score, created_at")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
-          .limit(10),
+          .limit(24),
       ]);
-
-      if (profileRes.data?.target_level) setLevel(profileRes.data.target_level);
-      setRiwayat(sessionRes.data ?? []);
+      if (profileRes.data) {
+        if (profileRes.data.target_level) setLevel(profileRes.data.target_level as Level);
+        setStreak(profileRes.data.streak ?? 0);
+      }
+      setRiwayat((sessionRes.data ?? []) as RiwayatItem[]);
     }
     load();
   }, []);
 
-  /* Generate questions */
+  /* Quiz timer */
+  useEffect(() => {
+    if (stage !== "quiz" || !timerOn || startedAt == null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [stage, timerOn, startedAt]);
+
+  const elapsed = startedAt != null ? Math.floor((now - startedAt) / 1000) : 0;
+  const soal = soalList[current];
+  const picked = soal ? answers[soal.id] : undefined;
+  const correctIdx = soal ? soal.options.findIndex(o => o.correct) : -1;
+  const showResult = picked != null;
+
+  const allAnswered = soalList.length > 0 && soalList.every(s => answers[s.id] != null);
+  const correctCount = soalList.filter(s => {
+    const p = answers[s.id];
+    return p != null && s.options[p]?.correct;
+  }).length;
+
   async function handleGenerate() {
     setError(null);
     setStage("generating");
     try {
-      const res  = await fetch("/api/tugas/generate", {
+      const res = await fetch("/api/tugas/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level, category, count }),
+        body: JSON.stringify({ level, category: kategori, count }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
-
-      const questions: Soal[] = json.data.questions.map((q: Omit<Soal,"id">, i: number) => ({
+      const questions: Soal[] = json.data.questions.map((q: Omit<Soal, "id">, i: number) => ({
         ...q, id: i + 1,
       }));
-
       setSoalList(questions);
       setAnswers({});
-      setRevealed({});
+      setFlagged(new Set());
       setCurrent(0);
-      setView("single");
+      setStartedAt(Date.now());
+      setNow(Date.now());
       setSaved(false);
       setStage("quiz");
     } catch {
@@ -145,570 +179,648 @@ export default function LembarTugas() {
     }
   }
 
-  /* Save session to Supabase */
-  async function handleSave() {
+  async function handleFinish() {
     setSaving(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
-
-    const correctCount = soalList.filter((s) => {
-      const picked     = answers[s.id];
-      const correctIdx = s.options.findIndex(o => o.correct);
-      return picked === correctIdx;
-    }).length;
-
-    const catLabel = category === "全" ? "Semua" : category;
-
+    const catLabel = kategori === "全" ? "Semua" : kategori;
     await supabase.from("sessions").insert({
-      user_id:    user.id,
+      user_id: user.id,
       level,
-      category:   catLabel,
-      title:      `Lembar Tugas ${level} — ${catLabel}`,
-      total:      soalList.length,
-      score:      correctCount,
+      category: catLabel,
+      title: `Lembar Tugas ${level} — ${catLabel}`,
+      total: soalList.length,
+      score: correctCount,
     });
-
     setSaving(false);
     setSaved(true);
-
-    /* Refresh riwayat */
+    // refresh
     const { data } = await supabase.from("sessions")
-      .select("id,title,category,total,score,created_at")
+      .select("id, title, category, level, total, score, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(10);
-    setRiwayat(data ?? []);
+      .limit(24);
+    setRiwayat((data ?? []) as RiwayatItem[]);
   }
 
-  /* Helpers */
-  function pick(soalId: number, i: number) {
-    setAnswers(p => ({ ...p, [soalId]: i }));
-  }
-  function reveal(soalId: number) {
-    setRevealed(p => ({ ...p, [soalId]: true }));
+  function pickAnswer(i: number) {
+    if (!soal) return;
+    if (answers[soal.id] != null) return;
+    setAnswers(p => ({ ...p, [soal.id]: i }));
   }
 
-  const allRevealed  = soalList.length > 0 && soalList.every(s => revealed[s.id]);
-  const correctCount = soalList.filter(s => {
-    const picked     = answers[s.id];
-    const correctIdx = s.options.findIndex(o => o.correct);
-    return picked === correctIdx;
-  }).length;
+  function toggleFlag() {
+    if (!soal) return;
+    setFlagged(prev => {
+      const next = new Set(prev);
+      if (next.has(soal.id)) next.delete(soal.id); else next.add(soal.id);
+      return next;
+    });
+  }
 
-  const soal      = soalList[current];
-  const picked    = soal ? answers[soal.id] : undefined;
-  const isRevealed = soal ? !!revealed[soal.id] : false;
-
-  /* ── Render ── */
   return (
-    <div className="flex h-screen overflow-hidden text-[#d7e2ff]"
-      style={{ background: "transparent", fontFamily: "var(--font-manrope)" }}>
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
 
-      <div className="flex-1 flex flex-col min-h-0">
+      <main className="app-shell">
+        <UserBar
+          streakDays={streak}
+          xp={xp}
+          xpTarget={xpTarget}
+          avatarLetter={userInitial}
+          isPro
+          hasUnread
+        />
 
-        {/* ── Header ── */}
-        <header className="flex items-center justify-between px-4 md:px-6 py-3 shrink-0"
-          style={{ background: "rgba(2,8,16,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(107,156,218,0.1)" }}>
-          <div className="flex items-center gap-2 md:gap-3">
-            <a href="/" className="flex items-center gap-2.5">
-              <div className="relative size-7 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-lg opacity-60 blur-sm"
-                  style={{ background: "linear-gradient(135deg,#4a7abf,#8b5abf)" }} />
-                <div className="relative size-7 rounded-lg flex items-center justify-center font-black text-[11px]"
-                  style={{ background: "linear-gradient(135deg,#1a3a6f,#3a1a6f)", border: "1px solid rgba(107,156,218,0.4)", color: "#bbc6e2" }}>先</div>
-              </div>
-              <div className="flex flex-col leading-none">
-                <span className="text-[13px] font-extrabold tracking-tight text-[#d7e2ff]"
-                  style={{ fontFamily: "var(--font-jakarta)" }}>Sensei</span>
-                <span className="text-[9px] font-bold tracking-widest"
-                  style={{ fontFamily: "var(--font-space)", color: "#4a7abf" }}>JLPT · AI</span>
-              </div>
-            </a>
-            <span className="text-[10px] px-2 py-0.5 rounded font-bold text-[#071327]"
-              style={{ background: "#6b9cda", fontFamily: "var(--font-space)" }}>{level}</span>
+        <header className="lt-header">
+          <div>
+            <Breadcrumb items={
+              stage === "setup"
+                ? [{ label: "Beranda", href: "/" }, { label: "Lembar Tugas" }]
+                : [
+                    { label: "Beranda", href: "/" },
+                    { label: "Lembar Tugas" },
+                    { label: `Sesi · ${count} soal` },
+                  ]
+            } />
+            <div className="lt-header-title-row">
+              {stage === "quiz" && (
+                <span className={`lv-badge lv-${level.toLowerCase()}`}>
+                  <span>{level}</span>
+                  <span className="lv-badge-kat">{kategori === "全" ? "MIX" : kategori}</span>
+                </span>
+              )}
+              <h1 className="lt-title">
+                {stage === "setup" ? (
+                  <>Lembar Tugas <span className="lt-title-jp">課題</span></>
+                ) : (
+                  <>Generated <span className="lt-title-jp">問題</span></>
+                )}
+              </h1>
+            </div>
+          </div>
+
+          <div className="lt-header-actions">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDrawerOpen(true)}>
+              <History size={13} />
+              Riwayat
+              {riwayat.length > 0 && <span className="lt-riwayat-count">{riwayat.length}</span>}
+            </button>
             {stage === "quiz" && (
               <>
-                <div className="h-4 w-px bg-white/10" />
-                <div className="flex items-center gap-1.5 text-xs text-[#4a5a7a]">
-                  <span className="text-[#8a9bbf]">Lembar Tugas</span>
-                  <ChevronDown className="size-3 -rotate-90 opacity-40" />
-                  <span className="text-[#8a9bbf]">{soalList.length} SOAL</span>
-                </div>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTimerOn(o => !o)}>
+                  <Pause size={12} strokeWidth={2} />
+                  {timerOn ? "Jeda timer" : "Lanjut"}
+                </button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setStage("setup")}>
+                  <X size={12} strokeWidth={2} />
+                  Keluar
+                </button>
               </>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            {stage === "quiz" && (
-              <button onClick={() => setStage("setup")}
-                className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:brightness-110"
-                style={{ background: "#1f2a3f", color: "#8a9bbf", fontFamily: "var(--font-space)" }}>
-                <RotateCcw className="size-3" /> GENERATE ULANG
-              </button>
-            )}
-            <button onClick={() => setRiwayatOpen(true)}
-              className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:brightness-110"
-              style={{ background: "#1f2a3f", color: "#8a9bbf", fontFamily: "var(--font-space)" }}>
-              <Clock className="size-3" /> RIWAYAT
-            </button>
-            <div className="flex items-center gap-2 text-xs text-[#4a5a7a]">
-              <Sparkles className="size-3 text-[#6b9cda]" />
-              <span style={{ color: "#6b9cda" }}>+ Claude AI</span>
-            </div>
-          </div>
         </header>
 
-        {/* ── Stats strip (quiz only) ── */}
-        {stage === "quiz" && (
-          <div className="flex items-center gap-6 px-6 py-3 shrink-0"
-            style={{ background: "rgba(8,15,30,0.7)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid rgba(107,156,218,0.08)" }}>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-extrabold text-[#bbc6e2]"
-                style={{ fontFamily: "var(--font-jakarta)" }}>{soalList.length}</span>
-              <span className="text-[9px] font-bold text-[#4a5a7a]"
-                style={{ fontFamily: "var(--font-space)" }}>TOTAL SOAL</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-extrabold text-[#6b9cda]"
-                style={{ fontFamily: "var(--font-jakarta)" }}>
-                {[...new Set(soalList.map(s => s.category))].length}
-              </span>
-              <span className="text-[9px] font-bold text-[#4a5a7a]"
-                style={{ fontFamily: "var(--font-space)" }}>KATEGORI</span>
-            </div>
-            {allRevealed && (
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-extrabold text-[#5ea87a]"
-                  style={{ fontFamily: "var(--font-jakarta)" }}>
-                  {correctCount}/{soalList.length}
-                </span>
-                <span className="text-[9px] font-bold text-[#4a5a7a]"
-                  style={{ fontFamily: "var(--font-space)" }}>SKOR</span>
-              </div>
-            )}
-            <div className="flex-1" />
-            {allRevealed && !saved && (
-              <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all hover:brightness-110 disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg,#3a8a5a,#5ea87a)", color: "#fff", fontFamily: "var(--font-space)" }}>
-                {saving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-                {saving ? "MENYIMPAN…" : "SIMPAN HASIL"}
-              </button>
-            )}
-            {saved && (
-              <span className="text-[10px] font-semibold text-[#5ea87a] flex items-center gap-1"
-                style={{ fontFamily: "var(--font-space)" }}>
-                <CheckCircle2 className="size-3" /> TERSIMPAN
-              </span>
-            )}
-            <button onClick={() => setView(v => v === "single" ? "all" : "single")}
-              className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all"
-              style={{ background: "#1f2a3f", color: "#8a9bbf", fontFamily: "var(--font-space)" }}>
-              <LayoutList className="size-3" />
-              {view === "single" ? "SEMUA SOAL" : "SATU PER SATU"}
-            </button>
+        {error && (
+          <div className="glass-card" style={{ padding: 16, marginBottom: 16, border: "1px solid rgba(164,36,59,0.32)", background: "rgba(164,36,59,0.06)" }}>
+            <p style={{ color: "var(--accent-rose)", margin: 0, fontSize: 13 }}>⚠️ {error}</p>
           </div>
         )}
 
-        {/* ── Main content ── */}
-        <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+        {stage === "setup" && (
+          <SetupView
+            level={level} setLevel={setLevel}
+            kategori={kategori} setKategori={setKategori}
+            count={count} setCount={setCount}
+            timerOn={timerOn} setTimerOn={setTimerOn}
+            riwayat={riwayat}
+            onStart={handleGenerate}
+          />
+        )}
 
-          {/* ── Setup screen ── */}
-          {stage === "setup" && (
-            <div className="flex items-center justify-center min-h-full px-6 py-10">
-              <div className="w-full max-w-lg flex flex-col gap-6">
+        {stage === "generating" && (
+          <div className="glass-card lt-gen-overlay">
+            <div className="lt-gen-spinner" />
+            <p className="lt-gen-title">Menyiapkan {count} soal {level} {kategori === "全" ? "" : kategori}...</p>
+            <p className="lt-gen-sub">Sensei AI lagi nyiapin soal — biasanya butuh 10-20 detik.</p>
+          </div>
+        )}
 
-                {/* Title */}
-                <div className="text-center">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
-                    style={{ background: "rgba(107,156,218,0.12)", border: "1px solid rgba(107,156,218,0.2)" }}>
-                    <Wand2 className="size-3 text-[#6b9cda]" />
-                    <span className="text-[10px] font-bold text-[#6b9cda]"
-                      style={{ fontFamily: "var(--font-space)" }}>AI GENERATE SOAL</span>
-                  </div>
-                  <h1 className="text-2xl font-extrabold text-[#d7e2ff] mb-2"
-                    style={{ fontFamily: "var(--font-jakarta)" }}>
-                    Buat Lembar Tugas
-                  </h1>
-                  <p className="text-sm text-[#4a5a7a]">
-                    Claude AI akan membuat soal latihan JLPT baru untukmu setiap sesi.
-                  </p>
-                </div>
+        {stage === "quiz" && soal && (
+          <QuizView
+            soalList={soalList}
+            soal={soal}
+            current={current} setCurrent={setCurrent}
+            picked={picked} pickAnswer={pickAnswer}
+            answers={answers}
+            flagged={flagged} toggleFlag={toggleFlag}
+            correctIdx={correctIdx}
+            showResult={showResult}
+            elapsed={elapsed}
+            level={level}
+            kategori={kategori === "全" ? "MIX" : kategori}
+            allAnswered={allAnswered}
+            correctCount={correctCount}
+            saving={saving}
+            saved={saved}
+            onFinish={handleFinish}
+            onReset={() => setStage("setup")}
+          />
+        )}
+      </main>
 
-                {error && (
-                  <div className="px-4 py-3 rounded-xl text-sm text-[#e05a5a]"
-                    style={{ background: "rgba(224,90,90,0.08)", border: "1px solid rgba(224,90,90,0.2)" }}>
-                    {error}
-                  </div>
+      <RiwayatDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        riwayat={riwayat}
+      />
+    </>
+  );
+}
+
+/* ─── Setup view ─── */
+
+function SetupView({
+  level, setLevel, kategori, setKategori, count, setCount, timerOn, setTimerOn,
+  riwayat, onStart,
+}: {
+  level: Level; setLevel: (l: Level) => void;
+  kategori: CategoryAll; setKategori: (k: CategoryAll) => void;
+  count: number; setCount: (n: number) => void;
+  timerOn: boolean; setTimerOn: (b: boolean) => void;
+  riwayat: RiwayatItem[];
+  onStart: () => void;
+}) {
+  return (
+    <div className="lt-setup-grid">
+      <main className="lt-setup-main">
+        <section className="setup-section glass-card">
+          <div className="section-head">
+            <span className="section-num">1</span>
+            <div>
+              <h3 className="section-title">Pilih Level</h3>
+              <p className="section-desc">AI akan tune kesulitan soal sesuai level kamu</p>
+            </div>
+          </div>
+          <div className="level-picker">
+            {LEVELS.map(opt => (
+              <button
+                key={opt.lv}
+                type="button"
+                className={`level-tile lvt-${opt.lv.toLowerCase()}${level === opt.lv ? " on" : ""}`}
+                onClick={() => setLevel(opt.lv)}
+              >
+                <span className="lvt-letter">{opt.lv}</span>
+                <span className="lvt-desc">{opt.desc}</span>
+                {level === opt.lv && (
+                  <span className="lvt-check">
+                    <Check size={10} strokeWidth={3} style={{ color: "#0E1116" }} />
+                  </span>
                 )}
+              </button>
+            ))}
+          </div>
+        </section>
 
-                {/* Level */}
-                <div className="p-5 rounded-2xl flex flex-col gap-3"
-                  style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.12)" }}>
-                  <p className="text-[10px] font-bold text-[#4a5a7a]"
-                    style={{ fontFamily: "var(--font-space)" }}>LEVEL JLPT</p>
-                  <div className="flex gap-2">
-                    {LEVELS.map(l => (
-                      <button key={l} onClick={() => setLevel(l)}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
-                        style={level === l
-                          ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)" }
-                          : { background: "#0d1929", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
+        <section className="setup-section glass-card">
+          <div className="section-head">
+            <span className="section-num">2</span>
+            <div>
+              <h3 className="section-title">Pilih Kategori</h3>
+              <p className="section-desc">Atau biarkan AI campur — pilih salah satu di bawah</p>
+            </div>
+          </div>
+          <div className="kat-grid">
+            {KATEGORIS.map(k => (
+              <button
+                key={k.jp}
+                type="button"
+                className={`kat-tile kt-${k.tone}${kategori === k.jp ? " on" : ""}`}
+                onClick={() => setKategori(k.jp)}
+              >
+                <div className="kt-icon">
+                  <k.Icon size={16} strokeWidth={1.8} />
                 </div>
-
-                {/* Category */}
-                <div className="p-5 rounded-2xl flex flex-col gap-3"
-                  style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.12)" }}>
-                  <p className="text-[10px] font-bold text-[#4a5a7a]"
-                    style={{ fontFamily: "var(--font-space)" }}>KATEGORI</p>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {CATS.map(c => (
-                      <button key={c.value} onClick={() => setCategory(c.value)}
-                        className="flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all"
-                        style={category === c.value
-                          ? { background: `${c.color}20`, border: `1px solid ${c.color}50`, color: c.color }
-                          : { background: "#0d1929", border: "1px solid rgba(255,255,255,0.04)", color: "#4a5a7a" }}>
-                        <span className="text-base font-black"
-                          style={{ fontFamily: "var(--font-jakarta)" }}>{c.kanji}</span>
-                        <span className="text-[9px] font-bold"
-                          style={{ fontFamily: "var(--font-space)" }}>{c.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="kt-text">
+                  <div className="kt-jp">{k.jp}</div>
+                  <div className="kt-label">{k.label}</div>
+                  <div className="kt-desc">{k.desc}</div>
                 </div>
+                {kategori === k.jp && (
+                  <span className="kt-check">
+                    <Check size={10} strokeWidth={3} style={{ color: "#0E1116" }} />
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className={`kat-mix-btn${kategori === "全" ? " on" : ""}`}
+            onClick={() => setKategori("全")}
+          >
+            <Sparkles size={11} fill="currentColor" strokeWidth={1.2} />
+            {kategori === "全" ? "AI campur semua kategori ✓" : "Biar AI yang campur semua kategori →"}
+          </button>
+        </section>
 
-                {/* Count */}
-                <div className="p-5 rounded-2xl flex flex-col gap-3"
-                  style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.12)" }}>
-                  <p className="text-[10px] font-bold text-[#4a5a7a]"
-                    style={{ fontFamily: "var(--font-space)" }}>JUMLAH SOAL</p>
-                  <div className="flex gap-2">
-                    {COUNTS.map(n => (
-                      <button key={n} onClick={() => setCount(n)}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
-                        style={count === n
-                          ? { background: "rgba(107,156,218,0.15)", color: "#6b9cda", border: "1px solid rgba(107,156,218,0.35)" }
-                          : { background: "#0d1929", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {n} soal
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Generate button */}
-                <button onClick={handleGenerate}
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold transition-all hover:brightness-110"
-                  style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", fontFamily: "var(--font-space)", boxShadow: "0 0 30px rgba(74,122,191,0.3)" }}>
-                  <Wand2 className="size-4" />
-                  GENERATE {count} SOAL {level} — {CATS.find(c => c.value === category)?.label}
+        <section className="setup-section glass-card">
+          <div className="section-head">
+            <span className="section-num">3</span>
+            <div>
+              <h3 className="section-title">Opsi Sesi</h3>
+              <p className="section-desc">Sesuaikan jumlah soal &amp; pengaturan ujian</p>
+            </div>
+          </div>
+          <div className="opt-row">
+            <div className="opt-block">
+              <label className="opt-label">Jumlah soal</label>
+              <div className="count-stepper">
+                {COUNTS.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`step-chip${count === c ? " on" : ""}`}
+                    onClick={() => setCount(c)}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <div className="opt-est">
+                <Clock size={11} strokeWidth={1.6} style={{ color: "var(--text-tertiary)" }} />
+                Estimasi: <strong>{Math.round(count * 1.2)} menit</strong>
+              </div>
+            </div>
+            <div className="opt-divider" />
+            <div className="opt-block">
+              <label className="opt-label">Mode</label>
+              <div className="toggle-pair">
+                <button
+                  type="button"
+                  className={`toggle-pill${timerOn ? " on" : ""}`}
+                  onClick={() => setTimerOn(true)}
+                >
+                  <Clock size={12} strokeWidth={1.8} /> Dengan timer
+                </button>
+                <button
+                  type="button"
+                  className={`toggle-pill${!timerOn ? " on" : ""}`}
+                  onClick={() => setTimerOn(false)}
+                >
+                  Tanpa timer
                 </button>
               </div>
             </div>
-          )}
+          </div>
+        </section>
 
-          {/* ── Generating screen ── */}
-          {stage === "generating" && (
-            <div className="flex flex-col items-center justify-center min-h-full gap-5 text-center px-6">
-              <div className="size-16 rounded-2xl flex items-center justify-center relative"
-                style={{ background: "rgba(107,156,218,0.12)", border: "1px solid rgba(107,156,218,0.2)" }}>
-                <div className="absolute inset-0 rounded-2xl animate-ping opacity-20"
-                  style={{ background: "rgba(107,156,218,0.3)" }} />
-                <Wand2 className="size-7 text-[#6b9cda] relative" />
-              </div>
-              <div>
-                <p className="text-base font-bold text-[#d7e2ff] mb-1"
-                  style={{ fontFamily: "var(--font-jakarta)" }}>
-                  Sensei AI sedang membuat soal…
-                </p>
-                <p className="text-sm text-[#4a5a7a]">
-                  {count} soal {level} • {CATS.find(c => c.value === category)?.label}
-                </p>
-              </div>
-              <Loader2 className="size-5 animate-spin text-[#4a5a7a]" />
-            </div>
-          )}
+        <button type="button" className="lt-start-cta" onClick={onStart}>
+          <div className="cta-bg" />
+          <Wand2 size={16} strokeWidth={1.8} />
+          <span className="cta-text">Generate &amp; Mulai Sesi</span>
+          <span className="cta-meta">
+            {count} soal · {level} · {kategori === "全" ? "MIX" : kategori}
+          </span>
+          <ChevronRight size={16} strokeWidth={2.2} />
+        </button>
+      </main>
 
-          {/* ── Quiz ── */}
-          {stage === "quiz" && soal && (
-            <div className="px-6 py-5">
-              {view === "all" ? (
-                <div className="max-w-3xl mx-auto flex flex-col gap-5 pb-8">
-                  {soalList.map((s, idx) => (
-                    <SoalCard key={s.id} soal={s}
-                      picked={answers[s.id]} revealed={!!revealed[s.id]}
-                      onPick={i => pick(s.id, i)}
-                      onReveal={() => reveal(s.id)}
-                      questionIndex={idx} total={soalList.length} />
-                  ))}
-                </div>
-              ) : (
-                <div className="max-w-3xl mx-auto pb-8">
-                  <SoalCard soal={soal}
-                    picked={picked} revealed={isRevealed}
-                    onPick={i => pick(soal.id, i)}
-                    onReveal={() => reveal(soal.id)}
-                    questionIndex={current} total={soalList.length} />
-                </div>
-              )}
-            </div>
+      <aside className="lt-setup-side">
+        <div className="glass-card lt-side-card">
+          <div className="lt-side-head">
+            <History size={13} strokeWidth={1.8} style={{ color: "var(--accent-iris)" }} />
+            Sesi Terbaru
+          </div>
+          {riwayat.length === 0 ? (
+            <p style={{ fontSize: 11.5, color: "var(--text-tertiary)", margin: 0, padding: "6px 4px" }}>
+              Belum ada sesi.
+            </p>
+          ) : (
+            <ul className="recent-list">
+              {riwayat.slice(0, 5).map(r => {
+                const tone = scoreTone(r.score, r.total);
+                return (
+                  <li key={r.id}>
+                    <Link href={`/analisis-foto?session=${r.id}`} className="recent-item">
+                      <span className={`lv-tag-mini lv-${r.level.toLowerCase()}`}>{r.level}</span>
+                      <div className="recent-meta">
+                        <div className="recent-title">
+                          <span className="font-jp-sans">{r.category}</span>
+                          <span className="recent-sep">·</span>
+                          {r.total} soal
+                        </div>
+                        <div className="recent-date">{relativeDate(r.created_at)}</div>
+                      </div>
+                      {r.score != null && tone !== "none" && (
+                        <span className={`recent-score rs-${tone}`}>{r.score}/{r.total}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
 
-        {/* ── Bottom nav (quiz single view) ── */}
-        {stage === "quiz" && view === "single" && (
-          <div className="shrink-0 flex items-center justify-between px-6 py-3"
-            style={{ background: "rgba(2,8,16,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderTop: "1px solid rgba(107,156,218,0.1)" }}>
-            <button onClick={() => setCurrent(c => Math.max(0, c - 1))}
-              disabled={current === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-30"
-              style={{ background: "#1f2a3f", color: "#8a9bbf" }}>
-              <ArrowLeft className="size-4" /> Sebelumnya
-            </button>
-            <button onClick={() => setView("all")}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: "#1f2a3f", color: "#8a9bbf" }}>
-              <LayoutList className="size-4" /> Semua Soal
-            </button>
-            <button onClick={() => setCurrent(c => Math.min(soalList.length - 1, c + 1))}
-              disabled={current === soalList.length - 1}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:brightness-110 disabled:opacity-30"
-              style={{ background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff" }}>
-              Berikutnya <ArrowRight className="size-4" />
+        <div className="glass-card lt-side-card glow-amber">
+          <div className="lt-side-head">
+            <Sparkles size={12} fill="var(--accent-amber)" strokeWidth={1.2} style={{ color: "var(--accent-amber)" }} />
+            Rekomendasi Sensei
+          </div>
+          <div>
+            <div className="sg-eyebrow">Fokus latihan</div>
+            <p className="sg-title">
+              Coba sesi <strong>{kategori === "全" ? "MIX" : kategori}</strong> level {level} dengan {count} soal.
+            </p>
+            <p className="sg-desc">
+              Sensei AI bakal generate soal khusus level kamu — kerjain lalu lihat akurasi di Statistik.
+            </p>
+            <button type="button" className="sg-cta" onClick={onStart}>
+              Setup otomatis →
             </button>
           </div>
-        )}
-      </div>
-
-      {/* ── Riwayat Drawer ── */}
-      {riwayatOpen && (
-        <>
-          <div className="fixed inset-0 z-40" style={{ background: "rgba(7,19,39,0.7)" }}
-            onClick={() => setRiwayatOpen(false)} />
-          <aside className="fixed top-0 right-0 h-full z-50 flex flex-col w-[85vw] max-w-[320px] sm:w-[300px]"
-            style={{ background: "#0d1929", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-
-            <div className="flex items-center justify-between px-5 py-4 shrink-0"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <div className="flex items-center gap-2">
-                <Star className="size-3.5 text-[#e07b4a]" />
-                <span className="text-sm font-bold text-[#d7e2ff]"
-                  style={{ fontFamily: "var(--font-jakarta)" }}>Riwayat Sesi</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded font-bold text-[#4a5a7a]"
-                  style={{ background: "#1f2a3f", fontFamily: "var(--font-space)" }}>
-                  {riwayat.length}
-                </span>
-              </div>
-              <button onClick={() => setRiwayatOpen(false)}
-                className="text-[#4a5a7a] hover:text-[#d7e2ff] transition-colors">
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 flex flex-col gap-2 pt-3 pb-4">
-              {riwayat.length === 0 ? (
-                <p className="text-[11px] text-[#4a5a7a] text-center py-8">Belum ada riwayat</p>
-              ) : riwayat.map(r => {
-                const color = catColor[r.category] ?? "#6b8cba";
-                const pct   = r.score != null && r.total ? Math.round((r.score / r.total) * 100) : null;
-                return (
-                  <div key={r.id} className="p-3 rounded-xl transition-all hover:brightness-110"
-                    style={{ background: "#101b30" }}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-extrabold text-[#d7e2ff]"
-                          style={{ fontFamily: "var(--font-jakarta)" }}>{r.total} soal</span>
-                        <span className="text-[8px] px-1.5 py-0.5 rounded font-bold"
-                          style={{ background: `${color}25`, color, fontFamily: "var(--font-space)" }}>
-                          {r.category}
-                        </span>
-                      </div>
-                      {pct != null && (
-                        <span className="text-[10px] font-bold"
-                          style={{ color: pct >= 70 ? "#5ea87a" : pct >= 50 ? "#e07b4a" : "#e05a5a", fontFamily: "var(--font-space)" }}>
-                          {pct}%
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 text-[9px] text-[#4a5a7a]"
-                      style={{ fontFamily: "var(--font-space)" }}>
-                      <Clock className="size-2.5" />
-                      {relativeTime(r.created_at)}
-                    </div>
-                    <p className="text-[10px] text-[#4a5a7a] mt-1 truncate">{r.title}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </aside>
-        </>
-      )}
-
-      <BottomNav activeHref="/lembar-tugas" />
+        </div>
+      </aside>
     </div>
   );
 }
 
-/* ─── SoalCard ────────────────────────────────────────────────── */
-function SoalCard({ soal, picked, revealed, onPick, onReveal, questionIndex, total }: {
-  soal: Soal;
-  picked: number | undefined;
-  revealed: boolean;
-  onPick: (i: number) => void;
-  onReveal: () => void;
-  questionIndex?: number;
-  total?: number;
-}) {
-  const correctIdx = soal.options.findIndex(o => o.correct);
+/* ─── Quiz view ─── */
 
-  function optStyle(i: number) {
-    if (!revealed) {
-      return picked === i
-        ? { bg: "rgba(107,156,218,0.18)", border: "rgba(107,156,218,0.5)", text: "#d7e2ff" }
-        : { bg: "rgba(16,27,48,0.5)", border: "rgba(107,156,218,0.1)", text: "#8a9bbf" };
-    }
-    if (i === correctIdx) return { bg: "rgba(94,168,122,0.1)",  border: "rgba(94,168,122,0.45)", text: "#5ea87a" };
-    if (picked === i)     return { bg: "rgba(224,90,90,0.08)",  border: "rgba(224,90,90,0.4)",  text: "#e05a5a" };
-    return { bg: "rgba(8,15,30,0.4)", border: "rgba(107,156,218,0.06)", text: "#4a5a7a" };
-  }
+function QuizView({
+  soalList, soal, current, setCurrent, picked, pickAnswer, answers, flagged, toggleFlag,
+  correctIdx, showResult, elapsed, level, kategori, allAnswered, correctCount,
+  saving, saved, onFinish, onReset,
+}: {
+  soalList: Soal[];
+  soal: Soal;
+  current: number;
+  setCurrent: (i: number) => void;
+  picked: number | undefined;
+  pickAnswer: (i: number) => void;
+  answers: Record<number, number>;
+  flagged: Set<number>;
+  toggleFlag: () => void;
+  correctIdx: number;
+  showResult: boolean;
+  elapsed: number;
+  level: Level;
+  kategori: string;
+  allAnswered: boolean;
+  correctCount: number;
+  saving: boolean;
+  saved: boolean;
+  onFinish: () => void;
+  onReset: () => void;
+}) {
+  const total = soalList.length;
+  const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
+  const progress = ((current + 1) / total) * 100;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-[#d7e2ff]"
-            style={{ fontFamily: "var(--font-jakarta)" }}>{soal.no}</span>
-          <span className="text-[9px] px-2 py-0.5 rounded font-bold"
-            style={{
-              background: catColor[soal.category] ? `${catColor[soal.category]}25` : "#1f2a3f",
-              color: catColor[soal.category] ?? "#8a9bbf",
-              fontFamily: "var(--font-space)",
-            }}>{soal.category}</span>
+    <div className="lt-quiz-grid">
+      <main className="lt-quiz-main">
+        <div className="quiz-progress">
+          <div className="qp-info">
+            <span className="qp-counter">
+              <strong>{String(current + 1).padStart(2, "0")}</strong>
+              <span className="qp-total">/ {String(total).padStart(2, "0")}</span>
+            </span>
+            <div className="qp-bar">
+              <div className="qp-fill" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+          <div className="qp-timer">
+            <Clock size={13} strokeWidth={1.8} />
+            <span className="qp-time-val">{fmtTime(elapsed)}</span>
+            <span className="qp-time-tag">ELAPSED</span>
+          </div>
         </div>
-        <span className="text-[9px] font-semibold"
-          style={{ color: diffColor[soal.difficulty], fontFamily: "var(--font-space)" }}>
-          {soal.difficulty}
-        </span>
-      </div>
 
-      {/* Context */}
-      {soal.context && (
-        <p className="text-sm text-[#8a9bbf] leading-relaxed px-1"
-          style={{ fontFamily: "var(--font-jakarta)" }}>{soal.context}</p>
-      )}
+        <section className="glass-card quiz-card">
+          <div className="quiz-meta-row">
+            <span className={`lv-tag-mini lv-${level.toLowerCase()}`}>{level}</span>
+            <span className="quiz-kat font-jp-sans">{soal.category || kategori}</span>
+            <span className="quiz-num-tag">#{current + 1}</span>
+          </div>
 
-      {/* Question */}
-      <p className="text-base text-[#d7e2ff] leading-relaxed"
-        style={{ fontFamily: "var(--font-jakarta)" }}>{soal.question}</p>
+          {soal.context && (
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16, lineHeight: 1.6, padding: 12, borderRadius: 10, background: "var(--surface-1)", border: "1px solid var(--edge-soft)" }}>
+              {soal.context}
+            </p>
+          )}
 
-      {/* Options */}
-      <div className="flex flex-col gap-2">
-        {soal.options.map((opt, i) => {
-          const s = optStyle(i);
-          return (
-            <button key={i} onClick={() => !revealed && onPick(i)} disabled={revealed}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all"
-              style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}>
-              <span className="size-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
-                style={{
-                  background: revealed && i === correctIdx ? "rgba(94,168,122,0.25)"
-                    : revealed && picked === i ? "rgba(224,90,90,0.2)"
-                    : picked === i ? "rgba(107,156,218,0.2)"
-                    : "rgba(187,198,226,0.06)",
-                  fontFamily: "var(--font-space)",
-                }}>
-                {revealed && i === correctIdx ? <CheckCircle2 className="size-3.5" /> :
-                 revealed && picked === i     ? <XCircle className="size-3.5" /> :
-                 ["1","2","3","4"][i]}
-              </span>
-              <span className="text-sm">{opt.text}</span>
-            </button>
-          );
-        })}
-      </div>
+          <p className="quiz-prompt">{soal.question}</p>
 
-      {/* Reveal button + progress */}
-      {!revealed && (
-        <div className="flex flex-col gap-2">
-          <button onClick={onReveal}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110"
-            style={{ background: "rgba(107,156,218,0.12)", color: "#6b9cda", border: "1px solid rgba(107,156,218,0.2)" }}>
-            <BookOpen className="size-4" /> Lihat Jawaban &amp; Pembahasan
+          <div className="quiz-options">
+            {soal.options.map((opt, i) => {
+              const isPicked = picked === i;
+              const isCorrect = i === correctIdx;
+              let cls = "";
+              if (showResult) {
+                if (isCorrect) cls = "correct";
+                else if (isPicked) cls = "wrong";
+              } else if (isPicked) cls = "picked";
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`quiz-opt ${cls}`}
+                  onClick={() => pickAnswer(i)}
+                  disabled={showResult}
+                >
+                  <span className="qo-key">{String.fromCharCode(65 + i)}</span>
+                  <span className="qo-text font-jp-sans">{opt.text}</span>
+                  {showResult && isCorrect && <Check size={16} strokeWidth={2.4} style={{ color: "var(--accent-emerald)" }} />}
+                  {showResult && isPicked && !isCorrect && <X size={16} strokeWidth={2.4} style={{ color: "var(--accent-rose)" }} />}
+                </button>
+              );
+            })}
+          </div>
+
+          {showResult && (
+            <div className="quiz-explain">
+              <div className="qe-head">
+                <span className="qe-badge">
+                  <Sparkles size={10} fill="var(--accent-emerald)" strokeWidth={1.4} />
+                  PENJELASAN
+                </span>
+              </div>
+              {soal.explanation.correct && (
+                <p className="qe-body">{soal.explanation.correct}</p>
+              )}
+              {soal.explanation.wrong && (
+                <p className="qe-body" style={{ color: "var(--accent-rose)" }}>{soal.explanation.wrong}</p>
+              )}
+              {soal.explanation.tips && (
+                <p className="qe-body" style={{ marginTop: 8 }}>
+                  <strong>💡 Tips: </strong>{soal.explanation.tips}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+
+        <div className="quiz-nav">
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            disabled={current === 0}
+            onClick={() => setCurrent(current - 1)}
+          >
+            <ChevronLeft size={13} /> Sebelumnya
           </button>
-          {questionIndex !== undefined && total !== undefined && (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between text-[10px]"
-                style={{ fontFamily: "var(--font-space)" }}>
-                <span className="text-[#4a5a7a]">{soal.no} dari {total} soal</span>
-                <span className="text-[#4a5a7a]">{Math.round(((questionIndex + 1) / total) * 100)}%</span>
-              </div>
-              <div className="h-1 rounded-full" style={{ background: "rgba(187,198,226,0.06)" }}>
-                <div className="h-1 rounded-full transition-all"
-                  style={{ width: `${((questionIndex + 1) / total) * 100}%`, background: "linear-gradient(90deg,#2f5a9a,#6b9cda)" }} />
-              </div>
-            </div>
+          <div className="quiz-nav-center">
+            <button
+              type="button"
+              className={`quiz-flag${flagged.has(soal.id) ? " on" : ""}`}
+              onClick={toggleFlag}
+            >
+              <Flag size={12} />
+              {flagged.has(soal.id) ? "Ditandai" : "Tandai"}
+            </button>
+            <span className="quiz-jump-hint">
+              Pilih jawaban dulu · <kbd>→</kbd> lanjut
+            </span>
+          </div>
+          {current < total - 1 ? (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setCurrent(current + 1)}
+              disabled={picked == null}
+            >
+              Selanjutnya <ChevronRight size={13} />
+            </button>
+          ) : !allAnswered ? (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled
+              title="Jawab semua soal dulu"
+            >
+              Selesai <Check size={13} strokeWidth={2.4} />
+            </button>
+          ) : saved ? (
+            <button type="button" className="btn btn-primary btn-sm" onClick={onReset}>
+              Sesi baru <ChevronRight size={13} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={onFinish}
+              disabled={saving}
+            >
+              {saving ? "Menyimpan..." : `Selesai · ${correctCount}/${total}`}
+              <Check size={13} strokeWidth={2.4} />
+            </button>
           )}
         </div>
-      )}
+      </main>
 
-      {/* Explanation */}
-      {revealed && (
-        <div className="flex flex-col gap-3 p-4 rounded-2xl"
-          style={{ background: "rgba(16,27,48,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.15)" }}>
-
-          {/* Correct explanation */}
-          <div className="flex gap-3">
-            <CheckCircle2 className="size-4 text-[#5ea87a] shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[10px] font-bold text-[#5ea87a] mb-1"
-                style={{ fontFamily: "var(--font-space)" }}>KENAPA BENAR</p>
-              <p className="text-xs text-[#8a9bbf] leading-relaxed">{soal.explanation.correct}</p>
-            </div>
+      <aside className="lt-quiz-side">
+        <div className="glass-card quiz-side-card">
+          <div className="qside-head">
+            <span className="qside-title">Peta Soal</span>
+            <span className="qside-meta">
+              <span className="qsm-good">{answeredCount}</span>
+              <span className="qsm-sep">/</span>
+              <span>{total}</span>
+            </span>
           </div>
-
-          <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
-
-          {/* Wrong explanation */}
-          <div className="flex gap-3">
-            <XCircle className="size-4 text-[#e07b4a] shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[10px] font-bold text-[#e07b4a] mb-1"
-                style={{ fontFamily: "var(--font-space)" }}>KENAPA SALAH</p>
-              <p className="text-xs text-[#8a9bbf] leading-relaxed">{soal.explanation.wrong}</p>
-            </div>
+          <div className="qside-grid">
+            {soalList.map((s, i) => {
+              const isCurrent = i === current;
+              const isAnswered = answers[s.id] != null;
+              const isFlagged = flagged.has(s.id);
+              const cls = isCurrent ? "on" : isAnswered ? "done" : "";
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`qside-cell ${cls}${isFlagged ? " flagged" : ""}`}
+                  onClick={() => setCurrent(i)}
+                >
+                  {i + 1}
+                </button>
+              );
+            })}
           </div>
-
-          {/* Grammar points */}
-          {soal.explanation.grammar.filter(g => g.term && g.meaning).length > 0 && (
-            <>
-              <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
-              <div className="flex flex-wrap gap-1.5">
-                {soal.explanation.grammar.filter(g => g.term && g.meaning).map((g, i) => (
-                  <span key={i} className="px-2.5 py-1 rounded-lg text-[11px]"
-                    style={{ background: "rgba(107,156,218,0.1)", color: "#8ab4e8", fontFamily: "var(--font-jakarta)" }}>
-                    {g.term} — {g.meaning}
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Tips */}
-          {soal.explanation.tips && (
-            <>
-              <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
-              <div className="flex gap-3">
-                <Sparkles className="size-4 text-[#6b9cda] shrink-0 mt-0.5" />
-                <p className="text-xs text-[#8a9bbf] leading-relaxed italic">{soal.explanation.tips}</p>
-              </div>
-            </>
-          )}
+          <div className="qside-legend">
+            <span><span className="lg-dot lg-on" /> Sekarang</span>
+            <span><span className="lg-dot lg-done" /> Sudah</span>
+            <span><span className="lg-dot lg-todo" /> Belum</span>
+          </div>
         </div>
-      )}
+
+        <div className="glass-card quiz-tip-card">
+          <div className="lt-side-head">
+            <Sparkles size={12} fill="var(--accent-amber)" strokeWidth={1.2} style={{ color: "var(--accent-amber)" }} />
+            Tips Sensei
+          </div>
+          <p className="quiz-tip-body">
+            Baca soal pelan-pelan, terutama untuk pola{" "}
+            <strong>「と / たら / ば / なら」</strong> — pikirin <em>siapa yang in control</em>.
+          </p>
+        </div>
+      </aside>
     </div>
+  );
+}
+
+/* ─── Riwayat drawer ─── */
+
+function RiwayatDrawer({
+  open, onClose, riwayat,
+}: { open: boolean; onClose: () => void; riwayat: RiwayatItem[] }) {
+  return (
+    <>
+      <div className={`drawer-overlay${open ? " on" : ""}`} onClick={onClose} />
+      <aside className={`drawer${open ? " on" : ""}`}>
+        <div className="drawer-head">
+          <h3 className="drawer-title">Riwayat Lembar Tugas</h3>
+          <button type="button" className="drawer-close" onClick={onClose} aria-label="Tutup">
+            <X size={14} />
+          </button>
+        </div>
+        <div className="drawer-body">
+          <p className="drawer-sub">{riwayat.length} sesi terakhir · Klik untuk buka review</p>
+          {riwayat.length === 0 ? (
+            <p style={{ fontSize: 12, color: "var(--text-tertiary)", textAlign: "center", padding: "32px 0" }}>
+              Belum ada sesi.
+            </p>
+          ) : (
+            <ul className="drawer-list">
+              {riwayat.map(r => {
+                const tone = scoreTone(r.score, r.total);
+                return (
+                  <li key={r.id}>
+                    <Link href={`/analisis-foto?session=${r.id}`} className="drawer-item">
+                      <span className={`lv-tag-mini lv-${r.level.toLowerCase()}`}>{r.level}</span>
+                      <div className="drawer-meta">
+                        <div className="drawer-item-title">
+                          <span className="font-jp-sans">{r.category}</span>
+                          <span style={{ color: "var(--text-tertiary)", margin: "0 6px" }}>·</span>
+                          {r.title}
+                        </div>
+                        <div className="drawer-item-sub">{relativeDate(r.created_at)} · {r.total} soal</div>
+                      </div>
+                      {r.score != null && tone !== "none" && (
+                        <span className={`drawer-score ds-${tone}`}>{r.score}/{r.total}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </aside>
+    </>
   );
 }
