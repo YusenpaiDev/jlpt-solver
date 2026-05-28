@@ -1896,163 +1896,198 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         <div className="h-8" />
       </div>
 
-      {/* ── Right: Chat + Kamus Panel (desktop only) ── */}
-      <div className="hidden lg:flex w-[320px] shrink-0 flex-col border-l"
-        style={{ background: "rgba(8,16,36,0.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderColor: "rgba(107,156,218,0.12)" }}>
-
-        {/* Tab switcher */}
-        <div className="flex border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-          <button onClick={() => setRightTab("chat")}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-[11px] font-bold transition-all"
-            style={rightTab === "chat"
-              ? { color: "#6b9cda", borderBottom: "2px solid #6b9cda", fontFamily: "var(--font-space)" }
-              : { color: "#4a5a7a", borderBottom: "2px solid transparent", fontFamily: "var(--font-space)" }}>
-            <MessageCircle className="size-3.5" /> SENSEI
+      {/* ── Right: Sensei / Kamus / Catatan sidebar (v2 markup) ── */}
+      <aside className="af-side hidden lg:flex">
+        <div className="glass-card side-tabs">
+          <button
+            type="button"
+            className={`side-tab${rightTab === "chat" ? " on" : ""}`}
+            onClick={() => setRightTab("chat")}
+          >
+            <MessageCircle size={13} strokeWidth={1.8} fill={rightTab === "chat" ? "currentColor" : "none"} />
+            SENSEI
           </button>
-          <button onClick={() => setRightTab("kamus")}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-[11px] font-bold transition-all"
-            style={rightTab === "kamus"
-              ? { color: "#a67bd4", borderBottom: "2px solid #a67bd4", fontFamily: "var(--font-space)" }
-              : { color: "#4a5a7a", borderBottom: "2px solid transparent", fontFamily: "var(--font-space)" }}>
-            <BookOpen className="size-3.5" /> KAMUS
+          <button
+            type="button"
+            className={`side-tab${rightTab === "kamus" ? " on" : ""}`}
+            onClick={() => setRightTab("kamus")}
+          >
+            <BookOpen size={13} strokeWidth={1.8} />
+            KAMUS
           </button>
-          <button onClick={() => setRightTab("catatan")}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-[11px] font-bold transition-all"
-            style={rightTab === "catatan"
-              ? { color: "#5ea87a", borderBottom: "2px solid #5ea87a", fontFamily: "var(--font-space)" }
-              : { color: "#4a5a7a", borderBottom: "2px solid transparent", fontFamily: "var(--font-space)" }}>
-            <NotebookPen className="size-3.5" /> CATATAN
+          <button
+            type="button"
+            className={`side-tab${rightTab === "catatan" ? " on" : ""}`}
+            onClick={() => setRightTab("catatan")}
+          >
+            <NotebookPen size={13} strokeWidth={1.8} />
+            CATATAN
+            {catatanList.length > 0 && <span className="side-tab-badge">{catatanList.length}</span>}
           </button>
         </div>
 
-        {/* ── Tab: Chat ── */}
-        {rightTab === "chat" && (<>
-          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-            {chatMsgs.length === 0 && (
-              <div className="flex flex-col gap-2">
+        {/* ── Tab: Sensei chat ── */}
+        {rightTab === "chat" && (
+          <div className="glass-card side-card sensei-card">
+            <div className="sensei-intro">
+              <div className="sensei-avatar">先</div>
+              <div>
+                <div className="sensei-name">Sensei AI</div>
+                <div className="sensei-status">Online · siap bantu</div>
+              </div>
+            </div>
+
+            {chatMsgs.length === 0 ? (
+              <div className="sensei-suggest">
                 {[
                   "Kenapa jawaban ini benar?",
                   "Kasih contoh kalimat lain",
                   "Jelasin grammar-nya lebih detail",
                 ].map(s => (
-                  <button key={s} onClick={() => { setChatInput(s); }}
-                    className="text-left px-3 py-2 rounded-xl text-xs text-[#8a9bbf] hover:text-[#d7e2ff] hover:bg-white/5 transition-all"
-                    style={{ background: "#1f2a3f", fontFamily: "var(--font-manrope)" }}>
+                  <button
+                    key={s}
+                    type="button"
+                    className="suggest-pill"
+                    onClick={() => setChatInput(s)}
+                  >
                     {s}
                   </button>
                 ))}
               </div>
-            )}
-            {chatMsgs.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className="max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed"
-                  style={m.role === "user"
-                    ? { background: "linear-gradient(135deg,#2f4865,#1a2a3f)", color: "#d7e2ff", fontFamily: "var(--font-manrope)" }
-                    : { background: "#1f2a3f", color: "#8a9bbf", fontFamily: "var(--font-manrope)" }}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            {chatLoading && (
-              <div className="flex justify-start">
-                <div className="px-3 py-2 rounded-xl" style={{ background: "#1f2a3f" }}>
-                  <Loader2 className="size-3 text-[#4a5a7a] animate-spin" />
-                </div>
+            ) : (
+              <div className="sensei-msgs">
+                {chatMsgs.map((m, i) => (
+                  <div key={i} className={`sensei-msg ${m.role === "user" ? "user" : "bot"}`}>
+                    {m.text}
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="sensei-msg bot">
+                    <Loader2 size={12} className="animate-spin" />
+                  </div>
+                )}
               </div>
             )}
-          </div>
-          <div className="px-4 py-3 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "#1f2a3f" }}>
+
+            <div className="sensei-input">
               <input
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
                 placeholder="Tanya tentang soal ini..."
-                className="flex-1 text-xs text-[#d7e2ff] placeholder-[#2a354b] bg-transparent outline-none"
-                style={{ fontFamily: "var(--font-manrope)" }}
               />
-              <button onClick={sendChat} disabled={!chatInput.trim() || chatLoading}
-                className="size-6 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 hover:brightness-125"
-                style={{ background: "linear-gradient(135deg,#2f4865,#4a7abf)" }}>
-                <Send className="size-3 text-white" />
+              <button
+                type="button"
+                className="sensei-send"
+                onClick={sendChat}
+                disabled={!chatInput.trim() || chatLoading}
+                aria-label="Kirim"
+              >
+                <Send size={13} strokeWidth={2} />
               </button>
             </div>
           </div>
-        </>)}
+        )}
 
         {/* ── Tab: Kamus ── */}
         {rightTab === "kamus" && (
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* Search */}
-            <div className="px-3 py-3 border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "#1f2a3f" }}>
-                <Search className="size-3.5 text-[#4a5a7a] shrink-0" />
-                <input
-                  value={kamusQuery}
-                  onChange={e => setKamusQuery(e.target.value)}
-                  placeholder="Cari kata..."
-                  className="flex-1 text-xs text-[#d7e2ff] placeholder-[#2a354b] bg-transparent outline-none"
-                  style={{ fontFamily: "var(--font-manrope)" }}
-                />
-                {kamusQuery && <button onClick={() => setKamusQuery("")}><X className="size-3 text-[#4a5a7a]" /></button>}
-              </div>
+          <div className="glass-card side-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "var(--surface-1)", border: "1px solid var(--edge-soft)" }}>
+              <Search size={13} strokeWidth={1.6} style={{ color: "var(--text-tertiary)" }} />
+              <input
+                value={kamusQuery}
+                onChange={e => setKamusQuery(e.target.value)}
+                placeholder="Cari kata..."
+                style={{
+                  flex: 1, background: "transparent", border: "none", outline: "none",
+                  color: "var(--text-primary)", fontSize: 12.5, fontFamily: "var(--font-sans)",
+                }}
+              />
+              {kamusQuery && (
+                <button
+                  type="button"
+                  onClick={() => setKamusQuery("")}
+                  style={{ background: "transparent", border: "none", color: "var(--text-tertiary)", cursor: "pointer" }}
+                  aria-label="Hapus"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
 
             {/* Add word form */}
-            <div className="px-3 py-3 border-b shrink-0 flex flex-col gap-2" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-              <div className="flex gap-1.5">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", gap: 6 }}>
                 <input
                   value={addKanji}
                   onChange={e => setAddKanji(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && generateWordInfo()}
                   placeholder="Ketik kata/kanji..."
-                  className="flex-1 px-3 py-2 rounded-xl text-sm text-[#d7e2ff] placeholder-[#2a354b] outline-none"
-                  style={{ background: "#1f2a3f", fontFamily: "var(--font-jakarta)" }}
+                  className="font-jp-sans"
+                  style={{
+                    flex: 1, padding: "8px 12px", borderRadius: 10,
+                    background: "var(--surface-1)", border: "1px solid var(--edge-default)",
+                    color: "var(--text-primary)", fontSize: 14, outline: "none",
+                  }}
                 />
-                <button onClick={generateWordInfo} disabled={!addKanji.trim() || generating}
-                  className="px-3 py-2 rounded-xl text-[10px] font-bold transition-all disabled:opacity-40 flex items-center gap-1 shrink-0"
-                  style={{ background: "rgba(166,123,212,0.2)", color: "#a67bd4", fontFamily: "var(--font-space)" }}>
-                  {generating ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
-                  {generating ? "" : "AUTO"}
+                <button
+                  type="button"
+                  onClick={generateWordInfo}
+                  disabled={!addKanji.trim() || generating}
+                  className="btn btn-secondary btn-sm"
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  {generating ? "" : "Auto"}
                 </button>
               </div>
               {(addReading || addMeaning) && (
-                <div className="flex flex-col gap-1.5">
+                <>
                   <input
                     value={addReading}
                     onChange={e => setAddReading(e.target.value)}
                     placeholder="Cara baca (hiragana)"
-                    className="w-full px-3 py-1.5 rounded-lg text-xs text-[#a67bd4] placeholder-[#2a354b] outline-none"
-                    style={{ background: "rgba(166,123,212,0.08)", fontFamily: "var(--font-jakarta)" }}
+                    style={{
+                      padding: "8px 12px", borderRadius: 8,
+                      background: "rgba(139, 90, 140, 0.08)", border: "1px solid rgba(139, 90, 140, 0.2)",
+                      color: "#B873BD", fontSize: 12.5, outline: "none",
+                      fontFamily: "var(--font-sans-jp)",
+                    }}
                   />
                   <input
                     value={addMeaning}
                     onChange={e => setAddMeaning(e.target.value)}
                     placeholder="Arti"
-                    className="w-full px-3 py-1.5 rounded-lg text-xs text-[#d7e2ff] placeholder-[#2a354b] outline-none"
-                    style={{ background: "#1f2a3f", fontFamily: "var(--font-manrope)" }}
+                    style={{
+                      padding: "8px 12px", borderRadius: 8,
+                      background: "var(--surface-1)", border: "1px solid var(--edge-soft)",
+                      color: "var(--text-primary)", fontSize: 12.5, outline: "none",
+                    }}
                   />
-                  <button onClick={saveNewWord} disabled={!addMeaning.trim() || savingNew}
-                    className="w-full py-2 rounded-xl text-[10px] font-bold transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
-                    style={{ background: "rgba(94,168,122,0.2)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                    {savingNew ? <Loader2 className="size-3 animate-spin" /> : <BookmarkPlus className="size-3" />}
-                    SIMPAN KE KAMUS
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={saveNewWord}
+                    disabled={!addMeaning.trim() || savingNew}
+                    style={{ justifyContent: "center" }}
+                  >
+                    {savingNew ? <Loader2 size={12} className="animate-spin" /> : <BookmarkPlus size={12} />}
+                    Simpan ke Kamus
                   </button>
-                </div>
+                </>
               )}
             </div>
 
             {/* Word list */}
-            <div className="flex-1 overflow-y-auto">
+            <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
               {!kamusLoaded ? (
-                <div className="flex items-center justify-center py-10">
-                  <Loader2 className="size-4 text-[#4a5a7a] animate-spin" />
+                <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+                  <Loader2 size={16} className="animate-spin" style={{ color: "var(--text-tertiary)" }} />
                 </div>
               ) : kamusWords.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-2 px-4 text-center">
-                  <BookOpen className="size-7 text-[#2a354b]" />
-                  <p className="text-xs text-[#4a5a7a]">Kamus kosong. Simpan kata dari soal dulu.</p>
-                </div>
+                <p style={{ fontSize: 11.5, color: "var(--text-tertiary)", textAlign: "center", padding: "16px 0", margin: 0 }}>
+                  Kamus kosong. Simpan kata dari soal dulu.
+                </p>
               ) : (
                 kamusWords
                   .filter(w => {
@@ -2060,16 +2095,20 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                     return !q || w.kanji.includes(kamusQuery) || (w.reading ?? "").includes(kamusQuery) || w.meaning.toLowerCase().includes(q);
                   })
                   .map(w => (
-                    <div key={w.id} className="px-4 py-3 border-b hover:bg-white/[0.02] transition-colors"
-                      style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-                      <div className="flex items-baseline gap-2 mb-0.5">
-                        <span className="text-sm font-bold text-[#d7e2ff]"
-                          style={{ fontFamily: "var(--font-jakarta)" }}>{w.kanji}</span>
+                    <div
+                      key={w.id}
+                      style={{
+                        padding: "8px 10px", borderRadius: 8,
+                        background: "var(--surface-1)", border: "1px solid var(--edge-soft)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span className="font-jp-sans" style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{w.kanji}</span>
                         {w.reading && (
-                          <span className="text-[10px] text-[#a67bd4]">{w.reading}</span>
+                          <span className="font-jp-sans" style={{ fontSize: 10.5, color: "var(--text-tertiary)" }}>{w.reading}</span>
                         )}
                       </div>
-                      <p className="text-[11px] text-[#4a5a7a] leading-snug">{w.meaning.split(";")[0]}</p>
+                      <p style={{ fontSize: 11.5, color: "var(--text-secondary)", margin: "2px 0 0", lineHeight: 1.4 }}>{w.meaning.split(";")[0]}</p>
                     </div>
                   ))
               )}
@@ -2079,91 +2118,122 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
         {/* ── Tab: Catatan ── */}
         {rightTab === "catatan" && (
-          <div className="flex-1 flex flex-col min-h-0">
-
-            {/* Header + tombol + */}
-            <div className="px-3 py-2.5 border-b flex items-center justify-between shrink-0"
-              style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-              <span className="text-[10px] font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+          <div className="glass-card side-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid var(--edge-soft)" }}>
+              <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text-tertiary)" }}>
                 {catatanList.length} catatan
               </span>
-              <button onClick={() => { setNewNoteOpen(o => !o); setNewNoteText(""); }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:brightness-110"
-                style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                <Plus className="size-3" /> BARU
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => { setNewNoteOpen(o => !o); setNewNoteText(""); }}
+              >
+                <Plus size={11} strokeWidth={2.4} /> Baru
               </button>
             </div>
 
-            {/* Form tambah catatan */}
             {newNoteOpen && (
-              <div className="px-3 py-3 border-b flex flex-col gap-2 shrink-0"
-                style={{ borderColor: "rgba(255,255,255,0.04)", background: "rgba(94,168,122,0.04)" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 10, borderRadius: 10, background: "rgba(107, 142, 63, 0.06)", border: "1px solid rgba(107, 142, 63, 0.2)" }}>
                 <textarea
                   autoFocus
                   value={newNoteText}
                   onChange={e => setNewNoteText(e.target.value)}
                   placeholder="Tulis catatanmu..."
                   rows={4}
-                  className="w-full px-3 py-2 rounded-xl text-xs text-[#d7e2ff] placeholder-[#2a354b] outline-none resize-none leading-relaxed"
-                  style={{ background: "#101b30", border: "1px solid rgba(94,168,122,0.2)", fontFamily: "var(--font-manrope)" }}
+                  style={{
+                    padding: "8px 10px", borderRadius: 8,
+                    background: "var(--surface-1)", border: "1px solid var(--edge-soft)",
+                    color: "var(--text-primary)", fontSize: 12.5, outline: "none",
+                    resize: "vertical", lineHeight: 1.5,
+                    fontFamily: "var(--font-sans)",
+                  }}
                 />
-                <div className="flex gap-2">
-                  <button onClick={() => { setNewNoteOpen(false); setNewNoteText(""); }}
-                    className="flex-1 py-1.5 rounded-lg text-[10px] font-bold"
-                    style={{ background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                    BATAL
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => { setNewNoteOpen(false); setNewNoteText(""); }}
+                    style={{ flex: 1, justifyContent: "center" }}
+                  >
+                    Batal
                   </button>
-                  <button onClick={addNewNote} disabled={!newNoteText.trim() || savingNewNote}
-                    className="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all disabled:opacity-40 flex items-center justify-center gap-1"
-                    style={{ background: "rgba(94,168,122,0.2)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                    {savingNewNote ? <Loader2 className="size-3 animate-spin" /> : null}
-                    SIMPAN
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={addNewNote}
+                    disabled={!newNoteText.trim() || savingNewNote}
+                    style={{ flex: 1, justifyContent: "center" }}
+                  >
+                    {savingNewNote ? <Loader2 size={12} className="animate-spin" /> : "Simpan"}
                   </button>
                 </div>
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto">
+            <div style={{ maxHeight: 400, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
               {!catatanLoaded ? (
-                <div className="flex items-center justify-center py-10">
-                  <Loader2 className="size-4 text-[#4a5a7a] animate-spin" />
+                <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+                  <Loader2 size={16} className="animate-spin" style={{ color: "var(--text-tertiary)" }} />
                 </div>
               ) : catatanList.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-2 px-4 text-center">
-                  <NotebookPen className="size-7 text-[#2a354b]" />
-                  <p className="text-xs text-[#4a5a7a]">Belum ada catatan. Klik "Simpan ke Catatan" di tiap soal.</p>
-                </div>
-              ) : catatanList.map(c => (
-                <div key={c.id} className="border-b" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-                  <button
-                    onClick={() => setExpandedNote(expandedNote === c.id ? null : c.id)}
-                    className="w-full px-4 py-3 text-left flex items-start gap-2.5 hover:bg-white/[0.02] transition-colors">
-                    <NotebookPen className="size-3.5 text-[#5ea87a] shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-[#d7e2ff] truncate" style={{ fontFamily: "var(--font-jakarta)" }}>{c.judul || "Catatan"}</p>
-                      <p className="text-[10px] text-[#4a5a7a] mt-0.5">
-                        {new Date(c.updated_at).toLocaleDateString("id-ID", { day:"numeric", month:"short" })}
-                      </p>
-                    </div>
-                    <span className="text-[10px] text-[#4a5a7a] shrink-0">{expandedNote === c.id ? "▲" : "▼"}</span>
-                  </button>
-                  {expandedNote === c.id && (
-                    <div className="px-4 pb-3">
-                      <p className="text-xs text-[#8a9bbf] leading-relaxed whitespace-pre-wrap"
-                        style={{ fontFamily: "var(--font-manrope)" }}>{c.isi}</p>
-                      <a href="/catatan"
-                        className="mt-2 inline-block text-[10px] text-[#5ea87a] hover:underline"
-                        style={{ fontFamily: "var(--font-space)" }}>
-                        Buka di Catatan →
-                      </a>
-                    </div>
-                  )}
-                </div>
-              ))}
+                <p style={{ fontSize: 11.5, color: "var(--text-tertiary)", textAlign: "center", padding: "16px 0", margin: 0 }}>
+                  Belum ada catatan. Klik &ldquo;Simpan ke Catatan&rdquo; di soal.
+                </p>
+              ) : catatanList.map(c => {
+                const isExpanded = expandedNote === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      borderRadius: 8,
+                      background: isExpanded ? "var(--surface-2)" : "var(--surface-1)",
+                      border: "1px solid var(--edge-soft)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedNote(isExpanded ? null : c.id)}
+                      style={{
+                        width: "100%", padding: "10px 12px",
+                        display: "flex", alignItems: "flex-start", gap: 10,
+                        background: "transparent", border: "none",
+                        textAlign: "left", cursor: "pointer",
+                        color: "inherit", fontFamily: "var(--font-sans)",
+                      }}
+                    >
+                      <NotebookPen size={14} strokeWidth={1.6} style={{ color: "var(--accent-emerald)", marginTop: 2, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {c.judul || "Catatan"}
+                        </p>
+                        <p style={{ fontSize: 10.5, color: "var(--text-tertiary)", margin: "2px 0 0" }}>
+                          {new Date(c.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{isExpanded ? "▲" : "▼"}</span>
+                    </button>
+                    {isExpanded && (
+                      <div style={{ padding: "0 12px 12px" }}>
+                        <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 }}>
+                          {c.isi}
+                        </p>
+                        <a
+                          href="/catatan"
+                          style={{ marginTop: 8, display: "inline-block", fontSize: 10.5, color: "var(--accent-emerald)", fontWeight: 500 }}
+                        >
+                          Buka di Catatan →
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
-      </div>
+      </aside>
+
 
       {/* ─── Edit Modal per Soal (v2) ─── */}
       {editIdx !== null && editDraft && (
