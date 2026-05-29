@@ -7,7 +7,7 @@ import KamusFlashCard from "@/components/KamusFlashCard";
 import {
   Camera, Bell, Upload, ArrowUpRight,
   CheckCircle2, Circle, Sparkles,
-  ChevronLeft, ChevronDown, RotateCcw,
+  ChevronLeft, ChevronDown, RotateCcw, Clock,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck,
   BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
 } from "lucide-react";
@@ -1344,118 +1344,94 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   };
 
   return (
-    <div className="flex-1 flex min-h-0 overflow-hidden relative">
+    <div className="af-grid" style={{ position: "relative" }}>
 
       {/* Toast notification */}
       {toast && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-2xl text-sm font-semibold animate-fadeIn"
-          style={{
-            background: toast.ok ? "rgba(94,168,122,0.95)" : "rgba(192,80,80,0.95)",
-            color: "#fff",
-            backdropFilter: "blur(12px)",
-            fontFamily: "var(--font-manrope)",
-            boxShadow: toast.ok ? "0 4px 24px rgba(94,168,122,0.4)" : "0 4px 24px rgba(192,80,80,0.4)",
-          }}>
+        <div className={`af-toast ${toast.ok ? "ok" : "bad"}`}>
           {toast.ok ? <BookmarkCheck className="size-4 shrink-0" /> : <X className="size-4 shrink-0" />}
           {toast.text}
         </div>
       )}
 
       {/* ── Left: All Questions ── */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-16 lg:pb-0"
-        style={{ background: "transparent" }}>
+      <main className="af-main">
 
-        {/* Sticky header */}
-        <div className="sticky top-0 z-10 px-4 md:px-8 py-3 md:py-4 flex items-center justify-between gap-3 flex-wrap"
-          style={{ background: "rgba(2,8,16,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(107,156,218,0.1)" }}>
-          <div className="flex items-center gap-3">
-            <h2 className="text-base font-bold text-[#d7e2ff]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>{result.title}</h2>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] px-2.5 py-1 rounded-full font-bold"
-                style={{ background: "#1f2a3f", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
-                {result.questions.length} soal
+        {/* Topbar v2 */}
+        <header className="af-topbar">
+          <div className="af-title-block">
+            <h1 className="af-title">
+              <span className="af-title-jp">{result.title}</span>
+            </h1>
+            <div className="af-meta-row">
+              <span className="meta-chip">
+                <span className="meta-num">{result.questions.length}</span> soal
               </span>
               {revealed.size > 0 && (
-                <span className="text-[10px] px-2.5 py-1 rounded-full font-bold"
-                  style={{ background: "rgba(94,168,122,0.15)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                  {revealed.size} dijawab
+                <span className="meta-chip">
+                  <span className="meta-dot" style={{ background: "var(--accent-emerald)" }} />
+                  <span className="meta-num">{revealed.size}</span> dijawab
+                </span>
+              )}
+              {isSaved && (
+                <a href="/riwayat-soal" className="meta-chip status-saved">
+                  <Check className="size-3" />
+                  Tersimpan otomatis · <span className="meta-link">Lihat riwayat →</span>
+                </a>
+              )}
+              {!isSaved && (
+                <span className="meta-chip">
+                  <Loader2 className="size-3 animate-spin" /> Menyimpan...
                 </span>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Timer + toggle */}
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg"
-              style={{ background: "#1f2a3f" }}>
-              <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>⏱</span>
-              <span className="text-[13px] font-black text-[#6b9cda] tabular-nums w-[3.5rem]"
-                style={{ fontFamily: "var(--font-jakarta)" }}>
-                {timerOn ? formatTime(elapsed) : "—:——"}
-              </span>
+
+          <div className="af-actions">
+            <div className="af-timer">
+              <Clock size={13} strokeWidth={2} />
+              <span className="af-timer-val">{timerOn ? formatTime(elapsed) : "—:——"}</span>
               <button
+                type="button"
                 onClick={() => setTimerOn(v => !v)}
-                className="ml-1 text-[9px] px-1.5 py-0.5 rounded font-bold transition-colors"
-                style={{
-                  background: timerOn ? "rgba(107,156,218,0.2)" : "rgba(74,90,122,0.2)",
-                  color: timerOn ? "#6b9cda" : "#4a5a7a",
-                  fontFamily: "var(--font-space)",
-                }}>
+                className={`af-timer-status${timerOn ? "" : " off"}`}
+                style={{ cursor: "pointer", border: "none" }}
+              >
                 {timerOn ? "ON" : "OFF"}
               </button>
             </div>
-            {/* Saved badge */}
-            {isSaved ? (
-              <a href="/riwayat-soal"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:brightness-110"
-                style={{
-                  background: "rgba(94,168,122,0.15)",
-                  color: "#5ea87a",
-                  border: "1px solid rgba(94,168,122,0.3)",
-                  fontFamily: "var(--font-space)",
-                }}>
-                <span className="size-1.5 rounded-full bg-[#5ea87a] shadow-[0_0_6px_#5ea87a]" />
-                TERSIMPAN · LIHAT RIWAYAT →
-              </a>
-            ) : (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
-                style={{ background: "#1f2a3f", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                <Loader2 className="size-3 animate-spin" /> Menyimpan...
-              </div>
-            )}
-            <button onClick={onReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#4a5a7a] hover:text-[#8a9bbf] transition-colors"
-              style={{ fontFamily: "var(--font-space)" }}>
-              <RotateCcw className="size-3" /> Upload Baru
+            <button type="button" className="btn btn-secondary btn-sm" onClick={onReset}>
+              <Upload size={14} /> Upload Baru
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Category + review filters */}
+        {/* Category + review filters v2 */}
         {(() => {
           const cats = ["全部", ...Array.from(new Set(result.questions.map(q => q.category).filter(Boolean)))];
           const reviewCount = result.questions.filter(q => q.needs_review).length;
           const hasCatFilter = cats.length > 2;
           if (!hasCatFilter && reviewCount === 0) return null;
           return (
-            <div className="flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6 pb-0 flex-wrap">
+            <div className="af-filter-row">
               {hasCatFilter && cats.map(c => (
-                <button key={c} onClick={() => setCatFilter(c!)}
-                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
-                  style={catFilter === c
-                    ? { background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", color: "#071327", fontFamily: "var(--font-space)" }
-                    : { background: "#101b30", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+                <button
+                  key={c}
+                  type="button"
+                  className={`af-filter-chip${catFilter === c ? " on" : ""}`}
+                  onClick={() => setCatFilter(c!)}
+                >
                   {c} {c !== "全部" && `(${result.questions.filter(q => q.category === c).length})`}
                 </button>
               ))}
               {reviewCount > 0 && (
-                <button onClick={() => setReviewOnly(v => !v)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ml-auto"
-                  style={reviewOnly
-                    ? { background: "linear-gradient(135deg,#dc5050,#e07b4a)", color: "#fff", fontFamily: "var(--font-space)" }
-                    : { background: "rgba(224,123,74,0.12)", color: "#e07b4a", border: "1px solid rgba(224,123,74,0.25)", fontFamily: "var(--font-space)" }}>
-                  <Flag className="size-3" />
-                  {reviewOnly ? "TAMPILKAN SEMUA" : `PERLU REVIEW (${reviewCount})`}
+                <button
+                  type="button"
+                  className={`af-filter-chip review${reviewOnly ? " on" : ""}`}
+                  onClick={() => setReviewOnly(v => !v)}
+                >
+                  <Flag size={12} strokeWidth={1.8} />
+                  {reviewOnly ? "Tampilkan semua" : `Perlu review (${reviewCount})`}
                 </button>
               )}
             </div>
@@ -1487,56 +1463,51 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 <div key={qi} className="flex flex-col gap-4">
 
                   {/* ── Standalone passage card ── */}
-                  {showPassageCard && q.passage && (
-                    <div className="rounded-2xl md:rounded-3xl overflow-hidden"
-                      style={{ background: "rgba(10,20,40,0.8)", border: "1px solid rgba(94,168,122,0.25)", boxShadow: "0 0 30px rgba(94,168,122,0.06)" }}>
-                      <div className="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between border-b gap-2 flex-wrap"
-                        style={{ borderColor: "rgba(94,168,122,0.15)" }}>
-                        <div className="flex items-center gap-2.5">
-                          <div className="size-7 rounded-lg flex items-center justify-center"
-                            style={{ background: "rgba(74,222,128,0.2)", boxShadow: "0 0 14px rgba(74,222,128,0.25)" }}>
-                            <BookOpen className="size-3.5" style={{ color: "#4ade80" }} />
+                  {showPassageCard && q.passage && (() => {
+                    const pKey = `p-${qi}`;
+                    const furiOn = showFurigana.has(pKey);
+                    const furiLoading = furiganaLoading.has(pKey);
+                    return (
+                      <section className="glass-card af-reading">
+                        <div className="reading-head">
+                          <h3 className="reading-title">
+                            <BookOpen size={14} strokeWidth={1.8} style={{ color: "var(--accent-emerald)" }} />
+                            Teks Bacaan · 読解
+                          </h3>
+                          <div className="reading-actions">
+                            <button
+                              type="button"
+                              onClick={() => toggleFurigana(pKey, q.passage!)}
+                              disabled={furiLoading}
+                              className={`toggle-chip${furiOn ? " on" : ""}`}
+                            >
+                              {furiLoading
+                                ? <Loader2 size={11} className="animate-spin" />
+                                : <span className="toggle-jp">ふ</span>}
+                              {furiLoading ? "Memuat..." : "Furigana"}
+                              {furiOn && !furiLoading && <Check size={11} strokeWidth={2.4} />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedPassages(s => { const n = new Set(s); if (n.has(qi)) n.delete(qi); else n.add(qi); return n; })}
+                              className="toggle-chip"
+                            >
+                              {isPassageCollapsed ? "Tampilkan ▼" : "Sembunyikan ▲"}
+                            </button>
                           </div>
-                          <span className="text-xs font-black tracking-wider"
-                            style={{ fontFamily: "var(--font-space)", color: "#4ade80", textShadow: "0 0 10px rgba(74,222,128,0.4)" }}>
-                            📖 TEKS BACAAN · 読解
-                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {(() => {
-                            const pKey = `p-${qi}`;
-                            return (
-                              <button
-                                onClick={() => toggleFurigana(pKey, q.passage!)}
-                                disabled={furiganaLoading.has(pKey)}
-                                className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg font-bold transition-all disabled:opacity-50"
-                                style={{ background: showFurigana.has(pKey) ? "rgba(138,180,232,0.18)" : "rgba(138,180,232,0.08)", color: "#8ab4e8", fontFamily: "var(--font-space)" }}>
-                                {furiganaLoading.has(pKey) ? <Loader2 className="size-3 animate-spin" /> : "ふ"}
-                                {furiganaLoading.has(pKey) ? "MEMUAT…" : showFurigana.has(pKey) ? "FURIGANA ✓" : "FURIGANA"}
-                              </button>
-                            );
-                          })()}
-                          <button
-                            onClick={() => setExpandedPassages(s => { const n = new Set(s); n.has(qi) ? n.delete(qi) : n.add(qi); return n; })}
-                            className="text-[10px] px-2.5 py-1 rounded-lg font-bold transition-all"
-                            style={{ background: "rgba(94,168,122,0.1)", color: "#5ea87a", fontFamily: "var(--font-space)" }}>
-                            {isPassageCollapsed ? "TAMPILKAN ▼" : "SEMBUNYIKAN ▲"}
-                          </button>
-                        </div>
-                      </div>
-                      {!isPassageCollapsed && (() => {
-                        const pKey = `p-${qi}`;
-                        return (
-                          <div className="px-4 md:px-6 py-4 md:py-5 whitespace-pre-wrap font-medium"
-                            style={{ fontFamily: "var(--font-jakarta)", color: "#f0fdf4", fontSize: "clamp(14px,3.8vw,17px)", lineHeight: showFurigana.has(pKey) ? 2.6 : 2 }}>
-                            {showFurigana.has(pKey) && furiganaMarked[pKey]
-                              ? renderPassage(furiganaMarked[pKey])
-                              : q.passage}
+                        {!isPassageCollapsed && (
+                          <div className="reading-body">
+                            <p>
+                              {furiOn && furiganaMarked[pKey]
+                                ? renderPassage(furiganaMarked[pKey])
+                                : q.passage}
+                            </p>
                           </div>
-                        );
-                      })()}
-                    </div>
-                  )}
+                        )}
+                      </section>
+                    );
+                  })()}
 
                   {/* ── Question card v2 ── */}
                   <article className="glass-card qc-v2">
@@ -1819,82 +1790,71 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           });
         })()}
 
-        {/* ── Tambah soal: manual / dari file ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-          <input ref={addPhotoRef} type="file"
+        {/* ── Tambah soal v2: manual / dari file ── */}
+        <div className="af-add-row">
+          <input
+            ref={addPhotoRef}
+            type="file"
             accept="image/*,application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="hidden" onChange={onAddPhotoChange} />
-          <button onClick={openAddManual} disabled={addingPhoto}
-            className="flex items-center justify-center gap-2 py-3 md:py-3.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
-            style={{ background: "rgba(94,168,122,0.12)", color: "#5ea87a", border: "1px dashed rgba(94,168,122,0.35)", fontFamily: "var(--font-space)" }}>
-            <Plus className="size-4" /> TAMBAH SOAL MANUAL
+            className="hidden"
+            onChange={onAddPhotoChange}
+          />
+          <button
+            type="button"
+            className="af-add-btn manual"
+            onClick={openAddManual}
+            disabled={addingPhoto}
+          >
+            <Plus size={14} strokeWidth={2.2} /> Tambah soal manual
           </button>
-          <button onClick={() => addPhotoRef.current?.click()}
+          <button
+            type="button"
+            className="af-add-btn from-file"
+            onClick={() => addPhotoRef.current?.click()}
             disabled={addingPhoto}
             title="Upload foto/PDF/Word — AI analisis & append ke sesi ini"
-            className="flex items-center justify-center gap-2 py-3 md:py-3.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
-            style={{ background: "rgba(107,156,218,0.12)", color: "#6b9cda", border: "1px dashed rgba(107,156,218,0.35)", fontFamily: "var(--font-space)" }}>
+          >
             {addingPhoto
-              ? <><Loader2 className="size-4 animate-spin" /> MENGANALISIS…</>
-              : <><Upload className="size-4" /> TAMBAH DARI FILE</>}
+              ? <><Loader2 size={14} className="animate-spin" /> Menganalisis...</>
+              : <><Upload size={14} strokeWidth={1.8} /> Tambah dari file</>}
           </button>
         </div>
         </div>
 
-        {/* ── Kosakata dari Foto ── */}
+        {/* ── Kosakata dari Foto v2 ── */}
         {result.vocabulary && result.vocabulary.length > 0 && (
-          <div className="px-4 md:px-8 pb-8 md:pb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] font-bold text-[#4a5a7a]"
-                style={{ fontFamily: "var(--font-space)" }}>KOSAKATA DARI FOTO</span>
-              <span className="text-[9px] px-2 py-0.5 rounded-full font-bold"
-                style={{ background: "#1f2a3f", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
+          <section className="af-vocab-section">
+            <div className="af-vocab-head">
+              <span>Kosakata dari foto</span>
+              <span className="meta-chip" style={{ padding: "2px 8px", fontSize: 10.5 }}>
                 {result.vocabulary.length} kata
               </span>
-              <span className="text-[9px] text-[#2a354b]"
-                style={{ fontFamily: "var(--font-space)" }}>— tersimpan otomatis ke Kamus</span>
+              <span style={{ fontSize: 10.5, color: "var(--text-muted)", letterSpacing: 0 }}>
+                — tersimpan otomatis ke Kamus
+              </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="af-vocab-grid">
               {result.vocabulary.map((v, i) => (
-                <div key={i} className="p-3 md:p-4 rounded-xl md:rounded-2xl flex flex-col gap-1.5 md:gap-2 relative"
-                  style={{ background: "rgba(16,27,48,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(107,156,218,0.15)" }}>
-                  {/* Level badge */}
-                  {v.jlpt_level && (
-                    <span className="absolute top-2.5 md:top-3 right-2.5 md:right-3 text-[9px] px-1.5 py-0.5 rounded font-bold"
-                      style={{ background: "#1f2a3f", color: "#4a5a7a", fontFamily: "var(--font-space)" }}>
-                      {v.jlpt_level}
-                    </span>
-                  )}
-                  {/* Furigana */}
-                  <p className="text-[11px] text-[#4a5a7a] leading-none"
-                    style={{ fontFamily: "var(--font-jakarta)" }}>{v.reading}</p>
-                  {/* Word */}
-                  <p className="text-xl md:text-2xl font-black text-[#d7e2ff] leading-none"
-                    style={{ fontFamily: "var(--font-jakarta)" }}>{v.word}</p>
-                  {/* Meaning */}
-                  <p className="text-[13px] md:text-sm text-[#8a9bbf] leading-snug">{v.meaning}</p>
-                  {/* Example */}
+                <article key={i} className="af-vocab-card">
+                  {v.jlpt_level && <span className="af-vocab-level">{v.jlpt_level}</span>}
+                  {v.reading && <span className="af-vocab-reading">{v.reading}</span>}
+                  <span className="af-vocab-word">{v.word}</span>
+                  <p className="af-vocab-meaning" style={{ margin: 0 }}>{v.meaning}</p>
                   {v.example && (
-                    <div className="mt-1 pl-2 border-l-2"
-                      style={{ borderColor: "rgba(107,156,218,0.3)" }}>
-                      <p className="text-xs text-[#4a5a7a] italic leading-relaxed"
-                        style={{ fontFamily: "var(--font-jakarta)" }}>{v.example}</p>
-                    </div>
+                    <p className="af-vocab-example" style={{ margin: 0 }}>{v.example}</p>
                   )}
-                  {/* Auto-saved indicator */}
-                  <div className="flex items-center gap-1 mt-1">
-                    <BookmarkCheck className="size-3 text-[#5ea87a]" />
-                    <span className="text-[9px] text-[#5ea87a]"
-                      style={{ fontFamily: "var(--font-space)" }}>TERSIMPAN</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 10, color: "var(--accent-emerald)" }}>
+                    <BookmarkCheck size={11} strokeWidth={1.8} />
+                    <span style={{ letterSpacing: "0.08em", fontWeight: 600 }}>Tersimpan</span>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         <div className="h-8" />
-      </div>
+      </main>
 
       {/* ── Right: Sensei / Kamus / Catatan sidebar (v2 markup) ── */}
       <aside className="af-side hidden lg:flex">
