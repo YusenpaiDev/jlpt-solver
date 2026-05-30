@@ -6558,7 +6558,15 @@ input, textarea, select { font-size: 16px; }
   .list-head { flex-wrap: wrap; gap: 8px; }
   .list-search { width: 100%; }
   .flash-card { width: 92vw !important; height: 60vh !important; }
-  .fc-kanji { font-size: 22vw !important; }
+  /* Kanji size auto-fit: cukup gede buat 1-2 karakter, gak overflow buat 4-5 karakter */
+  .fc-kanji {
+    font-size: clamp(54px, 14vw, 96px) !important;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    max-width: 100%;
+    padding: 0 16px;
+    text-align: center;
+  }
   .flash-controls { grid-template-columns: 40px 1fr 40px !important; }
   .flash-arrow { width: 40px !important; height: 40px !important; }
   .flash-flip-cta { min-width: 0 !important; padding: 10px 18px !important; font-size: 11px !important; }
