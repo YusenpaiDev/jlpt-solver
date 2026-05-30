@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
   Search, BookA, BookOpen, ChevronRight, ChevronLeft, Layers, Zap, Wand2, Plus, Upload,
-  X, Edit3, Trash2, Calendar, Camera, Shuffle, Check, Loader2, BarChart3,
+  X, Edit3, Trash2, Calendar, Camera, Shuffle, Check, Loader2, BarChart3, Star,
 } from "lucide-react";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
@@ -18,6 +18,7 @@ interface SavedWord {
   meaning: string;
   level: string | null;
   example: string | null;
+  favorite: boolean | null;
   created_at: string;
 }
 
@@ -47,6 +48,7 @@ export default function Kamus() {
   const [sort, setSort] = useState<SortMode>("newest");
   const [activeAlbum, setActiveAlbum] = useState<"all" | number>("all");
   const [selected, setSelected] = useState<string | null>(null);
+  const [favOnly, setFavOnly] = useState(false);
 
   /* Flash */
   const [flashMode, setFlashMode] = useState<FlashMode>(null);
@@ -91,22 +93,22 @@ export default function Kamus() {
         const profileRes = await supabase.from("profiles").select("streak").eq("id", user.id).single();
         if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
 
-        // Fallback kalau kolom `example` belum di-migrate (Postgres: column does not exist)
+        // Fallback graceful kalau kolom `example`/`favorite` belum di-migrate
         const wordsRes = await supabase
           .from("saved_words")
-          .select("id, kanji, reading, meaning, level, example, created_at")
+          .select("id, kanji, reading, meaning, level, example, favorite, created_at")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         let ws: SavedWord[];
-        if (wordsRes.error && /column .*example.* does not exist/i.test(wordsRes.error.message)) {
+        if (wordsRes.error && /column .*(example|favorite).* does not exist/i.test(wordsRes.error.message)) {
           const fb = await supabase
             .from("saved_words")
             .select("id, kanji, reading, meaning, level, created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false });
-          ws = (fb.data ?? []).map(w => ({ ...w, example: null })) as SavedWord[];
+          ws = (fb.data ?? []).map(w => ({ ...w, example: null, favorite: false })) as SavedWord[];
         } else {
-          ws = (wordsRes.data ?? []) as SavedWord[];
+          ws = (wordsRes.data ?? []).map(w => ({ ...w, favorite: w.favorite ?? false })) as SavedWord[];
         }
         setWords(ws);
         if (ws.length > 0) setSelected(ws[0].id);
@@ -144,6 +146,9 @@ export default function Kamus() {
     if (levelF !== "ALL") {
       result = result.filter(w => w.level === levelF);
     }
+    if (favOnly) {
+      result = result.filter(w => w.favorite);
+    }
     if (query.trim()) {
       const q = query.toLowerCase();
       result = result.filter(w =>
@@ -159,7 +164,7 @@ export default function Kamus() {
       result = [...result].sort((a, b) => (order[a.level ?? ""] ?? 99) - (order[b.level ?? ""] ?? 99));
     }
     return result;
-  }, [words, activeAlbum, levelF, query, sort]);
+  }, [words, activeAlbum, levelF, query, sort, favOnly]);
 
   const detail = useMemo(() => words.find(w => w.id === selected) ?? null, [words, selected]);
 
@@ -282,6 +287,22 @@ export default function Kamus() {
       setEditOpen(false);
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  /* ── Toggle favorite ── */
+  const toggleFavorite = async (id: string) => {
+    const w = words.find(x => x.id === id);
+    if (!w) return;
+    const next = !w.favorite;
+    // Optimistic
+    setWords(prev => prev.map(x => x.id === id ? { ...x, favorite: next } : x));
+    try {
+      const { error } = await createClient().from("saved_words").update({ favorite: next }).eq("id", id);
+      if (error) throw error;
+    } catch {
+      // Revert kalau gagal
+      setWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
     }
   };
 
@@ -469,6 +490,10 @@ export default function Kamus() {
             setSort={setSort}
             loading={loading}
             totalWords={words.length}
+            favOnly={favOnly}
+            setFavOnly={setFavOnly}
+            favCount={words.filter(w => w.favorite).length}
+            onToggleFavorite={toggleFavorite}
           />
 
           {detail ? (
@@ -477,6 +502,7 @@ export default function Kamus() {
               allWords={words}
               onEdit={openEdit}
               onDelete={() => deleteWord(detail.id)}
+              onToggleFavorite={() => toggleFavorite(detail.id)}
             />
           ) : !loading && words.length === 0 ? (
             <aside className="kk-detail">
@@ -755,6 +781,7 @@ function FilterRail({
 
 function WordList({
   words, selected, setSelected, query, setQuery, sort, setSort, loading, totalWords,
+  favOnly, setFavOnly, favCount, onToggleFavorite,
 }: {
   words: SavedWord[];
   selected: string | null;
@@ -765,6 +792,10 @@ function WordList({
   setSort: (s: SortMode) => void;
   loading: boolean;
   totalWords: number;
+  favOnly: boolean;
+  setFavOnly: (v: boolean) => void;
+  favCount: number;
+  onToggleFavorite: (id: string) => void;
 }) {
   return (
     <section className="kk-list-section glass-card">
@@ -778,6 +809,15 @@ function WordList({
           />
         </div>
         <div className="list-sort">
+          <button
+            type="button"
+            className={`sort-chip kk-fav-chip${favOnly ? " on" : ""}`}
+            onClick={() => setFavOnly(!favOnly)}
+            title={favOnly ? "Tampilkan semua" : "Hanya favorit"}
+          >
+            <Star size={11} strokeWidth={2} fill={favOnly ? "currentColor" : "none"} />
+            Favorit {favCount > 0 && <span style={{ opacity: 0.7 }}>({favCount})</span>}
+          </button>
           <span className="sort-label">Urutan:</span>
           <button type="button" className={`sort-chip${sort === "newest" ? " on" : ""}`} onClick={() => setSort("newest")}>Terbaru</button>
           <button type="button" className={`sort-chip${sort === "alpha" ? " on" : ""}`} onClick={() => setSort("alpha")}>A–Z</button>
@@ -806,13 +846,22 @@ function WordList({
         ) : words.map(w => (
           <li
             key={w.id}
-            className={`word-row${selected === w.id ? " on" : ""}`}
+            className={`word-row${selected === w.id ? " on" : ""}${w.favorite ? " is-fav" : ""}`}
             onClick={() => setSelected(w.id)}
           >
             <span className="word-kanji">{w.kanji}</span>
             <span className="word-reading">{w.reading ?? "—"}</span>
             <span className="word-meaning">{w.meaning}</span>
             <span className="word-right">
+              <button
+                type="button"
+                className={`kk-row-fav${w.favorite ? " on" : ""}`}
+                onClick={(e) => { e.stopPropagation(); onToggleFavorite(w.id); }}
+                title={w.favorite ? "Hapus dari favorit" : "Tambah ke favorit"}
+                aria-label={w.favorite ? "Hapus dari favorit" : "Tambah ke favorit"}
+              >
+                <Star size={13} strokeWidth={1.8} fill={w.favorite ? "currentColor" : "none"} />
+              </button>
               {w.level && <span className={`lv-tag-mini lv-${w.level.toLowerCase()}`}>{w.level}</span>}
             </span>
           </li>
@@ -823,15 +872,27 @@ function WordList({
 }
 
 function DetailCard({
-  word, allWords, onEdit, onDelete,
+  word, allWords, onEdit, onDelete, onToggleFavorite,
 }: {
-  word: SavedWord; allWords: SavedWord[]; onEdit: () => void; onDelete: () => void;
+  word: SavedWord;
+  allWords: SavedWord[];
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleFavorite: () => void;
 }) {
   return (
     <aside className="kk-detail">
       <div className="glass-card detail-hero">
         <div className="detail-hero-bg" />
         <div className="detail-hero-actions">
+          <button
+            type="button"
+            className={`dh-icon-btn fav${word.favorite ? " on" : ""}`}
+            title={word.favorite ? "Hapus dari favorit" : "Tambah ke favorit"}
+            onClick={onToggleFavorite}
+          >
+            <Star size={13} fill={word.favorite ? "currentColor" : "none"} strokeWidth={1.8} />
+          </button>
           <button type="button" className="dh-icon-btn" title="Edit" onClick={onEdit}>
             <Edit3 size={13} />
           </button>

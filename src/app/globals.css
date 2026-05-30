@@ -4262,6 +4262,37 @@ input, textarea, select { font-size: 16px; }
 .dh-icon-btn:hover { background: var(--surface-2); color: var(--text-primary); }
 .dh-icon-btn.danger:hover { color: var(--accent-rose); border-color: rgba(164, 36, 59, 0.4); }
 .dh-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.dh-icon-btn.fav.on {
+  color: var(--accent-amber);
+  border-color: rgba(212, 160, 74, 0.45);
+  background: rgba(212, 160, 74, 0.12);
+  box-shadow: 0 0 16px -4px rgba(212, 160, 74, 0.4);
+}
+.dh-icon-btn.fav:hover { color: var(--accent-amber); }
+
+/* Star button per row di word list */
+.kk-row-fav {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px;
+  transition: all 140ms;
+}
+.kk-row-fav:hover { color: var(--accent-amber); background: rgba(212, 160, 74, 0.08); }
+.kk-row-fav.on { color: var(--accent-amber); }
+.kk-row-fav.on:hover { background: rgba(212, 160, 74, 0.16); }
+
+/* Filter chip "Favorit" di list head */
+.kk-fav-chip { display: inline-flex; align-items: center; gap: 6px; }
+.kk-fav-chip.on {
+  color: var(--accent-amber);
+  border-color: rgba(212, 160, 74, 0.45);
+  background: rgba(212, 160, 74, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(212, 160, 74, 0.18);
+}
 .detail-level {
   position: absolute; top: 14px; right: 14px;
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
