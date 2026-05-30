@@ -754,6 +754,46 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 }) {
   const [answers,      setAnswers]      = useState<Record<number, string>>({});
   const [revealed,     setRevealed]     = useState<Set<number>>(new Set());
+
+  /* Exit confirmation — kalau user udah jawab/reveal minimal 1 soal,
+     intercept browser exit + in-app navigation buat tanya "yakin keluar?".
+     Data udah auto-saved di DB, ini pure UX safety net. */
+  const hasProgress = revealed.size > 0 || Object.keys(answers).length > 0;
+  useEffect(() => {
+    if (!hasProgress) return;
+
+    // Browser back / close / refresh — native dialog
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    // In-app NavRail / Link click interceptor — intercept anchor click bubbling up to document
+    const onDocClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement | null)?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!link) return;
+      const href = link.getAttribute("href") || "";
+      // Skip external, hash, dan link ke halaman yang sama
+      if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("mailto:")) return;
+      const currentPath = window.location.pathname + window.location.search;
+      if (href === currentPath || href === window.location.pathname) return;
+      // Skip kalau user pakai modifier key (ctrl-click buka tab baru — gak ngubah halaman ini)
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+      const ok = window.confirm("Progress kamu udah otomatis ke-save di Riwayat. Yakin mau keluar dari sesi ini?");
+      if (!ok) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    document.addEventListener("click", onDocClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("click", onDocClick, true);
+    };
+  }, [hasProgress]);
   const [catFilter,    setCatFilter]    = useState<string>("全部");
   const [reviewOnly,   setReviewOnly]   = useState(false);
   const [editIdx,      setEditIdx]      = useState<number | null>(null);
