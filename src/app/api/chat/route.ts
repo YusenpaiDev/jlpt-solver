@@ -7,6 +7,27 @@ export async function POST(req: NextRequest) {
   try {
     const { message, context, history } = await req.json();
 
+    const aturanKetat = `ATURAN JAWABAN — WAJIB DIIKUTI, tanpa kecuali:
+
+1. PENDEK. Maksimal 1-2 kalimat. Jangan pernah lebih.
+2. PLAIN TEXT doang. Dilarang KERAS pakai:
+   - Tanda bintang ** atau __ (gak boleh bold)
+   - Bullet list (- atau •)
+   - Heading kayak "Breakdown:", "Penjelasan:", "Contoh:"
+   - Tabel atau struktur formal
+3. DILARANG pecah arti per kata. User minta arti kalimat → kasih arti kalimat doang. Gak usah jelasin "ちゃんとした = rapi, 格好 = penampilan, dst."
+4. Bahasa Indonesia, santai, pakai "kamu".
+5. Default: cuma kasih ARTI kalimat dalam 1 kalimat Indonesia. Selesai.
+6. Boleh kasih konteks tambahan (1 kalimat) KALAU bener-bener perlu, tapi default jangan.
+
+CONTOH JAWABAN YANG BENAR:
+User: "卒業パーティーには、ちゃんとした格好で行ったほうがいいのかな maksud?"
+Kamu: "Artinya 'Apa sebaiknya aku pergi ke pesta kelulusan dengan pakaian rapi ya?'. Nuansanya ragu-ragu, kayak nanya pendapat."
+
+CONTOH JAWABAN YANG SALAH (jangan ditiru):
+"Maksudnya: **'Apakah sebaiknya...'**. **Breakdown:** - **ちゃんとした** = rapi - **格好** = penampilan..."
+↑ INI YANG DILARANG. Bertele-tele, pakai markdown, pecah-pecah per kata.`;
+
     const systemPrompt = context
       ? `Kamu Sensei JLPT, guru bahasa Jepang yang santai. Lagi diskusi sesi latihan ini:
 
@@ -18,16 +39,10 @@ ${context.questions
   )
   .join("\n\n")}
 
-ATURAN JAWABAN — wajib diikuti:
-- SINGKAT. Maksimal 2-3 kalimat. Jangan bertele-tele.
-- JANGAN pakai markdown (gak ada **bold**, bullet list, heading "Breakdown:", dll).
-- JANGAN pecah per kata kayak "**ちゃんとした** = rapi, **格好** = ...". User minta arti, kasih arti — jangan kuliahin.
-- Tone santai, kayak ngobrol sama temen. Pakai "kamu", bukan "Anda".
-- Boleh kasih 1 contoh kalimat Jepang KALAU bener-bener perlu, tapi default jangan.
-- Bahasa Indonesia.`
-      : `Kamu Sensei JLPT, guru bahasa Jepang yang santai. Jawab Bahasa Indonesia.
+${aturanKetat}`
+      : `Kamu Sensei JLPT, guru bahasa Jepang yang santai.
 
-ATURAN: singkat (2-3 kalimat), jangan pakai markdown, jangan pecah per kata, tone ngobrol santai pakai "kamu".`;
+${aturanKetat}`;
 
     const messages: Anthropic.MessageParam[] = [
       ...(history || []).map((m: { role: string; text: string }) => ({
@@ -39,12 +54,24 @@ ATURAN: singkat (2-3 kalimat), jangan pakai markdown, jangan pecah per kata, ton
 
     const response = await client.messages.create({
       model: "claude-haiku-4-5",
-      max_tokens: 1024,
+      max_tokens: 280,
       system: systemPrompt,
       messages,
     });
 
-    const reply = response.content[0].type === "text" ? response.content[0].text : "Maaf, gagal membalas.";
+    const rawReply = response.content[0].type === "text" ? response.content[0].text : "Maaf, gagal membalas.";
+
+    // Post-process: strip markdown kalau AI masih nyelipin (jaga-jaga prompt belum cukup)
+    const reply = rawReply
+      // Bold/italic: **text** atau __text__ atau *text* — keep teks-nya
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/__([^_]+)__/g, "$1")
+      .replace(/\*([^*\n]+)\*/g, "$1")
+      // Bullet list di awal baris: - atau •
+      .replace(/^\s*[-•]\s+/gm, "")
+      // Heading kayak "Breakdown:", "Penjelasan:" di awal kalimat — biarin, susah strip tanpa false-positive
+      .trim();
+
     return NextResponse.json({ success: true, reply });
   } catch (err) {
     console.error("Chat error:", err);

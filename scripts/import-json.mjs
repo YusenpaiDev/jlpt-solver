@@ -99,17 +99,29 @@ function normalizeResult(raw, fallbackTitle) {
   return { title, vocabulary, questions };
 }
 
-/* Discover JSON files */
+/* Discover JSON files — rekursif (masuk subfolder) */
+async function walkJsons(dir) {
+  const out = [];
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const e of entries) {
+    const full = join(dir, e.name);
+    if (e.isDirectory()) {
+      if (e.name.startsWith(".")) continue;
+      out.push(...await walkJsons(full));
+    } else if (e.isFile() && extname(e.name).toLowerCase() === ".json" && !e.name.startsWith(".")) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
 async function discoverJsons() {
   if (positional.length > 0) return positional.filter(p => extname(p).toLowerCase() === ".json");
   if (!existsSync(importDir)) {
     console.error(`❌ Folder ${importDir}/ gak ada. Bikin dulu + drop JSON kamu ke situ.`);
     process.exit(1);
   }
-  const entries = await readdir(importDir, { withFileTypes: true });
-  return entries
-    .filter(e => e.isFile() && extname(e.name).toLowerCase() === ".json")
-    .map(e => join(importDir, e.name));
+  return await walkJsons(importDir);
 }
 
 /* Push to Supabase */
