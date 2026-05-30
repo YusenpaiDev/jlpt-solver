@@ -459,7 +459,7 @@ function TargetSection({
                 <span className="pg-lv-letter">{lv}</span>
                 {targetLevel === lv && (
                   <span className="lvt-check">
-                    <Check size={10} strokeWidth={3} style={{ color: "#0E1116" }} />
+                    <Check size={10} strokeWidth={3} style={{ color: "var(--bg)" }} />
                   </span>
                 )}
               </button>

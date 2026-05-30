@@ -39,6 +39,9 @@ yarn-error.log*
 # materi belajar lokal (PDF/sumber kotoba) — jangan ke-push
 /materi/
 
+# mockup design v2 (reference lokal, jangan ke-push)
+/pembaruan UI/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

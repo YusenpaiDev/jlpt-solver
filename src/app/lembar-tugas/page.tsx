@@ -377,7 +377,7 @@ function SetupView({
                 <span className="lvt-desc">{opt.desc}</span>
                 {level === opt.lv && (
                   <span className="lvt-check">
-                    <Check size={10} strokeWidth={3} style={{ color: "#0E1116" }} />
+                    <Check size={10} strokeWidth={3} style={{ color: "var(--bg)" }} />
                   </span>
                 )}
               </button>
@@ -411,7 +411,7 @@ function SetupView({
                 </div>
                 {kategori === k.jp && (
                   <span className="kt-check">
-                    <Check size={10} strokeWidth={3} style={{ color: "#0E1116" }} />
+                    <Check size={10} strokeWidth={3} style={{ color: "var(--bg)" }} />
                   </span>
                 )}
               </button>

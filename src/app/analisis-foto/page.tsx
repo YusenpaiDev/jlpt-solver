@@ -129,16 +129,16 @@ function sanitizeQuestion(q: { question: string; options: string[] }): { questio
 
 
 const uploadStats = [
-  { label: "Soal dianalisis",  value: "24",  suffix: "",   color: "#6b9cda", glow: "rgba(74,122,191,0.15)"  },
-  { label: "Akurasi rata-rata",value: "78%", suffix: "",   color: "#5ea87a", glow: "rgba(94,168,122,0.15)" },
-  { label: "Hari streak",      value: "5",   suffix: "🔥", color: "#e07b4a", glow: "rgba(224,123,74,0.15)"  },
+  { label: "Soal dianalisis",  value: "24",  suffix: "",   color: "var(--text-secondary)", glow: "rgba(74,122,191,0.15)"  },
+  { label: "Akurasi rata-rata",value: "78%", suffix: "",   color: "var(--success)", glow: "rgba(94,168,122,0.15)" },
+  { label: "Hari streak",      value: "5",   suffix: "🔥", color: "var(--primary)", glow: "rgba(224,123,74,0.15)"  },
 ];
 
 const recentAnalysis = [
-  { kanji: "文法", label: "N2 文法問題 #14", date: "14 Apr", color: "#4a7abf" },
-  { kanji: "読解", label: "N2 読解問題 #8",  date: "12 Apr", color: "#5ea87a" },
-  { kanji: "語彙", label: "N2 語彙問題 #22", date: "10 Apr", color: "#8b5abf" },
-  { kanji: "文法", label: "N2 文法問題 #9",  date: "8 Apr",  color: "#e07b4a" },
+  { kanji: "文法", label: "N2 文法問題 #14", date: "14 Apr", color: "var(--info)" },
+  { kanji: "読解", label: "N2 読解問題 #8",  date: "12 Apr", color: "var(--success)" },
+  { kanji: "語彙", label: "N2 語彙問題 #22", date: "10 Apr", color: "var(--n1)" },
+  { kanji: "文法", label: "N2 文法問題 #9",  date: "8 Apr",  color: "var(--primary)" },
 ];
 
 const photoTips = [
@@ -156,15 +156,15 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
 
       {/* Ambient glow blobs */}
       <div className="pointer-events-none absolute top-0 left-1/3 w-[400px] h-[300px] opacity-[0.06] blur-[70px]"
-        style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
+        style={{ background: "radial-gradient(circle,var(--info),transparent 70%)" }} />
       <div className="pointer-events-none absolute top-10 right-0 w-[250px] h-[250px] opacity-[0.04] blur-[60px]"
-        style={{ background: "radial-gradient(circle,#8b5abf,transparent 70%)" }} />
+        style={{ background: "radial-gradient(circle,var(--n1),transparent 70%)" }} />
 
       {/* Page title */}
       <div className="mb-5 relative">
         <div className="flex items-center gap-2 mb-2">
-          <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-          <span className="text-[10px] tracking-widest text-[#5ea87a] font-semibold"
+          <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_var(--success)]" />
+          <span className="text-[10px] tracking-widest text-[var(--success)] font-semibold"
             style={{ fontFamily: "var(--font-space)" }}>
             AI ENGINE AKTIF · ANALISIS FOTO
           </span>
@@ -175,16 +175,16 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
             <span className="text-lg shrink-0">⚠️</span>
             <div>
               <p className="font-semibold text-red-300 mb-0.5" style={{ fontFamily: "var(--font-space)", fontSize: "11px" }}>ANALISIS GAGAL</p>
-              <p className="text-[#c08080] leading-relaxed">{error}</p>
+              <p className="text-[var(--danger)] leading-relaxed">{error}</p>
             </div>
           </div>
         )}
-        <h1 className="text-[2.4rem] font-extrabold leading-tight text-[#d7e2ff]"
+        <h1 className="text-[2.4rem] font-extrabold leading-tight text-[var(--text-primary)]"
           style={{ fontFamily: "var(--font-jakarta)" }}>
           Upload Soalmu,
           <br />
           <span style={{
-            background: "linear-gradient(135deg,#bbc6e2 0%,#6b9cda 50%,#a67bd4 100%)",
+            background: "linear-gradient(135deg,var(--text-primary) 0%,var(--text-secondary) 50%,var(--n1) 100%)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
           }}>
             Sensei yang Jawab.
@@ -196,13 +196,13 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
       <div className="flex items-center gap-2 md:gap-3 mb-5 overflow-x-auto pb-1">
         {uploadStats.map(({ label, value, suffix, color, glow }) => (
           <div key={label} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl relative overflow-hidden"
-            style={{ background: "#101b30" }}>
+            style={{ background: "var(--surface)" }}>
             <div className="absolute inset-0 opacity-60"
               style={{ background: `radial-gradient(circle at left,${glow},transparent 80%)` }} />
             <p className="relative text-lg font-extrabold leading-none" style={{ color, fontFamily: "var(--font-jakarta)" }}>
               {value}{suffix && <span className="ml-1">{suffix}</span>}
             </p>
-            <p className="relative text-[11px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>{label}</p>
+            <p className="relative text-[11px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>{label}</p>
           </div>
         ))}
       </div>
@@ -212,7 +212,7 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
         onClick={onUpload}
         className="group w-full rounded-2xl flex flex-col items-center justify-center gap-4 transition-all hover:brightness-110 mb-5 relative overflow-hidden"
         style={{
-          background: "#101b30",
+          background: "var(--surface)",
           border: "1.5px dashed rgba(94,168,122,0.35)",
           minHeight: "172px",
           boxShadow: "0 0 40px rgba(94,168,122,0.06) inset",
@@ -225,22 +225,22 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
           style={{ background: "radial-gradient(circle at 50% 50%,rgba(94,168,122,0.09),transparent 70%)" }} />
 
-        <Upload className="relative size-8 text-[#5ea87a] opacity-80" />
+        <Upload className="relative size-8 text-[var(--success)] opacity-80" />
 
         <div className="relative text-center">
-          <p className="font-bold text-[#d7e2ff] mb-1" style={{ fontFamily: "var(--font-jakarta)" }}>
+          <p className="font-bold text-[var(--text-primary)] mb-1" style={{ fontFamily: "var(--font-jakarta)" }}>
             Seret & lepas foto soal JLPT di sini
           </p>
-          <p className="text-xs text-[#4a5a7a]">PNG, JPG, PDF, Word (.docx) · Maks. 10MB</p>
+          <p className="text-xs text-[var(--text-tertiary)]">PNG, JPG, PDF, Word (.docx) · Maks. 10MB</p>
         </div>
 
         <div className="relative flex items-center gap-2">
-          <span className="text-[11px] px-5 py-1.5 rounded-full font-bold text-[#071327]"
-            style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", fontFamily: "var(--font-space)" }}>
+          <span className="text-[11px] px-5 py-1.5 rounded-full font-bold text-[var(--bg)]"
+            style={{ background: "linear-gradient(135deg,var(--text-primary),var(--text-secondary))", fontFamily: "var(--font-space)" }}>
             PILIH FILE
           </span>
           <span onClick={e => { e.stopPropagation(); onCamera(); }}
-            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full font-medium text-[#8a9bbf] border cursor-pointer hover:text-[#d7e2ff] hover:border-white/20 transition-colors"
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full font-medium text-[var(--text-secondary)] border cursor-pointer hover:text-[var(--text-primary)] hover:border-white/20 transition-colors"
             style={{ borderColor: "rgba(187,198,226,0.12)", fontFamily: "var(--font-space)" }}>
             <Camera className="size-3.5" /> KAMERA
           </span>
@@ -251,12 +251,12 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {/* Riwayat analisis */}
-        <div className="rounded-2xl p-5" style={{ background: "#101b30" }}>
+        <div className="rounded-2xl p-5" style={{ background: "var(--surface)" }}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+            <p className="text-xs font-bold text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
               RIWAYAT ANALISIS TERBARU
             </p>
-            <button className="flex items-center gap-1 text-[10px] text-[#4a5a7a] hover:text-[#bbc6e2] transition-colors"
+            <button className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
               style={{ fontFamily: "var(--font-space)" }}>
               SEMUA <ArrowUpRight className="size-3" />
             </button>
@@ -267,16 +267,16 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
                 <button key={label}
                   onClick={onOpenResult}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all hover:brightness-110 group"
-                  style={{ background: "#1f2a3f" }}>
+                  style={{ background: "var(--surface-2)" }}>
                   <div className="size-9 rounded-lg flex items-center justify-center text-sm font-black shrink-0"
                     style={{ background: `${color}20`, color, fontFamily: "var(--font-jakarta)" }}>
                     {kanji}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-[#d7e2ff] truncate"
+                    <p className="text-xs font-semibold text-[var(--text-primary)] truncate"
                       style={{ fontFamily: "var(--font-jakarta)" }}>{label}</p>
                   </div>
-                  <span className="text-[10px] text-[#4a5a7a] shrink-0 group-hover:text-[#bbc6e2] transition-colors"
+                  <span className="text-[10px] text-[var(--text-tertiary)] shrink-0 group-hover:text-[var(--text-primary)] transition-colors"
                     style={{ fontFamily: "var(--font-space)" }}>{date}</span>
                 </button>
               ))}
@@ -284,10 +284,10 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
           ) : (
             <div className="flex flex-col items-center justify-center py-8 gap-3">
               <div className="size-12 rounded-2xl flex items-center justify-center text-2xl"
-                style={{ background: "#1f2a3f" }}>📭</div>
-              <p className="text-xs font-semibold text-[#4a5a7a] text-center"
+                style={{ background: "var(--surface-2)" }}>📭</div>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)] text-center"
                 style={{ fontFamily: "var(--font-jakarta)" }}>Belum ada soal yang dianalisis</p>
-              <p className="text-[11px] text-[#2a354b] text-center">Upload foto pertamamu di atas!</p>
+              <p className="text-[11px] text-[var(--text-dim)] text-center">Upload foto pertamamu di atas!</p>
             </div>
           )}
         </div>
@@ -296,17 +296,17 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
         <div className="flex flex-col gap-4">
 
           {/* Tips foto */}
-          <div className="rounded-2xl p-5" style={{ background: "#101b30" }}>
-            <p className="text-xs font-bold text-[#4a5a7a] mb-3" style={{ fontFamily: "var(--font-space)" }}>
+          <div className="rounded-2xl p-5" style={{ background: "var(--surface)" }}>
+            <p className="text-xs font-bold text-[var(--text-tertiary)] mb-3" style={{ fontFamily: "var(--font-space)" }}>
               TIPS FOTO YANG BAGUS
             </p>
             <div className="grid grid-cols-2 gap-2">
               {photoTips.map(({ no, text }) => (
                 <div key={no} className="rounded-xl p-3 flex flex-col gap-2"
-                  style={{ background: "#1f2a3f" }}>
-                  <p className="text-[11px] text-[#8a9bbf] leading-relaxed">
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded mr-1.5 text-[10px] font-bold text-[#071327] align-middle"
-                      style={{ background: "linear-gradient(135deg,#bbc6e2,#6b8cba)", fontFamily: "var(--font-space)", flexShrink: 0 }}>
+                  style={{ background: "var(--surface-2)" }}>
+                  <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded mr-1.5 text-[10px] font-bold text-[var(--bg)] align-middle"
+                      style={{ background: "linear-gradient(135deg,var(--text-primary),var(--text-secondary))", fontFamily: "var(--font-space)", flexShrink: 0 }}>
                       {no}
                     </span>
                     {text}
@@ -318,46 +318,46 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
 
           {/* XP Progress N2 */}
           <div className="rounded-2xl p-5 relative overflow-hidden flex-1"
-            style={{ background: "#101b30" }}>
+            style={{ background: "var(--surface)" }}>
             <div className="absolute inset-0 opacity-15"
-              style={{ background: "radial-gradient(circle at top right,#4a7abf,transparent 65%)" }} />
+              style={{ background: "radial-gradient(circle at top right,var(--info),transparent 65%)" }} />
             <div className="relative">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-xs font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                <p className="text-xs font-bold text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
                   PROGRES N2 KAMU
                 </p>
                 <span className="text-[9px] px-2 py-0.5 rounded-full font-bold"
-                  style={{ background: "#2f4865", color: "#8ab4e8", fontFamily: "var(--font-space)" }}>
+                  style={{ background: "var(--surface-3)", color: "var(--info)", fontFamily: "var(--font-space)" }}>
                   LEVEL 4
                 </span>
               </div>
 
-              <p className="text-3xl font-extrabold text-[#d7e2ff] mt-2 mb-0.5"
+              <p className="text-3xl font-extrabold text-[var(--text-primary)] mt-2 mb-0.5"
                 style={{ fontFamily: "var(--font-jakarta)" }}>
-                520 <span className="text-base font-semibold text-[#4a5a7a]">/ 1000 XP</span>
+                520 <span className="text-base font-semibold text-[var(--text-tertiary)]">/ 1000 XP</span>
               </p>
-              <p className="text-[11px] text-[#8a9bbf] mb-3">52% menuju level berikutnya</p>
+              <p className="text-[11px] text-[var(--text-secondary)] mb-3">52% menuju level berikutnya</p>
 
-              <div className="h-2 rounded-full mb-4" style={{ background: "#1f2a3f" }}>
+              <div className="h-2 rounded-full mb-4" style={{ background: "var(--surface-2)" }}>
                 <div className="h-2 rounded-full" style={{
                   width: "52%",
-                  background: "linear-gradient(90deg,#3a8a5a,#5ea87a)",
+                  background: "linear-gradient(90deg,var(--success),var(--success))",
                   boxShadow: "0 0 10px rgba(94,168,122,0.4)",
                 }} />
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "Tata Bahasa", pct: 72, color: "#6b9cda" },
-                  { label: "Kosakata",    pct: 88, color: "#5ea87a" },
-                  { label: "Reading",     pct: 54, color: "#e07b4a" },
+                  { label: "Tata Bahasa", pct: 72, color: "var(--text-secondary)" },
+                  { label: "Kosakata",    pct: 88, color: "var(--success)" },
+                  { label: "Reading",     pct: 54, color: "var(--primary)" },
                 ].map(({ label, pct, color }) => (
                   <div key={label} className="rounded-lg p-2.5 text-center"
-                    style={{ background: "#1f2a3f" }}>
+                    style={{ background: "var(--surface-2)" }}>
                     <p className="text-sm font-bold mb-0.5" style={{ color, fontFamily: "var(--font-jakarta)" }}>
                       {pct}%
                     </p>
-                    <p className="text-[9px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+                    <p className="text-[9px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
                       {label}
                     </p>
                   </div>
@@ -400,26 +400,26 @@ function SetupView({
     <div className="flex-1 flex items-center justify-center px-8 py-10 relative">
       {/* Ambient */}
       <div className="pointer-events-none absolute inset-0 opacity-[0.05] blur-[80px]"
-        style={{ background: "radial-gradient(circle at 40% 40%,#4a7abf,transparent 60%)" }} />
+        style={{ background: "radial-gradient(circle at 40% 40%,var(--info),transparent 60%)" }} />
 
       <div className="relative w-full max-w-lg flex flex-col gap-6">
 
         {/* Back */}
         <button onClick={onBack}
-          className="flex items-center gap-1.5 text-[11px] text-[#4a5a7a] hover:text-[#bbc6e2] transition-colors self-start"
+          className="flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors self-start"
           style={{ fontFamily: "var(--font-space)" }}>
           <ChevronLeft className="size-3.5" /> HAPUS SEMUA & ULANG
         </button>
 
         {/* Photos strip — multiple thumbnails + add button */}
         <div className="p-4 rounded-2xl flex flex-col gap-3"
-          style={{ background: "#101b30", border: "1px solid rgba(255,255,255,0.05)" }}>
+          style={{ background: "var(--surface)", border: "1px solid rgba(255,255,255,0.05)" }}>
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>
+            <p className="text-[11px] font-bold text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
               FOTO SOAL
             </p>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-              style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+              style={{ background: "rgba(107,156,218,0.15)", color: "var(--text-secondary)", fontFamily: "var(--font-space)" }}>
               {files.length} {files.some(f => f.mimeType.includes("wordprocessingml")) ? "bagian" : "foto"}
             </span>
           </div>
@@ -427,18 +427,18 @@ function SetupView({
             {files.map((f, idx) => (
               <div key={idx} className="relative shrink-0 group/thumb">
                 <div className="size-16 rounded-xl overflow-hidden flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg,#1a2a3f,#0a1525)" }}>
+                  style={{ background: "linear-gradient(135deg,var(--surface),var(--bg))" }}>
                   {f.url
                     ? <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
                     : f.mimeType.includes("wordprocessingml")
-                      ? <span className="text-[10px] font-bold text-[#5ea87a] text-center px-1">DOC</span>
-                      : <span className="text-[10px] font-bold text-[#6b9cda] text-center px-1">PDF</span>
+                      ? <span className="text-[10px] font-bold text-[var(--success)] text-center px-1">DOC</span>
+                      : <span className="text-[10px] font-bold text-[var(--text-secondary)] text-center px-1">PDF</span>
                   }
                 </div>
                 <button
                   onClick={() => onRemoveFile(idx)}
                   className="absolute -top-1.5 -right-1.5 size-4.5 rounded-full flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity"
-                  style={{ background: "#dc5050" }}>
+                  style={{ background: "var(--danger)" }}>
                   <X className="size-2.5 text-white" />
                 </button>
                 <span className="absolute bottom-0.5 left-0 right-0 text-center text-[8px] text-white/60 bg-black/40 rounded-b-xl px-1 truncate"
@@ -451,20 +451,20 @@ function SetupView({
             <button
               onClick={onAddFile}
               className="size-16 rounded-xl shrink-0 flex flex-col items-center justify-center gap-1 transition-all hover:brightness-110"
-              style={{ background: "#1f2a3f", border: "1.5px dashed rgba(107,156,218,0.3)" }}>
-              <span className="text-lg text-[#4a5a7a]">+</span>
-              <span className="text-[8px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>TAMBAH</span>
+              style={{ background: "var(--surface-2)", border: "1.5px dashed rgba(107,156,218,0.3)" }}>
+              <span className="text-lg text-[var(--text-tertiary)]">+</span>
+              <span className="text-[8px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>TAMBAH</span>
             </button>
             {/* Camera button */}
             <button
               onClick={onCamera}
               className="size-16 rounded-xl shrink-0 flex flex-col items-center justify-center gap-1 transition-all hover:brightness-110"
-              style={{ background: "#1f2a3f", border: "1.5px dashed rgba(107,156,218,0.2)" }}>
-              <Camera className="size-5 text-[#4a5a7a]" />
-              <span className="text-[8px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>KAMERA</span>
+              style={{ background: "var(--surface-2)", border: "1.5px dashed rgba(107,156,218,0.2)" }}>
+              <Camera className="size-5 text-[var(--text-tertiary)]" />
+              <span className="text-[8px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>KAMERA</span>
             </button>
           </div>
-          <p className="text-[11px] text-[#5ea87a]" style={{ fontFamily: "var(--font-manrope)" }}>
+          <p className="text-[11px] text-[var(--success)]" style={{ fontFamily: "var(--font-manrope)" }}>
             <Check className="size-3 inline mr-1" />
             {files.length === 1
               ? `${files[0].name} berhasil diunggah`
@@ -476,7 +476,7 @@ function SetupView({
 
         {/* Level */}
         <div>
-          <p className="text-xs font-bold text-[#bbc6e2] mb-3"
+          <p className="text-xs font-bold text-[var(--text-primary)] mb-3"
             style={{ fontFamily: "var(--font-space)" }}>
             INI SOAL LEVEL BERAPA?
           </p>
@@ -485,8 +485,8 @@ function SetupView({
               <button key={l} onClick={() => setLevel(l)}
                 className="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
                 style={level === l
-                  ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", border: "1px solid rgba(107,156,218,0.4)" }
-                  : { background: "#101b30", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
+                  ? { background: "linear-gradient(135deg,var(--surface-2),var(--surface-3))", color: "var(--text-primary)", border: "1px solid rgba(107,156,218,0.4)" }
+                  : { background: "var(--surface)", color: "var(--text-tertiary)", border: "1px solid rgba(255,255,255,0.04)" }}>
                 {l}
               </button>
             ))}
@@ -495,11 +495,11 @@ function SetupView({
 
         {/* Category */}
         <div>
-          <p className="text-xs font-bold text-[#bbc6e2] mb-1"
+          <p className="text-xs font-bold text-[var(--text-primary)] mb-1"
             style={{ fontFamily: "var(--font-space)" }}>
             KATEGORI SOALNYA APA?
           </p>
-          <p className="text-[11px] text-[#4a5a7a] mb-3">
+          <p className="text-[11px] text-[var(--text-tertiary)] mb-3">
             Kalau tidak tahu, pilih &ldquo;AI deteksi&rdquo; — Sensei yang akan tentukan sendiri.
           </p>
           <div className="flex gap-2">
@@ -507,8 +507,8 @@ function SetupView({
               <button key={value} onClick={() => setCategory(value)}
                 className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl transition-all"
                 style={category === value
-                  ? { background: value === "ai" ? "rgba(166,123,212,0.15)" : "rgba(107,156,218,0.12)", color: value === "ai" ? "#a67bd4" : "#6b9cda", border: `1px solid ${value === "ai" ? "rgba(166,123,212,0.4)" : "rgba(107,156,218,0.35)"}` }
-                  : { background: "#101b30", color: "#4a5a7a", border: "1px solid rgba(255,255,255,0.04)" }}>
+                  ? { background: value === "ai" ? "rgba(166,123,212,0.15)" : "rgba(107,156,218,0.12)", color: value === "ai" ? "var(--n1)" : "var(--text-secondary)", border: `1px solid ${value === "ai" ? "rgba(166,123,212,0.4)" : "rgba(107,156,218,0.35)"}` }
+                  : { background: "var(--surface)", color: "var(--text-tertiary)", border: "1px solid rgba(255,255,255,0.04)" }}>
                 <span className="text-base font-black"
                   style={{ fontFamily: "var(--font-jakarta)" }}>{label}</span>
                 <span className="text-[9px]" style={{ fontFamily: "var(--font-space)" }}>{sub}</span>
@@ -523,8 +523,8 @@ function SetupView({
           disabled={!canStart}
           className="w-full py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
           style={canStart
-            ? { background: "linear-gradient(135deg,#1a3a6f,#2f5a9a)", color: "#d7e2ff", boxShadow: "0 0 20px rgba(74,122,191,0.25)" }
-            : { background: "#101b30", color: "#2a354b", cursor: "not-allowed" }}>
+            ? { background: "linear-gradient(135deg,var(--surface-2),var(--surface-3))", color: "var(--text-primary)", boxShadow: "0 0 20px rgba(74,122,191,0.25)" }
+            : { background: "var(--surface)", color: "var(--text-dim)", cursor: "not-allowed" }}>
           <Sparkles className="size-4" />
           {canStart
             ? `Analisis Soal ${level} · ${category === "ai" ? "AI Deteksi Kategori" : category}`
@@ -592,11 +592,11 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
       <div className="flex-1 flex flex-col items-center justify-start gap-5 p-4 md:p-8 relative overflow-hidden lg:overflow-visible">
         {/* ambient */}
         <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] opacity-[0.04] blur-[80px]"
-          style={{ background: "radial-gradient(circle,#4a7abf,transparent 70%)" }} />
+          style={{ background: "radial-gradient(circle,var(--info),transparent 70%)" }} />
 
         {/* Image preview — real uploaded photo */}
         <div className="w-full max-w-[260px] aspect-[3/4] rounded-2xl relative overflow-hidden shrink-0"
-          style={{ background: "linear-gradient(135deg,#1a2a3f,#0a1525)" }}>
+          style={{ background: "linear-gradient(135deg,var(--surface),var(--bg))" }}>
           {imageUrl
             ? <img src={imageUrl} alt="soal" className="w-full h-full object-cover" />
             : (
@@ -629,22 +629,22 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
         {/* heading */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-            <span className="text-[11px] text-[#5ea87a] font-semibold"
+            <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_var(--success)]" />
+            <span className="text-[11px] text-[var(--success)] font-semibold"
               style={{ fontFamily: "var(--font-space)" }}>AI ENGINE AKTIF</span>
             {total > 1 && (
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                style={{ background: "rgba(107,156,218,0.15)", color: "#6b9cda", fontFamily: "var(--font-space)" }}>
+                style={{ background: "rgba(107,156,218,0.15)", color: "var(--text-secondary)", fontFamily: "var(--font-space)" }}>
                 FOTO {currentIdx}/{total}
               </span>
             )}
           </div>
-          <h2 className="text-[1.7rem] font-extrabold text-[#d7e2ff] leading-tight"
+          <h2 className="text-[1.7rem] font-extrabold text-[var(--text-primary)] leading-tight"
             style={{ fontFamily: "var(--font-jakarta)" }}>
             {total > 1 ? `Foto ${currentIdx} dari ${total}` : "Sensei sedang"}
             <br />
             <span style={{
-              background: "linear-gradient(135deg,#d7e2ff,#6b8cba)",
+              background: "linear-gradient(135deg,var(--text-primary),var(--text-secondary))",
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
             }}>
               menganalisis...
@@ -654,17 +654,17 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
 
         {/* Timer + kata counter */}
         <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-          style={{ background: "#101b30" }}>
+          style={{ background: "var(--surface)" }}>
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>WAKTU BERJALAN</span>
+            <span className="text-[10px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>WAKTU BERJALAN</span>
             <span className="text-2xl font-black tabular-nums"
-              style={{ fontFamily: "var(--font-space)", color: elapsed > 60 ? "#e07b4a" : "#6b9cda" }}>
+              style={{ fontFamily: "var(--font-space)", color: elapsed > 60 ? "var(--primary)" : "var(--text-secondary)" }}>
               {mm}:{ss}
             </span>
           </div>
           <div className="ml-auto flex flex-col items-end">
-            <span className="text-[10px] text-[#4a5a7a]" style={{ fontFamily: "var(--font-space)" }}>FOTO</span>
-            <span className="text-2xl font-black text-[#6b9cda]"
+            <span className="text-[10px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>FOTO</span>
+            <span className="text-2xl font-black text-[var(--text-secondary)]"
               style={{ fontFamily: "var(--font-space)" }}>
               {currentIdx}/{total}
             </span>
@@ -675,12 +675,12 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
         <div>
           <div className="flex justify-between text-[11px] mb-2"
             style={{ fontFamily: "var(--font-space)" }}>
-            <span className="text-[#4a5a7a]">Status Pemrosesan</span>
-            <span className="text-[#bbc6e2] font-semibold">{Math.round(fakeProgress)}%</span>
+            <span className="text-[var(--text-tertiary)]">Status Pemrosesan</span>
+            <span className="text-[var(--text-primary)] font-semibold">{Math.round(fakeProgress)}%</span>
           </div>
-          <div className="h-1.5 rounded-full" style={{ background: "#1f2a3f" }}>
+          <div className="h-1.5 rounded-full" style={{ background: "var(--surface-2)" }}>
             <div className="h-1.5 rounded-full transition-all duration-1000"
-              style={{ width: `${fakeProgress}%`, background: "linear-gradient(90deg,#4a7abf,#bbc6e2)" }} />
+              style={{ width: `${fakeProgress}%`, background: "linear-gradient(90deg,var(--info),var(--text-primary))" }} />
           </div>
         </div>
 
@@ -692,16 +692,16 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
             return (
               <div key={i} className="flex items-center gap-3">
                 {done
-                  ? <CheckCircle2 className="size-4 text-[#5ea87a] shrink-0" />
+                  ? <CheckCircle2 className="size-4 text-[var(--success)] shrink-0" />
                   : active
-                    ? <Loader2 className="size-4 text-[#4a7abf] shrink-0 animate-spin" />
-                    : <Circle className="size-4 text-[#2a354b] shrink-0" />}
-                <span className={`text-sm ${done ? "text-[#d7e2ff]" : active ? "text-[#8a9bbf]" : "text-[#4a5a7a]"}`}
+                    ? <Loader2 className="size-4 text-[var(--info)] shrink-0 animate-spin" />
+                    : <Circle className="size-4 text-[var(--text-dim)] shrink-0" />}
+                <span className={`text-sm ${done ? "text-[var(--text-primary)]" : active ? "text-[var(--text-secondary)]" : "text-[var(--text-tertiary)]"}`}
                   style={{ fontFamily: "var(--font-manrope)" }}>
                   {label}
                 </span>
                 {active && (
-                  <span className="ml-auto text-[10px] text-[#4a7abf] animate-pulse"
+                  <span className="ml-auto text-[10px] text-[var(--info)] animate-pulse"
                     style={{ fontFamily: "var(--font-space)" }}>
                     PROSES...
                   </span>
@@ -712,16 +712,16 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
 
           {/* rotating patience message */}
           <div className="mt-1 rounded-xl p-3 transition-all duration-500"
-            style={{ background: "#1f2a3f", border: "1px solid rgba(107,156,218,0.08)" }}>
+            style={{ background: "var(--surface-2)", border: "1px solid rgba(107,156,218,0.08)" }}>
             <p className="text-base mb-1">{msg.icon}</p>
-            <p className="text-[12px] text-[#bbc6e2] leading-relaxed"
+            <p className="text-[12px] text-[var(--text-primary)] leading-relaxed"
               style={{ fontFamily: "var(--font-manrope)" }}>
               {msg.text}
             </p>
             <div className="flex gap-1 mt-2.5">
               {waitingMessages.map((_, i) => (
                 <div key={i} className="h-0.5 flex-1 rounded-full transition-all duration-300"
-                  style={{ background: i === msgIdx ? "#6b9cda" : "rgba(255,255,255,0.06)" }} />
+                  style={{ background: i === msgIdx ? "var(--text-secondary)" : "rgba(255,255,255,0.06)" }} />
               ))}
             </div>
           </div>
@@ -729,7 +729,7 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
           {onCancel && (
             <button onClick={onCancel}
               className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold transition-all hover:brightness-110"
-              style={{ background: "rgba(220,80,80,0.1)", color: "#dc5050", border: "1px solid rgba(220,80,80,0.2)", fontFamily: "var(--font-space)" }}>
+              style={{ background: "rgba(220,80,80,0.1)", color: "var(--danger)", border: "1px solid rgba(220,80,80,0.2)", fontFamily: "var(--font-space)" }}>
               <X className="size-3.5" /> BATAL ANALISIS
             </button>
           )}
@@ -1074,7 +1074,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       parts.push(
         <ruby key={key++} style={{ rubyAlign: "center" }}>
           {m[1]}
-          <rt style={{ color: "#8ab4e8", fontSize: "0.55em", fontWeight: 500, letterSpacing: 0 }}>{m[2]}</rt>
+          <rt style={{ color: "var(--info)", fontSize: "0.55em", fontWeight: 500, letterSpacing: 0 }}>{m[2]}</rt>
         </ruby>
       );
       last = m.index + m[0].length;
@@ -1448,7 +1448,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               if (reviewOnly && !q.needs_review) return null;
               const isRevealed = revealed.has(qi);
               const userAns = answers[qi];
-              const accentColors = ["#4a7abf","#8b5abf","#3a9a7a","#c0844a","#c05abf","#4a9abf","#7a8abf","#5a7abf"];
+              const accentColors = ["var(--info)","var(--n1)","var(--success)","var(--warning)","var(--n1)","var(--info)","var(--info)","var(--info)"];
               const accent = accentColors[qi % accentColors.length];
 
               // New passage encountered → show passage card before this question
@@ -1723,8 +1723,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                           )}
 
                           {q.grammar_points && q.grammar_points.length > 0 && (
-                            <div className="qc-pb-section" style={{ background: "rgba(85,112,181,0.05)", border: "1px solid rgba(85,112,181,0.22)" }}>
-                              <div className="qc-pb-head" style={{ color: "var(--accent-cyan)" }}>
+                            <div className="qc-pb-section pb-info">
+                              <div className="qc-pb-head">
                                 <BookOpen size={12} strokeWidth={1.8} /> POIN GRAMMAR / KOSAKATA
                               </div>
                               <div className="qc-pb-grammar">
@@ -1977,7 +1977,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
             {/* Add word form */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, minWidth: 0 }}>
                 <input
                   value={addKanji}
                   onChange={e => setAddKanji(e.target.value)}
@@ -1985,7 +1985,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                   placeholder="Ketik kata/kanji..."
                   className="font-jp-sans"
                   style={{
-                    flex: 1, padding: "8px 12px", borderRadius: 10,
+                    flex: 1, minWidth: 0, padding: "8px 12px", borderRadius: 10,
                     background: "var(--surface-1)", border: "1px solid var(--edge-default)",
                     color: "var(--text-primary)", fontSize: 14, outline: "none",
                   }}
@@ -1994,7 +1994,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                   type="button"
                   onClick={generateWordInfo}
                   disabled={!addKanji.trim() || generating}
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-magic btn-sm"
                   style={{ whiteSpace: "nowrap" }}
                 >
                   {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
@@ -2010,7 +2010,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                     style={{
                       padding: "8px 12px", borderRadius: 8,
                       background: "rgba(139, 90, 140, 0.08)", border: "1px solid rgba(139, 90, 140, 0.2)",
-                      color: "#B873BD", fontSize: 12.5, outline: "none",
+                      color: "var(--n1)", fontSize: 12.5, outline: "none",
                       fontFamily: "var(--font-sans-jp)",
                     }}
                   />
@@ -2039,7 +2039,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             </div>
 
             {/* Word list */}
-            <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
               {!kamusLoaded ? (
                 <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
                   <Loader2 size={16} className="animate-spin" style={{ color: "var(--text-tertiary)" }} />
@@ -2130,7 +2130,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               </div>
             )}
 
-            <div style={{ maxHeight: 400, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
               {!catatanLoaded ? (
                 <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
                   <Loader2 size={16} className="animate-spin" style={{ color: "var(--text-tertiary)" }} />
@@ -2234,7 +2234,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 onClick={() => setEditDraft(d => d ? { ...d, needs_review: !d.needs_review } : d)}
               >
                 <span className={`af-mfr-check${editDraft.needs_review ? " on" : ""}`}>
-                  {editDraft.needs_review && <Check size={10} strokeWidth={3} style={{ color: "#0E1116" }} />}
+                  {editDraft.needs_review && <Check size={10} strokeWidth={3} style={{ color: "var(--bg)" }} />}
                 </span>
                 <Flag size={13} strokeWidth={1.8} />
                 TANDAI PERLU REVIEW
@@ -2433,13 +2433,13 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
         <div className="flex items-center justify-between px-5 py-4 border-b"
           style={{ borderColor: "rgba(255,255,255,0.06)" }}>
           <div className="flex items-center gap-2">
-            <Camera className="size-4 text-[#6b9cda]" />
-            <span className="text-sm font-bold text-[#d7e2ff]"
+            <Camera className="size-4 text-[var(--text-secondary)]" />
+            <span className="text-sm font-bold text-[var(--text-primary)]"
               style={{ fontFamily: "var(--font-jakarta)" }}>Ambil Foto dengan Kamera</span>
           </div>
           <button onClick={onClose}
             className="size-7 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors">
-            <X className="size-4 text-[#8a9bbf]" />
+            <X className="size-4 text-[var(--text-secondary)]" />
           </button>
         </div>
 
@@ -2447,8 +2447,8 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
         <div className="relative bg-black" style={{ aspectRatio: "4/3" }}>
           {camError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center">
-              <Camera className="size-10 text-[#4a5a7a]" />
-              <p className="text-sm text-[#8a9bbf]" style={{ fontFamily: "var(--font-manrope)" }}>{camError}</p>
+              <Camera className="size-10 text-[var(--text-tertiary)]" />
+              <p className="text-sm text-[var(--text-secondary)]" style={{ fontFamily: "var(--font-manrope)" }}>{camError}</p>
             </div>
           ) : (
             <>
@@ -2456,7 +2456,7 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
                 className="w-full h-full object-cover" />
               {!ready && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="size-8 text-[#4a7abf] animate-spin" />
+                  <Loader2 className="size-8 text-[var(--info)] animate-spin" />
                 </div>
               )}
             </>
@@ -2468,15 +2468,15 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
         {/* Footer */}
         <div className="px-5 py-5 flex items-center justify-center gap-4">
           <button onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-sm font-medium text-[#8a9bbf] hover:text-[#d7e2ff] transition-colors"
-            style={{ background: "#1f2a3f", fontFamily: "var(--font-space)" }}>
+            className="px-5 py-2.5 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            style={{ background: "var(--surface-2)", fontFamily: "var(--font-space)" }}>
             BATAL
           </button>
           <button onClick={capture} disabled={!ready || !!camError}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
             style={{
-              background: ready && !camError ? "linear-gradient(135deg,#1a3a6f,#2f5a9a)" : "#1f2a3f",
-              color: ready && !camError ? "#d7e2ff" : "#4a5a7a",
+              background: ready && !camError ? "linear-gradient(135deg,var(--surface-2),var(--surface-3))" : "var(--surface-2)",
+              color: ready && !camError ? "var(--text-primary)" : "var(--text-tertiary)",
               fontFamily: "var(--font-space)",
             }}>
             <Camera className="size-4" /> AMBIL FOTO
@@ -2491,21 +2491,21 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
 const notifs = [
   {
     id: 1, read: false,
-    icon: "🔥", color: "#e07b4a",
+    icon: "🔥", color: "var(--primary)",
     title: "Streak dalam bahaya!",
     desc: "Kamu belum latihan hari ini. Streak 7 harimu akan putus tengah malam.",
     time: "1 jam lalu",
   },
   {
     id: 2, read: false,
-    icon: "🗂️", color: "#6b9cda",
+    icon: "🗂️", color: "var(--text-secondary)",
     title: "5 kata perlu direview",
     desc: "諦める・把握・一生懸命 dan 2 lainnya sudah waktunya diulang hari ini.",
     time: "3 jam lalu",
   },
   {
     id: 3, read: true,
-    icon: "✨", color: "#a67bd4",
+    icon: "✨", color: "var(--n1)",
     title: "Fitur baru: Favorit Kamus",
     desc: "Kamu sekarang bisa simpan kata favorit dan filter di tab Favorit.",
     time: "Kemarin",

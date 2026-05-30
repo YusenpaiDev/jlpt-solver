@@ -52,18 +52,7 @@ export default function RootLayout({
       lang="id"
       className={`${jakarta.variable} ${manrope.variable} ${spaceGrotesk.variable} ${GeistSans.variable} ${notoSerifJp.variable} ${notoSansJp.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-screen bg-space">
-        {/* ── Global AI background (v1) — pages opt into v2 via <AuroraBackground/> ── */}
-        <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
-          <div className="stars" />
-          <div className="ai-ring ai-ring-1" />
-          <div className="ai-ring ai-ring-2" />
-          <div className="ai-ring ai-ring-3" />
-          <div className="particle particle-1" />
-          <div className="particle particle-2" />
-          <div className="particle particle-3" />
-          <div className="particle particle-4" />
-        </div>
+      <body className="min-h-screen app-canvas">
         {children}
       </body>
     </html>

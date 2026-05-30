@@ -88,16 +88,26 @@ export default function Kamus() {
         if (!user) return;
         setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
-        const [profileRes, wordsRes] = await Promise.all([
-          supabase.from("profiles").select("streak").eq("id", user.id).single(),
-          supabase
-            .from("saved_words")
-            .select("id, kanji, reading, meaning, level, example, created_at")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false }),
-        ]);
+        const profileRes = await supabase.from("profiles").select("streak").eq("id", user.id).single();
         if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
-        const ws = (wordsRes.data ?? []) as SavedWord[];
+
+        // Fallback kalau kolom `example` belum di-migrate (Postgres: column does not exist)
+        const wordsRes = await supabase
+          .from("saved_words")
+          .select("id, kanji, reading, meaning, level, example, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        let ws: SavedWord[];
+        if (wordsRes.error && /column .*example.* does not exist/i.test(wordsRes.error.message)) {
+          const fb = await supabase
+            .from("saved_words")
+            .select("id, kanji, reading, meaning, level, created_at")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+          ws = (fb.data ?? []).map(w => ({ ...w, example: null })) as SavedWord[];
+        } else {
+          ws = (wordsRes.data ?? []) as SavedWord[];
+        }
         setWords(ws);
         if (ws.length > 0) setSelected(ws[0].id);
       } finally {

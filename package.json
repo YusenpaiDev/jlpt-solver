@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "analisis": "node scripts/batch-analisis.mjs",
+    "import": "node scripts/import-json.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
