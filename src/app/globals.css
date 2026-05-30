@@ -4314,12 +4314,19 @@ input, textarea, select { font-size: 16px; }
 .detail-kanji {
   position: relative;
   font-family: var(--font-serif-jp); font-weight: 600;
-  font-size: 78px; line-height: 1;
+  /* Auto-shrink biar 4-5 karakter (引っかかる, かかり合う) tetep 1 baris */
+  font-size: clamp(42px, 4vw, 60px);
+  line-height: 1.05;
   margin: 0 0 18px;
   background: linear-gradient(150deg, #FFFFFF 10%, #F4B89A 50%, #DD4124 95%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 12px 28px rgba(221, 65, 36, 0.4));
   letter-spacing: 0;
+  /* Keep Jepang gak wrap di tengah karakter */
+  word-break: keep-all;
+  overflow-wrap: normal;
+  max-width: 100%;
+  padding: 0 8px;
 }
 .detail-meaning { position: relative; font-size: 15px; color: var(--text-primary); line-height: 1.5; margin: 0 0 18px; font-weight: 500; }
 .detail-meta {
