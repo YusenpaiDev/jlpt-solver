@@ -9,6 +9,7 @@
     "lint": "eslint",
     "analisis": "node scripts/batch-analisis.mjs",
     "import": "node scripts/import-json.mjs",
+    "import-bunpou": "node scripts/import-bunpou.mjs",
     "backup": "node scripts/backup-sessions.mjs"
   },
   "dependencies": {

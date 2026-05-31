@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 interface BigCardData {
+  href?: string;
   id: string;
   jp: string;
   title: string;
@@ -34,14 +35,15 @@ const AVAILABLE: BigCardData[] = [
   },
   {
     id: "bunpou",
+    href: "/materi/bunpou",
     jp: "文",
     title: "Bunpou",
     subtitle: "Tata Bahasa",
-    desc: "Pola grammar JLPT lengkap per level: penjelasan, contoh kalimat, latihan langsung.",
-    cta: "Coming Soon",
+    desc: "Pola grammar JLPT lengkap per level: penjelasan, penyambungan, contoh kalimat.",
+    cta: "Buka Bunpou",
     accent: "amber",
-    progressLabel: "Akan dibuka",
-    progressPct: 22,
+    progressLabel: "Sudah tersedia",
+    progressPct: 100,
   },
 ];
 
@@ -171,13 +173,13 @@ export default function MateriHub() {
 
 /* ─── Big card (Kotoba / Bunpou) ─── */
 
-function BigCard({ jp, title, subtitle, desc, cta, accent, progressLabel, progressPct }: BigCardData) {
-  return (
-    <article className={`glass-card big-card big-card-${accent} interactive`}>
+function BigCard({ href, jp, title, subtitle, desc, cta, accent, progressLabel, progressPct }: BigCardData) {
+  const body = (
+    <>
       <div className="bc-glyph-stage">
         <div className={`bc-glow bc-glow-${accent}`} />
         <div className="bc-glyph">{jp}</div>
-        <span className="bc-soon-badge">Soon</span>
+        {!href && <span className="bc-soon-badge">Soon</span>}
       </div>
       <div className="bc-body">
         <div className="bc-eyebrow">{subtitle}</div>
@@ -199,13 +201,26 @@ function BigCard({ jp, title, subtitle, desc, cta, accent, progressLabel, progre
 
         <div className="bc-footer">
           <span className={`bc-cta bc-cta-${accent}`}>
-            <Clock size={12} strokeWidth={2} /> {cta}
+            {href ? <ArrowRight size={12} strokeWidth={2} /> : <Clock size={12} strokeWidth={2} />} {cta}
           </span>
-          <button type="button" className="bc-arrow" aria-label="Buka">
+          <span className="bc-arrow" aria-label="Buka">
             <ArrowRight size={14} />
-          </button>
+          </span>
         </div>
       </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={`glass-card big-card big-card-${accent} interactive`} style={{ textDecoration: "none" }}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <article className={`glass-card big-card big-card-${accent} interactive`}>
+      {body}
     </article>
   );
 }
