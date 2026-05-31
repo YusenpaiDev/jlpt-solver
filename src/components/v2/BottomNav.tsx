@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Camera, History, BookA, BarChart3 } from "lucide-react";
+import { Home, BookOpen, Camera, History, BookA } from "lucide-react";
 
 const BOTTOM_ITEMS = [
-  { href: "/",              label: "Beranda",   Icon: Home },
-  { href: "/analisis-foto", label: "Foto",      Icon: Camera },
-  { href: "/riwayat-soal",  label: "Riwayat",   Icon: History },
-  { href: "/kamus",         label: "Kamus",     Icon: BookA },
-  { href: "/statistik",     label: "Statistik", Icon: BarChart3 },
+  { href: "/",              label: "Beranda",  Icon: Home },
+  { href: "/materi",        label: "Materi",   Icon: BookOpen },
+  { href: "/analisis-foto", label: "Foto",     Icon: Camera },
+  { href: "/riwayat-soal",  label: "Riwayat",  Icon: History },
+  { href: "/kamus",         label: "Kamus",    Icon: BookA },
 ] as const;
 
 /**
