@@ -6973,8 +6973,33 @@ input, textarea, select { font-size: 16px; }
   .kk-list-section, .kk-detail { position: static !important; max-height: none !important; }
   .kk-detail { display: none; }
   .detail-kanji { font-size: 56px !important; }
-  .word-row { grid-template-columns: 1fr auto !important; gap: 8px !important; }
-  .word-row .word-reading, .word-row .word-meaning { display: none !important; }
+  /* Mobile word-row: stack vertical biar info lengkap (kanji + reading + arti + star/level) */
+  .word-row {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-rows: auto auto auto !important;
+    grid-template-areas:
+      "kanji   right"
+      "reading right"
+      "meaning meaning" !important;
+    gap: 4px 10px !important;
+    padding: 14px 14px !important;
+  }
+  .word-row .word-kanji { grid-area: kanji; font-size: 17px !important; }
+  .word-row .word-reading {
+    grid-area: reading;
+    display: block !important;
+    font-size: 12px !important; color: var(--text-tertiary);
+  }
+  .word-row .word-meaning {
+    grid-area: meaning;
+    display: block !important;
+    white-space: normal !important;
+    font-size: 12.5px !important;
+    line-height: 1.45;
+    color: var(--text-secondary);
+  }
+  .word-row .word-right { grid-area: right; align-self: start; }
   .word-table-head { display: none !important; }
   .list-head { flex-wrap: wrap; gap: 8px; }
   .list-search { width: 100%; }
