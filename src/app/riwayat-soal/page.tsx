@@ -294,27 +294,28 @@ export default function RiwayatSoal() {
               value={periodF}
               onChange={setPeriodF}
             />
-            <button type="button" className="reset-link" onClick={resetFilters}>Reset filter</button>
-
-            <button
-              type="button"
-              onClick={fetchAll}
-              className="reset-link"
-              style={{ marginLeft: 0, display: "inline-flex", alignItems: "center", gap: 4 }}
-              title="Refresh data"
-            >
-              <RefreshCw size={11} /> Refresh
-            </button>
-            {sessions.length > 0 && (
+            <div className="rs-filter-actions">
+              <button type="button" className="reset-link" onClick={resetFilters}>Reset filter</button>
               <button
                 type="button"
-                onClick={deleteAll}
+                onClick={fetchAll}
                 className="reset-link"
-                style={{ marginLeft: 0, color: "var(--accent-rose)", display: "inline-flex", alignItems: "center", gap: 4 }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                title="Refresh data"
               >
-                <Trash2 size={11} /> Hapus semua
+                <RefreshCw size={11} /> Refresh
               </button>
-            )}
+              {sessions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={deleteAll}
+                  className="reset-link"
+                  style={{ color: "var(--accent-rose)", display: "inline-flex", alignItems: "center", gap: 4 }}
+                >
+                  <Trash2 size={11} /> Hapus semua
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

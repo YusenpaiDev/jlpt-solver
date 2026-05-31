@@ -2184,6 +2184,13 @@ input, textarea, select { font-size: 16px; }
   flex-wrap: wrap;
   gap: 14px 24px;
 }
+.rs-filter-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
 .filter-group { display: flex; align-items: center; gap: 8px; }
 .fg-label {
   font-size: 10.5px; font-weight: 700;
@@ -6900,7 +6907,26 @@ input, textarea, select { font-size: 16px; }
   .rs-ring svg { width: 44px !important; height: 44px !important; }
   .rs-ring-pct { font-size: 11px !important; }
   .rs-score-meta { display: none !important; }
-  .rs-filter-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+  /* Riwayat mobile: filter rapi — label di atas, chips horizontal wrap kecil */
+  .rs-filter-row { flex-direction: column; align-items: stretch; gap: 12px; }
+  .rs-filter-row .filter-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .rs-filter-row .fg-chips { gap: 5px; }
+  .rs-filter-row .fg-chip {
+    padding: 5px 10px;
+    font-size: 11.5px;
+  }
+  .rs-filter-row .fg-label { font-size: 10px; }
+  /* Action buttons (Reset/Refresh/Hapus): inline row di bawah */
+  .rs-filter-actions {
+    margin-left: 0 !important;
+    gap: 12px !important;
+    padding-top: 4px;
+  }
+  .rs-filter-actions .reset-link { font-size: 11.5px !important; }
   .rs-search { padding: 10px 14px; }
   .rs-search kbd { display: none; }
   .activity-grid { grid-template-columns: repeat(8, 1fr) !important; }
