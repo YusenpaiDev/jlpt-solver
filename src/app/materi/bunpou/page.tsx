@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
   Search, BookOpen, Star, ChevronDown, ChevronRight, Info, X, Loader2, Sparkles,
+  Zap, Shuffle, ArrowLeft, ArrowRight,
 } from "lucide-react";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
@@ -52,6 +53,13 @@ export default function BunpouPage() {
   const [favOnly, setFavOnly] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [glossaryOpen, setGlossaryOpen] = useState(true);
+
+  /* Flashcard mode */
+  const [flashOpen, setFlashOpen] = useState(false);
+  const [flashIdx, setFlashIdx] = useState(0);
+  const [flashOrder, setFlashOrder] = useState<number[]>([]);
+  const [flashFlipped, setFlashFlipped] = useState(false);
+  const [flashShuffled, setFlashShuffled] = useState(false);
 
   /* User bar */
   const [streak, setStreak] = useState(0);
@@ -152,6 +160,58 @@ export default function BunpouPage() {
 
   const favCount = useMemo(() => patterns.filter(p => p.favorite).length, [patterns]);
 
+  /* ── Flashcard mode helpers ── */
+  const openFlash = () => {
+    if (filtered.length === 0) return;
+    setFlashOrder(filtered.map((_, i) => i));
+    setFlashIdx(0);
+    setFlashFlipped(false);
+    setFlashShuffled(false);
+    setFlashOpen(true);
+  };
+  const closeFlash = () => setFlashOpen(false);
+  const flashNext = () => {
+    setFlashFlipped(false);
+    setFlashIdx(i => Math.min(filtered.length - 1, i + 1));
+  };
+  const flashPrev = () => {
+    setFlashFlipped(false);
+    setFlashIdx(i => Math.max(0, i - 1));
+  };
+  const flashShuffle = () => {
+    const order = filtered.map((_, i) => i);
+    // Fisher-Yates di state init biar gak nge-trigger purity error
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    setFlashOrder(order);
+    setFlashIdx(0);
+    setFlashFlipped(false);
+    setFlashShuffled(true);
+  };
+
+  // ESC / arrow keyboard nav
+  useEffect(() => {
+    if (!flashOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeFlash();
+      else if (e.key === "ArrowRight") flashNext();
+      else if (e.key === "ArrowLeft") flashPrev();
+      else if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        setFlashFlipped(f => !f);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashOpen, flashIdx, filtered.length]);
+
+  const flashPattern = flashOpen && filtered.length > 0
+    ? filtered[flashOrder[flashIdx] ?? 0]
+    : null;
+
   return (
     <>
       <AuroraBackground />
@@ -184,9 +244,20 @@ export default function BunpouPage() {
               Pola tata bahasa JLPT — kapan dipake, nyambung ke jenis kata apa, contoh konkretnya. Klik baris buat lihat detail + contoh kalimat.
             </p>
           </div>
-          <div className="bp-count-pill">
-            <span className="bp-count-num">{patterns.length}</span>
-            <span className="bp-count-label">POLA</span>
+          <div className="bp-header-right">
+            <div className="bp-count-pill">
+              <span className="bp-count-num">{patterns.length}</span>
+              <span className="bp-count-label">POLA</span>
+            </div>
+            <button
+              type="button"
+              className="bp-flash-btn"
+              onClick={openFlash}
+              disabled={patterns.length === 0}
+            >
+              <Zap size={14} fill="currentColor" strokeWidth={1.2} />
+              Latihan Kilat
+            </button>
           </div>
         </header>
 
@@ -370,6 +441,95 @@ export default function BunpouPage() {
           )}
         </section>
       </main>
+
+      {/* ── Flashcard mode (modal overlay) ── */}
+      {flashOpen && flashPattern && (
+        <div className="bp-flash-mask" role="dialog" aria-modal="true">
+          <div className="bp-flash-shell">
+            <div className="bp-flash-top">
+              <button type="button" className="bp-flash-close" onClick={closeFlash} aria-label="Tutup">
+                <X size={16} />
+              </button>
+              <div className="bp-flash-meta">
+                <span className="bp-flash-counter">{flashIdx + 1} / {filtered.length}</span>
+                {flashPattern.level && (
+                  <span className={`bp-lv-tag bp-lv-${flashPattern.level.toLowerCase()}`}>{flashPattern.level}</span>
+                )}
+                {flashShuffled && <span className="bp-flash-tag">SHUFFLED</span>}
+              </div>
+              <button
+                type="button"
+                className={`bp-flash-shuffle${flashShuffled ? " on" : ""}`}
+                onClick={flashShuffle}
+                title="Acak urutan"
+              >
+                <Shuffle size={13} strokeWidth={1.8} />
+              </button>
+            </div>
+
+            <div
+              className={`bp-flash-card${flashFlipped ? " flipped" : ""}`}
+              onClick={() => setFlashFlipped(f => !f)}
+              role="button"
+              tabIndex={0}
+              aria-label="Klik untuk balik kartu"
+            >
+              {!flashFlipped ? (
+                <div className="bp-flash-face bp-flash-front">
+                  <div className="bp-flash-eyebrow">FUMI · KAPAN DIPAKE</div>
+                  <h2 className="bp-flash-pattern font-jp-sans">{flashPattern.pattern}</h2>
+                  {flashPattern.connects_to && (
+                    <p className="bp-flash-connect font-jp-sans">{flashPattern.connects_to}</p>
+                  )}
+                  <span className="bp-flash-hint">Klik / spasi → tampilkan arti</span>
+                </div>
+              ) : (
+                <div className="bp-flash-face bp-flash-back">
+                  <div className="bp-flash-eyebrow">ARTI · CATATAN · CONTOH</div>
+                  <h3 className="bp-flash-meaning">{flashPattern.meaning}</h3>
+                  {flashPattern.notes && <p className="bp-flash-notes">{flashPattern.notes}</p>}
+                  {flashPattern.example_jp && (
+                    <div className="bp-flash-example">
+                      <p className="bp-flash-ex-jp font-jp-sans">{flashPattern.example_jp}</p>
+                      {flashPattern.example_id && (
+                        <p className="bp-flash-ex-id">{flashPattern.example_id}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="bp-flash-controls">
+              <button
+                type="button"
+                className="bp-flash-arrow"
+                onClick={flashPrev}
+                disabled={flashIdx === 0}
+                aria-label="Sebelumnya"
+              >
+                <ArrowLeft size={14} />
+              </button>
+              <button
+                type="button"
+                className="bp-flash-flip-cta"
+                onClick={() => setFlashFlipped(f => !f)}
+              >
+                {flashFlipped ? "Sembunyikan" : "Lihat Arti"}
+              </button>
+              <button
+                type="button"
+                className="bp-flash-arrow"
+                onClick={flashNext}
+                disabled={flashIdx >= filtered.length - 1}
+                aria-label="Berikutnya"
+              >
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
