@@ -7026,9 +7026,13 @@ input, textarea, select { font-size: 16px; }
   .glass-card { border-radius: 18px; }
 
   .app-shell {
-    padding: 16px 16px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 16px 10px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
     padding-top: max(16px, env(safe-area-inset-top, 0px));
   }
+  /* Soal card di mobile: edge-to-edge biar gede + simetris */
+  .af-grid { padding: 0 !important; }
+  .af-main { width: 100%; }
+  .qc-v2 { margin-left: 0; margin-right: 0; }
   .top-bar { flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
   .top-actions { gap: 8px; }
   .af-userbar { padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
