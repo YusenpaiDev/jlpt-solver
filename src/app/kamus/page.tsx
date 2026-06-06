@@ -303,11 +303,23 @@ export default function Kamus() {
     // Optimistic
     setWords(prev => prev.map(x => x.id === id ? { ...x, favorite: next } : x));
     try {
-      const { error } = await createClient().from("saved_words").update({ favorite: next }).eq("id", id);
+      // .select("id") + cek data.length > 0 supaya silent-fail (RLS, row gak
+      // ditemukan) ke-detect — sebelumnya error null tapi update gak nyangkut
+      const { data, error } = await createClient()
+        .from("saved_words")
+        .update({ favorite: next })
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
-    } catch {
-      // Revert kalau gagal
+      if (!data || data.length === 0) throw new Error("Update gak nyangkut (cek RLS)");
+    } catch (err) {
+      // Revert + kasih tau user
       setWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
+      console.error("Toggle favorite (/kamus) error:", err);
+      const msg = err instanceof Error
+        ? err.message
+        : (err as {message?: string})?.message ?? JSON.stringify(err);
+      alert(`Gagal simpan bintang: ${msg}`);
     }
   };
 
