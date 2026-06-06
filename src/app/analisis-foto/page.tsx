@@ -1396,7 +1396,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   };
 
   const pick = (qi: number, id: string) => {
-    if (revealed.has(qi) && !isReview) return;
+    if (revealed.has(qi)) return;
     setAnswers(a => ({ ...a, [qi]: id }));
   };
   const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
@@ -1703,9 +1703,9 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                             role="button"
                             tabIndex={0}
                             className={`qc-v2-option ${cls}`}
-                            onClick={() => { if (!isRevealed || isReview) pick(qi, id); }}
+                            onClick={() => { if (!isRevealed) pick(qi, id); }}
                             onKeyDown={(e) => {
-                              if ((e.key === "Enter" || e.key === " ") && (!isRevealed || isReview)) {
+                              if ((e.key === "Enter" || e.key === " ") && !isRevealed) {
                                 e.preventDefault();
                                 pick(qi, id);
                               }
