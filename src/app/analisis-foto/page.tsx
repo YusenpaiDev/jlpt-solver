@@ -1438,10 +1438,17 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     const next = !w.favorite;
     setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: next } : x));
     try {
-      const { error } = await createClient().from("saved_words").update({ favorite: next }).eq("id", id);
+      const { data, error } = await createClient()
+        .from("saved_words")
+        .update({ favorite: next })
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
-    } catch {
+      if (!data || data.length === 0) throw new Error("Row tidak ke-update (cek RLS)");
+    } catch (err) {
       setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast(`Gagal toggle: ${msg}`, false);
     }
   };
 
@@ -2206,7 +2213,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                         )}
                         <button
                           type="button"
-                          onClick={() => toggleKamusFavorite(w.id)}
+                          onClick={(e) => { e.stopPropagation(); toggleKamusFavorite(w.id); }}
                           aria-label={w.favorite ? "Hapus dari favorit" : "Tandai favorit"}
                           title={w.favorite ? "Favorit ✓" : "Tandai favorit"}
                           style={{
