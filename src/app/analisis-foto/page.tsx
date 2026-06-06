@@ -8,7 +8,7 @@ import {
   Camera, Bell, Upload, ArrowUpRight,
   CheckCircle2, Circle, Sparkles,
   ChevronLeft, ChevronDown, RotateCcw, Clock,
-  X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck,
+  X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck, Star,
   BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
 } from "lucide-react";
 
@@ -825,7 +825,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
   const [savingNote,   setSavingNote]   = useState<number | null>(null);
   const [rightTab,     setRightTab]     = useState<"chat"|"kamus"|"catatan">("chat");
-  const [kamusWords,   setKamusWords]   = useState<{id:string;kanji:string;reading:string|null;meaning:string}[]>([]);
+  const [kamusWords,   setKamusWords]   = useState<{id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean}[]>([]);
   const [kamusQuery,   setKamusQuery]   = useState("");
   const [kamusLoaded,  setKamusLoaded]  = useState(false);
   const [catatanList,  setCatatanList]  = useState<{id:string;judul:string;isi:string;updated_at:string}[]>([]);
@@ -1147,7 +1147,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         meaning: addMeaning.trim(),
       }).select("id, kanji, reading, meaning").single();
       if (error && error.code !== "23505") throw error;
-      if (data) setKamusWords(prev => [data as {id:string;kanji:string;reading:string|null;meaning:string}, ...prev]);
+      if (data) setKamusWords(prev => [{ ...(data as {id:string;kanji:string;reading:string|null;meaning:string}), favorite: false }, ...prev]);
       setSavedWords(s => new Set([...s, addKanji.trim()]));
       setAddKanji(""); setAddReading(""); setAddMeaning("");
       showToast(`${addKanji} disimpan ke Kamus ✓`, true);
@@ -1201,12 +1201,22 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
+      // Graceful: kolom `favorite` mungkin belum di-migrate di project lama
+      const primary = await supabase
         .from("saved_words")
-        .select("id, kanji, reading, meaning")
+        .select("id, kanji, reading, meaning, favorite")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      setKamusWords((data ?? []) as {id:string;kanji:string;reading:string|null;meaning:string}[]);
+      if (primary.error && /column .*favorite.* does not exist/i.test(primary.error.message)) {
+        const fb = await supabase
+          .from("saved_words")
+          .select("id, kanji, reading, meaning")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        setKamusWords((fb.data ?? []).map(w => ({ ...w, favorite: false })) as typeof kamusWords);
+      } else {
+        setKamusWords((primary.data ?? []).map(w => ({ ...w, favorite: w.favorite ?? false })) as typeof kamusWords);
+      }
       setKamusLoaded(true);
     })();
   }, [rightTab, kamusLoaded]);
@@ -1383,8 +1393,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       setSavedWords(s => new Set([...s, jp]));
       setKamusWords(prev => {
         if (prev.find(w => w.kanji === jp)) return prev;
-        const w = inserted ?? { id: `local-${jp}`, kanji: jp, reading, meaning };
-        return [w as {id:string;kanji:string;reading:string|null;meaning:string}, ...prev];
+        const base = inserted ?? { id: `local-${jp}`, kanji: jp, reading, meaning };
+        return [{ ...(base as {id:string;kanji:string;reading:string|null;meaning:string}), favorite: false }, ...prev];
       });
       showToast(`${jp} ditambahkan ke Kamus ✓`, true);
     } catch (err) {
@@ -1400,6 +1410,21 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     setAnswers(a => ({ ...a, [qi]: id }));
   };
   const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
+
+  /* Toggle favorite di kamus sidebar — nyambung ke saved_words.favorite
+     yang dipakai /kamus page. Klik bintang = same effect as star di /kamus. */
+  const toggleKamusFavorite = async (id: string) => {
+    const w = kamusWords.find(x => x.id === id);
+    if (!w) return;
+    const next = !w.favorite;
+    setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: next } : x));
+    try {
+      const { error } = await createClient().from("saved_words").update({ favorite: next }).eq("id", id);
+      if (error) throw error;
+    } catch {
+      setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
+    }
+  };
 
   const sendChat = async () => {
     if (!chatInput.trim() || chatLoading) return;
@@ -2159,6 +2184,22 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                         {w.reading && (
                           <span className="font-jp-sans" style={{ fontSize: 10.5, color: "var(--text-tertiary)", lineHeight: 1.5 }}>{w.reading}</span>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => toggleKamusFavorite(w.id)}
+                          aria-label={w.favorite ? "Hapus dari favorit" : "Tandai favorit"}
+                          title={w.favorite ? "Favorit ✓" : "Tandai favorit"}
+                          style={{
+                            marginLeft: "auto", flexShrink: 0,
+                            width: 22, height: 22, borderRadius: 6,
+                            display: "grid", placeItems: "center",
+                            background: "transparent", border: "none", cursor: "pointer",
+                            color: w.favorite ? "var(--accent-amber)" : "var(--text-tertiary)",
+                            transition: "color .14s, transform .14s",
+                          }}
+                        >
+                          <Star size={13} strokeWidth={1.8} fill={w.favorite ? "currentColor" : "none"} />
+                        </button>
                       </div>
                       <p style={{ fontSize: 11.5, color: "var(--text-secondary)", margin: "2px 0 0", lineHeight: 1.4 }}>{w.meaning.split(";")[0]}</p>
                     </div>
