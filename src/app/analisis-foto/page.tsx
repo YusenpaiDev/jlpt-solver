@@ -2103,9 +2103,9 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                        <span className="font-jp-sans" style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{w.kanji}</span>
+                        <span className="font-jp-sans" style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.5 }}>{w.kanji}</span>
                         {w.reading && (
-                          <span className="font-jp-sans" style={{ fontSize: 10.5, color: "var(--text-tertiary)" }}>{w.reading}</span>
+                          <span className="font-jp-sans" style={{ fontSize: 10.5, color: "var(--text-tertiary)", lineHeight: 1.5 }}>{w.reading}</span>
                         )}
                       </div>
                       <p style={{ fontSize: 11.5, color: "var(--text-secondary)", margin: "2px 0 0", lineHeight: 1.4 }}>{w.meaning.split(";")[0]}</p>
@@ -2204,10 +2204,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                     >
                       <NotebookPen size={14} strokeWidth={1.6} style={{ color: "var(--accent-emerald)", marginTop: 2, flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <p style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.5 }}>
                           {c.judul || "Catatan"}
                         </p>
-                        <p style={{ fontSize: 10.5, color: "var(--text-tertiary)", margin: "2px 0 0" }}>
+                        <p style={{ fontSize: 10.5, color: "var(--text-tertiary)", margin: "2px 0 0", lineHeight: 1.5 }}>
                           {new Date(c.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                         </p>
                       </div>
