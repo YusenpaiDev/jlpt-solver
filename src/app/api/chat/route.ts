@@ -1,7 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import OpenAI from "openai";
+import { deepseek, DEEPSEEK_MODEL } from "@/lib/deepseek";
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,22 +43,22 @@ ${aturanKetat}`
 
 ${aturanKetat}`;
 
-    const messages: Anthropic.MessageParam[] = [
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: "system", content: systemPrompt },
       ...(history || []).map((m: { role: string; text: string }) => ({
-        role: m.role === "user" ? "user" : "assistant" as "user" | "assistant",
+        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
         content: m.text,
       })),
       { role: "user", content: message },
     ];
 
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5",
+    const response = await deepseek.chat.completions.create({
+      model: DEEPSEEK_MODEL,
       max_tokens: 280,
-      system: systemPrompt,
       messages,
     });
 
-    const rawReply = response.content[0].type === "text" ? response.content[0].text : "Maaf, gagal membalas.";
+    const rawReply = response.choices[0]?.message?.content ?? "Maaf, gagal membalas.";
 
     // Post-process: strip markdown kalau AI masih nyelipin (jaga-jaga prompt belum cukup)
     const reply = rawReply

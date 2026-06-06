@@ -1,7 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { deepseek, DEEPSEEK_MODEL } from "@/lib/deepseek";
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,13 +55,14 @@ Balas HANYA dengan JSON berikut (tanpa markdown, tanpa komentar):
   ]
 }`;
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
+    const response = await deepseek.chat.completions.create({
+      model: DEEPSEEK_MODEL,
       max_tokens: 8192,
+      response_format: { type: "json_object" },
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    const text = (response.choices[0]?.message?.content ?? "").trim();
     const clean = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(clean);
 
