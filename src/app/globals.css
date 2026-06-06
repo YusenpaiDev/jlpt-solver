@@ -5178,8 +5178,8 @@ input, textarea, select { font-size: 16px; }
 .af-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .af-timer {
   position: fixed;
-  top: 88px;
-  right: 28px;
+  bottom: 24px;
+  right: 24px;
   z-index: 60;
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 9px; border-radius: 10px;
@@ -5199,11 +5199,8 @@ input, textarea, select { font-size: 16px; }
   font-size: 8.5px; padding: 1px 4px;
 }
 @media (max-width: 768px) {
-  .af-timer {
-    top: auto;
-    bottom: 88px;
-    right: 16px;
-  }
+  /* Geser ke atas biar gak ketutup BottomNav mobile */
+  .af-timer { bottom: 88px; right: 16px; }
 }
 .af-timer-val { font-size: 18px; font-weight: 600; }
 .af-timer-status {
