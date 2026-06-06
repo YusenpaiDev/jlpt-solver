@@ -5181,17 +5181,22 @@ input, textarea, select { font-size: 16px; }
   top: 88px;
   right: 28px;
   z-index: 60;
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 16px; border-radius: var(--radius-md);
-  background: rgba(26, 22, 32, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(221, 65, 36, 0.32);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
-    0 0 24px -6px rgba(221, 65, 36, 0.35),
-    0 8px 24px -10px rgba(0, 0, 0, 0.55);
-  font-variant-numeric: tabular-nums; color: var(--text-primary);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 9px; border-radius: 10px;
+  background: rgba(26, 22, 32, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--edge-soft);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  font-size: 11px;
+  opacity: 0.55;
+  transition: opacity .2s;
+}
+.af-timer:hover { opacity: 1; }
+.af-timer .af-timer-val { font-size: 12px; font-weight: 500; }
+.af-timer .af-timer-status {
+  font-size: 8.5px; padding: 1px 4px;
 }
 @media (max-width: 768px) {
   .af-timer {
