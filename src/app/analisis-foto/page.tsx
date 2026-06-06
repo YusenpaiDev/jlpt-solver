@@ -826,6 +826,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [savingNote,   setSavingNote]   = useState<number | null>(null);
   const [rightTab,     setRightTab]     = useState<"chat"|"kamus"|"catatan">("chat");
   const [kamusWords,   setKamusWords]   = useState<{id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean}[]>([]);
+  const [flashKamusId, setFlashKamusId] = useState<string | null>(null);
   const [kamusQuery,   setKamusQuery]   = useState("");
   const [kamusLoaded,  setKamusLoaded]  = useState(false);
   const [catatanList,  setCatatanList]  = useState<{id:string;judul:string;isi:string;updated_at:string}[]>([]);
@@ -1154,6 +1155,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       if (data) {
         const fresh = { ...(data as {id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean|null}), favorite: data.favorite ?? false };
         setKamusWords(prev => [fresh, ...prev.filter(w => w.id !== fresh.id)]);
+        triggerKamusFlash(fresh.id);
       }
       setSavedWords(s => new Set([...s, kanji]));
       setAddKanji(""); setAddReading(""); setAddMeaning("");
@@ -1404,6 +1406,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       if (inserted) {
         const fresh = { ...(inserted as {id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean|null}), favorite: inserted.favorite ?? false };
         setKamusWords(prev => [fresh, ...prev.filter(w => w.id !== fresh.id)]);
+        triggerKamusFlash(fresh.id);
       }
       showToast(`${jp} ditambahkan ke Kamus ✓`, true);
     } catch (err) {
@@ -1419,6 +1422,13 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     setAnswers(a => ({ ...a, [qi]: id }));
   };
   const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
+
+  /* Trigger flash halo amber di baris kotoba — biar user notice entry-nya
+     baru/refresh. Auto-clear 1.3s setelah animation selesai. */
+  const triggerKamusFlash = (id: string) => {
+    setFlashKamusId(id);
+    setTimeout(() => setFlashKamusId(prev => prev === id ? null : prev), 1300);
+  };
 
   /* Toggle favorite di kamus sidebar — nyambung ke saved_words.favorite
      yang dipakai /kamus page. Klik bintang = same effect as star di /kamus. */
@@ -2182,6 +2192,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                   .map(w => (
                     <div
                       key={w.id}
+                      className={flashKamusId === w.id ? "kamus-row-flash" : undefined}
                       style={{
                         padding: "8px 10px", borderRadius: 8,
                         background: "var(--surface-1)", border: "1px solid var(--edge-soft)",
