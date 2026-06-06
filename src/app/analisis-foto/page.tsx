@@ -1155,7 +1155,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       let data: {id:string;kanji:string;reading:string|null;meaning:string;favorite?:boolean|null} | null = null;
       const primary = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
         .select("id, kanji, reading, meaning, favorite").single();
-      if (primary.error && /column .*favorite.* does not exist/i.test(primary.error.message)) {
+      if (primary.error && /(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(primary.error.message)) {
         const fb = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
           .select("id, kanji, reading, meaning").single();
         if (fb.error) throw fb.error;
@@ -1229,7 +1229,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         .select("id, kanji, reading, meaning, favorite")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      if (primary.error && /column .*favorite.* does not exist/i.test(primary.error.message)) {
+      if (primary.error && /(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(primary.error.message)) {
         const fb = await supabase
           .from("saved_words")
           .select("id, kanji, reading, meaning")
@@ -1412,7 +1412,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       let inserted: {id:string;kanji:string;reading:string|null;meaning:string;favorite?:boolean|null} | null = null;
       const primary = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
         .select("id, kanji, reading, meaning, favorite").single();
-      if (primary.error && /column .*favorite.* does not exist/i.test(primary.error.message)) {
+      if (primary.error && /(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(primary.error.message)) {
         const fb = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
           .select("id, kanji, reading, meaning").single();
         if (fb.error) throw fb.error;
@@ -1472,7 +1472,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         ? err.message
         : (err as {message?: string})?.message ?? JSON.stringify(err);
       // Kolom favorite belum di-migrate: kasih instruksi jelas, bukan error mentah.
-      if (/column .*favorite.* does not exist/i.test(msg)) {
+      if (/(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(msg)) {
         showToast("Fitur favorit butuh migrasi DB. Buka Supabase SQL Editor, lalu jalanin: alter table saved_words add column favorite boolean default false;", false);
       } else {
         showToast(`Gagal toggle: ${msg}`, false);

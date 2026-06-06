@@ -100,7 +100,7 @@ export default function Kamus() {
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         let ws: SavedWord[];
-        if (wordsRes.error && /column .*(example|favorite).* does not exist/i.test(wordsRes.error.message)) {
+        if (wordsRes.error && /(column .*(example|favorite).* does not exist|could not find the .(example|favorite). column)/i.test(wordsRes.error.message)) {
           const fb = await supabase
             .from("saved_words")
             .select("id, kanji, reading, meaning, level, created_at")
