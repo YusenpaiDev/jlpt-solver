@@ -36,10 +36,16 @@ interface VocabItem {
   example?: string;
   jlpt_level?: string;
 }
+interface UserProgress {
+  answers: Record<number, string>;
+  revealed: number[];
+  xp_claimed?: boolean;
+}
 interface AIResult {
   title: string;
   vocabulary?: VocabItem[];
   questions: AIQuestion[];
+  user_progress?: UserProgress;
 }
 interface FileData {
   base64: string;
@@ -752,8 +758,12 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   sessionLevel?: Level | null;
   sessionCategory?: Category | null;
 }) {
-  const [answers,      setAnswers]      = useState<Record<number, string>>({});
-  const [revealed,     setRevealed]     = useState<Set<number>>(new Set());
+  const [answers,      setAnswers]      = useState<Record<number, string>>(
+    () => result.user_progress?.answers ?? {}
+  );
+  const [revealed,     setRevealed]     = useState<Set<number>>(
+    () => new Set(result.user_progress?.revealed ?? [])
+  );
 
   /* Exit confirmation — kalau user udah jawab/reveal minimal 1 soal,
      intercept browser exit + in-app navigation buat tanya "yakin keluar?".
@@ -1201,18 +1211,57 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     })();
   }, [rightTab, kamusLoaded]);
 
-  /* Save score + gain XP once all questions are revealed */
+  /* Auto-save: tiap user jawab/reveal, debounce 600ms, persist user_progress
+     + sessions.score continuous biar statistik kebaca + resume jalan. */
+  useEffect(() => {
+    if (!sessionId || isReview) return;
+    if (revealed.size === 0 && Object.keys(answers).length === 0) return;
+
+    const handle = setTimeout(async () => {
+      try {
+        const correctCount = result.questions.filter((q, qi) => {
+          if (!revealed.has(qi)) return false;
+          const userAns = answers[qi];
+          return userAns && userAns === q.correct;
+        }).length;
+
+        const nextProgress: UserProgress = {
+          answers,
+          revealed: Array.from(revealed),
+          xp_claimed: scoreSaved,
+        };
+        const nextResult: AIResult = { ...result, user_progress: nextProgress };
+
+        const supabase = createClient();
+        await supabase
+          .from("sessions")
+          .update({ ai_result: nextResult, score: correctCount })
+          .eq("id", sessionId);
+      } catch {
+        // silent — UI tetap responsif walau save gagal
+      }
+    }, 600);
+
+    return () => clearTimeout(handle);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, revealed, sessionId, isReview]);
+
+  /* XP gain — sekali aja per sesi, pas semua soal ke-reveal. xp_claimed
+     dipersist di ai_result.user_progress biar refresh gak double-award. */
   useEffect(() => {
     const total = result.questions.length;
-    if (revealed.size < total || scoreSaved || !sessionId) return;
+    if (revealed.size < total || scoreSaved || !sessionId || isReview) return;
+    if (result.user_progress?.xp_claimed) {
+      setScoreSaved(true);
+      return;
+    }
 
-    async function saveScoreAndXp() {
+    async function awardXp() {
       const correctCount = result.questions.filter((q, qi) => {
         const userAns = answers[qi];
         return userAns && userAns === q.correct;
       }).length;
-
-      const xpGain = correctCount * 10 + 5; // 10 per correct + 5 partisipasi
+      const xpGain = correctCount * 10 + 5;
 
       try {
         const supabase = createClient();
@@ -1223,26 +1272,21 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           .from("profiles").select("xp").eq("id", user.id).single();
         const currentXp = profile?.xp ?? 0;
 
-        await Promise.all([
-          supabase.from("sessions")
-            .update({ score: correctCount })
-            .eq("id", sessionId),
-          supabase.from("profiles")
-            .update({ xp: currentXp + xpGain })
-            .eq("id", user.id),
-        ]);
+        await supabase.from("profiles")
+          .update({ xp: currentXp + xpGain })
+          .eq("id", user.id);
 
         setScoreSaved(true);
         setToast({ text: `+${xpGain} XP — ${correctCount}/${total} benar`, ok: true });
         setTimeout(() => setToast(null), 3000);
       } catch {
-        // gagal simpan skor — silent
+        // silent
       }
     }
 
-    saveScoreAndXp();
+    awardXp();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [revealed.size, scoreSaved, sessionId]);
+  }, [revealed.size, scoreSaved, sessionId, isReview]);
 
   /* Timer — hanya jalan saat timerOn = true */
   useEffect(() => {
