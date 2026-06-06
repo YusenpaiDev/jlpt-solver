@@ -7055,10 +7055,22 @@ html { scrollbar-gutter: stable; }
     max-width: 100% !important;
     margin: 0 !important;
     box-sizing: border-box;
+    /* Stop breathing glow animation di mobile — animasi box-shadow loop
+       4.2s bikin perceived size berubah-ubah pas dibandingkan. Static
+       glow yang lebih kalem biar konsisten. */
+    animation: none !important;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+      0 0 0 1px rgba(221, 65, 36, 0.20),
+      0 0 24px -6px rgba(221, 65, 36, 0.28),
+      0 8px 24px -10px rgba(0, 0, 0, 0.5) !important;
   }
   /* Pembahasan padding samain dengan options padding biar gak ada
      perbedaan inset → card width perceived sama */
   .qc-pembahasan { padding: 16px 22px !important; }
+  /* Glass-card transition di-target ke background+border doang biar
+     content change gak trigger 200ms transition pada properti lain */
+  .glass-card { transition: background-color 200ms, border-color 200ms !important; }
   .top-bar { flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
   .top-actions { gap: 8px; }
   .af-userbar { padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
