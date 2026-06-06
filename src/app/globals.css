@@ -5374,6 +5374,25 @@ input, textarea, select { font-size: 16px; }
   background: rgba(107, 142, 63, 0.08);
   border-color: var(--accent-emerald);
   box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.18), 0 8px 24px -8px rgba(107, 142, 63, 0.3);
+  animation: correct-pulse 620ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes correct-pulse {
+  0%   { box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.18), 0 8px 24px -8px rgba(107, 142, 63, 0.3);
+         border-color: var(--accent-emerald); }
+  35%  { box-shadow: 0 0 0 4px rgba(107, 142, 63, 0.45), 0 22px 42px -10px rgba(107, 142, 63, 0.55);
+         border-color: #9CB572; }
+  100% { box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.18), 0 8px 24px -8px rgba(107, 142, 63, 0.3);
+         border-color: var(--accent-emerald); }
+}
+@keyframes check-draw {
+  from { stroke-dashoffset: 28; }
+  to   { stroke-dashoffset: 0; }
+}
+.qc-check-draw {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: check-draw 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 140ms;
 }
 .qc-v2-option.wrong { background: rgba(164, 36, 59, 0.08); border-color: var(--accent-rose); }
 .qc-v2-option.dim { opacity: 0.55; }

@@ -1716,7 +1716,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                               {useFuri ? renderPassage(furiganaMarked[opKey]) : optText}
                             </span>
                             {isRevealed && isCorrect && (
-                              <Check size={16} strokeWidth={2.4} style={{ color: "var(--accent-emerald)" }} />
+                              <svg
+                                width={16} height={16} viewBox="0 0 24 24" fill="none"
+                                stroke="var(--accent-emerald)" strokeWidth={2.4}
+                                strokeLinecap="round" strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <polyline className="qc-check-draw" points="20 6 9 17 4 12" />
+                              </svg>
                             )}
                             {isRevealed && isSelected && !isCorrect && (
                               <X size={16} strokeWidth={2.4} style={{ color: "var(--accent-rose)" }} />
