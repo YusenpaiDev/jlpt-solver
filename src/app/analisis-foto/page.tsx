@@ -1447,7 +1447,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
      baru/refresh. Auto-clear 1.3s setelah animation selesai. */
   const triggerKamusFlash = (id: string) => {
     setFlashKamusId(id);
-    setTimeout(() => setFlashKamusId(prev => prev === id ? null : prev), 1300);
+    setTimeout(() => setFlashKamusId(prev => prev === id ? null : prev), 1800);
   };
 
   /* Toggle favorite di kamus sidebar — nyambung ke saved_words.favorite
