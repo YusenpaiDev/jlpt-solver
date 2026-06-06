@@ -5371,18 +5371,39 @@ input, textarea, select { font-size: 16px; }
     inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
 }
 .qc-v2-option.correct {
-  background: rgba(107, 142, 63, 0.08);
+  position: relative;
+  background: rgba(107, 142, 63, 0.10);
   border-color: var(--accent-emerald);
-  box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.18), 0 8px 24px -8px rgba(107, 142, 63, 0.3);
-  animation: correct-pulse 620ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.22), 0 8px 24px -8px rgba(107, 142, 63, 0.3);
+  animation: correct-pulse 1100ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+.qc-v2-option.correct::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center,
+              rgba(156, 181, 114, 0.55) 0%,
+              rgba(107, 142, 63, 0.25) 35%,
+              transparent 70%);
+  opacity: 0;
+  transform: scale(0.85);
+  animation: correct-halo 1200ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 0;
+}
+.qc-v2-option.correct > * { position: relative; z-index: 1; }
 @keyframes correct-pulse {
-  0%   { box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.18), 0 8px 24px -8px rgba(107, 142, 63, 0.3);
-         border-color: var(--accent-emerald); }
-  35%  { box-shadow: 0 0 0 4px rgba(107, 142, 63, 0.45), 0 22px 42px -10px rgba(107, 142, 63, 0.55);
-         border-color: #9CB572; }
-  100% { box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.18), 0 8px 24px -8px rgba(107, 142, 63, 0.3);
-         border-color: var(--accent-emerald); }
+  0%   { box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.22), 0 8px 24px -8px rgba(107, 142, 63, 0.3); }
+  25%  { box-shadow: 0 0 0 8px rgba(107, 142, 63, 0.42), 0 28px 56px -10px rgba(156, 181, 114, 0.75); }
+  70%  { box-shadow: 0 0 0 3px rgba(107, 142, 63, 0.30), 0 14px 34px -10px rgba(107, 142, 63, 0.45); }
+  100% { box-shadow: 0 0 0 1px rgba(107, 142, 63, 0.22), 0 8px 24px -8px rgba(107, 142, 63, 0.3); }
+}
+@keyframes correct-halo {
+  0%   { opacity: 0;   transform: scale(0.85); }
+  20%  { opacity: 0.9; transform: scale(1.04); }
+  60%  { opacity: 0.4; transform: scale(1.12); }
+  100% { opacity: 0;   transform: scale(1.18); }
 }
 @keyframes check-draw {
   from { stroke-dashoffset: 28; }
@@ -5391,8 +5412,8 @@ input, textarea, select { font-size: 16px; }
 .qc-check-draw {
   stroke-dasharray: 28;
   stroke-dashoffset: 28;
-  animation: check-draw 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: 140ms;
+  animation: check-draw 480ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 180ms;
 }
 .qc-v2-option.wrong { background: rgba(164, 36, 59, 0.08); border-color: var(--accent-rose); }
 .qc-v2-option.dim { opacity: 0.55; }

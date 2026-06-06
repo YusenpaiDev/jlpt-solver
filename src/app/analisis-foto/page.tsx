@@ -1312,7 +1312,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       });
       if (error) throw error;
       setSavedNotes(prev => new Set([...prev, qi]));
-      setCatatanList(prev => [{ id: "temp", judul, isi, updated_at: new Date().toISOString() }, ...prev]);
+      setCatatanList(prev => [{ id: `temp-${Date.now()}-${qi}`, judul, isi, updated_at: new Date().toISOString() }, ...prev]);
       showToast("Disimpan ke Catatan ✓", true);
     } catch (err) {
       showToast(`Gagal: ${err instanceof Error ? err.message : (err as {message?:string})?.message ?? JSON.stringify(err)}`, false);
