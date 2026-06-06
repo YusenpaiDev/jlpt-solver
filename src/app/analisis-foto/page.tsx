@@ -2100,6 +2100,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                       style={{
                         padding: "8px 10px", borderRadius: 8,
                         background: "var(--surface-1)", border: "1px solid var(--edge-soft)",
+                        flexShrink: 0,
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -2189,6 +2190,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                       background: isExpanded ? "var(--surface-2)" : "var(--surface-1)",
                       border: "1px solid var(--edge-soft)",
                       overflow: "hidden",
+                      flexShrink: 0,
                     }}
                   >
                     <button
