@@ -7019,6 +7019,12 @@ input, textarea, select { font-size: 16px; }
   .ct-workspace { grid-template-columns: 220px minmax(0, 1fr) !important; }
   .ct-workspace > .ct-editor { display: none !important; }
 }
+
+/* Reserve scrollbar gutter biar konten gak ke-geser kiri-kanan
+   pas pembahasan muncul → konten jadi scrollable (vertical scrollbar
+   appear bikin width body kurang ~15px). */
+html { scrollbar-gutter: stable; }
+
 @media (max-width: 767px) {
   .nav-rail { display: none !important; }
   .bottom-nav { display: block; }
@@ -7028,11 +7034,19 @@ input, textarea, select { font-size: 16px; }
   .app-shell {
     padding: 16px 10px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
     padding-top: max(16px, env(safe-area-inset-top, 0px));
+    width: 100%;
+    box-sizing: border-box;
   }
-  /* Soal card di mobile: edge-to-edge biar gede + simetris */
-  .af-grid { padding: 0 !important; }
-  .af-main { width: 100%; }
-  .qc-v2 { margin-left: 0; margin-right: 0; }
+  /* Soal card di mobile: edge-to-edge + lock width biar gak shift/shrink
+     pas pembahasan muncul (kena scrollbar appear / re-layout) */
+  .af-grid { padding: 0 !important; width: 100%; }
+  .af-main { width: 100%; min-width: 0; }
+  .qc-v2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+  }
   .top-bar { flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
   .top-actions { gap: 8px; }
   .af-userbar { padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
