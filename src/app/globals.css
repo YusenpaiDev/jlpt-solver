@@ -5199,8 +5199,22 @@ input, textarea, select { font-size: 16px; }
   font-size: 8.5px; padding: 1px 4px;
 }
 @media (max-width: 768px) {
-  /* Geser ke atas biar gak ketutup BottomNav mobile */
-  .af-timer { bottom: 88px; right: 16px; }
+  /* Pojok kiri bawah, di atas BottomNav. Lebih kecil + lebih dim
+     supaya gak ngintip pembahasan / soal di area baca. */
+  .af-timer {
+    bottom: 84px;
+    left: 12px;
+    right: auto;
+    padding: 3px 7px;
+    gap: 4px;
+    opacity: 0.4;
+    font-size: 10px;
+  }
+  .af-timer .af-timer-val { font-size: 11px; }
+  .af-timer .af-timer-status { font-size: 8px; padding: 0px 3px; }
+  .af-timer:hover, .af-timer:active { opacity: 1; }
+  /* Sembunyiin icon Clock di mobile biar makin compact */
+  .af-timer > svg { display: none; }
 }
 .af-timer-val { font-size: 18px; font-weight: 600; }
 .af-timer-status {
