@@ -1142,18 +1142,31 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { showToast("Login dulu", false); return; }
       // Upsert biar duplicate gak skip, malah refresh entry-nya + naik ke atas
-      // (created_at di-bump) — user yg lupa udah pernah simpan tetep dapet entry baru.
+      // (created_at di-bump). Graceful: cobain include `favorite` di select,
+      // kalau kolom belum di-migrate, fallback ke select tanpa favorite.
       const kanji = addKanji.trim();
-      const { data, error } = await supabase.from("saved_words").upsert({
+      const upsertBase = {
         user_id: user.id,
         kanji,
         reading: addReading.trim() || null,
         meaning: addMeaning.trim(),
         created_at: new Date().toISOString(),
-      }, { onConflict: "user_id,kanji" }).select("id, kanji, reading, meaning, favorite").single();
-      if (error) throw error;
+      };
+      let data: {id:string;kanji:string;reading:string|null;meaning:string;favorite?:boolean|null} | null = null;
+      const primary = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
+        .select("id, kanji, reading, meaning, favorite").single();
+      if (primary.error && /column .*favorite.* does not exist/i.test(primary.error.message)) {
+        const fb = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
+          .select("id, kanji, reading, meaning").single();
+        if (fb.error) throw fb.error;
+        data = fb.data;
+      } else if (primary.error) {
+        throw primary.error;
+      } else {
+        data = primary.data;
+      }
       if (data) {
-        const fresh = { ...(data as {id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean|null}), favorite: data.favorite ?? false };
+        const fresh = { ...data, favorite: data.favorite ?? false };
         setKamusWords(prev => [fresh, ...prev.filter(w => w.id !== fresh.id)]);
         triggerKamusFlash(fresh.id);
       }
@@ -1393,18 +1406,25 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       } catch { /* furigana optional */ }
 
       // Upsert: kalau duplicate (user lupa udah simpan dari soal lain), refresh
-      // entry-nya + naik ke atas. Data baru menang.
-      const { data: inserted, error } = await supabase.from("saved_words").upsert({
-        user_id: user.id,
-        kanji: jp,
-        reading,
-        meaning,
-        created_at: new Date().toISOString(),
-      }, { onConflict: "user_id,kanji" }).select("id, kanji, reading, meaning, favorite").single();
-      if (error) throw error;
+      // entry-nya + naik ke atas. Graceful: fallback select tanpa favorite
+      // kalau kolom belum di-migrate.
+      const upsertBase = { user_id: user.id, kanji: jp, reading, meaning, created_at: new Date().toISOString() };
+      let inserted: {id:string;kanji:string;reading:string|null;meaning:string;favorite?:boolean|null} | null = null;
+      const primary = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
+        .select("id, kanji, reading, meaning, favorite").single();
+      if (primary.error && /column .*favorite.* does not exist/i.test(primary.error.message)) {
+        const fb = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
+          .select("id, kanji, reading, meaning").single();
+        if (fb.error) throw fb.error;
+        inserted = fb.data;
+      } else if (primary.error) {
+        throw primary.error;
+      } else {
+        inserted = primary.data;
+      }
       setSavedWords(s => new Set([...s, jp]));
       if (inserted) {
-        const fresh = { ...(inserted as {id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean|null}), favorite: inserted.favorite ?? false };
+        const fresh = { ...inserted, favorite: inserted.favorite ?? false };
         setKamusWords(prev => [fresh, ...prev.filter(w => w.id !== fresh.id)]);
         triggerKamusFlash(fresh.id);
       }
@@ -1451,7 +1471,12 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       const msg = err instanceof Error
         ? err.message
         : (err as {message?: string})?.message ?? JSON.stringify(err);
-      showToast(`Gagal toggle: ${msg}`, false);
+      // Kolom favorite belum di-migrate: kasih instruksi jelas, bukan error mentah.
+      if (/column .*favorite.* does not exist/i.test(msg)) {
+        showToast("Fitur favorit butuh migrasi DB. Buka Supabase SQL Editor, lalu jalanin: alter table saved_words add column favorite boolean default false;", false);
+      } else {
+        showToast(`Gagal toggle: ${msg}`, false);
+      }
     }
   };
 
