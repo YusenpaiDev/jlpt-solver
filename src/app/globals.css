@@ -5416,6 +5416,29 @@ input, textarea, select { font-size: 16px; }
   animation-delay: 180ms;
 }
 
+/* Kamus row default glow — vermillion ambient (tuned dari .qc-v2 soal card
+   glow tapi blur lebih kecil karena row-nya pendek). Statis, gak animated
+   biar gak distraksi pas browsing banyak entry. */
+.kamus-row {
+  border: 1px solid rgba(221, 65, 36, 0.22) !important;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(221, 65, 36, 0.10),
+    0 0 18px -4px rgba(221, 65, 36, 0.28),
+    0 0 36px -12px rgba(221, 65, 36, 0.18),
+    0 4px 14px -6px rgba(0, 0, 0, 0.45);
+  transition: box-shadow .2s, border-color .2s;
+}
+.kamus-row:hover {
+  border-color: rgba(221, 65, 36, 0.38) !important;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(221, 65, 36, 0.20),
+    0 0 24px -4px rgba(221, 65, 36, 0.38),
+    0 0 48px -12px rgba(221, 65, 36, 0.24),
+    0 6px 18px -6px rgba(0, 0, 0, 0.5);
+}
+
 /* Kamus row flash — amber halo + pulse saat kotoba baru/refresh masuk
    ke list. Pakai inline style sebagai dasar, jadi class ini cuma tumpang
    tindih shadow/halo animation tanpa ngubah border-radius/background. */

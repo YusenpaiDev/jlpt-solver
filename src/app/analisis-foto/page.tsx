@@ -2192,10 +2192,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                   .map(w => (
                     <div
                       key={w.id}
-                      className={flashKamusId === w.id ? "kamus-row-flash" : undefined}
+                      className={`kamus-row${flashKamusId === w.id ? " kamus-row-flash" : ""}`}
                       style={{
                         padding: "8px 10px", borderRadius: 8,
-                        background: "var(--surface-1)", border: "1px solid var(--edge-soft)",
+                        background: "var(--surface-1)",
                         flexShrink: 0,
                       }}
                     >
