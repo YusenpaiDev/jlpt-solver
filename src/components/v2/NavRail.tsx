@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, BookOpen, History, Camera, ListTodo, BookA, NotebookPen, BarChart3,
-  Settings, LogOut, Sparkles,
+  Headphones, Settings, LogOut, Sparkles,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/riwayat-soal",  label: "Riwayat Soal",  Icon: History },
   { href: "/analisis-foto", label: "Analisis Foto", Icon: Camera },
   { href: "/lembar-tugas",  label: "Lembar Tugas",  Icon: ListTodo },
+  { href: "/choukai",       label: "Choukai",       Icon: Headphones },
   { href: "/kamus",         label: "Kamus",         Icon: BookA },
   { href: "/catatan",       label: "Catatan",       Icon: NotebookPen },
   { href: "/statistik",     label: "Statistik",     Icon: BarChart3 },

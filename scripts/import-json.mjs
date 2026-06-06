@@ -76,6 +76,7 @@ async function findUserId(email) {
 /* Normalize: pastikan field yang dipake app ada, fill default kalau missing */
 function normalizeResult(raw, fallbackTitle) {
   const title = (raw.title || fallbackTitle || "Soal JLPT").toString();
+  const section = raw.section ?? null;
   const vocabulary = Array.isArray(raw.vocabulary) ? raw.vocabulary.map(v => ({
     word: v.word ?? v.kanji ?? "",
     reading: v.reading ?? "",
@@ -94,9 +95,22 @@ function normalizeResult(raw, fallbackTitle) {
     tip: q.tip ?? "",
     category: q.category ?? "AI",
     passage: q.passage ?? null,
+    // choukai-specific (null-able, kept verbatim so player can read them from ai_result)
+    audio: q.audio ?? null,
+    image: q.image ?? null,
+    mondai: typeof q.mondai === "number" ? q.mondai : null,
+    transcript: Array.isArray(q.transcript) ? q.transcript : null,
+    prompt: q.prompt ?? null,
   })).filter(q => q.question && q.options.length > 0) : [];
 
-  return { title, vocabulary, questions };
+  return { title, section, vocabulary, questions };
+}
+
+/* Auto-detect kategori session: choukai kalau ada 聴解-* questions atau section=choukai */
+function detectCategory(result, fallback) {
+  if (result.section === "choukai") return "聴解";
+  if (result.questions.some(q => typeof q.category === "string" && q.category.startsWith("聴解"))) return "聴解";
+  return fallback;
 }
 
 /* Discover JSON files — rekursif (masuk subfolder) */
@@ -126,12 +140,13 @@ async function discoverJsons() {
 
 /* Push to Supabase */
 async function push(userId, result) {
+  const sessionCategory = detectCategory(result, category);
   const { data: session, error: sessErr } = await supabase
     .from("sessions")
     .insert({
       user_id: userId,
       level,
-      category,
+      category: sessionCategory,
       title: result.title,
       total: result.questions.length,
       ai_result: result,
