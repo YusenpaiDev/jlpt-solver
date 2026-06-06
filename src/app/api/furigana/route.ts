@@ -1,5 +1,7 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { deepseek, DEEPSEEK_MODEL } from "@/lib/deepseek";
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,8 +9,8 @@ export async function POST(req: NextRequest) {
 
     /* ── Passage mode: mark up every kanji word with its reading ── */
     if (passage?.trim()) {
-      const response = await deepseek.chat.completions.create({
-        model: DEEPSEEK_MODEL,
+      const response = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 4000,
         messages: [{
           role: "user",
@@ -23,17 +25,16 @@ ${passage.trim()}
 Balas HANYA teks dengan markup [[…|…]], tanpa apapun yang lain.`,
         }],
       });
-      const marked = (response.choices[0]?.message?.content ?? "").trim();
+      const marked = response.content[0].type === "text" ? response.content[0].text.trim() : "";
       return NextResponse.json({ marked });
     }
 
     if (!word?.trim()) return NextResponse.json({ reading: "", meaning: "" });
 
     if (withMeaning) {
-      const response = await deepseek.chat.completions.create({
-        model: DEEPSEEK_MODEL,
+      const response = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 128,
-        response_format: { type: "json_object" },
         messages: [{
           role: "user",
           content: `Untuk kata Jepang "${word.trim()}", balas HANYA dengan JSON ini (tanpa markdown):
@@ -42,7 +43,7 @@ Contoh: {"reading":"かんじ","meaning":"aksara kanji"}`,
         }],
       });
 
-      const text = (response.choices[0]?.message?.content ?? "{}").trim();
+      const text = response.content[0].type === "text" ? response.content[0].text.trim() : "{}";
       try {
         const parsed = JSON.parse(text);
         return NextResponse.json({ reading: parsed.reading ?? "", meaning: parsed.meaning ?? "" });
@@ -51,8 +52,8 @@ Contoh: {"reading":"かんじ","meaning":"aksara kanji"}`,
       }
     }
 
-    const response = await deepseek.chat.completions.create({
-      model: DEEPSEEK_MODEL,
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 64,
       messages: [{
         role: "user",
@@ -62,7 +63,7 @@ Contoh: input "漢字" → output "かんじ"`,
       }],
     });
 
-    const reading = (response.choices[0]?.message?.content ?? "").trim();
+    const reading = response.content[0].type === "text" ? response.content[0].text.trim() : "";
     return NextResponse.json({ reading });
   } catch (err) {
     console.error("Furigana error:", err);
