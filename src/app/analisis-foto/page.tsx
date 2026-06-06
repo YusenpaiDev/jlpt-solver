@@ -1450,6 +1450,31 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     setTimeout(() => setFlashKamusId(prev => prev === id ? null : prev), 1800);
   };
 
+  /* Delete kotoba dari sidebar — nyambung ke saved_words yang sama dengan
+     /kamus. Confirm dulu biar gak ke-pencet gak sengaja. */
+  const deleteKamusWord = async (id: string, kanji: string) => {
+    if (!confirm(`Hapus "${kanji}" dari kamus?`)) return;
+    const prev = kamusWords;
+    setKamusWords(p => p.filter(w => w.id !== id));
+    setSavedWords(s => {
+      const next = new Set(s);
+      next.delete(kanji);
+      return next;
+    });
+    try {
+      const { error } = await createClient().from("saved_words").delete().eq("id", id);
+      if (error) throw error;
+      showToast(`${kanji} dihapus dari kamus`, true);
+    } catch (err) {
+      setKamusWords(prev);
+      console.error("Delete word error:", err);
+      const msg = err instanceof Error
+        ? err.message
+        : (err as {message?: string})?.message ?? JSON.stringify(err);
+      showToast(`Gagal hapus: ${msg}`, false);
+    }
+  };
+
   /* Toggle favorite di kamus sidebar — nyambung ke saved_words.favorite
      yang dipakai /kamus page. Klik bintang = same effect as star di /kamus. */
   const toggleKamusFavorite = async (id: string) => {
@@ -2254,6 +2279,24 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                           }}
                         >
                           <Star size={13} strokeWidth={1.8} fill={w.favorite ? "currentColor" : "none"} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); deleteKamusWord(w.id, w.kanji); }}
+                          aria-label={`Hapus ${w.kanji} dari kamus`}
+                          title="Hapus dari kamus"
+                          style={{
+                            flexShrink: 0,
+                            width: 22, height: 22, borderRadius: 6,
+                            display: "grid", placeItems: "center",
+                            background: "transparent", border: "none", cursor: "pointer",
+                            color: "var(--text-tertiary)",
+                            transition: "color .14s",
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = "var(--accent-rose)"}
+                          onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-tertiary)"}
+                        >
+                          <Trash2 size={12} strokeWidth={1.8} />
                         </button>
                       </div>
                       <p style={{ fontSize: 11.5, color: "var(--text-secondary)", margin: "2px 0 0", lineHeight: 1.4 }}>{w.meaning.split(";")[0]}</p>

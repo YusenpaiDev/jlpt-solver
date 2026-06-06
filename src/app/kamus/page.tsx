@@ -499,6 +499,7 @@ export default function Kamus() {
             setFavOnly={setFavOnly}
             favCount={words.filter(w => w.favorite).length}
             onToggleFavorite={toggleFavorite}
+            onDelete={deleteWord}
           />
 
           {detail ? (
@@ -786,7 +787,7 @@ function FilterRail({
 
 function WordList({
   words, selected, setSelected, query, setQuery, sort, setSort, loading, totalWords,
-  favOnly, setFavOnly, favCount, onToggleFavorite,
+  favOnly, setFavOnly, favCount, onToggleFavorite, onDelete,
 }: {
   words: SavedWord[];
   selected: string | null;
@@ -801,6 +802,7 @@ function WordList({
   setFavOnly: (v: boolean) => void;
   favCount: number;
   onToggleFavorite: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
     <section className="kk-list-section glass-card">
@@ -866,6 +868,15 @@ function WordList({
                 aria-label={w.favorite ? "Hapus dari favorit" : "Tambah ke favorit"}
               >
                 <Star size={13} strokeWidth={1.8} fill={w.favorite ? "currentColor" : "none"} />
+              </button>
+              <button
+                type="button"
+                className="kk-row-delete"
+                onClick={(e) => { e.stopPropagation(); onDelete(w.id); }}
+                title="Hapus dari kamus"
+                aria-label={`Hapus ${w.kanji}`}
+              >
+                <Trash2 size={12} strokeWidth={1.8} />
               </button>
               {w.level && <span className={`lv-tag-mini lv-${w.level.toLowerCase()}`}>{w.level}</span>}
             </span>

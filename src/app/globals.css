@@ -4674,6 +4674,17 @@ input, textarea, select { font-size: 16px; }
 .kk-row-fav:hover { color: var(--accent-amber); background: rgba(212, 160, 74, 0.08); }
 .kk-row-fav.on { color: var(--accent-amber); }
 .kk-row-fav.on:hover { background: rgba(212, 160, 74, 0.16); }
+.kk-row-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px;
+  transition: all 140ms;
+}
+.kk-row-delete:hover { color: var(--accent-rose); background: rgba(164, 36, 59, 0.10); }
 
 /* Filter chip "Favorit" di list head */
 .kk-fav-chip { display: inline-flex; align-items: center; gap: 6px; }
