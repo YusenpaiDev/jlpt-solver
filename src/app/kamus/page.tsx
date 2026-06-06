@@ -216,21 +216,26 @@ export default function Kamus() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setAddErr("Login dulu."); return; }
-      const { data, error } = await supabase.from("saved_words").insert({
+      // Upsert: kalau kanji udah ada, refresh entry-nya + naik ke atas list
+      // (created_at di-bump). Data baru dari form menang — user yg lupa udah
+      // simpan jadi gak ke-block.
+      const { data, error } = await supabase.from("saved_words").upsert({
         user_id: user.id,
         kanji: form.kanji.trim(),
         reading: form.reading.trim() || null,
         meaning: form.meaning.trim(),
         level: form.level || null,
         example: form.example.trim() || null,
-      }).select("id, kanji, reading, meaning, level, example, created_at").single();
+        created_at: new Date().toISOString(),
+      }, { onConflict: "user_id,kanji" }).select("id, kanji, reading, meaning, level, example, favorite, created_at").single();
 
       if (error) {
-        setAddErr(error.code === "23505" ? "Kata ini sudah ada." : `Gagal: ${error.message}`);
+        setAddErr(`Gagal: ${error.message}`);
         return;
       }
-      const w = data as SavedWord;
-      setWords(prev => [w, ...prev]);
+      const w = { ...(data as SavedWord), favorite: data.favorite ?? false };
+      // Replace existing entry kalau ada, sisanya naik ke atas
+      setWords(prev => [w, ...prev.filter(x => x.id !== w.id)]);
       setSelected(w.id);
       closeAdd();
     } catch (err) {

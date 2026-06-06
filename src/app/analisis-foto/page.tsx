@@ -1140,17 +1140,24 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { showToast("Login dulu", false); return; }
-      const { data, error } = await supabase.from("saved_words").insert({
+      // Upsert biar duplicate gak skip, malah refresh entry-nya + naik ke atas
+      // (created_at di-bump) — user yg lupa udah pernah simpan tetep dapet entry baru.
+      const kanji = addKanji.trim();
+      const { data, error } = await supabase.from("saved_words").upsert({
         user_id: user.id,
-        kanji: addKanji.trim(),
+        kanji,
         reading: addReading.trim() || null,
         meaning: addMeaning.trim(),
-      }).select("id, kanji, reading, meaning").single();
-      if (error && error.code !== "23505") throw error;
-      if (data) setKamusWords(prev => [{ ...(data as {id:string;kanji:string;reading:string|null;meaning:string}), favorite: false }, ...prev]);
-      setSavedWords(s => new Set([...s, addKanji.trim()]));
+        created_at: new Date().toISOString(),
+      }, { onConflict: "user_id,kanji" }).select("id, kanji, reading, meaning, favorite").single();
+      if (error) throw error;
+      if (data) {
+        const fresh = { ...(data as {id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean|null}), favorite: data.favorite ?? false };
+        setKamusWords(prev => [fresh, ...prev.filter(w => w.id !== fresh.id)]);
+      }
+      setSavedWords(s => new Set([...s, kanji]));
       setAddKanji(""); setAddReading(""); setAddMeaning("");
-      showToast(`${addKanji} disimpan ke Kamus ✓`, true);
+      showToast(`${kanji} disimpan ke Kamus ✓`, true);
     } catch (err) {
       showToast(`Gagal: ${err instanceof Error ? err.message : (err as {message?:string})?.message ?? JSON.stringify(err)}`, false);
     } finally { setSavingNew(false); }
@@ -1383,19 +1390,21 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         if (rj.reading) reading = rj.reading;
       } catch { /* furigana optional */ }
 
-      const { data: inserted, error } = await supabase.from("saved_words").insert({
+      // Upsert: kalau duplicate (user lupa udah simpan dari soal lain), refresh
+      // entry-nya + naik ke atas. Data baru menang.
+      const { data: inserted, error } = await supabase.from("saved_words").upsert({
         user_id: user.id,
         kanji: jp,
         reading,
         meaning,
-      }).select("id, kanji, reading, meaning").single();
-      if (error && error.code !== "23505") throw error;
+        created_at: new Date().toISOString(),
+      }, { onConflict: "user_id,kanji" }).select("id, kanji, reading, meaning, favorite").single();
+      if (error) throw error;
       setSavedWords(s => new Set([...s, jp]));
-      setKamusWords(prev => {
-        if (prev.find(w => w.kanji === jp)) return prev;
-        const base = inserted ?? { id: `local-${jp}`, kanji: jp, reading, meaning };
-        return [{ ...(base as {id:string;kanji:string;reading:string|null;meaning:string}), favorite: false }, ...prev];
-      });
+      if (inserted) {
+        const fresh = { ...(inserted as {id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean|null}), favorite: inserted.favorite ?? false };
+        setKamusWords(prev => [fresh, ...prev.filter(w => w.id !== fresh.id)]);
+      }
       showToast(`${jp} ditambahkan ke Kamus ✓`, true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
