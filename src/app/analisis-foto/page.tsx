@@ -1447,7 +1447,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       if (!data || data.length === 0) throw new Error("Row tidak ke-update (cek RLS)");
     } catch (err) {
       setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
-      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Toggle favorite error:", err);
+      const msg = err instanceof Error
+        ? err.message
+        : (err as {message?: string})?.message ?? JSON.stringify(err);
       showToast(`Gagal toggle: ${msg}`, false);
     }
   };

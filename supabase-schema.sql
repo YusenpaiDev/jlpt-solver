@@ -53,12 +53,14 @@ create table public.saved_words (
   example     text,
   level       text,
   image_url   text,
+  favorite    boolean default false,
   created_at  timestamptz default now(),
   unique(user_id, kanji)
 );
 
 -- Migration (jalankan jika tabel sudah ada):
 -- alter table public.saved_words add column if not exists example text;
+-- alter table public.saved_words add column if not exists favorite boolean default false;
 
 -- Notifikasi
 create table public.notifications (
