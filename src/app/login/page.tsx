@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Mail, Lock, Eye, EyeOff, User as UserIcon, ArrowRight, Check, Sparkles,
   Shield, Zap, AlertCircle,
@@ -14,7 +13,6 @@ type Mode = "signin" | "signup";
 type Level = "N5" | "N4" | "N3" | "N2" | "N1";
 
 export default function Login() {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("signin");
   const [showPass, setShowPass] = useState(false);
   const [email, setEmail] = useState("");
@@ -39,7 +37,10 @@ export default function Login() {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push("/");
+        // Full navigation (bukan router.push) — jaminan cookie auth kekirim ke
+        // server dulu, jadi middleware langsung liat user (gak perlu refresh manual).
+        window.location.assign("/");
+        return;
       } else {
         if (!agreed) {
           setError("Setujui syarat & privasi dulu.");

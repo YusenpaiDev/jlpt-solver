@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
-  User, Zap, Wand2, Bell, CreditCard, Shield, Trash2, ChevronRight, Camera, Check, Sparkles,
+  User, Zap, Wand2, Bell, CreditCard, Shield, Trash2, ChevronRight, Camera, Check, Sparkles, X,
 } from "lucide-react";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
@@ -65,11 +65,16 @@ export default function Pengaturan() {
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function showSaved() {
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
+  }
+  function showError(msg: string) {
+    setErrMsg(msg);
+    setTimeout(() => setErrMsg(null), 4000);
   }
 
   /* Load profile */
@@ -106,13 +111,20 @@ export default function Pengaturan() {
     if (user) {
       const ext = file.name.split(".").pop();
       const path = `${user.id}/avatar.${ext}`;
-      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-      if (!error) {
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (upErr) {
+        showError("Gagal upload foto: " + upErr.message);
+      } else {
         const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
         const url = urlData.publicUrl + `?t=${Date.now()}`;
-        setAvatarUrl(url);
-        await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
-        showSaved();
+        // Persist link ke profiles — CEK error-nya (dulu gagal diam-diam di sini).
+        const { error: updErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+        if (updErr) {
+          showError("Foto ke-upload tapi gagal disimpan: " + updErr.message);
+        } else {
+          setAvatarUrl(url);
+          showSaved();
+        }
       }
     }
     setUploadingAvatar(false);
@@ -253,6 +265,11 @@ export default function Pengaturan() {
         {saved && (
           <div className="pg-saved-toast">
             <Check size={14} strokeWidth={2.4} /> Tersimpan
+          </div>
+        )}
+        {errMsg && (
+          <div className="pg-saved-toast pg-error-toast">
+            <X size={14} strokeWidth={2.4} /> {errMsg}
           </div>
         )}
       </main>

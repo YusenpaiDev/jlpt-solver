@@ -31,13 +31,20 @@ export default function KamusFlashCard() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data } = await supabase
-          .from("saved_words")
-          .select("id, kanji, reading, meaning, level")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        if (data && data.length > 0) {
-          const ws = data as SavedWord[];
+        // Paginasi (Supabase cap 1000/query) — ambil SEMUA kotoba buat flash.
+        const ws: SavedWord[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data } = await supabase
+            .from("saved_words")
+            .select("id, kanji, reading, meaning, level")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .range(from, from + 999);
+          const batch = (data ?? []) as SavedWord[];
+          ws.push(...batch);
+          if (batch.length < 1000) break;
+        }
+        if (ws.length > 0) {
           setWords(ws);
           setOrder(ws.map((_, i) => i));
         }

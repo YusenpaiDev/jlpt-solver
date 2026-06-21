@@ -16,6 +16,7 @@ interface Session {
   total: number;
   score: number | null;
   created_at: string;
+  section?: string | null; // ai_result->section — buat deteksi choukai
 }
 
 const categoryGlyph: Record<string, string> = {
@@ -68,13 +69,13 @@ export default function Home() {
 
       const [profileRes, sessionRes] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
-        supabase.from("sessions").select("id,level,category,title,total,score,created_at")
+        supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
       ]);
 
       if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
 
-      const sess: Session[] = sessionRes.data ?? [];
+      const sess = (sessionRes.data ?? []) as unknown as Session[];
       setSessions(sess.slice(0, 4));
       setTotalSoal(sess.reduce((s, r) => s + (r.total ?? 0), 0));
 
@@ -294,9 +295,10 @@ function RiwayatPreview({ sessions, loading }: { sessions: Session[]; loading: b
           </p>
         ) : sessions.map(s => {
           const cls = scoreClass(s.score, s.total);
+          const isChoukai = s.section === "choukai";
           return (
-            <Link key={s.id} href={`/analisis-foto?session=${s.id}`} className="riwayat-item">
-              <div className="ri-glyph">{categoryGlyph[s.category] ?? "全"}</div>
+            <Link key={s.id} href={isChoukai ? `/choukai/${s.id}` : `/analisis-foto?session=${s.id}`} className="riwayat-item">
+              <div className="ri-glyph">{isChoukai ? "聴" : (categoryGlyph[s.category] ?? "全")}</div>
               <div className="ri-meta">
                 <div className="ri-title">{s.title}</div>
                 <div className="ri-sub">{relativeTime(s.created_at)} · {s.total} soal</div>

@@ -21,6 +21,7 @@ interface Session {
   total: number;
   score: number | null;
   created_at: string;
+  section?: string | null; // ai_result->section — buat deteksi choukai
 }
 
 const KATEGORI_LABEL: Record<string, string> = {
@@ -108,13 +109,15 @@ export default function RiwayatSoal() {
       const [profileRes, sessionRes] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
         supabase.from("sessions")
-          .select("id, level, category, title, total, score, created_at")
+          .select("id, level, category, title, total, score, created_at, ai_result->section")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
       ]);
       if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
       if (sessionRes.error) throw sessionRes.error;
-      setSessions((sessionRes.data ?? []) as Session[]);
+      // Choukai punya halaman sendiri (🎧) — jangan ikut tampil di Riwayat.
+      const rows = ((sessionRes.data ?? []) as Session[]).filter(s => s.section !== "choukai");
+      setSessions(rows);
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "Gagal memuat riwayat.");
     } finally {
@@ -489,11 +492,13 @@ function SessionCard({
     : pct >= 65 ? "mid"
     : "bad";
   const kategoriRo = KATEGORI_LABEL[s.category] ?? "";
-  const glyph = CATEGORY_GLYPH[s.category] ?? "全";
+  const isChoukai = s.section === "choukai";
+  const glyph = isChoukai ? "聴" : (CATEGORY_GLYPH[s.category] ?? "全");
+  const href = isChoukai ? `/choukai/${s.id}` : `/analisis-foto?session=${s.id}`;
   const lvLower = s.level.toLowerCase();
 
   return (
-    <Link href={`/analisis-foto?session=${s.id}`} className={`glass-card rs-card rs-card-${tone}`}>
+    <Link href={href} className={`glass-card rs-card rs-card-${tone}`}>
       <div>
         <div className={`rs-glyph rs-glyph-${tone}`}>{glyph}</div>
       </div>
@@ -535,10 +540,10 @@ function SessionCard({
           </>
         ) : (
           <div className="rs-score-meta">
-            <div className="rs-score-fraction" style={{ color: "var(--text-tertiary)" }}>
-              <strong>—</strong>
+            <div className="rs-score-fraction" style={{ color: "var(--accent-emerald)" }}>
+              <Clock size={18} strokeWidth={2} />
             </div>
-            <div className="rs-score-label">belum</div>
+            <div className="rs-score-label">dikerjain</div>
           </div>
         )}
       </div>

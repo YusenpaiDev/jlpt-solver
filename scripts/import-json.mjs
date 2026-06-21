@@ -73,8 +73,51 @@ async function findUserId(email) {
   }
 }
 
+/* Choukai ber-key Jepang (試験/年月/問題/質問) → format standar app.
+   Future-proof: kalau nanti ada 質問文/スクリプト/解説, ikut ke-ambil. */
+const MONDAI_NAME = { 1: "課題理解", 2: "ポイント理解", 3: "概要理解", 4: "即時応答", 5: "統合理解" };
+function normalizeTranscript(t) {
+  if (!Array.isArray(t)) return null;
+  const out = t.map(line => {
+    if (line && typeof line === "object") return { sp: line.sp ?? line["話者"] ?? "", jp: line.jp ?? line["日本語"] ?? "", id: line.id ?? line["訳"] ?? "" };
+    return { sp: "", jp: String(line), id: "" };
+  });
+  return out.length ? out : null;
+}
+function convertChoukaiRaw(raw) {
+  const shiken = raw["試験"] ?? "N2";
+  const nengetsu = raw["年月"] ?? "";
+  const questions = [];
+  for (const m of (raw["問題"] ?? [])) {
+    const num = m["問題番号"];
+    const shiji = m["指示"] ?? "";
+    const script = normalizeTranscript(m["スクリプト"] ?? m["台本"] ?? m["本文"]);
+    const cat = "聴解-" + (MONDAI_NAME[num] ?? "");
+    for (const q of (m["質問"] ?? [])) {
+      const qText = q["質問文"] ?? q["問い"] ?? "";
+      questions.push({
+        mondai: num,
+        category: cat,
+        prompt: shiji,
+        question: qText || `問題${num}（${q["番号"]}）`,
+        options: (q["選択肢"] ?? []).map((o, i) => `${i + 1}. ${o}`),
+        correct: String(q["正解"] ?? "1"),
+        explanation: q["解説"] ?? `Jawaban benar: pilihan ${q["正解"]}.`,
+        transcript: normalizeTranscript(q["スクリプト"] ?? q["台本"]) ?? script,
+        audio: null,
+        image: typeof q["image"] === "number" || typeof q["image"] === "string" ? q["image"] : null,
+      });
+    }
+  }
+  return { title: raw.title || `JLPT ${shiken} ${nengetsu} 聴解`.trim(), section: "choukai", vocabulary: [], questions };
+}
+
 /* Normalize: pastikan field yang dipake app ada, fill default kalau missing */
 function normalizeResult(raw, fallbackTitle) {
+  // Auto-convert format choukai ber-key Jepang sebelum normalisasi standar.
+  if (Array.isArray(raw["問題"]) && !Array.isArray(raw.questions)) {
+    raw = convertChoukaiRaw(raw);
+  }
   const title = (raw.title || fallbackTitle || "Soal JLPT").toString();
   const section = raw.section ?? null;
   const vocabulary = Array.isArray(raw.vocabulary) ? raw.vocabulary.map(v => ({
@@ -141,12 +184,16 @@ async function discoverJsons() {
 /* Push to Supabase */
 async function push(userId, result) {
   const sessionCategory = detectCategory(result, category);
+  // DB constraint cuma izinin ('文法','語彙','文字','読解','AI') — '聴解' belum.
+  // Halaman Choukai ngenalin sesi via ai_result.section === "choukai", jadi
+  // simpan category 'AI' biar lolos constraint tanpa migrasi DB.
+  const dbCategory = sessionCategory === "聴解" ? "AI" : sessionCategory;
   const { data: session, error: sessErr } = await supabase
     .from("sessions")
     .insert({
       user_id: userId,
       level,
-      category: sessionCategory,
+      category: dbCategory,
       title: result.title,
       total: result.questions.length,
       ai_result: result,

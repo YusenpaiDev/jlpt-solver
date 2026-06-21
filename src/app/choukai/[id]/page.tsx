@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
-  Headphones, Play, Pause, RotateCcw, Check, X, ChevronLeft, ChevronRight, ChevronDown,
+  Headphones, Play, Pause, RotateCcw, Rewind, FastForward, Check, X, ChevronLeft, ChevronRight, ChevronDown,
   Lightbulb, Grid3x3, Plus, BookOpen, Loader2, Sparkles, AlertCircle,
 } from "lucide-react";
 
@@ -117,6 +117,15 @@ function AudioPlayer({ src }: { src?: string }) {
     try { await a.play(); } catch { /* ignore */ }
   };
 
+  // Mundur / maju beberapa detik (buat navigasi audio panjang).
+  const seek = (delta: number) => {
+    const a = audioRef.current;
+    if (!a) return;
+    const next = Math.min(Math.max(a.currentTime + delta, 0), a.duration || a.currentTime + delta);
+    a.currentTime = next;
+    setT(next);
+  };
+
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   const pct = dur > 0 ? (t / dur) * 100 : 0;
   const bars = Array.from({ length: 48 }, (_, i) => i);
@@ -137,9 +146,19 @@ function AudioPlayer({ src }: { src?: string }) {
         />
       )}
       <div className="chp-row">
+        <button type="button" className="chp-skip" onClick={() => seek(-10)} disabled={missing || !src}
+                title="Mundur 10 detik" aria-label="Mundur 10 detik">
+          <Rewind size={16} strokeWidth={2} fill="currentColor" />
+          <span className="chp-skip-n">10</span>
+        </button>
         <button type="button" className="chp-play" onClick={togglePlay} disabled={missing || !src}
                 aria-label={playing ? "Pause" : "Play"}>
           {playing ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
+        </button>
+        <button type="button" className="chp-skip" onClick={() => seek(10)} disabled={missing || !src}
+                title="Maju 10 detik" aria-label="Maju 10 detik">
+          <FastForward size={16} strokeWidth={2} fill="currentColor" />
+          <span className="chp-skip-n">10</span>
         </button>
         <div className="chp-main">
           <div className="chp-wave">
@@ -445,7 +464,9 @@ export default function ChoukaiPlayer() {
                 <p>{q.question}</p>
               </div>
 
-              <AudioPlayer key={`${sessionId}-${idx}`} src={q.audio} />
+              {/* key di-base ke src audio (bukan idx) → 1 file utuh per tes:
+                  player gak remount/reset pas pindah soal, posisi audio kebawa. */}
+              <AudioPlayer key={q.audio ?? sessionId} src={q.audio} />
 
               {q.image && (
                 <div className="ch-soal-img-fixed">
@@ -454,9 +475,8 @@ export default function ChoukaiPlayer() {
               )}
 
               {q.prompt && (
-                <div className="ch-prompt">
-                  <span className="ch-prompt-spk">A</span>
-                  <p>「{q.prompt}」</p>
+                <div className="ch-prompt ch-prompt-instr">
+                  <p>{q.prompt}</p>
                 </div>
               )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar } from "@/components/v2";
 import KamusFlashCard from "@/components/KamusFlashCard";
@@ -10,6 +11,7 @@ import {
   ChevronLeft, ChevronDown, RotateCcw, Clock,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck, Star,
   BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
+  Highlighter, Undo2, LogOut,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -36,16 +38,66 @@ interface VocabItem {
   example?: string;
   jlpt_level?: string;
 }
+/* Coretan stabilo freehand. Koordinat dinormalisasi ke lebar canvas
+   (x & y dibagi cssWidth) biar skala-nya seragam & ikut responsif. `w`
+   juga normalized. `c` = warna rgba. */
+interface HiStroke {
+  c: string;
+  w: number;
+  pts: number[]; // flattened [x0,y0,x1,y1,...]
+  t?: number;    // timestamp commit — buat undo global (urutan antar-kartu)
+}
 interface UserProgress {
   answers: Record<number, string>;
   revealed: number[];
   xp_claimed?: boolean;
+  highlights?: Record<string, HiStroke[]>; // keyed by passage key, e.g. "p-3"
+}
+/* Ringkasan kompak buat halaman Statistik — disimpan di ai_result.stats
+   tiap save, biar Statistik bisa fetch ringan (gak narik ai_result full).
+   perCat keyed kategori asli soal: {文法:{a:answered,c:correct}, ...} */
+interface SessionStats {
+  answered: number;
+  correct: number;
+  perCat: Record<string, { a: number; c: number }>;
 }
 interface AIResult {
   title: string;
   vocabulary?: VocabItem[];
   questions: AIQuestion[];
   user_progress?: UserProgress;
+  stats?: SessionStats;
+}
+
+/* Bucket kategori per-soal ke 5 kategori JLPT (聴解-* → 聴解). */
+function catBucket(c?: string | null): string | null {
+  if (!c) return null;
+  if (c.startsWith("聴解")) return "聴解";
+  if (c === "文法" || c === "語彙" || c === "読解" || c === "文字") return c;
+  return null;
+}
+/* Hitung ringkasan stats dari jawaban + soal yang udah ke-reveal. */
+function computeStats(
+  questions: AIQuestion[],
+  answers: Record<number, string>,
+  revealed: number[] | Set<number>,
+): SessionStats {
+  const revSet = revealed instanceof Set ? revealed : new Set(revealed);
+  const perCat: Record<string, { a: number; c: number }> = {};
+  let answered = 0, correct = 0;
+  questions.forEach((q, qi) => {
+    if (!revSet.has(qi)) return;
+    answered++;
+    const ok = !!answers[qi] && answers[qi] === q.correct;
+    if (ok) correct++;
+    const cat = catBucket(q.category);
+    if (cat) {
+      const b = perCat[cat] ?? (perCat[cat] = { a: 0, c: 0 });
+      b.a++;
+      if (ok) b.c++;
+    }
+  });
+  return { answered, correct, perCat };
 }
 interface FileData {
   base64: string;
@@ -746,6 +798,140 @@ function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imag
 }
 
 /* ─── Result State ──────────────────────────────────────────── */
+/* Palet coret — sengaja tanpa oren (warna brand) biar gak ketuker.
+   Gaya pensil: tipis & cukup pekat, jadi enak buat garis-bawah / lingkarin. */
+const STABILO_COLORS = [
+  { key: "kuning", rgba: "rgba(253, 224, 71, 0.88)" },
+  { key: "hijau",  rgba: "rgba(52, 211, 153, 0.88)" },
+  { key: "pink",   rgba: "rgba(244, 114, 182, 0.88)" },
+  { key: "biru",   rgba: "rgba(96, 165, 250, 0.88)" },
+];
+const STABILO_PX = 4; // tebal coretan (px logical, sebelum dinormalisasi) — tipis kayak pensil
+
+/* Overlay canvas buat coret-coret stabilo freehand di atas teks bacaan.
+   Strokes disimpan ternormalisasi (lihat HiStroke) jadi tetap nyangkut
+   walau card di-resize / responsive. */
+function StabiloLayer({
+  strokes, active, color, onCommit,
+}: {
+  strokes: HiStroke[];
+  active: boolean;
+  color: string;
+  onCommit: (s: HiStroke) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing   = useRef(false);
+  const cur       = useRef<number[]>([]);
+  const cssSize   = useRef({ w: 0, h: 0 });
+  // Mirror props ke ref biar callback ResizeObserver (yang dibuat sekali pas
+  // mount) selalu baca data terbaru, bukan closure stale.
+  const strokesRef = useRef(strokes); strokesRef.current = strokes;
+  const colorRef   = useRef(color);   colorRef.current   = color;
+
+  const drawOne = (ctx: CanvasRenderingContext2D, s: HiStroke, cssW: number) => {
+    const p = s.pts;
+    if (p.length < 2) return;
+    ctx.strokeStyle = s.c;
+    ctx.lineWidth   = Math.max(2, s.w * cssW);
+    ctx.lineCap     = "round";
+    ctx.lineJoin    = "round";
+    if (p.length === 2) {
+      // tap tunggal → titik bulat
+      ctx.beginPath();
+      ctx.arc(p[0] * cssW, p[1] * cssW, ctx.lineWidth / 2, 0, Math.PI * 2);
+      ctx.fillStyle = s.c;
+      ctx.fill();
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(p[0] * cssW, p[1] * cssW);
+    for (let i = 2; i < p.length; i += 2) ctx.lineTo(p[i] * cssW, p[i + 1] * cssW);
+    ctx.stroke();
+  };
+
+  const redraw = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const { w: cssW } = cssSize.current;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    ctx.scale(dpr, dpr);
+    for (const s of strokesRef.current) drawOne(ctx, s, cssW);
+    if (cur.current.length) drawOne(ctx, { c: colorRef.current, w: STABILO_PX / cssW, pts: cur.current }, cssW);
+  };
+
+  // Sinkronkan ukuran backing-store canvas ke ukuran tampil + redraw.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const sync = () => {
+      const r = parent.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const dpr = window.devicePixelRatio || 1;
+      cssSize.current = { w: r.width, h: r.height };
+      canvas.width  = Math.round(r.width * dpr);
+      canvas.height = Math.round(r.height * dpr);
+      redraw();
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(parent);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Redraw tiap strokes/warna berubah.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { redraw(); }, [strokes, color]);
+
+  const pt = (e: React.PointerEvent) => {
+    const canvas = canvasRef.current!;
+    const r = canvas.getBoundingClientRect();
+    const w = r.width || 1;
+    return [(e.clientX - r.left) / w, (e.clientY - r.top) / w];
+  };
+
+  const onDown = (e: React.PointerEvent) => {
+    if (!active) return;
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    drawing.current = true;
+    cur.current = pt(e);
+    redraw();
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (!active || !drawing.current) return;
+    const [x, y] = pt(e);
+    cur.current.push(x, y);
+    redraw();
+  };
+  const onUp = () => {
+    if (!drawing.current) return;
+    drawing.current = false;
+    const pts = cur.current;
+    cur.current = [];
+    if (pts.length >= 2) onCommit({ c: color, w: STABILO_PX / (cssSize.current.w || 1), pts, t: Date.now() });
+    redraw();
+  };
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`stabilo-canvas${active ? " active" : ""}`}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerLeave={onUp}
+      onPointerCancel={onUp}
+    />
+  );
+}
+
 function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview, sessionLevel, sessionCategory }: {
   onReset: () => void;
   result: AIResult;
@@ -766,36 +952,37 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   );
 
   /* Exit confirmation — kalau user udah jawab/reveal minimal 1 soal,
-     intercept browser exit + in-app navigation buat tanya "yakin keluar?".
-     Data udah auto-saved di DB, ini pure UX safety net. */
+     intercept browser exit + in-app navigation buat konfirmasi keluar.
+     In-app: pakai modal custom (bukan window.confirm jelek). Browser
+     close/refresh: native beforeunload (gak bisa dibikin custom). */
+  const router = useRouter();
+  // Snapshot progress pas masuk sesi — buat opsi "keluar tanpa simpan".
+  const initialProgressRef = useRef<UserProgress | undefined>(result.user_progress);
+  const [exitTo,   setExitTo]   = useState<string | null>(null);
+  const [exitBusy, setExitBusy] = useState<"save" | "discard" | null>(null);
   const hasProgress = revealed.size > 0 || Object.keys(answers).length > 0;
   useEffect(() => {
     if (!hasProgress) return;
 
-    // Browser back / close / refresh — native dialog
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", onBeforeUnload);
 
-    // In-app NavRail / Link click interceptor — intercept anchor click bubbling up to document
+    // In-app NavRail / Link click interceptor → tahan navigasi, munculin modal.
     const onDocClick = (e: MouseEvent) => {
       const link = (e.target as HTMLElement | null)?.closest("a[href]") as HTMLAnchorElement | null;
       if (!link) return;
       const href = link.getAttribute("href") || "";
-      // Skip external, hash, dan link ke halaman yang sama
       if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("mailto:")) return;
       const currentPath = window.location.pathname + window.location.search;
       if (href === currentPath || href === window.location.pathname) return;
-      // Skip kalau user pakai modifier key (ctrl-click buka tab baru — gak ngubah halaman ini)
-      if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return; // ctrl/cmd-click = tab baru, biarin
 
-      const ok = window.confirm("Progress kamu udah otomatis ke-save di Riwayat. Yakin mau keluar dari sesi ini?");
-      if (!ok) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      e.preventDefault();
+      e.stopPropagation();
+      setExitTo(href);
     };
     document.addEventListener("click", onDocClick, true);
 
@@ -804,6 +991,45 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       document.removeEventListener("click", onDocClick, true);
     };
   }, [hasProgress]);
+
+  /* Skor dari sebuah progress (null kalau belum semua kejawab). */
+  const scoreFromProgress = (p?: UserProgress): number | null => {
+    const tot = result.questions.length;
+    const rev = p?.revealed ?? [];
+    const ans = p?.answers ?? {};
+    if (tot === 0 || rev.length !== tot) return null; // belum komplit → skor disembunyiin
+    return result.questions.filter((q, qi) => rev.includes(qi) && ans[qi] && ans[qi] === q.correct).length;
+  };
+
+  /* Tulis `progress` ke DB lalu navigasi client-side (gak micu beforeunload).
+     mode "save" = pakai progress sekarang; "discard" = balikin snapshot awal.
+     Flush manual penting krn auto-save di-debounce 600ms (bisa belum ke-flush). */
+  const leaveWith = async (progress: UserProgress | undefined, mode: "save" | "discard") => {
+    const dest = exitTo;
+    if (sessionId && !isReview) {
+      setExitBusy(mode);
+      try {
+        const nextResult: AIResult = {
+          ...result,
+          user_progress: progress,
+          stats: computeStats(result.questions, progress?.answers ?? {}, progress?.revealed ?? []),
+        };
+        const supabase = createClient();
+        await supabase
+          .from("sessions")
+          .update({ ai_result: nextResult, score: scoreFromProgress(progress) })
+          .eq("id", sessionId);
+      } catch { /* tetap lanjut keluar walau gagal */ }
+      setExitBusy(null);
+    }
+    setExitTo(null);
+    if (dest) router.push(dest);
+  };
+  const confirmExit = () => leaveWith(
+    { answers, revealed: Array.from(revealed), xp_claimed: scoreSaved, highlights },
+    "save",
+  );
+  const discardExit = () => leaveWith(initialProgressRef.current, "discard");
   const [catFilter,    setCatFilter]    = useState<string>("全部");
   const [reviewOnly,   setReviewOnly]   = useState(false);
   const [editIdx,      setEditIdx]      = useState<number | null>(null);
@@ -814,6 +1040,31 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [furiganaMarked,   setFuriganaMarked]   = useState<Record<string, string>>({});
   const [showFurigana,     setShowFurigana]     = useState<Set<string>>(new Set());
   const [furiganaLoading,  setFuriganaLoading]  = useState<Set<string>>(new Set());
+  /* Coret/stabilo: satu mode global — kalau nyala, semua kartu (bacaan +
+     tiap soal) bisa dicoret. Coretan disimpan per-area di `highlights`,
+     key-nya "p-<qi>" buat bacaan & "c-<qi>" buat kartu soal. */
+  const [highlights,   setHighlights]   = useState<Record<string, HiStroke[]>>(
+    () => result.user_progress?.highlights ?? {}
+  );
+  const [drawMode,     setDrawMode]      = useState(false);
+  const [stabiloColor, setStabiloColor]  = useState<string>(STABILO_COLORS[0].rgba);
+  const hasAnyStroke = Object.values(highlights).some(a => a.length > 0);
+  const commitStroke = (key: string, s: HiStroke) =>
+    setHighlights(h => ({ ...h, [key]: [...(h[key] ?? []), s] }));
+  // Undo global: buang coretan dgn timestamp terbaru di seluruh kartu.
+  const undoLastStroke = () => setHighlights(h => {
+    let bestKey: string | null = null, bestIdx = -1, bestT = -Infinity;
+    for (const [k, arr] of Object.entries(h)) {
+      for (let i = 0; i < arr.length; i++) {
+        const t = arr[i].t ?? 0;
+        if (t >= bestT) { bestT = t; bestKey = k; bestIdx = i; }
+      }
+    }
+    if (bestKey === null) return h;
+    const arr = h[bestKey].slice();
+    arr.splice(bestIdx, 1);
+    return { ...h, [bestKey]: arr };
+  });
   const [chatInput,    setChatInput]    = useState("");
   const [chatLoading,  setChatLoading]  = useState(false);
   const [elapsed,      setElapsed]      = useState(0);
@@ -822,6 +1073,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [savingWord,   setSavingWord]   = useState<string | null>(null);
   const [toast,        setToast]        = useState<{ text: string; ok: boolean } | null>(null);
   const [scoreSaved,   setScoreSaved]   = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false); // popup skor pas selesai
+  const [resetting,    setResetting]    = useState(false);
   const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
   const [savingNote,   setSavingNote]   = useState<number | null>(null);
   const [rightTab,     setRightTab]     = useState<"chat"|"kamus"|"catatan">("chat");
@@ -1224,33 +1477,44 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       // Graceful: kolom `favorite` mungkin belum di-migrate di project lama
-      const primary = await supabase
-        .from("saved_words")
-        .select("id, kanji, reading, meaning, favorite")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // Paginasi (Supabase cap 1000/query) — ambil SEMUA kotoba.
+      const fetchAllKamus = async (cols: string) => {
+        const all: Record<string, unknown>[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await supabase
+            .from("saved_words").select(cols)
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .range(from, from + 999);
+          if (error) return { data: all, error };
+          all.push(...((data ?? []) as unknown as Record<string, unknown>[]));
+          if ((data?.length ?? 0) < 1000) break;
+        }
+        return { data: all, error: null as { message: string } | null };
+      };
+      const primary = await fetchAllKamus("id, kanji, reading, meaning, favorite");
       if (primary.error && /(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(primary.error.message)) {
-        const fb = await supabase
-          .from("saved_words")
-          .select("id, kanji, reading, meaning")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        setKamusWords((fb.data ?? []).map(w => ({ ...w, favorite: false })) as typeof kamusWords);
+        const fb = await fetchAllKamus("id, kanji, reading, meaning");
+        setKamusWords(fb.data.map(w => ({ ...w, favorite: false })) as unknown as typeof kamusWords);
       } else {
-        setKamusWords((primary.data ?? []).map(w => ({ ...w, favorite: w.favorite ?? false })) as typeof kamusWords);
+        setKamusWords(primary.data.map(w => ({ ...w, favorite: w.favorite ?? false })) as unknown as typeof kamusWords);
       }
       setKamusLoaded(true);
     })();
   }, [rightTab, kamusLoaded]);
 
-  /* Auto-save: tiap user jawab/reveal, debounce 600ms, persist user_progress
-     + sessions.score continuous biar statistik kebaca + resume jalan. */
+  /* Auto-save: tiap user jawab/reveal, debounce 600ms, persist user_progress.
+     SKOR cuma ditulis pas semua soal kejawab (selesai) — selama in-progress
+     score = null biar Riwayat nampilin "sedang dikerjain", bukan skor partial. */
   useEffect(() => {
     if (!sessionId || isReview) return;
-    if (revealed.size === 0 && Object.keys(answers).length === 0) return;
+    const hasHl = Object.values(highlights).some(arr => arr.length > 0);
+    if (revealed.size === 0 && Object.keys(answers).length === 0 && !hasHl) return;
 
     const handle = setTimeout(async () => {
       try {
+        const total = result.questions.length;
+        const isComplete = total > 0 && revealed.size === total;
         const correctCount = result.questions.filter((q, qi) => {
           if (!revealed.has(qi)) return false;
           const userAns = answers[qi];
@@ -1261,13 +1525,18 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           answers,
           revealed: Array.from(revealed),
           xp_claimed: scoreSaved,
+          highlights,
         };
-        const nextResult: AIResult = { ...result, user_progress: nextProgress };
+        const nextResult: AIResult = {
+          ...result,
+          user_progress: nextProgress,
+          stats: computeStats(result.questions, answers, revealed),
+        };
 
         const supabase = createClient();
         await supabase
           .from("sessions")
-          .update({ ai_result: nextResult, score: correctCount })
+          .update({ ai_result: nextResult, score: isComplete ? correctCount : null })
           .eq("id", sessionId);
       } catch {
         // silent — UI tetap responsif walau save gagal
@@ -1276,7 +1545,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
     return () => clearTimeout(handle);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answers, revealed, sessionId, isReview]);
+  }, [answers, revealed, highlights, sessionId, isReview]);
 
   /* XP gain — sekali aja per sesi, pas semua soal ke-reveal. xp_claimed
      dipersist di ai_result.user_progress biar refresh gak double-award. */
@@ -1319,6 +1588,58 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     awardXp();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [revealed.size, scoreSaved, sessionId, isReview]);
+
+  /* Deteksi "baru selesai" (rising edge) → munculin popup skor sekali.
+     prevRevealed di-init ke nilai saat mount, jadi sesi yang DIBUKA dalam
+     keadaan udah komplit gak langsung popup (cuma pas user nyelesaiin live). */
+  const prevRevealed = useRef(revealed.size);
+  useEffect(() => {
+    const total = result.questions.length;
+    const nowComplete = total > 0 && revealed.size === total;
+    const wasComplete = total > 0 && prevRevealed.current === total;
+    if (nowComplete && !wasComplete) setShowCompletion(true);
+    prevRevealed.current = revealed.size;
+  }, [revealed.size, result.questions.length]);
+
+  /* Skor final + reset */
+  const total       = result.questions.length;
+  const isComplete  = total > 0 && revealed.size === total;
+  const correctTotal = result.questions.filter((q, qi) => answers[qi] && answers[qi] === q.correct).length;
+
+  /* Ulang dari awal — clear jawaban & pembahasan, soal yang sama dikerjain
+     ulang. XP gak dibalikin & gak dobel (xp_claimed tetap true). Coretan
+     stabilo dibiarin (catatan, bukan jawaban). */
+  const resetSession = async () => {
+    setResetting(true);
+    try {
+      setAnswers({});
+      setRevealed(new Set());
+      prevRevealed.current = 0;
+      setShowCompletion(false);
+      if (sessionId && !isReview) {
+        const nextProgress: UserProgress = {
+          answers: {},
+          revealed: [],
+          xp_claimed: true, // udah pernah dapet XP, jangan award lagi
+          highlights,
+        };
+        const nextResult: AIResult = {
+          ...result,
+          user_progress: nextProgress,
+          stats: { answered: 0, correct: 0, perCat: {} },
+        };
+        setResult(nextResult);
+        const supabase = createClient();
+        await supabase
+          .from("sessions")
+          .update({ ai_result: nextResult, score: null })
+          .eq("id", sessionId);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setResetting(false);
+    }
+  };
 
   /* Timer — hanya jalan saat timerOn = true */
   useEffect(() => {
@@ -1591,6 +1912,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             <button type="button" className="btn btn-secondary btn-sm" onClick={onReset}>
               <Upload size={14} /> Upload Baru
             </button>
+            <button
+              type="button"
+              className="btn btn-sm af-exit-btn"
+              onClick={() => (hasProgress ? setExitTo("/riwayat-soal") : router.push("/riwayat-soal"))}
+              title="Keluar dari sesi (progress tetap tersimpan)"
+            >
+              <LogOut size={14} strokeWidth={1.9} /> Keluar
+            </button>
           </div>
         </header>
 
@@ -1685,12 +2014,18 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                           </div>
                         </div>
                         {!isPassageCollapsed && (
-                          <div className="reading-body">
+                          <div className={`reading-body${drawMode ? " stabilo-active" : ""}`}>
                             <p>
                               {furiOn && furiganaMarked[pKey]
                                 ? renderPassage(furiganaMarked[pKey])
                                 : q.passage}
                             </p>
+                            <StabiloLayer
+                              strokes={highlights[pKey] ?? []}
+                              active={drawMode}
+                              color={stabiloColor}
+                              onCommit={(s) => commitStroke(pKey, s)}
+                            />
                           </div>
                         )}
                       </section>
@@ -1979,6 +2314,13 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                         </section>
                       );
                     })()}
+                    {/* Overlay coret — nutupin seluruh kartu soal pas draw mode */}
+                    <StabiloLayer
+                      strokes={highlights[`c-${qi}`] ?? []}
+                      active={drawMode}
+                      color={stabiloColor}
+                      onCommit={(s) => commitStroke(`c-${qi}`, s)}
+                    />
                   </article>
               </div>
             );
@@ -2610,6 +2952,137 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           </div>
         </>
       )}
+
+      {/* ── Modal konfirmasi keluar (ganti window.confirm bawaan) ── */}
+      {exitTo && (
+        <>
+          <div className="af-modal-overlay" onClick={() => !exitBusy && setExitTo(null)} />
+          <div className="af-modal af-exit" role="dialog" aria-modal="true">
+            <div className="af-exit-icon"><Save size={22} strokeWidth={1.8} /></div>
+            <h2 className="af-exit-title">Keluar dari sesi?</h2>
+            <p className="af-exit-sub">
+              Simpan dulu progressnya, atau keluar tanpa nyimpen perubahan barusan.
+            </p>
+            <div className="af-exit-actions">
+              <button
+                type="button"
+                className="btn btn-primary af-exit-save"
+                onClick={confirmExit}
+                disabled={!!exitBusy}
+              >
+                {exitBusy === "save"
+                  ? <Loader2 className="size-4 animate-spin" />
+                  : <Check size={15} strokeWidth={2.4} />}
+                Simpan & keluar
+              </button>
+              <button
+                type="button"
+                className="af-exit-discard"
+                onClick={discardExit}
+                disabled={!!exitBusy}
+              >
+                {exitBusy === "discard"
+                  ? <Loader2 className="size-3.5 animate-spin" />
+                  : <RotateCcw size={13} strokeWidth={2} />}
+                Keluar tanpa simpan
+              </button>
+            </div>
+            <button
+              type="button"
+              className="af-exit-cancel"
+              onClick={() => setExitTo(null)}
+              disabled={!!exitBusy}
+            >
+              Batal, lanjut belajar
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── Popup skor: muncul sekali pas semua soal kejawab ── */}
+      {showCompletion && isComplete && (
+        <>
+          <div className="af-modal-overlay" onClick={() => setShowCompletion(false)} />
+          <div className="af-modal af-complete" role="dialog" aria-modal="true">
+            <div className="af-complete-emoji">🎉</div>
+            <h2 className="af-complete-title">Selesai!</h2>
+            <p className="af-complete-sub">Semua {total} soal udah kamu jawab.</p>
+            <div className="af-complete-score">
+              <strong>{correctTotal}</strong>
+              <span>/ {total}</span>
+            </div>
+            <div className="af-complete-pct">
+              {Math.round((correctTotal / total) * 100)}% benar
+            </div>
+            <div className="af-complete-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={resetSession}
+                disabled={resetting}
+              >
+                {resetting
+                  ? <Loader2 className="size-4 animate-spin" />
+                  : <RotateCcw size={14} strokeWidth={2} />}
+                Ulang dari awal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowCompletion(false)}
+              >
+                <Check size={14} strokeWidth={2.4} /> Mantap, tutup
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Floating dock: mode coret/pensil global (bacaan + tiap soal) ── */}
+      <div className={`stabilo-dock${drawMode ? " open" : ""}`}>
+        {drawMode && (
+          <div className="stabilo-dock-tools">
+            {STABILO_COLORS.map(c => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => setStabiloColor(c.rgba)}
+                className={`stabilo-swatch${stabiloColor === c.rgba ? " on" : ""}`}
+                style={{ background: c.rgba }}
+                title={c.key}
+              />
+            ))}
+            <span className="stabilo-dock-sep" />
+            <button
+              type="button"
+              onClick={undoLastStroke}
+              disabled={!hasAnyStroke}
+              className="stabilo-tool"
+              title="Undo coretan terakhir"
+            >
+              <Undo2 size={13} strokeWidth={1.8} /> Undo
+            </button>
+            <button
+              type="button"
+              onClick={() => setHighlights({})}
+              disabled={!hasAnyStroke}
+              className="stabilo-tool"
+              title="Hapus semua coretan"
+            >
+              <Trash2 size={13} strokeWidth={1.8} /> Hapus
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setDrawMode(v => !v)}
+          className={`stabilo-fab${drawMode ? " on" : ""}`}
+          title={drawMode ? "Selesai coret" : "Mode coret — corat-coret di soal & bacaan"}
+        >
+          {drawMode ? <Check size={16} strokeWidth={2.4} /> : <Highlighter size={16} strokeWidth={1.8} />}
+          {drawMode ? "Selesai" : "Coret"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -2719,36 +3192,9 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
   );
 }
 
-/* ─── Notif data ─────────────────────────────────────────────── */
-const notifs = [
-  {
-    id: 1, read: false,
-    icon: "🔥", color: "var(--primary)",
-    title: "Streak dalam bahaya!",
-    desc: "Kamu belum latihan hari ini. Streak 7 harimu akan putus tengah malam.",
-    time: "1 jam lalu",
-  },
-  {
-    id: 2, read: false,
-    icon: "🗂️", color: "var(--text-secondary)",
-    title: "5 kata perlu direview",
-    desc: "諦める・把握・一生懸命 dan 2 lainnya sudah waktunya diulang hari ini.",
-    time: "3 jam lalu",
-  },
-  {
-    id: 3, read: true,
-    icon: "✨", color: "var(--n1)",
-    title: "Fitur baru: Favorit Kamus",
-    desc: "Kamu sekarang bisa simpan kata favorit dan filter di tab Favorit.",
-    time: "Kemarin",
-  },
-];
-
 /* ─── Page ──────────────────────────────────────────────────── */
 export default function AnalisisFoto() {
   const [stage,               setStage]               = useState<Stage>("upload");
-  const [notifOpen,           setNotifOpen]           = useState(false);
-  const [readIds,             setReadIds]             = useState<Set<number>>(new Set(notifs.filter(n => n.read).map(n => n.id)));
   const [files,               setFiles]               = useState<FileData[]>([]);
   const [result,              setResult]              = useState<AIResult | null>(null);
   const [resultLevel,         setResultLevel]         = useState<Level | null>(null);
@@ -2967,8 +3413,6 @@ export default function AnalisisFoto() {
     }
   };
 
-  const unreadCount = notifs.filter(n => !readIds.has(n.id)).length;
-
   const handleUpload = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -3141,8 +3585,6 @@ export default function AnalisisFoto() {
           xpTarget={1000}
           avatarLetter={userInitial}
           isPro
-          hasUnread={unreadCount > 0}
-          onBellClick={() => setNotifOpen(o => !o)}
         />
 
         {stage === "upload" && (

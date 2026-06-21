@@ -800,7 +800,42 @@ input, textarea, select { font-size: 16px; }
   color: var(--text);
   cursor: pointer;
   border: 2px solid var(--edge-default);
+  overflow: hidden;
+  padding: 0;
 }
+.avatar-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Notifikasi dropdown (di UserBar) */
+.notif-wrap { position: relative; display: inline-flex; }
+.notif-backdrop { position: fixed; inset: 0; z-index: 70; }
+.notif-pop {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  width: 300px; max-width: 86vw; z-index: 71;
+  background: var(--surface-1, rgba(24,28,36,0.98));
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 44px -8px rgba(0,0,0,0.55);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  animation: stabilo-pop 160ms ease;
+}
+.notif-pop-head {
+  padding: 12px 16px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-tertiary); border-bottom: 1px solid var(--edge-soft);
+}
+.notif-empty { padding: 26px 16px; text-align: center; font-size: 13px; color: var(--text-tertiary); }
+.notif-item { display: flex; gap: 11px; padding: 13px 16px; border-bottom: 1px solid var(--edge-soft); }
+.notif-item:last-child { border-bottom: none; }
+.notif-ic { font-size: 18px; line-height: 1.3; flex-shrink: 0; }
+.notif-body { min-width: 0; }
+.notif-t { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.notif-d { font-size: 12px; line-height: 1.5; color: var(--text-tertiary); }
 .af-userbar {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px;
@@ -3674,6 +3709,11 @@ input, textarea, select { font-size: 16px; }
   display: inline-flex; align-items: center; gap: 8px;
   animation: sheet-up 220ms var(--ease-out-back);
 }
+.pg-error-toast {
+  background: #c0392b; color: #fff;
+  box-shadow: 0 12px 32px -8px rgba(192, 57, 43, 0.5);
+  max-width: 90vw;
+}
 
 /* ──── Lembar Tugas layout ──── */
 .lt-header {
@@ -5299,7 +5339,7 @@ input, textarea, select { font-size: 16px; }
 .af-filter-chip.review.on { background: rgba(212, 160, 74, 0.16); border-color: rgba(212, 160, 74, 0.5); }
 
 /* Question card v2 */
-.qc-v2 { padding: 0; overflow: hidden; }
+.qc-v2 { padding: 0; overflow: hidden; position: relative; }
 .qc-v2-head {
   display: flex; align-items: center; gap: 8px;
   padding: 14px 20px;
@@ -5814,6 +5854,7 @@ input, textarea, select { font-size: 16px; }
 .toggle-chip.on { background: rgba(221, 65, 36, 0.10); border-color: rgba(221, 65, 36, 0.32); color: var(--accent-iris); }
 .toggle-chip:disabled { opacity: 0.6; cursor: not-allowed; }
 .toggle-jp { font-family: var(--font-sans-jp); font-size: 13px; font-weight: 600; }
+.reading-body { position: relative; }
 .reading-body p {
   font-size: 16px; line-height: 2.4;
   color: var(--text-primary);
@@ -5821,6 +5862,139 @@ input, textarea, select { font-size: 16px; }
   font-feature-settings: "palt";
   font-family: var(--font-sans-jp);
   white-space: pre-wrap;
+  position: relative; z-index: 1;
+}
+/* Overlay canvas stabilo — di atas teks, transparan kecuali coretan. */
+.stabilo-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+.stabilo-canvas.active { pointer-events: auto; touch-action: none; cursor: crosshair; }
+/* Pas mode stabilo nyala, matiin select teks biar gak ngeblok pas nyoret. */
+.reading-body.stabilo-active p { user-select: none; -webkit-user-select: none; }
+
+/* Floating dock: mode coret global + warna/undo/hapus */
+.stabilo-dock {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; z-index: 60;
+  display: flex; align-items: center; gap: 10px;
+}
+.stabilo-dock-tools {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: var(--radius-full);
+  background: var(--surface-1); border: 1px solid var(--edge-soft);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+  animation: stabilo-pop 180ms ease;
+}
+@keyframes stabilo-pop { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+.stabilo-dock-sep { width: 1px; align-self: stretch; background: var(--edge-soft); margin: 0 2px; }
+.stabilo-swatch {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+  transition: transform 140ms, border-color 140ms;
+}
+.stabilo-swatch:hover { transform: scale(1.12); }
+.stabilo-swatch.on { border-color: var(--text-primary); transform: scale(1.12); }
+.stabilo-tool {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 11px; border-radius: var(--radius-full);
+  background: transparent; border: 1px solid var(--edge-soft);
+  font-size: 11.5px; font-weight: 500; color: var(--text-secondary);
+  cursor: pointer; transition: all 140ms; font-family: var(--font-sans);
+}
+.stabilo-tool:hover:not(:disabled) { border-color: var(--edge-strong); color: var(--text-primary); }
+.stabilo-tool:disabled { opacity: 0.4; cursor: not-allowed; }
+.stabilo-fab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 11px 18px; border-radius: var(--radius-full);
+  background: var(--surface-1); border: 1px solid var(--edge-soft);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  cursor: pointer; transition: all 160ms; font-family: var(--font-sans);
+}
+.stabilo-fab:hover { color: var(--text-primary); border-color: var(--edge-strong); }
+.stabilo-fab.on {
+  background: rgba(221, 65, 36, 0.14); border-color: rgba(221, 65, 36, 0.40);
+  color: var(--accent-iris);
+}
+
+/* Popup skor "Selesai!" */
+.af-modal.af-complete {
+  width: 92vw; max-width: 400px;
+  align-items: center; text-align: center;
+  padding: 32px 28px 26px;
+  gap: 0;
+}
+.af-complete-emoji { font-size: 46px; line-height: 1; margin-bottom: 8px; animation: stabilo-pop 260ms ease; }
+.af-complete-title { font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0 0 4px; }
+.af-complete-sub { font-size: 13px; color: var(--text-tertiary); margin: 0 0 18px; }
+.af-complete-score {
+  display: flex; align-items: baseline; justify-content: center; gap: 4px;
+  font-family: var(--font-sans-jp);
+}
+.af-complete-score strong { font-size: 52px; font-weight: 800; color: var(--accent-emerald); line-height: 1; }
+.af-complete-score span { font-size: 22px; font-weight: 600; color: var(--text-tertiary); }
+.af-complete-pct { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-top: 6px; margin-bottom: 24px; }
+.af-complete-actions { display: flex; gap: 10px; width: 100%; }
+.af-complete-actions .btn { flex: 1; justify-content: center; }
+
+/* Modal konfirmasi keluar */
+.af-modal.af-exit {
+  width: 92vw; max-width: 384px;
+  align-items: center; text-align: center;
+  padding: 30px 26px 22px;
+  gap: 0;
+}
+.af-exit-icon {
+  width: 54px; height: 54px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(221, 65, 36, 0.12); color: var(--accent-iris);
+  box-shadow: 0 0 0 6px rgba(221, 65, 36, 0.06);
+  margin-bottom: 16px;
+  animation: stabilo-pop 240ms ease;
+}
+.af-exit-title { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0 0 8px; letter-spacing: -0.01em; }
+.af-exit-sub { font-size: 13px; line-height: 1.6; color: var(--text-tertiary); margin: 0 0 22px; max-width: 300px; }
+.af-exit-actions { display: flex; flex-direction: column; gap: 9px; width: 100%; }
+.af-exit-save {
+  width: 100%; justify-content: center;
+  padding: 12px; font-size: 14px; font-weight: 600;
+}
+.af-exit-discard {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; padding: 11px;
+  border-radius: var(--radius-lg);
+  background: transparent; border: 1px solid var(--edge-soft);
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  cursor: pointer; transition: all 150ms; font-family: var(--font-sans);
+}
+.af-exit-discard:hover:not(:disabled) {
+  border-color: rgba(244, 114, 114, 0.4); color: #f47272;
+  background: rgba(244, 114, 114, 0.06);
+}
+.af-exit-discard:disabled { opacity: 0.5; cursor: not-allowed; }
+.af-exit-cancel {
+  margin-top: 14px; padding: 4px 8px;
+  background: none; border: none; cursor: pointer;
+  font-size: 12.5px; font-weight: 500; color: var(--text-tertiary);
+  font-family: var(--font-sans); transition: color 150ms;
+}
+.af-exit-cancel:hover:not(:disabled) { color: var(--text-primary); }
+.af-exit-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Tombol "Keluar" di header sesi */
+.af-exit-btn {
+  background: transparent;
+  border: 1px solid var(--edge-soft);
+  color: var(--text-secondary);
+}
+.af-exit-btn:hover {
+  border-color: rgba(244, 114, 114, 0.42);
+  color: #f47272;
+  background: rgba(244, 114, 114, 0.06);
 }
 .reading-body ruby > rt {
   font-size: 9px; font-weight: 400;
@@ -7413,6 +7587,14 @@ html { scrollbar-gutter: stable; }
   cursor: pointer; display: grid; place-items: center; transition: .16s; }
 .chp-replay:hover:not(:disabled) { color: var(--accent-iris); border-color: rgba(221,65,36,0.4); }
 .chp-replay:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Mundur / maju 10 detik */
+.chp-skip { flex-shrink: 0; position: relative; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--surface-2); border: 1px solid var(--edge-default); color: var(--text-secondary);
+  cursor: pointer; display: grid; place-items: center; transition: .16s; }
+.chp-skip:hover:not(:disabled) { color: var(--accent-iris); border-color: rgba(221,65,36,0.4); }
+.chp-skip:disabled { opacity: 0.4; cursor: not-allowed; }
+.chp-skip-n { position: absolute; bottom: 3px; right: 3px; font-size: 8px; font-weight: 700;
+  line-height: 1; color: currentColor; background: var(--surface-1); border-radius: 3px; padding: 1px 2px; }
 .chp-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; gap: 12px; }
 .chp-speed { display: flex; gap: 4px; padding: 3px; background: var(--surface-2);
   border-radius: 9px; border: 1px solid var(--edge-soft); }
@@ -7431,6 +7613,10 @@ html { scrollbar-gutter: stable; }
   background: var(--surface-3); border: 1px solid var(--edge-default);
   display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--accent-iris); }
 .ch-prompt p { margin: 0; font-family: var(--font-sans-jp); font-size: 17px; font-weight: 500; color: var(--text-primary); }
+/* Instruksi (指示) — bukan dialog, jadi tampil subtle tanpa badge pembicara */
+.ch-prompt-instr { background: transparent; border: none; border-left: 3px solid var(--edge-soft);
+  border-radius: 0; padding: 4px 0 4px 14px; }
+.ch-prompt-instr p { font-size: 13.5px; font-weight: 400; color: var(--text-tertiary); line-height: 1.65; }
 
 /* soal image (rendered) */
 .ch-soal-img-fixed { border-radius: 14px; overflow: hidden; border: 1px solid var(--edge-soft);
@@ -7595,4 +7781,7 @@ html { scrollbar-gutter: stable; }
   .ch-nav { padding: 14px 16px; }
   .chp-row { gap: 10px; }
   .chp-play { width: 48px; height: 48px; }
+  /* angkat dock coret biar gak ketutup BottomNav */
+  .stabilo-dock { bottom: 92px; }
+  .stabilo-dock-tools { flex-wrap: wrap; max-width: calc(100vw - 28px); }
 }

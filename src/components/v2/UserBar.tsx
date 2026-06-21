@@ -1,7 +1,8 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useEffect, useState } from "react";
 import { Sparkles, Bell } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface UserBarProps {
   streakDays: number;
@@ -27,11 +28,59 @@ export function UserBar({
   xpTarget,
   avatarLetter,
   isPro = false,
-  hasUnread = false,
-  onBellClick,
   onAvatarClick,
 }: UserBarProps) {
   const flameGradientId = useId();
+
+  // Ambil foto profil + tanggal sesi terakhir (buat notif "streak hampir putus").
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [lastSessionDate, setLastSessionDate] = useState<string | null>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [readToday, setReadToday] = useState(true);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const readKey = `sensei-notif-read-${today}`;
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const [{ data: prof }, { data: sess }] = await Promise.all([
+        supabase.from("profiles").select("avatar_url").eq("id", user.id).single(),
+        supabase.from("sessions").select("created_at").eq("user_id", user.id)
+          .order("created_at", { ascending: false }).limit(1),
+      ]);
+      if (!alive) return;
+      if (prof?.avatar_url) setAvatarUrl(prof.avatar_url);
+      if (sess?.[0]) setLastSessionDate(sess[0].created_at.slice(0, 10));
+      setReadToday(typeof window !== "undefined" && !!localStorage.getItem(readKey));
+    })();
+    return () => { alive = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Notifikasi dari data NYATA — saat ini: streak hampir putus.
+  const studiedToday = lastSessionDate === today;
+  const notifs: { id: string; icon: string; title: string; desc: string }[] = [];
+  if (streakDays > 0 && !studiedToday) {
+    notifs.push({
+      id: "streak-danger",
+      icon: "🔥",
+      title: "Streak hampir putus!",
+      desc: `Kamu belum latihan hari ini. Streak ${streakDays} hari bakal putus tengah malam.`,
+    });
+  }
+  const showDot = notifs.length > 0 && !readToday;
+
+  const openNotif = () => {
+    setNotifOpen(o => !o);
+    if (!readToday) {
+      try { localStorage.setItem(readKey, "1"); } catch { /* ignore */ }
+      setReadToday(true);
+    }
+  };
 
   return (
     <div className="af-userbar">
@@ -64,22 +113,47 @@ export function UserBar({
             <Sparkles size={11} strokeWidth={1.4} fill="currentColor" /> PRO
           </span>
         )}
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Notifikasi"
-          onClick={onBellClick}
-        >
-          <Bell size={16} />
-          {hasUnread && <span className="dot" />}
-        </button>
+        <div className="notif-wrap">
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Notifikasi"
+            onClick={openNotif}
+          >
+            <Bell size={16} />
+            {showDot && <span className="dot" />}
+          </button>
+          {notifOpen && (
+            <>
+              <div className="notif-backdrop" onClick={() => setNotifOpen(false)} />
+              <div className="notif-pop" role="dialog" aria-label="Notifikasi">
+                <div className="notif-pop-head">Notifikasi</div>
+                {notifs.length === 0 ? (
+                  <div className="notif-empty">Belum ada notifikasi baru 🎉</div>
+                ) : (
+                  notifs.map(n => (
+                    <div key={n.id} className="notif-item">
+                      <span className="notif-ic">{n.icon}</span>
+                      <div className="notif-body">
+                        <div className="notif-t">{n.title}</div>
+                        <div className="notif-d">{n.desc}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
         <button
           type="button"
           className="avatar"
           aria-label="Akun"
           onClick={onAvatarClick}
         >
-          {avatarLetter}
+          {avatarUrl
+            ? <img src={avatarUrl} alt="Foto profil" className="avatar-img" />
+            : avatarLetter}
         </button>
       </div>
     </div>

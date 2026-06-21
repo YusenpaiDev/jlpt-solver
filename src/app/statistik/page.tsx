@@ -11,6 +11,14 @@ import {
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 type Period = 7 | 30 | 90 | 0; // 0 = all-time
 
+/* Ringkasan kompak per-sesi yang disimpan di ai_result.stats sama
+   analisis-foto pas jawaban ke-save (perCat: {kategori: {a:answered, c:correct}}).
+   Statistik cukup fetch ini (ringan ±KB), gak perlu narik ai_result full. */
+interface SessionStats {
+  answered: number;
+  correct: number;
+  perCat?: Record<string, { a: number; c: number }>;
+}
 interface RawSession {
   id: string;
   level: Level | null;
@@ -18,7 +26,11 @@ interface RawSession {
   total: number;
   score: number | null;
   created_at: string;
+  stats: SessionStats | null; // dari sub-select ai_result->stats
 }
+
+type CatStat = { answered: number; correct: number };
+interface Derived { answered: number; correct: number; perCat: Record<string, CatStat> }
 
 const KATEGORI_LABEL: Record<string, string> = {
   "文法": "Bunpou",
@@ -75,7 +87,7 @@ export default function Statistik() {
 
       const [profileRes, sessionRes, wordsRes] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
-        supabase.from("sessions").select("id, level, category, total, score, created_at")
+        supabase.from("sessions").select("id, level, category, total, score, created_at, ai_result->stats")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
@@ -97,18 +109,33 @@ export default function Statistik() {
     );
   }, [sessions, period]);
 
+  /* {answered, correct, perCat} per sesi — dari ai_result.stats (sub-select). */
+  const derived = useMemo(() => {
+    const m = new Map<string, Derived>();
+    sessions.forEach(s => {
+      const st = s.stats;
+      const perCat: Record<string, CatStat> = {};
+      for (const [k, v] of Object.entries(st?.perCat ?? {})) {
+        perCat[k] = { answered: v.a ?? 0, correct: v.c ?? 0 };
+      }
+      m.set(s.id, { answered: st?.answered ?? 0, correct: st?.correct ?? 0, perCat });
+    });
+    return m;
+  }, [sessions]);
+
   const totalSoal = inPeriod.reduce((s, r) => s + (r.total ?? 0), 0);
   const totalSoalPrev = prevPeriod.reduce((s, r) => s + (r.total ?? 0), 0);
   const totalSoalDelta = totalSoal - totalSoalPrev;
 
-  const scoredNow = inPeriod.filter(s => s.score != null && s.total > 0);
-  const avgAccuracy = scoredNow.length > 0
-    ? Math.round(scoredNow.reduce((acc, s) => acc + (s.score! / s.total) * 100, 0) / scoredNow.length)
-    : null;
-  const scoredPrev = prevPeriod.filter(s => s.score != null && s.total > 0);
-  const avgAccuracyPrev = scoredPrev.length > 0
-    ? Math.round(scoredPrev.reduce((acc, s) => acc + (s.score! / s.total) * 100, 0) / scoredPrev.length)
-    : null;
+  /* Akurasi overall = total benar ÷ total dijawab (gabung semua soal, partial
+     ikut ngitung). null kalau belum ada soal yang dijawab. */
+  const overallAcc = (subset: RawSession[]): number | null => {
+    let a = 0, c = 0;
+    subset.forEach(s => { const d = derived.get(s.id); if (d) { a += d.answered; c += d.correct; } });
+    return a > 0 ? Math.round((c / a) * 100) : null;
+  };
+  const avgAccuracy = overallAcc(inPeriod);
+  const avgAccuracyPrev = overallAcc(prevPeriod);
   const accuracyDelta = avgAccuracy != null && avgAccuracyPrev != null ? avgAccuracy - avgAccuracyPrev : null;
 
   /* ── Longest streak (from session dates) ── */
@@ -152,48 +179,58 @@ export default function Statistik() {
     return buckets;
   }, [sessions]);
 
-  /* ── Akurasi per kategori (all-time) + delta last 7d vs prev 7d ── */
+  /* ── Akurasi per kategori (all-time, dari kategori ASLI tiap soal) +
+        delta last 7d vs prev 7d ── */
   const katAccuracy = useMemo(() => {
+    const all: Record<string, CatStat> = {};
+    const w7: Record<string, CatStat> = {};
+    const p7: Record<string, CatStat> = {};
+    const bump = (bag: Record<string, CatStat>, cat: string, cs: CatStat) => {
+      const b = bag[cat] ?? (bag[cat] = { answered: 0, correct: 0 });
+      b.answered += cs.answered; b.correct += cs.correct;
+    };
+    sessions.forEach(s => {
+      const d = derived.get(s.id);
+      if (!d) return;
+      const in7 = withinPeriod(s.created_at, 7);
+      const inPrev7 = !in7 && withinPeriod(s.created_at, 14);
+      for (const [cat, cs] of Object.entries(d.perCat)) {
+        bump(all, cat, cs);
+        if (in7) bump(w7, cat, cs);
+        else if (inPrev7) bump(p7, cat, cs);
+      }
+    });
+    const pctOf = (cs?: CatStat) => (cs && cs.answered > 0 ? Math.round((cs.correct / cs.answered) * 100) : null);
     return KATEGORI_ORDER.map(jp => {
-      const sessAll = sessions.filter(s => s.category === jp && s.score != null && s.total > 0);
-      const totalScore = sessAll.reduce((sum, s) => sum + s.score!, 0);
-      const totalQ = sessAll.reduce((sum, s) => sum + s.total, 0);
-      const pct = totalQ > 0 ? Math.round((totalScore / totalQ) * 100) : 0;
-
-      // Delta: pct in last 7 days vs prev 7 days
-      const last7 = sessAll.filter(s => withinPeriod(s.created_at, 7));
-      const prev7 = sessAll.filter(s =>
-        !withinPeriod(s.created_at, 7) && withinPeriod(s.created_at, 14)
-      );
-      const last7Pct = last7.length > 0
-        ? Math.round((last7.reduce((a, s) => a + s.score!, 0) / last7.reduce((a, s) => a + s.total, 0)) * 100)
-        : null;
-      const prev7Pct = prev7.length > 0
-        ? Math.round((prev7.reduce((a, s) => a + s.score!, 0) / prev7.reduce((a, s) => a + s.total, 0)) * 100)
-        : null;
+      const A = all[jp] ?? { answered: 0, correct: 0 };
+      const pct = A.answered > 0 ? Math.round((A.correct / A.answered) * 100) : 0;
+      const last7Pct = pctOf(w7[jp]);
+      const prev7Pct = pctOf(p7[jp]);
       const delta = last7Pct != null && prev7Pct != null ? last7Pct - prev7Pct : null;
-
       return {
         jp: jp as string,
         label: KATEGORI_LABEL[jp] ?? "",
         pct, delta,
-        soal: totalQ,
+        soal: A.answered,
         color: colorForPct(pct),
-        present: sessAll.length > 0,
+        present: A.answered > 0,
       };
     });
-  }, [sessions]);
+  }, [sessions, derived]);
 
-  /* ── Level mastery (avg accuracy per level) ── */
+  /* ── Level mastery (akurasi per level, dari soal yang dijawab) ── */
   const levelMastery = useMemo(() => {
     return LEVELS_ORDER.map(lv => {
-      const sessAll = sessions.filter(s => s.level === lv && s.score != null && s.total > 0);
-      const totalScore = sessAll.reduce((sum, s) => sum + s.score!, 0);
-      const totalQ = sessAll.reduce((sum, s) => sum + s.total, 0);
-      const pct = totalQ > 0 ? Math.round((totalScore / totalQ) * 100) : 0;
-      return { lv, pct, soal: totalQ, target: lv === targetLevel };
+      let answered = 0, correct = 0;
+      sessions.forEach(s => {
+        if (s.level !== lv) return;
+        const d = derived.get(s.id);
+        if (d) { answered += d.answered; correct += d.correct; }
+      });
+      const pct = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+      return { lv, pct, soal: answered, target: lv === targetLevel };
     });
-  }, [sessions, targetLevel]);
+  }, [sessions, derived, targetLevel]);
 
   /* ── Records ── */
   const records = useMemo(() => {
@@ -215,9 +252,14 @@ export default function Statistik() {
     const maxSesiSehari = arr.length > 0 ? Math.max(...arr.map(d => d.sesi)) : 0;
     const maxSoalSehari = arr.length > 0 ? Math.max(...arr.map(d => d.soal)) : 0;
 
-    // top akurasi sesi
-    const scoredArr = sessions.filter(s => s.score != null && s.total > 0)
-      .map(s => ({ pct: Math.round((s.score! / s.total) * 100), label: `${s.level ?? ""} ${s.category ?? ""}`.trim() }))
+    // top akurasi sesi — dari soal yang udah dijawab (min. 1 dijawab)
+    const scoredArr = sessions
+      .map(s => {
+        const d = derived.get(s.id);
+        if (!d || d.answered === 0) return null;
+        return { pct: Math.round((d.correct / d.answered) * 100), label: `${s.level ?? ""} ${s.category ?? ""}`.trim() };
+      })
+      .filter((x): x is { pct: number; label: string } => x != null)
       .sort((a, b) => b.pct - a.pct);
     const topAkurasi = scoredArr[0] ?? null;
 
@@ -237,7 +279,7 @@ export default function Statistik() {
       : null;
 
     return { longestStreak, maxSesiSehari, maxSoalSehari, topAkurasi, bulanTerbaik };
-  }, [sessions, longestStreak]);
+  }, [sessions, longestStreak, derived]);
 
   /* ── Jam belajar favorit ── */
   const hourBuckets = useMemo(() => {

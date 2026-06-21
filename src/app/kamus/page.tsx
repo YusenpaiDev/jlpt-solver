@@ -93,19 +93,28 @@ export default function Kamus() {
         const profileRes = await supabase.from("profiles").select("streak").eq("id", user.id).single();
         if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
 
+        // Ambil SEMUA kotoba — paginasi per 1000 (Supabase hard-cap 1000/query).
+        const fetchAllWords = async (cols: string): Promise<{ data: SavedWord[]; error: { message: string } | null }> => {
+          const all: SavedWord[] = [];
+          for (let from = 0; ; from += 1000) {
+            const { data, error } = await supabase
+              .from("saved_words")
+              .select(cols)
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false })
+              .range(from, from + 999);
+            if (error) return { data: all, error };
+            const batch = (data ?? []) as unknown as SavedWord[];
+            all.push(...batch);
+            if (batch.length < 1000) break;
+          }
+          return { data: all, error: null };
+        };
         // Fallback graceful kalau kolom `example`/`favorite` belum di-migrate
-        const wordsRes = await supabase
-          .from("saved_words")
-          .select("id, kanji, reading, meaning, level, example, favorite, created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+        const wordsRes = await fetchAllWords("id, kanji, reading, meaning, level, example, favorite, created_at");
         let ws: SavedWord[];
         if (wordsRes.error && /(column .*(example|favorite).* does not exist|could not find the .(example|favorite). column)/i.test(wordsRes.error.message)) {
-          const fb = await supabase
-            .from("saved_words")
-            .select("id, kanji, reading, meaning, level, created_at")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false });
+          const fb = await fetchAllWords("id, kanji, reading, meaning, level, created_at");
           ws = (fb.data ?? []).map(w => ({ ...w, example: null, favorite: false })) as SavedWord[];
         } else {
           ws = (wordsRes.data ?? []).map(w => ({ ...w, favorite: w.favorite ?? false })) as SavedWord[];
