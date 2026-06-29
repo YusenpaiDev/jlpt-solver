@@ -29,7 +29,7 @@ export async function proxy(request: NextRequest) {
 
   // Redirect unauthenticated users to login
   // (except login page itself and public routes)
-  const publicPaths = ["/login", "/premium"];
+  const publicPaths = ["/login", "/premium", "/auth"];
   const isPublic = publicPaths.some(p => request.nextUrl.pathname.startsWith(p));
 
   if (!user && !isPublic) {
