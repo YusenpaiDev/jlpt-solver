@@ -59,9 +59,29 @@ const TIPS: { t: string; d: string; accent: "iris" | "amber" | "emerald" | "rose
   { t: "Mock test mingguan", d: "Sediakan 1 sesi penuh (105 menit) tiap weekend untuk simulasi suasana ujian.", accent: "emerald" },
 ];
 
+interface ExamSession {
+  id: string;
+  level: string;
+  title: string;
+  total: number;
+  score: number | null;
+  section?: string | null;
+}
+
+/* Ambil tahun/bulan dari judul exam (toleran berbagai format judul import). */
+function examMeta(title: string): { label: string; sortKey: number } {
+  const m = title.match(/(20\d{2})\s*年\s*(\d{1,2})\s*月/);
+  if (m) {
+    const y = +m[1], mo = +m[2];
+    return { label: `${y}年${mo}月`, sortKey: y * 100 + mo };
+  }
+  return { label: title.slice(0, 24), sortKey: 0 };
+}
+
 export default function MateriHub() {
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
+  const [exams, setExams] = useState<ExamSession[]>([]);
   const xp = 820;
   const xpTarget = 1000;
 
@@ -77,9 +97,28 @@ export default function MateriHub() {
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
       const { data } = await supabase.from("profiles").select("streak").eq("id", user.id).single();
       if (data) setStreak(data.streak ?? 0);
+
+      // Bank soal = sesi ber-kind "materi". Choukai punya halaman sendiri → exclude.
+      const { data: ex } = await supabase
+        .from("sessions")
+        .select("id, level, title, total, score, ai_result->section")
+        .eq("user_id", user.id)
+        .eq("ai_result->>kind", "materi")
+        .order("created_at", { ascending: false });
+      setExams(((ex ?? []) as ExamSession[]).filter(s => s.section !== "choukai"));
     }
     load();
   }, []);
+
+  // Kelompokin exam per level (N1→N5), tiap grup urut tahun terbaru dulu.
+  const examGroups = (["N1", "N2", "N3", "N4", "N5"] as const)
+    .map(lv => ({
+      level: lv,
+      items: exams
+        .filter(e => e.level === lv)
+        .sort((a, b) => examMeta(b.title).sortKey - examMeta(a.title).sortKey),
+    }))
+    .filter(g => g.items.length > 0);
 
   return (
     <>
@@ -121,6 +160,29 @@ export default function MateriHub() {
 
         <div className="mat-grid">
           <div className="mat-main">
+            {examGroups.length > 0 && (
+              <section>
+                <div className="mat-section-head">
+                  <h2 className="mat-section-title">
+                    Bank Soal <span className="mat-title-jp" style={{ fontSize: 15 }}>過去問</span>{" "}
+                    <span className="mat-section-count">{exams.length}</span>
+                  </h2>
+                  <span className="mat-section-sub">Soal ujian lengkap — klik buat mulai latihan</span>
+                </div>
+                {examGroups.map(g => (
+                  <div key={g.level} className="ex-level-block">
+                    <div className="ex-level-head">
+                      <span className={`lv-tag lv-${g.level.toLowerCase()}`}>{g.level}</span>
+                      <span className="ex-level-count">{g.items.length} set</span>
+                    </div>
+                    <div className="ex-grid">
+                      {g.items.map(e => <ExamCard key={e.id} exam={e} />)}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+
             <section>
               <div className="mat-section-head">
                 <h2 className="mat-section-title">
@@ -222,6 +284,29 @@ function BigCard({ href, jp, title, subtitle, desc, cta, accent, progressLabel, 
     <article className={`glass-card big-card big-card-${accent} interactive`}>
       {body}
     </article>
+  );
+}
+
+/* ─── Kartu exam (bank soal) ─── */
+
+function ExamCard({ exam }: { exam: ExamSession }) {
+  const { label } = examMeta(exam.title);
+  const done = exam.score != null && exam.total > 0;
+  const pct = done ? Math.round((exam.score! / exam.total) * 100) : null;
+  return (
+    <Link href={`/analisis-foto?session=${exam.id}`} className="glass-card ex-card interactive">
+      <div className="ex-card-main">
+        <div className="ex-card-label">{label}</div>
+        <div className="ex-card-meta">{exam.total} soal</div>
+      </div>
+      {done ? (
+        <span className="ex-card-badge done">{pct}%</span>
+      ) : (
+        <span className="ex-card-badge">
+          Mulai <ArrowRight size={12} strokeWidth={2.2} />
+        </span>
+      )}
+    </Link>
   );
 }
 

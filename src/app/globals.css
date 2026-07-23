@@ -138,12 +138,15 @@
   }
   html {
     color-scheme: dark;
+    /* Matiin pull-to-refresh / scroll-chaining pas overscroll brutal (HP) */
+    overscroll-behavior-y: none;
   }
   body {
     background-color: #071327;
     color: #d7e2ff;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior-y: none;
   }
 }
 
@@ -1952,6 +1955,38 @@ input, textarea, select { font-size: 16px; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
+
+/* ── Bank Soal (exam list di Materi) ── */
+.ex-level-block { margin-bottom: 18px; }
+.ex-level-head {
+  display: flex; align-items: center; gap: 10px;
+  margin: 4px 0 10px;
+}
+.ex-level-count { font-size: 12px; color: var(--text-tertiary); }
+.ex-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.ex-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 13px 15px; text-decoration: none;
+}
+.ex-card-label { font-size: 14px; font-weight: 650; color: var(--text-primary); }
+.ex-card-meta { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; }
+.ex-card-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  padding: 5px 9px; border-radius: var(--radius-full);
+  color: var(--accent-iris); background: rgba(96,165,250,0.10);
+  border: 1px solid rgba(96,165,250,0.18);
+}
+.ex-card-badge.done {
+  color: var(--accent-emerald); background: rgba(52,211,153,0.10);
+  border-color: rgba(52,211,153,0.20);
+}
+@media (max-width: 900px) { .ex-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .ex-grid { grid-template-columns: 1fr; } }
 .soon-card {
   padding: 16px 18px;
   display: flex;

@@ -22,6 +22,7 @@ interface Session {
   score: number | null;
   created_at: string;
   section?: string | null; // ai_result->section — buat deteksi choukai
+  kind?: string | null;    // ai_result->kind — "materi" = bank soal, sembunyiin kalau belum dikerjain
 }
 
 const KATEGORI_LABEL: Record<string, string> = {
@@ -109,14 +110,18 @@ export default function RiwayatSoal() {
       const [profileRes, sessionRes] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
         supabase.from("sessions")
-          .select("id, level, category, title, total, score, created_at, ai_result->section")
+          .select("id, level, category, title, total, score, created_at, ai_result->section, ai_result->kind")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
       ]);
       if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
       if (sessionRes.error) throw sessionRes.error;
       // Choukai punya halaman sendiri (🎧) — jangan ikut tampil di Riwayat.
-      const rows = ((sessionRes.data ?? []) as Session[]).filter(s => s.section !== "choukai");
+      // Sembunyiin choukai (punya halaman sendiri) + bank soal (kind:"materi")
+      // yang BELUM dikerjain. Materi yang udah ada skornya tetap muncul di sini.
+      const rows = ((sessionRes.data ?? []) as Session[]).filter(
+        s => s.section !== "choukai" && !(s.kind === "materi" && s.score == null)
+      );
       setSessions(rows);
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "Gagal memuat riwayat.");

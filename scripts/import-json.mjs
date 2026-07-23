@@ -146,7 +146,9 @@ function normalizeResult(raw, fallbackTitle) {
     prompt: q.prompt ?? null,
   })).filter(q => q.question && q.options.length > 0) : [];
 
-  return { title, section, vocabulary, questions };
+  // `kind: "materi"` → sesi hasil import = bank soal/materi, bukan log latihan.
+  // Halaman /materi nge-list ini; /riwayat-soal nyembunyiin yg belum dikerjain.
+  return { title, section, vocabulary, questions, kind: "materi" };
 }
 
 /* Auto-detect kategori session: choukai kalau ada 聴解-* questions atau section=choukai */
