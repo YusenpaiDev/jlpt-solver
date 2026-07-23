@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { setSavedWordFavorite } from "@/lib/supabase/savedWords";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
   Search, BookA, BookOpen, ChevronRight, ChevronLeft, Layers, Zap, Wand2, Plus, Upload,
@@ -311,24 +312,22 @@ export default function Kamus() {
     const next = !w.favorite;
     // Optimistic
     setWords(prev => prev.map(x => x.id === id ? { ...x, favorite: next } : x));
-    try {
-      // .select("id") + cek data.length > 0 supaya silent-fail (RLS, row gak
-      // ditemukan) ke-detect — sebelumnya error null tapi update gak nyangkut
-      const { data, error } = await createClient()
-        .from("saved_words")
-        .update({ favorite: next })
-        .eq("id", id)
-        .select("id");
-      if (error) throw error;
-      if (!data || data.length === 0) throw new Error("Update gak nyangkut (cek RLS)");
-    } catch (err) {
-      // Revert + kasih tau user
-      setWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
-      console.error("Toggle favorite (/kamus) error:", err);
-      const msg = err instanceof Error
-        ? err.message
-        : (err as {message?: string})?.message ?? JSON.stringify(err);
-      alert(`Gagal simpan bintang: ${msg}`);
+
+    // Helper tahan sesi-basi: refresh + retry sekali sebelum nyerah.
+    const res = await setSavedWordFavorite(id, next);
+    if (res.ok) return;
+
+    // Gagal → revert bintang + pesan yang tepat sesuai penyebab.
+    setWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
+    console.error("Toggle favorite (/kamus) gagal:", res);
+    if (res.reason === "auth") {
+      if (confirm("Sesi login kamu habis. Login ulang biar bintangnya kesimpen?")) {
+        window.location.assign("/login");
+      }
+    } else if (res.reason === "missing-column") {
+      alert("Fitur favorit butuh migrasi DB. Buka Supabase SQL Editor, lalu jalanin:\nalter table saved_words add column favorite boolean default false;");
+    } else {
+      alert(`Gagal simpan bintang: ${res.message}`);
     }
   };
 

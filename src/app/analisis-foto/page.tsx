@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { setSavedWordFavorite } from "@/lib/supabase/savedWords";
 import { AuroraBackground, NavRail, BottomNav, UserBar } from "@/components/v2";
 import KamusFlashCard from "@/components/KamusFlashCard";
 import {
@@ -1803,26 +1804,20 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     if (!w) return;
     const next = !w.favorite;
     setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: next } : x));
-    try {
-      const { data, error } = await createClient()
-        .from("saved_words")
-        .update({ favorite: next })
-        .eq("id", id)
-        .select("id");
-      if (error) throw error;
-      if (!data || data.length === 0) throw new Error("Row tidak ke-update (cek RLS)");
-    } catch (err) {
-      setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
-      console.error("Toggle favorite error:", err);
-      const msg = err instanceof Error
-        ? err.message
-        : (err as {message?: string})?.message ?? JSON.stringify(err);
-      // Kolom favorite belum di-migrate: kasih instruksi jelas, bukan error mentah.
-      if (/(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(msg)) {
-        showToast("Fitur favorit butuh migrasi DB. Buka Supabase SQL Editor, lalu jalanin: alter table saved_words add column favorite boolean default false;", false);
-      } else {
-        showToast(`Gagal toggle: ${msg}`, false);
-      }
+
+    // Helper tahan sesi-basi: refresh + retry sekali sebelum nyerah.
+    const res = await setSavedWordFavorite(id, next);
+    if (res.ok) return;
+
+    // Gagal → revert + pesan yang tepat.
+    setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
+    console.error("Toggle favorite gagal:", res);
+    if (res.reason === "auth") {
+      showToast("Sesi login habis — login ulang biar favoritnya kesimpen.", false);
+    } else if (res.reason === "missing-column") {
+      showToast("Fitur favorit butuh migrasi DB. Buka Supabase SQL Editor, lalu jalanin: alter table saved_words add column favorite boolean default false;", false);
+    } else {
+      showToast(`Gagal toggle: ${res.message}`, false);
     }
   };
 
