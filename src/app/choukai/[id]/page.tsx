@@ -7,8 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
   Headphones, Play, Pause, RotateCcw, Rewind, FastForward, Check, X, ChevronLeft, ChevronRight, ChevronDown,
-  Lightbulb, Grid3x3, Plus, BookOpen, Loader2, Sparkles, AlertCircle,
+  Lightbulb, Grid3x3, Plus, BookOpen, Loader2, Sparkles, AlertCircle, Highlighter, Undo2, Trash2,
 } from "lucide-react";
+import { StabiloLayer, STABILO_COLORS, type HiStroke } from "@/components/StabiloLayer";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -287,6 +288,29 @@ export default function ChoukaiPlayer() {
   const [showTranslation, setShowTranslation] = useState(true);
   const [learnMode, setLearnMode] = useState(false);
   const [showMap, setShowMap] = useState(false);
+
+  /* Coret/stabilo — sementara (gak ke DB): coretan per-soal keyed `c-${idx}`,
+     ilang pas reload/keluar halaman. Overlay nutupin kartu soal pas draw mode. */
+  const [drawMode, setDrawMode] = useState(false);
+  const [stabiloColor, setStabiloColor] = useState<string>(STABILO_COLORS[0].rgba);
+  const [highlights, setHighlights] = useState<Record<string, HiStroke[]>>({});
+  const hasAnyStroke = Object.values(highlights).some(a => a.length > 0);
+  const commitStroke = (key: string, s: HiStroke) =>
+    setHighlights(h => ({ ...h, [key]: [...(h[key] ?? []), s] }));
+  // Undo global: buang coretan dgn timestamp terbaru di seluruh soal.
+  const undoLastStroke = () => setHighlights(h => {
+    let bestKey: string | null = null, bestIdx = -1, bestT = -Infinity;
+    for (const [k, arr] of Object.entries(h)) {
+      for (let i = 0; i < arr.length; i++) {
+        const t = arr[i].t ?? 0;
+        if (t >= bestT) { bestT = t; bestKey = k; bestIdx = i; }
+      }
+    }
+    if (bestKey === null) return h;
+    const arr = h[bestKey].slice();
+    arr.splice(bestIdx, 1);
+    return { ...h, [bestKey]: arr };
+  });
 
   useEffect(() => {
     async function load() {
@@ -572,6 +596,13 @@ export default function ChoukaiPlayer() {
                 Selanjutnya <ChevronRight size={14} />
               </button>
             </div>
+            {/* Overlay coret — nutupin kartu soal pas draw mode (per-soal) */}
+            <StabiloLayer
+              strokes={highlights[`c-${idx}`] ?? []}
+              active={drawMode}
+              color={stabiloColor}
+              onCommit={(s) => commitStroke(`c-${idx}`, s)}
+            />
           </article>
 
           <aside className="ch-side">
@@ -674,6 +705,52 @@ export default function ChoukaiPlayer() {
           </div>
         </div>
       )}
+
+      {/* Dock coret-coret (stabilo) — sementara, gak ke DB */}
+      <div className={`stabilo-dock${drawMode ? " open" : ""}`}>
+        {drawMode && (
+          <div className="stabilo-dock-tools">
+            {STABILO_COLORS.map(c => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => setStabiloColor(c.rgba)}
+                className={`stabilo-swatch${stabiloColor === c.rgba ? " on" : ""}`}
+                style={{ background: c.rgba }}
+                title={c.key}
+              />
+            ))}
+            <span className="stabilo-dock-sep" />
+            <button
+              type="button"
+              onClick={undoLastStroke}
+              disabled={!hasAnyStroke}
+              className="stabilo-tool"
+              title="Undo coretan terakhir"
+            >
+              <Undo2 size={13} strokeWidth={1.8} /> Undo
+            </button>
+            <button
+              type="button"
+              onClick={() => setHighlights({})}
+              disabled={!hasAnyStroke}
+              className="stabilo-tool"
+              title="Hapus semua coretan"
+            >
+              <Trash2 size={13} strokeWidth={1.8} /> Hapus
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setDrawMode(v => !v)}
+          className={`stabilo-fab${drawMode ? " on" : ""}`}
+          title={drawMode ? "Selesai coret" : "Mode coret — corat-coret di soal"}
+        >
+          {drawMode ? <Check size={16} strokeWidth={2.4} /> : <Highlighter size={16} strokeWidth={1.8} />}
+          {drawMode ? "Selesai" : "Coret"}
+        </button>
+      </div>
     </>
   );
 }
