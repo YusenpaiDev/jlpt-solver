@@ -95,6 +95,12 @@ export default function Pengaturan() {
         setAvatarUrl(profile.avatar_url ?? null);
         setStreak(profile.streak ?? 0);
       }
+      // Target belajar sekarang di-source dari user_metadata (dipakai onboarding
+      // + proxy). Override kalau ada.
+      const md = user.user_metadata ?? {};
+      if (md.target_level) setTargetLevel(md.target_level as Level);
+      if (md.exam_date && md.exam_date !== "none") setUjianDate(md.exam_date as string);
+      if (typeof md.daily_goal_minutes === "number") setWaktuPerHari(md.daily_goal_minutes as number);
     }
     load();
   }, []);
@@ -151,6 +157,10 @@ export default function Pengaturan() {
       await supabase.from("profiles")
         .update({ target_level: targetLevel })
         .eq("id", user.id);
+      // Sinkron ke user_metadata (source of truth buat onboarding + proxy).
+      await supabase.auth.updateUser({
+        data: { target_level: targetLevel, exam_date: ujianDate || null, daily_goal_minutes: waktuPerHari },
+      });
     }
     setSaving(false);
     showSaved();

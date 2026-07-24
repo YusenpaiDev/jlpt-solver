@@ -38,6 +38,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Onboarding first-login: user login tapi belum kelarin onboarding → paksa ke
+  // /onboarding (kecuali lagi di /onboarding atau route publik). Flag disimpan
+  // di user_metadata.onboarding_completed. Lihat handoff onboarding.
+  if (
+    user &&
+    !user.user_metadata?.onboarding_completed &&
+    !request.nextUrl.pathname.startsWith("/onboarding") &&
+    !isPublic
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/onboarding";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   return supabaseResponse;
 }
 
