@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Lock, RotateCcw, Headphones } from "lucide-react";
 
-type Lv = "N2" | "N3";
+type Lv = "N1" | "N2" | "N3" | "N4" | "N5";
+const LEVEL_ORDER: Lv[] = ["N1", "N2", "N3", "N4", "N5"];
 const OWNED_LEVEL: Lv = "N2"; // TODO: dari profiles.subscription — gating Step 5
 
 interface Exam {
@@ -98,7 +99,7 @@ export default function MateriHub() {
 
   const shown = showAll ? gridSets : gridSets.slice(0, DEFAULT_SHOWN);
   const moreN = gridSets.length - shown.length;
-  const c2 = counts("N2"), c3 = counts("N3");
+  const levelsPresent = LEVEL_ORDER.filter(lv => (perLevel[lv]?.length ?? 0) > 0);
   const locked = level !== OWNED_LEVEL;
 
   const openExam = (e: Exam) => {
@@ -155,8 +156,11 @@ export default function MateriHub() {
 
           {/* level tabs */}
           <div className="lv-tabs">
-            <button className={`lv-tab${level === "N2" ? " on" : ""}`} onClick={() => { setLevel("N2"); setShowAll(false); }}>N2 <span className="c">{c2.total} set</span></button>
-            <button className={`lv-tab${level === "N3" ? " on" : ""}`} onClick={() => { setLevel("N3"); setShowAll(false); }}>N3 {"N3" !== OWNED_LEVEL && <Lock size={11} strokeWidth={2} />}<span className="c">{c3.total} set</span></button>
+            {levelsPresent.map(lv => (
+              <button key={lv} className={`lv-tab${level === lv ? " on" : ""}`} onClick={() => { setLevel(lv); setShowAll(false); }}>
+                {lv} {lv !== OWNED_LEVEL && <Lock size={11} strokeWidth={2} />}<span className="c">{counts(lv).total} set</span>
+              </button>
+            ))}
             <div className="lv-typef">
               {(["all", "筆記", "聴解"] as const).map(t => (
                 <button key={t} className={`lv-tf${typeF === t ? " on" : ""}`} onClick={() => setTypeF(t)}>{t === "all" ? "Semua" : t === "筆記" ? "✍️ 筆記" : "🎧 聴解"}</button>
