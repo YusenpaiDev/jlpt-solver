@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
@@ -65,7 +66,7 @@ function colorForPct(pct: number): "iris" | "amber" | "emerald" | "rose" {
   return "iris";
 }
 
-export default function Statistik() {
+export function StatistikView({ embedded = false }: { embedded?: boolean }) {
   const [sessions, setSessions] = useState<RawSession[]>([]);
   const [savedWordsCount, setSavedWordsCount] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -307,23 +308,9 @@ export default function Statistik() {
     return worst;
   }, [katAccuracy]);
 
-  return (
+  const inner = (
     <>
-      <AuroraBackground />
-      <NavRail />
-      <BottomNav />
-
-      <main className="app-shell">
-        <UserBar
-          streakDays={streak}
-          xp={xp}
-          xpTarget={xpTarget}
-          avatarLetter={userInitial}
-          isPro
-          hasUnread
-        />
-
-        <header className="st-header">
+      <header className="st-header">
           <div>
             <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Statistik" }]} />
             <h1 className="st-title">
@@ -548,9 +535,28 @@ export default function Statistik() {
             </div>
           </aside>
         </div>
+    </>
+  );
+
+  // Embedded (tab Statistik di /progres): tanpa chrome — parent yang kasih.
+  if (embedded) return inner;
+  return (
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
+      <main className="app-shell">
+        <UserBar streakDays={streak} xp={xp} xpTarget={xpTarget} avatarLetter={userInitial} isPro hasUnread />
+        {inner}
       </main>
     </>
   );
+}
+
+// /statistik digabung ke /progres (tab Statistik). Redirect; konten dipakai
+// via named export StatistikView di /progres.
+export default function StatistikPage() {
+  redirect("/progres?tab=stat");
 }
 
 /* ─── Subcomponents ─── */

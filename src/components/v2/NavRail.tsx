@@ -3,20 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, BookOpen, History, Camera, ListTodo, BookA, NotebookPen, BarChart3,
-  Headphones, Settings, LogOut, Sparkles,
+  Home, BookOpen, Camera, ListTodo, BookA, NotebookPen, BarChart3,
+  Settings, LogOut, Sparkles,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
   { href: "/materi",        label: "Materi",        Icon: BookOpen },
-  { href: "/riwayat-soal",  label: "Riwayat Soal",  Icon: History },
   { href: "/analisis-foto", label: "Analisis Foto", Icon: Camera },
   { href: "/lembar-tugas",  label: "Lembar Tugas",  Icon: ListTodo },
-  { href: "/choukai",       label: "Choukai",       Icon: Headphones },
   { href: "/kamus",         label: "Kamus",         Icon: BookA },
   { href: "/catatan",       label: "Catatan",       Icon: NotebookPen },
-  { href: "/statistik",     label: "Statistik",     Icon: BarChart3 },
+  { href: "/progres",       label: "Progres",       Icon: BarChart3 },
 ] as const;
 
 /**
