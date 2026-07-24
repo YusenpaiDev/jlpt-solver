@@ -383,45 +383,20 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
             <div className="relative">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-xs font-bold text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
-                  PROGRES N2 KAMU
+                  KUOTA ANALISIS
                 </p>
                 <span className="text-[9px] px-2 py-0.5 rounded-full font-bold"
                   style={{ background: "var(--surface-3)", color: "var(--info)", fontFamily: "var(--font-space)" }}>
-                  LEVEL 4
+                  PRO
                 </span>
               </div>
 
               <p className="text-3xl font-extrabold text-[var(--text-primary)] mt-2 mb-0.5"
                 style={{ fontFamily: "var(--font-jakarta)" }}>
-                520 <span className="text-base font-semibold text-[var(--text-tertiary)]">/ 1000 XP</span>
+                Unlimited
               </p>
-              <p className="text-[11px] text-[var(--text-secondary)] mb-3">52% menuju level berikutnya</p>
 
-              <div className="h-2 rounded-full mb-4" style={{ background: "var(--surface-2)" }}>
-                <div className="h-2 rounded-full" style={{
-                  width: "52%",
-                  background: "linear-gradient(90deg,var(--success),var(--success))",
-                  boxShadow: "0 0 10px rgba(94,168,122,0.4)",
-                }} />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: "Tata Bahasa", pct: 72, color: "var(--text-secondary)" },
-                  { label: "Kosakata",    pct: 88, color: "var(--success)" },
-                  { label: "Reading",     pct: 54, color: "var(--primary)" },
-                ].map(({ label, pct, color }) => (
-                  <div key={label} className="rounded-lg p-2.5 text-center"
-                    style={{ background: "var(--surface-2)" }}>
-                    <p className="text-sm font-bold mb-0.5" style={{ color, fontFamily: "var(--font-jakarta)" }}>
-                      {pct}%
-                    </p>
-                    <p className="text-[9px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
-                      {label}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <p className="text-[11px] text-[var(--text-secondary)]">Analisis foto sepuasnya — gak ada batas harian.</p>
             </div>
           </div>
         </div>
