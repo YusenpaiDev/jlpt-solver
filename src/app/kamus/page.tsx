@@ -48,8 +48,14 @@ export default function Kamus() {
   const [levelF, setLevelF] = useState<LevelFilter>("ALL");
   const [sort, setSort] = useState<SortMode>("newest");
   const [activeAlbum, setActiveAlbum] = useState<"all" | number>("all");
+  // Batas jumlah baris yang di-render (perf) — Kamus bisa ribuan kata. Render
+  // semua sekaligus bikin berat, jadi cap + tombol "tampilkan lebih".
+  const [renderLimit, setRenderLimit] = useState(80);
   const [selected, setSelected] = useState<string | null>(null);
   const [favOnly, setFavOnly] = useState(false);
+
+  // Reset batas render tiap ganti filter/urutan/album/pencarian.
+  useEffect(() => { setRenderLimit(80); }, [query, levelF, favOnly, activeAlbum, sort]);
 
   /* Flash */
   const [flashMode, setFlashMode] = useState<FlashMode>(null);
@@ -506,7 +512,9 @@ export default function Kamus() {
           />
 
           <WordList
-            words={filtered}
+            words={filtered.slice(0, renderLimit)}
+            hiddenCount={Math.max(0, filtered.length - renderLimit)}
+            onShowMore={() => setRenderLimit(n => n + 120)}
             selected={selected}
             setSelected={setSelected}
             query={query}
@@ -806,10 +814,12 @@ function FilterRail({
 }
 
 function WordList({
-  words, selected, setSelected, query, setQuery, sort, setSort, loading, totalWords,
+  words, hiddenCount, onShowMore, selected, setSelected, query, setQuery, sort, setSort, loading, totalWords,
   favOnly, setFavOnly, favCount, onToggleFavorite, onDelete,
 }: {
   words: SavedWord[];
+  hiddenCount: number;
+  onShowMore: () => void;
   selected: string | null;
   setSelected: (id: string) => void;
   query: string;
@@ -903,6 +913,11 @@ function WordList({
           </li>
         ))}
       </ul>
+      {hiddenCount > 0 && (
+        <button type="button" className="kk-showmore" onClick={onShowMore}>
+          Tampilkan lebih banyak <span className="kk-showmore-n">{hiddenCount} kata lagi</span>
+        </button>
+      )}
     </section>
   );
 }
