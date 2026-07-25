@@ -102,8 +102,11 @@ export default function MateriHub() {
   const levelsPresent = LEVEL_ORDER.filter(lv => (perLevel[lv]?.length ?? 0) > 0);
   const locked = level !== OWNED_LEVEL;
 
+  // Buka set. Kartu yang kekunci (teaser di level non-paket, index >= 3) udah
+  // di-block lewat `!teaser` di onClick — jadi di sini gak perlu cek `locked`
+  // lagi (kalau dicek, 3 kartu teaser gratis ikut mati). Bug ini bikin banyak
+  // kartu N3/N4 gak bisa dipencet.
   const openExam = (e: Exam) => {
-    if (locked) return;
     router.push(exType(e) === "聴解" ? `/choukai/${e.id}` : `/latihan/${e.id}`);
   };
 
@@ -245,7 +248,7 @@ export default function MateriHub() {
                 <div className="mn-m"><div className="mn-t">{t}</div><div className="mn-d">{d}</div></div>
               </div>
             ))}
-            <div className="mn-vote"><span className="mn-vote-t">Mana yang paling kamu butuhin?</span><button className="mn-vote-btn">Vote materi berikutnya →</button></div>
+            <div className="mn-vote"><span className="mn-vote-t">Mana yang paling kamu butuhin?</span><button className="mn-vote-btn" onClick={() => alert("Makasih! Fitur vote materi lagi disiapin 🙌")}>Vote materi berikutnya →</button></div>
           </div>
         </section>
       </main>
