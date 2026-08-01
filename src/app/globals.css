@@ -8359,3 +8359,71 @@ html { scrollbar-gutter: stable; }
   .beranda-v2 .bv-materi2 { grid-template-columns: 1fr; }
   .beranda-v2 .bv-top-r { width: 100%; flex-wrap: wrap; }
 }
+
+/* Beranda v2 — di layar lebar, perbesar skala biar konten ngisi tinggi (gak kosong di bawah) */
+@media (min-width: 1400px) {
+  .beranda-v2 { display: flex; flex-direction: column; min-height: calc(100vh - 56px); }
+  .beranda-v2 .bv-grid { flex: 1 1 auto; gap: 22px; align-items: stretch; }
+  .beranda-v2 .bv-col { gap: 22px; }
+  .beranda-v2 .bv-side { gap: 22px; }
+  .beranda-v2 .bv-greet h1 { font-size: 30px; }
+  .beranda-v2 .bv-greet p { font-size: 13.5px; }
+  .beranda-v2 .bv-resume { padding: 20px 24px; margin-bottom: 22px; }
+  .beranda-v2 .res-ic { width: 52px; height: 52px; font-size: 23px; }
+  .beranda-v2 .res-t { font-size: 16px; }
+  .beranda-v2 .res-s { font-size: 13px; }
+  .beranda-v2 .bv-stats { gap: 18px; margin-bottom: 22px; }
+  .beranda-v2 .bv-stat { padding: 22px 24px; }
+  .beranda-v2 .stat-l { font-size: 12px; }
+  .beranda-v2 .stat-ic { width: 28px; height: 28px; font-size: 14px; }
+  .beranda-v2 .stat-v { font-size: 33px; }
+  .beranda-v2 .stat-v .u { font-size: 13px; }
+  .beranda-v2 .stat-d { font-size: 12px; }
+  .beranda-v2 .bv-duo { gap: 22px; }
+  .beranda-v2 .bv-kanji { padding: 28px; grid-template-columns: 160px minmax(0,1fr); }
+  .beranda-v2 .kj-stage { height: 200px; }
+  .beranda-v2 .kj-stage::before { width: 168px; height: 168px; }
+  .beranda-v2 .kj { font-size: 124px; }
+  .beranda-v2 .kj-read { font-size: 21px; }
+  .beranda-v2 .kj-mean { font-size: 14px; }
+  .beranda-v2 .kj-ex { font-size: 14.5px; padding: 13px 15px; }
+  .beranda-v2 .bv-quiz { padding: 28px; gap: 16px; }
+  .beranda-v2 .q-head h3 { font-size: 16px; }
+  .beranda-v2 .q-q { font-size: 17px; }
+  .beranda-v2 .q-opt { font-size: 15.5px; padding: 12px 15px; }
+  .beranda-v2 .bv-fokus { padding: 28px; }
+  .beranda-v2 .f-head h3 { font-size: 16px; }
+  .beranda-v2 .cats { gap: 14px; }
+  .beranda-v2 .cat { padding: 18px 16px; }
+  .beranda-v2 .cat-jp { font-size: 18px; }
+  .beranda-v2 .cat-pct { font-size: 16px; }
+  .beranda-v2 .cat-n { font-size: 11px; }
+  .beranda-v2 .f-note { font-size: 13px; padding: 14px 16px; margin-top: 18px; }
+  .beranda-v2 .bv-materi2 { gap: 22px; }
+  .beranda-v2 .m-card { padding: 22px 24px; }
+  .beranda-v2 .m-ic { width: 46px; height: 46px; font-size: 19px; }
+  .beranda-v2 .m-t { font-size: 15px; }
+  .beranda-v2 .m-s { font-size: 12px; }
+  .beranda-v2 .bv-scard { padding: 22px 24px; }
+  .beranda-v2 .s-h { font-size: 11.5px; }
+  .beranda-v2 .cd-ring { width: 88px; height: 88px; }
+  .beranda-v2 .cd-t { font-size: 15px; }
+  .beranda-v2 .cd-s { font-size: 12px; }
+  .beranda-v2 .wk { height: 84px; }
+  .beranda-v2 .wk-note { font-size: 12px; }
+  .beranda-v2 .riw-i { padding: 9px 10px; }
+  .beranda-v2 .riw-g { width: 36px; height: 36px; font-size: 15px; }
+  .beranda-v2 .riw-t { font-size: 13px; }
+  .beranda-v2 .riw-s { font-size: 11px; }
+  .beranda-v2 .insight p { font-size: 13px; }
+  /* biar tiap kolom ke-stretch penuh & kartu terakhir isi sisa bawah */
+  .beranda-v2 .bv-col, .beranda-v2 .bv-side { justify-content: space-between; }
+}
+@media (min-width: 2100px) {
+  .beranda-v2 .bv-stat { padding: 28px 30px; }
+  .beranda-v2 .stat-v { font-size: 40px; }
+  .beranda-v2 .kj { font-size: 150px; }
+  .beranda-v2 .kj-stage { height: 240px; }
+  .beranda-v2 .cat-jp { font-size: 20px; }
+  .beranda-v2 .bv-grid { gap: 26px; }
+}
