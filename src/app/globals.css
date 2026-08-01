@@ -438,10 +438,43 @@ input, textarea, select { font-size: 16px; }
   background-attachment: fixed;
 }
 
-/* AuroraBackground (per-page) — sekarang no-op visual, biar gak ada
-   double ambient. Tetep di-render biar pemanggilan komponen di pages
-   tetep valid tanpa edit per-page. */
-.aurora-bg, .aurora-blob, .aurora-noise { display: none; }
+/* AuroraBackground (per-page) — blob beraurora yang drift pelan.
+   Transform-only animation (blur di-rasterize sekali, cuma transform yg jalan)
+   → ringan, GPU-composited. */
+.aurora-bg {
+  position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  contain: strict;
+}
+.aurora-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(90px); will-change: transform;
+}
+.aurora-blob.aurora-1 {
+  width: 46vw; height: 46vw; left: -8vw; top: -12vw; opacity: .42;
+  background: radial-gradient(circle, var(--aurora-1), transparent 68%);
+  animation: aurora-drift-1 26s ease-in-out infinite;
+}
+.aurora-blob.aurora-2 {
+  width: 40vw; height: 40vw; left: -10vw; bottom: -16vw; opacity: .34;
+  background: radial-gradient(circle, var(--aurora-2), transparent 70%);
+  animation: aurora-drift-2 34s ease-in-out infinite;
+}
+.aurora-blob.aurora-3 {
+  width: 38vw; height: 38vw; right: -12vw; top: 18vh; opacity: .26;
+  background: radial-gradient(circle, var(--aurora-3), transparent 72%);
+  animation: aurora-drift-3 30s ease-in-out infinite;
+}
+.aurora-blob.aurora-4 {
+  width: 44vw; height: 44vw; right: -8vw; bottom: -14vw; opacity: .38;
+  background: radial-gradient(circle, var(--aurora-4), transparent 70%);
+  animation: aurora-drift-4 28s ease-in-out infinite;
+}
+.aurora-noise { display: none; }
+@keyframes aurora-drift-1 { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(6vw,4vh,0) scale(1.14); } }
+@keyframes aurora-drift-2 { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(5vw,-5vh,0) scale(1.18); } }
+@keyframes aurora-drift-3 { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-6vw,5vh,0) scale(1.12); } }
+@keyframes aurora-drift-4 { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-5vw,-4vh,0) scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .aurora-blob { animation: none !important; } }
 
 /* ──── GlassCard ──── */
 .glass-card {
