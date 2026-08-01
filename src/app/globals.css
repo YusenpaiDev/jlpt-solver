@@ -8320,7 +8320,8 @@ html { scrollbar-gutter: stable; }
 .beranda-v2 .s-h .r { font-size: 10.5px; font-weight: 700; color: #8FCB52; text-transform: none; letter-spacing: 0; }
 .beranda-v2 .s-all { font-size: 10.5px; text-transform: none; letter-spacing: 0; color: #E8704F; font-weight: 700; }
 .beranda-v2 .cd { display: flex; align-items: center; gap: 14px; }
-.beranda-v2 .cd-ring { position: relative; width: 74px; height: 74px; flex-shrink: 0; }
+.beranda-v2 .cd-ring { position: relative; width: 74px; height: 74px; flex-shrink: 0; display: grid; place-items: center; }
+.beranda-v2 .cd-ring svg { display: block; }
 .beranda-v2 .cd-ring .n { position: absolute; inset: 0; display: grid; place-items: center; font-size: 19px; font-weight: 700; }
 .beranda-v2 .cd-t { font-size: 13px; font-weight: 700; }
 .beranda-v2 .cd-s { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
@@ -8407,6 +8408,8 @@ html { scrollbar-gutter: stable; }
   .beranda-v2 .bv-scard { padding: 22px 24px; }
   .beranda-v2 .s-h { font-size: 11.5px; }
   .beranda-v2 .cd-ring { width: 88px; height: 88px; }
+  .beranda-v2 .cd-ring svg { width: 88px; height: 88px; }
+  .beranda-v2 .cd-ring .n { font-size: 22px; }
   .beranda-v2 .cd-t { font-size: 15px; }
   .beranda-v2 .cd-s { font-size: 12px; }
   .beranda-v2 .wk { height: 84px; }
