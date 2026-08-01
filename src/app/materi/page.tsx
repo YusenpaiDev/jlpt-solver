@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
-import { Lock, RotateCcw, Headphones } from "lucide-react";
+import { Lock } from "lucide-react";
 
 type Lv = "N1" | "N2" | "N3" | "N4" | "N5";
 const LEVEL_ORDER: Lv[] = ["N1", "N2", "N3", "N4", "N5"];
@@ -22,6 +22,7 @@ interface Exam {
 }
 type ExType = "筆記" | "聴解";
 function exType(e: Exam): ExType { return e.section === "choukai" ? "聴解" : "筆記"; }
+
 function examMeta(title: string): { label: string; sortKey: number } {
   const m = title.match(/(20\d{2})\s*年\s*(\d{1,2})\s*月/);
   if (m) return { label: `${m[1]}年${m[2]}月`, sortKey: +m[1] * 100 + +m[2] };
@@ -33,20 +34,23 @@ function relDate(iso: string): string {
   if (d < 7) return `${d} hari lalu`; if (d < 30) return `${Math.floor(d / 7)} minggu lalu`;
   return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 }
+const pctOf = (e: Exam) => (e.score != null && e.total > 0 ? Math.round((e.score / e.total) * 100) : null);
 
-const DEFAULT_SHOWN = 7;
+/* 1 ujian = 1 grup (tanggal) berisi bagian 筆記 + 聴解 */
+interface Group { key: string; level: Lv; label: string; sortKey: number; hisho?: Exam; choukai?: Exam; }
+type StatusF = "all" | "incomplete" | "done";
+const DEFAULT_SHOWN = 5;
 
 export default function MateriHub() {
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const [exams, setExams] = useState<Exam[]>([]);
   const [level, setLevel] = useState<Lv>("N2");
-  const [typeF, setTypeF] = useState<"all" | ExType>("all");
+  const [statusF, setStatusF] = useState<StatusF>("all");
   const [showAll, setShowAll] = useState(false);
   const router = useRouter();
 
-  const targetLevel: Lv = "N2";
-  const targetDate = "Desember 2026";
+  const targetDate = "Desember 2026"; // TODO: user_metadata.exam_date
 
   useEffect(() => {
     async function load() {
@@ -74,41 +78,49 @@ export default function MateriHub() {
     return m;
   }, [exams]);
 
-  const counts = (lv: Lv) => {
-    const all = perLevel[lv] ?? [];
-    return { total: all.length, hisho: all.filter(e => exType(e) === "筆記").length, choukai: all.filter(e => exType(e) === "聴解").length };
-  };
-
-  // Set untuk grid: level aktif + filter tipe, urut tahun terbaru
-  const gridSets = useMemo(() => {
-    let s = (perLevel[level] ?? []).slice();
-    if (typeF !== "all") s = s.filter(e => exType(e) === typeF);
-    return s.sort((a, b) => examMeta(b.title).sortKey - examMeta(a.title).sortKey);
-  }, [perLevel, level, typeF]);
-
-  // Summary (level aktif)
-  const summary = useMemo(() => {
-    const all = perLevel[level] ?? [];
-    const done = all.filter(e => e.score != null && e.total > 0);
-    const pctSet = all.length ? Math.round((done.length / all.length) * 100) : 0;
-    const avg = done.length ? Math.round(done.reduce((n, e) => n + (e.score! / e.total) * 100, 0) / done.length) : null;
-    const last = done.slice().sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))[0];
-    const nextSet = all.filter(e => e.score == null).sort((a, b) => examMeta(b.title).sortKey - examMeta(a.title).sortKey)[0];
-    return { total: all.length, doneN: done.length, pctSet, avg, last, nextSet };
-  }, [perLevel, level]);
-
-  const shown = showAll ? gridSets : gridSets.slice(0, DEFAULT_SHOWN);
-  const moreN = gridSets.length - shown.length;
   const levelsPresent = LEVEL_ORDER.filter(lv => (perLevel[lv]?.length ?? 0) > 0);
   const locked = level !== OWNED_LEVEL;
 
-  // Buka set. Kartu yang kekunci (teaser di level non-paket, index >= 3) udah
-  // di-block lewat `!teaser` di onClick — jadi di sini gak perlu cek `locked`
-  // lagi (kalau dicek, 3 kartu teaser gratis ikut mati). Bug ini bikin banyak
-  // kartu N3/N4 gak bisa dipencet.
-  const openExam = (e: Exam) => {
-    router.push(exType(e) === "聴解" ? `/choukai/${e.id}` : `/latihan/${e.id}`);
+  /* group per tanggal → {hisho, choukai} */
+  const groups = useMemo<Group[]>(() => {
+    const map = new Map<string, Group>();
+    for (const e of perLevel[level] ?? []) {
+      const { label, sortKey } = examMeta(e.title);
+      const key = `${e.level}·${label}`;
+      let g = map.get(key);
+      if (!g) { g = { key, level: e.level as Lv, label, sortKey }; map.set(key, g); }
+      if (exType(e) === "聴解") g.choukai = e; else g.hisho = e;
+    }
+    return [...map.values()].sort((a, b) => b.sortKey - a.sortKey);
+  }, [perLevel, level]);
+
+  const gStatus = (g: Group): StatusF => {
+    const parts = [g.hisho, g.choukai].filter(Boolean) as Exam[];
+    const doneN = parts.filter(e => pctOf(e) != null).length;
+    if (doneN === 0) return "incomplete"; // belum mulai = belum lengkap
+    if (doneN === parts.length) return "done";
+    return "incomplete";
   };
+  const filtered = useMemo(() => statusF === "all" ? groups : groups.filter(g => gStatus(g) === statusF), [groups, statusF]);
+  const shown = showAll ? filtered : filtered.slice(0, DEFAULT_SHOWN);
+  const moreN = filtered.length - shown.length;
+
+  const counts = (lv: Lv) => {
+    const set = new Set((perLevel[lv] ?? []).map(e => examMeta(e.title).label));
+    return set.size;
+  };
+
+  /* pace: berapa set (grup) kelar minggu ini */
+  const pace = useMemo(() => {
+    const wk = Date.now() - 7 * 86_400_000;
+    const doneThisWk = (perLevel[level] ?? []).filter(e => pctOf(e) != null && +new Date(e.created_at) >= wk).length;
+    return { doneThisWk, target: 2 };
+  }, [perLevel, level]);
+
+  /* NEXT: grup terbaru yang belum lengkap di level yang dimiliki */
+  const next = useMemo(() => groups.find(g => gStatus(g) !== "done"), [groups]);
+
+  const openPart = (e?: Exam) => { if (!e) return; router.push(exType(e) === "聴解" ? `/choukai/${e.id}` : `/latihan/${e.id}`); };
 
   return (
     <>
@@ -118,140 +130,162 @@ export default function MateriHub() {
       <main className="app-shell">
         <UserBar streakDays={streak} xp={820} xpTarget={1000} avatarLetter={userInitial} isPro hasUnread />
 
-        <header className="mat-header">
-          <div>
-            <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Materi" }]} />
-            <h1 className="mat-title">Materi <span className="mat-title-jp">教材</span></h1>
-            <p className="mat-sub">Bank soal ujian lengkap + materi belajar terstruktur. Kotoba personal kamu ada di <Link href="/kamus">Kamus →</Link></p>
-          </div>
-          <div className="mat-stats">
-            <div className="mat-stat-card glass-card">
-              <div className="mat-stat-label">Target kamu</div>
-              <div className="mat-stat-value"><span className={`lv-tag lv-${targetLevel.toLowerCase()}`}>{targetLevel}</span><span className="mat-stat-meta">{targetDate}</span></div>
-            </div>
-          </div>
-        </header>
+        <div className="materi-v3">
+          <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Materi" }]} />
 
-        {/* ═══ BANK SOAL ═══ */}
-        <section id="bank-soal">
-          <div className="mat-section-head">
-            <h2 className="mat-section-title">Bank Soal <span className="mat-title-jp" style={{ fontSize: 15 }}>過去問</span> <span className="mat-section-count">{exams.length}</span></h2>
-            <span className="mat-section-sub">Soal ujian lengkap — klik buat mulai latihan</span>
-          </div>
-
-          {/* summary strip */}
-          <div className="bs-summary">
-            <div className="bss-ring">
-              <svg width="52" height="52" viewBox="0 0 52 52">
-                <circle cx="26" cy="26" r="21" stroke="var(--surface-3)" strokeWidth="5" fill="none" />
-                <circle cx="26" cy="26" r="21" stroke="var(--success)" strokeWidth="5" fill="none" strokeDasharray="132" strokeDashoffset={132 * (1 - summary.pctSet / 100)} strokeLinecap="round" transform="rotate(-90 26 26)" style={{ filter: "drop-shadow(0 0 5px rgba(143,203,82,0.5))" }} />
-              </svg>
-              <span className="bss-pct">{summary.pctSet}%</span>
+          <div className="m3-hd">
+            <div>
+              <h1>Materi <span className="jp">教材</span></h1>
+              <p>Bank soal ujian lengkap + materi belajar terstruktur. Kotoba personal kamu ada di <Link href="/kamus">Kamus →</Link></p>
             </div>
-            <div className="bss-meta">
-              <div className="bss-t"><b>{summary.doneN} dari {summary.total} set</b> {level} udah kamu kerjain{summary.avg != null && ` · rata-rata ${summary.avg}%`}</div>
-              <div className="bss-s">{summary.last ? `Terakhir: ${examMeta(summary.last.title).label} (${Math.round((summary.last.score! / summary.last.total) * 100)}%) · ${relDate(summary.last.created_at)}` : "Belum ada set yang dikerjain — mulai dari yang terbaru 🔥"}</div>
-            </div>
-            {summary.nextSet && !locked && (
-              <button className="bss-cta" onClick={() => openExam(summary.nextSet!)}>Lanjut set berikutnya →</button>
-            )}
-          </div>
-
-          {/* level tabs */}
-          <div className="lv-tabs">
-            {levelsPresent.map(lv => (
-              <button key={lv} className={`lv-tab${level === lv ? " on" : ""}`} onClick={() => { setLevel(lv); setShowAll(false); }}>
-                {lv} {lv !== OWNED_LEVEL && <Lock size={11} strokeWidth={2} />}<span className="c">{counts(lv).total} set</span>
-              </button>
-            ))}
-            <div className="lv-typef">
-              {(["all", "筆記", "聴解"] as const).map(t => (
-                <button key={t} className={`lv-tf${typeF === t ? " on" : ""}`} onClick={() => setTypeF(t)}>{t === "all" ? "Semua" : t === "筆記" ? "✍️ 筆記" : "🎧 聴解"}</button>
-              ))}
+            <div className="m3-pace">
+              <div className="m3-pace-top"><span className="t">Pace menuju {OWNED_LEVEL} · {targetDate}</span><span className="badge">{pace.doneThisWk >= pace.target ? "ON TRACK" : "AYO"}</span></div>
+              <div className="main">Kerjain <b>{pace.target} set / minggu</b> biar konsisten sampai ujian ✓</div>
+              <div className="sub">Minggu ini: <b>{pace.doneThisWk} / {pace.target} set</b>{pace.doneThisWk < pace.target && " — lanjut yuk"}</div>
             </div>
           </div>
 
-          {locked && (
-            <div className="bs-lock-banner">
-              <Lock size={14} strokeWidth={2} /> Paket kamu: <b>{OWNED_LEVEL}</b>. Upgrade buat akses {level} ({counts(level).total} set, 2010–2025) <Link href="/premium" className="bs-lock-cta">Upgrade →</Link>
+          {/* NEXT hero */}
+          {next && !locked && (
+            <div className="m3-next">
+              <div>
+                <div className="eyebrow"><span className="d" />Berikutnya buat kamu</div>
+                <div className="t"><span className="jpt">{next.label}</span> — ujian {next.level}</div>
+                <div className="meta">
+                  {next.hisho && <span>✍️ <b>筆記 {next.hisho.total} soal</b></span>}
+                  {next.choukai && <span>🎧 <b>聴解 {next.choukai.total} soal</b></span>}
+                </div>
+              </div>
+              <div className="acts">
+                {next.hisho && <button className="btn btn-p" onClick={() => openPart(next.hisho)}>▶ Mulai 筆記</button>}
+                {next.choukai && <button className="btn btn-g" onClick={() => openPart(next.choukai)}>🎧 Atau 聴解 dulu</button>}
+              </div>
             </div>
           )}
 
-          <div className="exam-grid">
-            {shown.map((e, i) => {
-              const done = e.score != null && e.total > 0;
-              const pct = done ? Math.round((e.score! / e.total) * 100) : 0;
-              const bad = done && pct < 65;
-              const teaser = locked && i >= 3; // Step 5: 3 pertama playable
-              const cho = exType(e) === "聴解";
+          {/* filter */}
+          <div className="m3-bar">
+            {levelsPresent.map(lv => (
+              <button key={lv} className={`fchip${level === lv ? " on" : ""}`} onClick={() => { setLevel(lv); setShowAll(false); }}>
+                {lv !== OWNED_LEVEL && <span className="lock">🔒</span>} {lv} <span className="c">{counts(lv)} ujian</span>
+              </button>
+            ))}
+            <span className="m3-div" />
+            {([["all", "Semua"], ["incomplete", "Belum lengkap"], ["done", "✓ Selesai"]] as const).map(([v, l]) => (
+              <button key={v} className={`fchip${statusF === v ? " on" : ""}`} onClick={() => { setStatusF(v); setShowAll(false); }}>{l}</button>
+            ))}
+            <span className="bar-r">1 ujian = 筆記 + 聴解 · klik bagian buat mulai</span>
+          </div>
+
+          {locked && (
+            <div className="m3-lock">
+              <Lock size={14} strokeWidth={2} /> Paket kamu: <b>{OWNED_LEVEL}</b>. Upgrade buat akses {level} ({counts(level)} ujian, 2010–2025) <Link href="/premium" className="cta">Upgrade →</Link>
+            </div>
+          )}
+
+          {/* exam grid */}
+          <div className="m3-exams">
+            {shown.map((g, i) => {
+              const teaser = locked && i >= 3;
+              const parts = [g.hisho, g.choukai].filter(Boolean) as Exam[];
+              const doneN = parts.filter(e => pctOf(e) != null).length;
+              const total = parts.reduce((n, e) => n + e.total, 0);
+              const badge = doneN === parts.length && parts.length > 1 ? { t: "✓ LENGKAP", c: "done" }
+                : g.hisho && pctOf(g.hisho) != null ? { t: `✓ 筆記 ${pctOf(g.hisho)}%`, c: "done" }
+                : g.choukai && pctOf(g.choukai) != null ? { t: `✓ 聴解 ${pctOf(g.choukai)}%`, c: "done" }
+                : null;
               return (
-                <div key={e.id} className={`exam${done ? " done" : ""}${bad ? " bad" : ""}${teaser ? " teaser" : ""}`} onClick={() => !teaser && openExam(e)}>
+                <div key={g.key} className={`exam card${teaser ? " teaser" : ""}`}>
+                  <span className="exam-glyph">験</span>
                   <div className="exam-top">
-                    <span className="exam-title">{cho && <Headphones size={11} strokeWidth={2} style={{ marginRight: 4, verticalAlign: "-1px", opacity: .7 }} />}{examMeta(e.title).label}</span>
-                    <span className="exam-soal">{e.total} soal{cho ? " 🎧" : ""}</span>
+                    <span className="exam-t">{g.label}</span>
+                    {badge && <span className={`exam-badge eb-${badge.c}`}>{badge.t}</span>}
                   </div>
-                  {done ? (
-                    <div className="score-row">
-                      <div className="sring">
-                        <svg width="36" height="36" viewBox="0 0 36 36">
-                          <circle cx="18" cy="18" r="14" stroke="var(--surface-3)" strokeWidth="3.5" fill="none" />
-                          <circle cx="18" cy="18" r="14" stroke={bad ? "var(--danger)" : "var(--success)"} strokeWidth="3.5" fill="none" strokeDasharray="88" strokeDashoffset={88 * (1 - pct / 100)} strokeLinecap="round" transform="rotate(-90 18 18)" />
-                        </svg>
-                        <span className={`spct ${bad ? "g-bad" : "g-good"}`}>{pct}%</span>
-                      </div>
-                      <div className="smeta"><div className="sl1">{e.score} <span className="frac">/ {e.total}</span></div><div className={`sl2${bad ? " g-bad" : ""}`}>{bad ? "review yuk" : relDate(e.created_at)}</div></div>
-                      <button className="ulangi" onClick={(ev) => { ev.stopPropagation(); openExam(e); }}><RotateCcw size={12} /></button>
-                    </div>
-                  ) : (
-                    <div className="exam-foot"><span className="exam-hint">{teaser ? "🔒 Upgrade" : "Belum dikerjain"}</span>{!teaser && <button className="mulai" onClick={(ev) => { ev.stopPropagation(); openExam(e); }}>Mulai →</button>}</div>
-                  )}
+                  <div className="exam-s">Ujian {g.level} · <b>{total} soal</b>{teaser && " · 🔒 upgrade"}</div>
+                  <div className="parts">
+                    <Part e={g.hisho} type="筆記" teaser={teaser} onOpen={openPart} />
+                    <Part e={g.choukai} type="聴解" teaser={teaser} onOpen={openPart} />
+                  </div>
                 </div>
               );
             })}
             {moreN > 0 && (
-              <button className="exam-more" onClick={() => setShowAll(true)}><b>+{moreN} set lagi</b><span>Tampilkan semua {level} →</span></button>
+              <button className="more" onClick={() => setShowAll(true)}>
+                <div style={{ textAlign: "center" }}>
+                  <div className="n">+{moreN} ujian lagi</div>
+                  <div className="l">makin lama makin klasik</div>
+                  <div className="a">Tampilkan semua {level} →</div>
+                </div>
+              </button>
             )}
+            {shown.length === 0 && <p className="m3-empty">Belum ada ujian di filter ini.</p>}
           </div>
-        </section>
 
-        {/* ═══ TERSEDIA ═══ */}
-        <section>
-          <div className="mat-section-head"><h2 className="mat-section-title">Tersedia <span className="mat-section-count">2</span></h2><span className="mat-section-sub">Klik kartu untuk mulai</span></div>
-          <div className="ters-grid">
-            <article className="ters kotoba">
-              <span className="ters-soon">SOON</span>
-              <div className="ters-glyph"><span>語</span></div>
-              <div className="ters-body">
-                <span className="ters-eyebrow">Kosakata Terstruktur</span><span className="ters-name">Kotoba</span>
-                <p className="ters-desc">Dari file lokal kamu — di-parse otomatis, dikelompokkan per level &amp; tema, siap jadi flashcard.</p>
-                <div className="ters-foot"><div className="ters-prog"><div className="tp-track"><div className="tp-fill" style={{ width: "60%" }} /></div><span className="tp-pct">60%</span></div><span className="ters-cta">Coming soon</span></div>
-              </div>
-            </article>
-            <Link href="/materi/bunpou" className="ters bunpou" style={{ textDecoration: "none" }}>
-              <div className="ters-glyph"><span>文</span></div>
-              <div className="ters-body">
-                <span className="ters-eyebrow">Tata Bahasa</span><span className="ters-name">Bunpou</span>
-                <p className="ters-desc">Pola grammar JLPT lengkap per level: penjelasan, penyambungan, contoh kalimat.</p>
-                <div className="ters-foot"><div className="ters-prog"><div className="tp-track"><div className="tp-fill full" style={{ width: "100%" }} /></div><span className="tp-pct">100%</span></div><span className="ters-cta">Buka Bunpou →</span></div>
+          {/* Materi Belajar */}
+          <div className="m3-sec"><h2>Materi Belajar</h2><span className="b">2</span><span className="r">Referensi + drill — nyambung ke status latihanmu</span></div>
+          <div className="m3-duo">
+            <Link href="/materi/bunpou" className="mat card gold">
+              <div className="mat-g gold"><span className="gl">文</span></div>
+              <div className="mat-b">
+                <span className="mat-eyebrow gold">Tata Bahasa</span>
+                <span className="mat-t">Bunpou</span>
+                <span className="mat-d">Pola grammar JLPT lengkap per level: penjelasan, penyambungan, contoh kalimat, drill per pola.</span>
+                <div className="mat-foot"><div className="mat-track"><i className="gold" style={{ width: "100%" }} /></div><span className="mat-pct">siap dipakai</span><span className="mat-go">Buka Bunpou →</span></div>
               </div>
             </Link>
+            <div className="mat card">
+              <div className="mat-g"><span className="gl">語</span></div>
+              <div className="mat-b">
+                <span className="mat-eyebrow">Kosakata Terstruktur</span>
+                <span className="mat-t">Kotoba <span className="mat-soon">SOON</span></span>
+                <span className="mat-d">Kata per dek tema — flash mode, simpan ⭐ ke Kamus, status per kata dari latihanmu.</span>
+                <div className="mat-foot"><div className="mat-track"><i style={{ width: "60%" }} /></div><span className="mat-pct">disiapin</span><span className="mat-go" style={{ color: "var(--text-dim)" }}>Coming soon</span></div>
+              </div>
+            </div>
           </div>
-        </section>
 
-        {/* ═══ MENDATANG ═══ */}
-        <section>
-          <div className="mat-section-head"><h2 className="mat-section-title">Materi mendatang <span className="mat-section-count muted-count">3</span></h2></div>
-          <div className="mn-strip">
+          {/* Mendatang */}
+          <div className="m3-sec"><h2>Materi Mendatang</h2><span className="b muted">3</span></div>
+          <div className="m3-soon card">
             {[["字", "Kanji", "Karakter per level, urutan stroke"], ["聴", "Choukai", "Listening dengan audio terstruktur"], ["読", "Dokkai", "Teks bacaan panjang + pembahasan"]].map(([g, t, d]) => (
-              <div className="mn-item" key={t}>
-                <div className="mn-g">{g}<span className="mn-lock"><Lock size={8} strokeWidth={2.5} /></span></div>
-                <div className="mn-m"><div className="mn-t">{t}</div><div className="mn-d">{d}</div></div>
+              <div className="soon-i" key={t}>
+                <span className="soon-ic">{g}<span className="lk">🔒</span></span>
+                <div><div className="soon-t">{t}</div><div className="soon-s">{d}</div></div>
               </div>
             ))}
-            <div className="mn-vote"><span className="mn-vote-t">Mana yang paling kamu butuhin?</span><button className="mn-vote-btn" onClick={() => alert("Makasih! Fitur vote materi lagi disiapin 🙌")}>Vote materi berikutnya →</button></div>
+            <div className="soon-vote"><span className="t">Mana yang paling kamu butuhin?</span><button className="vbtn" onClick={() => alert("Makasih! Fitur vote materi lagi disiapin 🙌")}>Vote materi berikutnya →</button></div>
           </div>
-        </section>
+        </div>
       </main>
     </>
+  );
+}
+
+/* satu bagian ujian (筆記 / 聴解) di dalam kartu */
+function Part({ e, type, teaser, onOpen }: { e?: Exam; type: ExType; teaser: boolean; onOpen: (e?: Exam) => void }) {
+  const isCho = type === "聴解";
+  if (!e) {
+    return (
+      <div className="part disabled">
+        <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
+        <div className="part-m"><div className="part-t">{type}</div><div className="part-s">Belum tersedia</div></div>
+        <span className="part-soon">segera</span>
+      </div>
+    );
+  }
+  const pct = pctOf(e);
+  const bad = pct != null && pct < 65;
+  const click = () => { if (!teaser) onOpen(e); };
+  return (
+    <div className="part" onClick={click} role="button" tabIndex={0}>
+      <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
+      <div className="part-m">
+        <div className="part-t">{type} · {e.total} soal</div>
+        <div className="part-s">{pct != null ? `Terakhir ${pct}% · ${relDate(e.created_at)}` : isCho ? "~50 menit · audio" : "belum dikerjain"}</div>
+      </div>
+      {pct != null
+        ? <><span className="part-score" style={bad ? { background: "rgba(212,160,74,0.15)", color: "var(--warning)" } : undefined}>{pct}%</span><span className="part-go">{teaser ? "🔒" : bad ? "↻ Ulangi" : "Review"}</span></>
+        : <span className="part-go">{teaser ? "🔒 Upgrade" : "Mulai →"}</span>}
+    </div>
   );
 }
