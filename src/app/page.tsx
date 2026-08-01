@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav } from "@/components/v2";
@@ -14,7 +14,18 @@ interface Session {
   score: number | null;
   created_at: string;
   section?: string | null;
+  stats?: { answered: number; correct: number; perCat?: Record<string, { a: number; c: number }> } | null;
+  kind?: string | null;
 }
+
+/* 5 kategori — urutan tampilan sama kayak desain */
+const FOCUS_CATS = [
+  { jp: "文字", ro: "Moji" }, { jp: "語彙", ro: "Goi" }, { jp: "文法", ro: "Bunpou" },
+  { jp: "読解", ro: "Dokkai" }, { jp: "聴解", ro: "Choukai" },
+];
+const DAY_LETTER = ["M", "S", "S", "R", "K", "J", "S"]; // getDay 0=Minggu … 6=Sabtu
+type Focus = { jp: string; ro: string; pct: number | null; n: number };
+type WeekDay = { d: string; h: number; v: number; now: boolean };
 
 const categoryGlyph: Record<string, string> = { "文法": "文", "語彙": "語", "文字": "字", "読解": "読", "AI": "全" };
 /* warna glyph riwayat per section/kategori */
@@ -52,6 +63,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("Yusuf");
   const [meta, setMeta] = useState<{ date: string; days: number | null }>({ date: "", days: null });
+  const [focus, setFocus] = useState<Focus[]>([]);
+  const [week, setWeek] = useState<WeekDay[]>([]);
+  const [activeDays, setActiveDays] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -70,19 +84,55 @@ export default function Home() {
 
       const [profileRes, sessionRes, kotobaRes] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
-        supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section")
-          .eq("user_id", user.id).order("created_at", { ascending: false }).limit(30),
+        supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section,ai_result->stats,ai_result->kind")
+          .eq("user_id", user.id).order("created_at", { ascending: false }).limit(300),
         supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       ]);
       if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
       if (kotobaRes.count != null) setKotoba(kotobaRes.count);
 
       const sess = (sessionRes.data ?? []) as unknown as Session[];
-      setSessions(sess.slice(0, 4));
-      setTotalSoal(sess.reduce((s, r) => s + (r.total ?? 0), 0));
-      setResume(sess.find(r => r.score == null) ?? sess[0] ?? null);
-      const scored = sess.filter(r => r.score != null && r.total);
-      if (scored.length > 0) setAvgScore(Math.round(scored.reduce((s, r) => s + (r.score! / r.total), 0) / scored.length * 100));
+      const practiced = sess.filter(r => r.score != null && r.total);       // sesi yang udah dikerjain
+      // Riwayat: sembunyiin import bank soal yang belum dikerjain (materi/riwayat split)
+      const riwayat = sess.filter(r => !(r.kind === "materi" && r.score == null));
+
+      setSessions(riwayat.slice(0, 4));
+      setTotalSoal(sess.reduce((s, r) => s + (r.total ?? 0), 0)); // ukuran library soal (bank + analisis)
+      setResume(riwayat.find(r => r.score == null) ?? riwayat[0] ?? sess[0] ?? null);
+      if (practiced.length > 0) setAvgScore(Math.round(practiced.reduce((s, r) => s + (r.score! / r.total), 0) / practiced.length * 100));
+
+      /* Fokus per-kategori (all-time, dari ai_result.stats.perCat) */
+      const catAgg: Record<string, { a: number; c: number }> = {};
+      for (const s of sess) {
+        for (const [k, v] of Object.entries(s.stats?.perCat ?? {})) {
+          const b = (catAgg[k] ??= { a: 0, c: 0 });
+          b.a += v.a ?? 0; b.c += v.c ?? 0;
+        }
+      }
+      setFocus(FOCUS_CATS.map(c => {
+        const b = catAgg[c.jp];
+        return { ...c, pct: b && b.a > 0 ? Math.round((b.c / b.a) * 100) : null, n: b?.a ?? 0 };
+      }));
+
+      /* Aktivitas 7 hari terakhir (soal dijawab per hari, dari stats.answered) */
+      const perDay: Record<string, number> = {};
+      for (const s of sess) {
+        const ans = s.stats?.answered ?? 0;
+        if (!ans) continue;
+        const d = new Date(s.created_at);
+        perDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] = (perDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] ?? 0) + ans;
+      }
+      const wk: WeekDay[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const v = perDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] ?? 0;
+        wk.push({ d: DAY_LETTER[d.getDay()], v, h: 0, now: i === 0 });
+      }
+      const maxV = Math.max(1, ...wk.map(w => w.v));
+      wk.forEach(w => (w.h = w.v > 0 ? Math.max(8, Math.round((w.v / maxV) * 100)) : 0));
+      setWeek(wk);
+      setActiveDays(wk.filter(w => w.v > 0).length);
+
       setLoading(false);
     }
     load();
@@ -90,6 +140,11 @@ export default function Home() {
 
   const resumeHref = resume ? (resume.section === "choukai" ? `/choukai/${resume.id}` : `/latihan/${resume.id}`) : "/materi";
   const dash = "—";
+  const weakest = useMemo(() => {
+    const present = focus.filter(f => f.pct != null && f.n > 0);
+    if (!present.length) return null;
+    return present.reduce((lo, f) => (f.pct! < lo.pct! ? f : lo));
+  }, [focus]);
 
   return (
     <>
@@ -158,19 +213,23 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* fokus latihan 5 kategori */}
+              {/* fokus latihan 5 kategori — dari ai_result.stats (real) */}
               <div className="bv-fokus card">
                 <div className="f-head"><h3>Fokus Latihan — akurasi per kategori</h3><Link href="/progres?tab=stat">Statistik lengkap →</Link></div>
                 <div className="cats">
-                  {FOCUS.map(c => (
+                  {(focus.length ? focus : FOCUS_CATS.map(c => ({ ...c, pct: null as number | null, n: 0 }))).map(c => (
                     <div key={c.ro} className={`cat c-${c.ro.toLowerCase()}`}>
                       <div className="cat-jp">{c.jp}</div><div className="cat-ro">{c.ro}</div>
-                      <div className="cat-bar"><i style={{ width: `${c.pct}%` }} /></div>
-                      <div className="cat-pct">{c.pct}%</div><div className="cat-n">{c.n} soal</div>
+                      <div className="cat-bar"><i style={{ width: `${c.pct ?? 0}%` }} /></div>
+                      <div className="cat-pct">{c.pct != null ? `${c.pct}%` : "—"}</div><div className="cat-n">{c.n} soal</div>
                     </div>
                   ))}
                 </div>
-                <div className="f-note">💡 <span><b>読解 paling lemah (58%)</b> — pola salah: soal &quot;main idea&quot; teks panjang.</span><Link href="/materi" className="btn btn-p sm">Drill Dokkai →</Link></div>
+                {weakest ? (
+                  <div className="f-note">💡 <span><b>{weakest.jp} paling perlu digenjot ({weakest.pct}%)</b> — dari {weakest.n} soal yang kamu jawab.</span><Link href="/materi" className="btn btn-p sm">Latihan lagi →</Link></div>
+                ) : (
+                  <div className="f-note">💡 <span>Belum ada data akurasi — <b>kerjain latihan/ujian</b> dulu biar kategori kamu keliatan.</span><Link href="/materi" className="btn btn-p sm">Mulai →</Link></div>
+                )}
               </div>
 
               {/* materi shortcuts */}
@@ -194,13 +253,13 @@ export default function Home() {
               </div>
 
               <div className="bv-scard card">
-                <div className="s-h">Aktivitas 7 hari <span className="r">+18% vs lalu</span></div>
+                <div className="s-h">Aktivitas 7 hari <span className="r">soal dijawab</span></div>
                 <div className="wk">
-                  {WEEK.map((c, i) => (
-                    <div className="wkc" key={i}><div className={`wkb${c.mut ? " mut" : ""}${c.now ? " now" : ""}`} style={{ height: `${Math.max(c.v, 5)}%` }} /><span className={`wkl${c.now ? " now" : ""}`}>{c.d}</span></div>
+                  {(week.length ? week : Array.from({ length: 7 }, (_, i) => ({ d: DAY_LETTER[i], h: 0, v: 0, now: i === 6 }))).map((c, i) => (
+                    <div className="wkc" key={i}><div className={`wkb${c.v === 0 ? " mut" : ""}${c.now ? " now" : ""}`} style={{ height: `${Math.max(c.h, 5)}%` }} title={`${c.v} soal`} /><span className={`wkl${c.now ? " now" : ""}`}>{c.d}</span></div>
                   ))}
                 </div>
-                <div className="wk-note"><b>6 dari 7 hari</b> aktif — streak {streak} hari 🔥 jaga hari ini!</div>
+                <div className="wk-note">{activeDays > 0 ? <><b>{activeDays} dari 7 hari</b> aktif — streak {streak} hari 🔥 jaga hari ini!</> : <>Belum ada aktivitas minggu ini — <b>mulai hari ini</b> 💪</>}</div>
               </div>
 
               <div className="bv-scard card">
@@ -234,16 +293,3 @@ export default function Home() {
   );
 }
 
-/* static — TODO: per-kategori accuracy dari sessions */
-const FOCUS = [
-  { jp: "文字", ro: "Moji", pct: 90, n: 124 },
-  { jp: "語彙", ro: "Goi", pct: 81, n: 156 },
-  { jp: "文法", ro: "Bunpou", pct: 72, n: 203 },
-  { jp: "読解", ro: "Dokkai", pct: 58, n: 89 },
-  { jp: "聴解", ro: "Choukai", pct: 84, n: 67 },
-];
-/* static — TODO: aggregate sessions by day-of-week */
-const WEEK: { d: string; v: number; mut?: boolean; now?: boolean }[] = [
-  { d: "S", v: 34 }, { d: "S", v: 58 }, { d: "R", v: 6, mut: true }, { d: "K", v: 74 },
-  { d: "J", v: 48 }, { d: "S", v: 62 }, { d: "M", v: 88, now: true },
-];
