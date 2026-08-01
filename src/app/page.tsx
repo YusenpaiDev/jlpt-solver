@@ -62,6 +62,7 @@ export default function Home() {
   const [resume, setResume] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("Yusuf");
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [meta, setMeta] = useState<{ date: string; days: number | null }>({ date: "", days: null });
   const [focus, setFocus] = useState<Focus[]>([]);
   const [week, setWeek] = useState<WeekDay[]>([]);
@@ -81,14 +82,19 @@ export default function Home() {
       if (!user) { setLoading(false); return; }
       const first = (user.user_metadata?.full_name || user.email || "Yusuf").split(/[ @]/)[0];
       setName(first.charAt(0).toUpperCase() + first.slice(1));
+      // dari user_metadata dulu (Google OAuth), nanti ditimpa profiles.avatar_url kalau ada
+      setAvatar(user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null);
 
       const [profileRes, sessionRes, kotobaRes] = await Promise.all([
-        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+        supabase.from("profiles").select("streak, avatar_url").eq("id", user.id).single(),
         supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section,ai_result->stats,ai_result->kind")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(300),
         supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       ]);
-      if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
+      if (profileRes.data) {
+        setStreak(profileRes.data.streak ?? 0);
+        if (profileRes.data.avatar_url) setAvatar(profileRes.data.avatar_url);
+      }
       if (kotobaRes.count != null) setKotoba(kotobaRes.count);
 
       const sess = (sessionRes.data ?? []) as unknown as Session[];
@@ -163,7 +169,7 @@ export default function Home() {
               <span className="bv-pill streak"><span className="fl">🔥</span> <b>{streak}</b> hari</span>
               <div className="bv-xp"><div className="bv-xp-top"><span>Level 8</span><b>{xp} / {xpTarget} XP</b></div><div className="bv-xp-bar"><i style={{ width: `${Math.round(xp / xpTarget * 100)}%` }} /></div></div>
               <span className="bv-lv">N2</span>
-              <div className="bv-ava">{name[0]}</div>
+              <div className="bv-ava">{avatar ? <img src={avatar} alt={name} className="bv-ava-img" referrerPolicy="no-referrer" /> : name[0]}</div>
             </div>
           </div>
 

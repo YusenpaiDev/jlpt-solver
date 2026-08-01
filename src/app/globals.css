@@ -8252,7 +8252,8 @@ html { scrollbar-gutter: stable; }
 .beranda-v2 .bv-xp-bar { height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
 .beranda-v2 .bv-xp-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg,var(--primary),var(--primary-hover)); box-shadow: 0 0 8px rgba(221,65,36,0.6); }
 .beranda-v2 .bv-lv { width: 38px; height: 38px; border-radius: 12px; background: rgba(221,65,36,0.16); border: 1px solid rgba(221,65,36,0.4); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #E8704F; }
-.beranda-v2 .bv-ava { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg,var(--primary),var(--danger)); display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #fff; border: 2px solid rgba(255,255,255,0.12); }
+.beranda-v2 .bv-ava { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg,var(--primary),var(--danger)); display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #fff; border: 2px solid rgba(255,255,255,0.12); overflow: hidden; }
+.beranda-v2 .bv-ava-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 /* resume */
 .beranda-v2 .bv-resume { display: flex; align-items: center; gap: 16px; padding: 15px 20px; margin-bottom: 16px; border-radius: 16px; background: linear-gradient(135deg,rgba(221,65,36,0.14),var(--surface)); border: 1px solid rgba(221,65,36,0.3); position: relative; overflow: hidden; }
