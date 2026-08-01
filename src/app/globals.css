@@ -8196,7 +8196,7 @@ html { scrollbar-gutter: stable; }
 /* ═══════════════════════════════════════════════════════════════
    BERANDA v2 — dashboard padat. Scoped di .beranda-v2.
    ═══════════════════════════════════════════════════════════════ */
-.beranda-v2 { --line: rgba(255,255,255,0.08); --line-2: rgba(255,255,255,0.14); --jp: var(--font-sans-jp); --jps: var(--font-serif-jp); max-width: 1240px; margin: 0 auto; }
+.beranda-v2 { --line: rgba(255,255,255,0.08); --line-2: rgba(255,255,255,0.14); --jp: var(--font-sans-jp); --jps: var(--font-serif-jp); }
 .beranda-v2 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
 .beranda-v2 a { text-decoration: none; }
 .beranda-v2 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 20px; border-radius: 99px; font-family: var(--font-sans); font-size: 12.5px; font-weight: 700; cursor: pointer; border: none; transition: .16s; white-space: nowrap; }
