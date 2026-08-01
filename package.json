@@ -10,6 +10,7 @@
     "analisis": "node scripts/batch-analisis.mjs",
     "import": "node scripts/import-json.mjs",
     "import-audio": "node scripts/import-audio.mjs",
+    "import-audio-split": "node scripts/import-audio-split.mjs",
     "import-bunpou": "node scripts/import-bunpou.mjs",
     "backup": "node scripts/backup-sessions.mjs"
   },
