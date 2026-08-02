@@ -7,7 +7,9 @@ import { Search, Star, Zap, Shuffle, ArrowLeft, ArrowRight, X, RotateCcw, Chevro
 import kotobaData from "@/data/kotoba-n2.json";
 
 interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; jlpt_level?: string; note?: string; }
-const DATA = ((kotobaData as { vocabulary?: Kotoba[] }).vocabulary ?? []).filter(w => w.word);
+// Grup yang namanya berlabel level lain (mis. "H-17 JLPT N3") = bukan N2 → dibuang dari deck.
+const NON_N2 = /\bN[1345]\b/;
+const DATA = ((kotobaData as { vocabulary?: Kotoba[] }).vocabulary ?? []).filter(w => w.word && !NON_N2.test(w.group || ""));
 // grup ikut urutan kemunculan di file (urutan Nihongo no Mori)
 const GROUP_ORDER: string[] = [];
 for (const w of DATA) if (!GROUP_ORDER.includes(w.group)) GROUP_ORDER.push(w.group);
