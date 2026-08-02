@@ -8527,7 +8527,7 @@ html { scrollbar-gutter: stable; }
 /* ═══════════════════════════════════════════════════════════════
    KOTOBA v2 — peta progres hafalan (Unit collapsible + detail panel)
    ═══════════════════════════════════════════════════════════════ */
-.kotoba-v2 { --line: rgba(255,255,255,0.08); --line-2: rgba(255,255,255,0.14); --jp: var(--font-sans-jp); --jps: var(--font-serif-jp); --danger2: #E0566F; --success2: #8FCB52; max-width: 1300px; }
+.kotoba-v2 { --line: rgba(255,255,255,0.08); --line-2: rgba(255,255,255,0.14); --jp: var(--font-sans-jp); --jps: var(--font-serif-jp); --danger2: #E0566F; --success2: #8FCB52; }
 .kotoba-v2 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
 .kotoba-v2 .btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 16px; border-radius: 99px; font-family: var(--font-sans); font-size: 11.5px; font-weight: 700; cursor: pointer; border: none; transition: .15s; }
 .kotoba-v2 .btn-p { background: var(--primary); color: #fff; box-shadow: 0 8px 20px -8px rgba(221,65,36,0.7); }
