@@ -40,6 +40,16 @@ function statFor(w: string): WStat {
   return { state: "new", correct: 0, wrong: 0, seen: 0 };
 }
 const DOT: Record<State, string> = { known: "d-known", seen: "d-seen", wrong: "d-wrong", new: "d-new" };
+
+/* Jenis kata (POS) — dari grup + akhiran ます. */
+type Pos = "動詞" | "副詞" | "接続詞";
+function posOf(w: Kotoba): Pos | null {
+  if (w.group === "副詞") return "副詞";
+  if (w.group === "接続詞") return "接続詞";
+  if (/ます$/.test(w.word) || w.group === "動詞" || w.group.includes("合う")) return "動詞";
+  return null;
+}
+const POS_LIST: Pos[] = ["動詞", "副詞", "接続詞"];
 function hitsText(s: WStat): { t: string; bad?: boolean } {
   if (s.state === "wrong") return { t: `salah ${s.wrong}×`, bad: true };
   if (s.state === "known") return { t: `benar ${s.correct}×` };
@@ -55,6 +65,7 @@ export default function KotobaDeck() {
 
   const [query, setQuery] = useState("");
   const [statusF, setStatusF] = useState<"all" | State | "fav">("all");
+  const [posF, setPosF] = useState<Pos | null>(null);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([GROUP_ORDER[0]]));
   const [sel, setSel] = useState<Kotoba | null>(null);
 
@@ -82,8 +93,12 @@ export default function KotobaDeck() {
   /* ringkasan header (dari dummy status) */
   const summary = useMemo(() => {
     let known = 0, seen = 0, wrong = 0, neu = 0;
-    for (const w of DATA) { const s = statFor(w.word).state; if (s === "known") known++; else if (s === "seen") seen++; else if (s === "wrong") wrong++; else neu++; }
-    return { known, seen, wrong, neu };
+    const pos: Record<Pos, number> = { "動詞": 0, "副詞": 0, "接続詞": 0 };
+    for (const w of DATA) {
+      const s = statFor(w.word).state; if (s === "known") known++; else if (s === "seen") seen++; else if (s === "wrong") wrong++; else neu++;
+      const p = posOf(w); if (p) pos[p]++;
+    }
+    return { known, seen, wrong, neu, pos };
   }, []);
 
   const match = (w: Kotoba, q: string) =>
@@ -93,6 +108,7 @@ export default function KotobaDeck() {
     const q = query.trim().toLowerCase();
     return GROUP_ORDER.map(name => {
       let ws = DATA.filter(w => w.group === name && match(w, q));
+      if (posF) ws = ws.filter(w => posOf(w) === posF);
       if (statusF === "fav") ws = ws.filter(w => favs.has(w.word));
       else if (statusF !== "all") ws = ws.filter(w => statFor(w.word).state === statusF);
       ws = ws.slice().sort((a, b) => (a.reading ?? "").localeCompare(b.reading ?? "", "ja"));
@@ -100,9 +116,9 @@ export default function KotobaDeck() {
       const total = DATA.filter(w => w.group === name).length;
       return { name, words: ws, total, pct: total ? Math.round((known / total) * 100) : 0 };
     }).filter(g => g.words.length > 0);
-  }, [query, statusF, favs]);
+  }, [query, statusF, posF, favs]);
 
-  useEffect(() => { if (query.trim() || statusF !== "all") setOpenGroups(new Set(groups.map(g => g.name))); }, [query, statusF, groups]);
+  useEffect(() => { if (query.trim() || statusF !== "all" || posF) setOpenGroups(new Set(groups.map(g => g.name))); }, [query, statusF, posF, groups]);
 
   const toggleFav = async (w: Kotoba) => {
     if (busy) return;
@@ -181,6 +197,10 @@ export default function KotobaDeck() {
             <button className={`chip wrong${statusF === "wrong" ? " on" : ""}`} onClick={() => setStatusF("wrong")}><span className="d d-wrong" />Sering salah <span className="n">{summary.wrong}</span></button>
             <button className={`chip${statusF === "seen" ? " on" : ""}`} onClick={() => setStatusF("seen")}><span className="d d-seen" />Pernah muncul <span className="n">{summary.seen}</span></button>
             <button className={`chip${statusF === "new" ? " on" : ""}`} onClick={() => setStatusF("new")}><span className="d d-new" />Belum <span className="n">{summary.neu}</span></button>
+            <span className="csep" />
+            {POS_LIST.map(p => (
+              <button key={p} className={`chip${posF === p ? " on" : ""}`} onClick={() => setPosF(cur => cur === p ? null : p)}>{p} <span className="n">{summary.pos[p]}</span></button>
+            ))}
             <span className="csep" />
             <button className={`chip${statusF === "fav" ? " on" : ""}`} onClick={() => setStatusF("fav")}><Star size={11} fill={statusF === "fav" ? "currentColor" : "none"} /> Favorit {favs.size > 0 && <span className="n">{favs.size}</span>}</button>
           </div>
