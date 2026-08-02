@@ -31,6 +31,7 @@ interface AIQuestion {
   category?: "文法" | "語彙" | "文字" | "読解";
   passage?: string | null;
   needs_review?: boolean;
+  target?: string; // kata yang digarisbawahi (soal 文字/語彙) — biar jelas yg ditanya
 }
 interface VocabItem {
   word: string;
@@ -1655,7 +1656,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   };
 
   /* Highlight blanks like （　）（　　）in question text */
-  const renderQuestion = (text: string, accent: string) => {
+  const renderQuestion = (text: string, accent: string, target?: string) => {
     const parts = text.split(/(（[　\u3000 ]+）|\( *\))/g);
     return parts.map((part, i) => {
       if (/^（[　\u3000 ]+）$/.test(part) || /^\( *\)$/.test(part)) {
@@ -1672,6 +1673,17 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               letterSpacing: "0.1em",
             }}>
             ＿＿
+          </span>
+        );
+      }
+      // Garisbawahi kata target (soal 文字/語彙) — occurrence pertama di part ini.
+      if (target && part.includes(target)) {
+        const idx = part.indexOf(target);
+        return (
+          <span key={i}>
+            {part.slice(0, idx)}
+            <span style={{ borderBottom: `2px solid ${accent}`, fontWeight: 700, paddingBottom: 1 }}>{target}</span>
+            {part.slice(idx + target.length)}
           </span>
         );
       }
@@ -2085,7 +2097,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                         <p className="qc-v2-prompt font-jp-sans">
                           {useFuri
                             ? renderPassage(furiganaMarked[qKey])
-                            : renderQuestion(q.question, accent)}
+                            : renderQuestion(q.question, accent, q.target)}
                         </p>
                       );
                     })()}
