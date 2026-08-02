@@ -8620,3 +8620,45 @@ html { scrollbar-gutter: stable; }
   .kotoba-v2 .kv-wid, .kotoba-v2 .kv-whits { display: none; }
   .kotoba-v2 .kv-prog { flex-wrap: wrap; }
 }
+
+/* Kotoba v2 — status/tracking (dummy) + tema + chips */
+.kotoba-v2 .kv-src { display: inline-flex; align-items: center; gap: 6px; padding: 11px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 12.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.kotoba-v2 .kv-chips { display: flex; align-items: center; gap: 7px; margin-bottom: 20px; flex-wrap: wrap; }
+.kotoba-v2 .kv-chips .chip { padding: 7px 13px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); font-size: 11.5px; font-weight: 600; color: var(--text-dim); cursor: pointer; font-family: var(--font-sans); display: inline-flex; align-items: center; gap: 6px; transition: .14s; }
+.kotoba-v2 .kv-chips .chip:hover { color: var(--text-muted); border-color: var(--line-2); }
+.kotoba-v2 .kv-chips .chip.on { background: rgba(221,65,36,0.12); border-color: rgba(221,65,36,0.4); color: #E8704F; }
+.kotoba-v2 .kv-chips .chip .n { font-size: 10px; color: var(--text-dim); }
+.kotoba-v2 .kv-chips .chip.on .n { color: #E8704F; opacity: .75; }
+.kotoba-v2 .kv-chips .chip .d { width: 7px; height: 7px; border-radius: 50%; }
+.kotoba-v2 .kv-chips .chip.wrong.on { background: rgba(224,86,111,0.12); border-color: rgba(224,86,111,0.5); color: var(--danger2); }
+.kotoba-v2 .kv-chips .csep { width: 1px; height: 20px; background: var(--line-2); margin: 0 3px; }
+
+/* status dots */
+.kotoba-v2 .kv-dot.d-seen, .kotoba-v2 .kv-chips .d.d-seen { background: var(--warning); border: none; box-shadow: 0 0 6px rgba(212,160,74,0.5); }
+.kotoba-v2 .kv-dot.d-known { background: #8FCB52; border: none; box-shadow: 0 0 6px rgba(143,203,82,0.45); }
+.kotoba-v2 .kv-dot.d-wrong, .kotoba-v2 .kv-chips .d.d-wrong { background: var(--danger2); border: none; box-shadow: 0 0 7px rgba(224,86,111,0.6); }
+.kotoba-v2 .kv-whits.bad { color: var(--danger2); font-weight: 700; }
+
+/* tema unit */
+.kotoba-v2 .kv-ut .jpt { font-family: var(--jp); color: #E8704F; font-weight: 700; }
+.kotoba-v2 .kv-ut .thid { color: var(--text-muted); font-weight: 500; }
+
+/* unit track multi-segment (dummy: known hijau) */
+.kotoba-v2 .kv-upct { color: var(--success2); font-weight: 700; }
+
+/* status badge (detail) */
+.kotoba-v2 .kv-status.s-wrong { background: rgba(224,86,111,0.12); border-color: rgba(224,86,111,0.4); color: var(--danger2); }
+.kotoba-v2 .kv-status.s-known { background: rgba(143,203,82,0.12); border-color: rgba(143,203,82,0.4); color: var(--success2); }
+.kotoba-v2 .kv-status.s-seen { background: rgba(212,160,74,0.12); border-color: rgba(212,160,74,0.4); color: var(--warning); }
+
+/* jejak trace */
+.kotoba-v2 .kv-trace { display: flex; align-items: center; gap: 6px; }
+.kotoba-v2 .kv-trace .tr-i { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; }
+.kotoba-v2 .kv-trace .tr-ok { background: rgba(143,203,82,0.14); border: 1px solid rgba(143,203,82,0.4); color: var(--success2); }
+.kotoba-v2 .kv-trace .tr-no { background: rgba(224,86,111,0.13); border: 1px solid rgba(224,86,111,0.45); color: var(--danger2); }
+
+/* confusion */
+.kotoba-v2 .kv-conf { display: flex; flex-direction: column; gap: 6px; }
+.kotoba-v2 .kv-conf .conf-i { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); font-family: var(--jp); font-size: 13px; font-weight: 600; cursor: pointer; transition: .13s; }
+.kotoba-v2 .kv-conf .conf-i:hover { border-color: rgba(221,65,36,0.35); }
+.kotoba-v2 .kv-conf .conf-i .m { font-family: var(--font-sans); font-size: 10.5px; color: var(--text-dim); font-weight: 500; margin-left: auto; }
