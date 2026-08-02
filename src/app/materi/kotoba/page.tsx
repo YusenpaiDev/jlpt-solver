@@ -27,16 +27,14 @@ const THEME: Record<string, { jp: string; id: string; label?: string }> = {
   "Unit 12": { jp: "抽象", id: "Konsep abstrak" },
 };
 
-/* ── STATUS per kata: DUMMY deterministik (dari hash kata) biar tampilan
-   kelihatan "hidup" kayak desain. TODO: ganti ke tracking latihan asli. ── */
 function hash(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 type State = "known" | "seen" | "wrong" | "new";
 interface WStat { state: State; correct: number; wrong: number; seen: number; }
-function statFor(w: string): WStat {
-  const h = hash(w), r = h % 100;
-  if (r < 37) return { state: "known", correct: (h % 4) + 3, wrong: 0, seen: 0 };
-  if (r < 39) return { state: "wrong", correct: (h % 2), wrong: (h % 3) + 2, seen: 0 };
-  if (r < 68) return { state: "seen", correct: 0, wrong: 0, seen: (h % 2) + 1 };
+/* ── STATUS per kata dari tracking latihan asli. Belum ada sistemnya + user
+   belum latihan kotoba → JUJUR semua "belum" (jangan ngaku udah dikerjain).
+   TODO: pas tracking per-kata jadi, baca benar/salah dari situ. ── */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- param disimpen buat API tracking asli nanti
+function statFor(word: string): WStat {
   return { state: "new", correct: 0, wrong: 0, seen: 0 };
 }
 const DOT: Record<State, string> = { known: "d-known", seen: "d-seen", wrong: "d-wrong", new: "d-new" };
@@ -219,7 +217,7 @@ export default function KotobaDeck() {
                         <span className="cnt">{g.total} kata</span>
                       </span>
                       <div className="kv-utrack"><i style={{ width: `${g.pct}%` }} /></div>
-                      <span className="kv-upct">{g.pct}% dikuasai</span>
+                      <span className="kv-upct" style={g.pct === 0 ? { color: "var(--text-dim)", fontWeight: 500 } : undefined}>{g.pct === 0 ? "belum dilatih" : `${g.pct}% dikuasai`}</span>
                       <button className="kv-drill" onClick={e => { e.stopPropagation(); startFlash(DATA.filter(w => w.group === g.name)); }}><Zap size={11} /> Drill unit ({g.total})</button>
                     </div>
                     {open && (
@@ -267,7 +265,7 @@ export default function KotobaDeck() {
 
                   {selConf.length > 0 && (
                     <div className="kv-det-sec">
-                      <div className="kv-det-h">Sering ketuker sama</div>
+                      <div className="kv-det-h">Kata mirip (gampang ketuker)</div>
                       <div className="kv-conf">{selConf.map(c => <div className="conf-i" key={c.word} onClick={() => setSel(c)}>{c.word}<span className="m">{c.meaning}</span></div>)}</div>
                     </div>
                   )}
