@@ -19,6 +19,7 @@ interface Exam {
   score: number | null;
   section?: string | null;
   created_at: string;
+  ready?: boolean; // false = konten belum lengkap → lock "SOON"
 }
 type ExType = "筆記" | "聴解";
 function exType(e: Exam): ExType { return e.section === "choukai" ? "聴解" : "筆記"; }
@@ -61,7 +62,7 @@ export default function MateriHub() {
       const [p, ex] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
         supabase.from("sessions")
-          .select("id, level, title, total, score, created_at, ai_result->section")
+          .select("id, level, title, total, score, created_at, ai_result->section, ai_result->ready")
           .eq("user_id", user.id)
           .eq("ai_result->>kind", "materi")
           .order("created_at", { ascending: false }),
@@ -120,7 +121,7 @@ export default function MateriHub() {
   /* NEXT: grup terbaru yang belum lengkap di level yang dimiliki */
   const next = useMemo(() => groups.find(g => gStatus(g) !== "done"), [groups]);
 
-  const openPart = (e?: Exam) => { if (!e) return; router.push(exType(e) === "聴解" ? `/choukai/${e.id}` : `/latihan/${e.id}`); };
+  const openPart = (e?: Exam) => { if (!e || e.ready === false) return; router.push(exType(e) === "聴解" ? `/choukai/${e.id}` : `/latihan/${e.id}`); };
 
   return (
     <>
@@ -157,8 +158,8 @@ export default function MateriHub() {
                 </div>
               </div>
               <div className="acts">
-                {next.hisho && <button className="btn btn-p" onClick={() => openPart(next.hisho)}>▶ Mulai 筆記</button>}
-                {next.choukai && <button className="btn btn-g" onClick={() => openPart(next.choukai)}>🎧 Atau 聴解 dulu</button>}
+                {next.hisho && next.hisho.ready !== false && <button className="btn btn-p" onClick={() => openPart(next.hisho)}>▶ Mulai 筆記</button>}
+                {next.choukai && next.choukai.ready !== false && <button className="btn btn-g" onClick={() => openPart(next.choukai)}>🎧 Atau 聴解 dulu</button>}
               </div>
             </div>
           )}
@@ -270,6 +271,15 @@ function Part({ e, type, teaser, onOpen }: { e?: Exam; type: ExType; teaser: boo
         <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
         <div className="part-m"><div className="part-t">{type}</div><div className="part-s">Belum tersedia</div></div>
         <span className="part-soon">segera</span>
+      </div>
+    );
+  }
+  if (e.ready === false) {
+    return (
+      <div className="part soon">
+        <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
+        <div className="part-m"><div className="part-t">{type} · {e.total} soal</div><div className="part-s">Lagi disiapin — segera hadir</div></div>
+        <span className="part-soon">🔒 SOON</span>
       </div>
     );
   }
