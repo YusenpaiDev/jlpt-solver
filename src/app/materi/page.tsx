@@ -233,15 +233,15 @@ export default function MateriHub() {
                 <div className="mat-foot"><div className="mat-track"><i className="gold" style={{ width: "100%" }} /></div><span className="mat-pct">siap dipakai</span><span className="mat-go">Buka Bunpou →</span></div>
               </div>
             </Link>
-            <div className="mat card">
+            <Link href="/materi/kotoba" className="mat card" style={{ textDecoration: "none" }}>
               <div className="mat-g"><span className="gl">語</span></div>
               <div className="mat-b">
                 <span className="mat-eyebrow">Kosakata Terstruktur</span>
-                <span className="mat-t">Kotoba <span className="mat-soon">SOON</span></span>
-                <span className="mat-d">Kata per dek tema — flash mode, simpan ⭐ ke Kamus, status per kata dari latihanmu.</span>
-                <div className="mat-foot"><div className="mat-track"><i style={{ width: "60%" }} /></div><span className="mat-pct">disiapin</span><span className="mat-go" style={{ color: "var(--text-dim)" }}>Coming soon</span></div>
+                <span className="mat-t">Kotoba</span>
+                <span className="mat-d">585 kata N2 kurasi <b>Nihongo no Mori</b> — flash mode per tema, simpan ⭐ ke Kamus.</span>
+                <div className="mat-foot"><div className="mat-track"><i style={{ width: "100%" }} /></div><span className="mat-pct">585 kata</span><span className="mat-go">Buka Kotoba →</span></div>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Mendatang */}

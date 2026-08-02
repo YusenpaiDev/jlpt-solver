@@ -1,0 +1,5271 @@
+{
+  "title": "JLPT N2 — Kotoba (Kosakata) 585 kata",
+  "count": 585,
+  "vocabulary": [
+    {
+      "word": "行きます",
+      "reading": "いきます",
+      "meaning": "pergi ke",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "乗ります",
+      "reading": "のります",
+      "meaning": "menaiki, naik ke",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "入ります",
+      "reading": "はいります",
+      "meaning": "masuk ke",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "住みます",
+      "reading": "すみます",
+      "meaning": "tinggal di",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "会います",
+      "reading": "あいます",
+      "meaning": "bertemu dengan",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "到着します",
+      "reading": "とうちゃくします",
+      "meaning": "sampai, tiba di",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "泊まります",
+      "reading": "とまります",
+      "meaning": "menginap di",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "座ります",
+      "reading": "すわります",
+      "meaning": "duduk di",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "勤めます",
+      "reading": "つとめます",
+      "meaning": "bekerja di",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "向かいます",
+      "reading": "むかいます",
+      "meaning": "menuju ke",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "来ます",
+      "reading": "きます",
+      "meaning": "datang ke",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "帰ります",
+      "reading": "かえります",
+      "meaning": "pulang ke",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "通います",
+      "reading": "かよいます",
+      "meaning": "rutin pergi ke",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "出席します",
+      "reading": "しゅっせきします",
+      "meaning": "hadir di",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "遅れます",
+      "reading": "おくれます",
+      "meaning": "terlambat",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "慣れます",
+      "reading": "なれます",
+      "meaning": "terbiasa",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "関わります",
+      "reading": "かかわります",
+      "meaning": "berhubungan",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "飽きます",
+      "reading": "あきます",
+      "meaning": "menjadi bosan",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "集中します",
+      "reading": "しゅうちゅうします",
+      "meaning": "berkonsentrasi",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "応じます",
+      "reading": "おうじます",
+      "meaning": "merespon",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "賛成します",
+      "reading": "さんせいします",
+      "meaning": "setuju dengan",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "同意します",
+      "reading": "どういします",
+      "meaning": "setuju dengan",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "従います",
+      "reading": "したがいます",
+      "meaning": "patuh dengan",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "参加します",
+      "reading": "さんかします",
+      "meaning": "mengikuti, ikut serta dalam",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "合格します",
+      "reading": "ごうかくします",
+      "meaning": "lulus ujian",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "負ける",
+      "reading": "まける",
+      "meaning": "kalah dari",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "勝つ",
+      "reading": "かつ",
+      "meaning": "menang dari",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "勤務する",
+      "reading": "きんむする",
+      "meaning": "bekerja di",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "戻ります",
+      "reading": "もどります",
+      "meaning": "kembali ke",
+      "group": "動詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "あっという間に",
+      "reading": "あっというまに",
+      "meaning": "dalam sekejap",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "あとで",
+      "reading": "あとで",
+      "meaning": "nanti",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "意外に",
+      "reading": "いがいに",
+      "meaning": "diluar dugaan, tidak sesuai ekspektasi",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "いきなり",
+      "reading": "いきなり",
+      "meaning": "tiba tiba, mendadak",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "一度に",
+      "reading": "いちどに",
+      "meaning": "sekalian, sekaligus",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "いつの間にか",
+      "reading": "いつのまにか",
+      "meaning": "entah kapan terjadinya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "いよいよ",
+      "reading": "いよいよ",
+      "meaning": "sebentar lagi",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "思わず",
+      "reading": "おもわず",
+      "meaning": "tanpa dipikirkan matang matang, reflek",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "勝手に",
+      "reading": "かってに",
+      "meaning": "dengan seenaknya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "かなり",
+      "reading": "かなり",
+      "meaning": "lumayan",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "きちんと",
+      "reading": "きちんと",
+      "meaning": "dengan baik, dengan rapi",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "結局",
+      "reading": "けっきょく",
+      "meaning": "pada akhirnya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "結構",
+      "reading": "けっこう",
+      "meaning": "lumayan",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ざっと",
+      "reading": "ざっと",
+      "meaning": "sekilas, tidak secara teliti",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "じっと",
+      "reading": "じっと",
+      "meaning": "melihat dengan seksama, tidak bergerak",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "実は",
+      "reading": "じつは",
+      "meaning": "sebenarnya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "しばしば",
+      "reading": "しばしば",
+      "meaning": "sering",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "しばらく",
+      "reading": "しばらく",
+      "meaning": "sementara waktu",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "徐々に",
+      "reading": "じょじょに",
+      "meaning": "sedikit demi sedikit",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ずいぶん",
+      "reading": "ずいぶん",
+      "meaning": "lumayan",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "少なくとも",
+      "reading": "すくなくとも",
+      "meaning": "paling tidak, setidaknya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "少しずつ",
+      "reading": "すこしずつ",
+      "meaning": "sedikit demi sedikit",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ずっと",
+      "reading": "ずっと",
+      "meaning": "terus menerus, berbeda jauh",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そろそろ",
+      "reading": "そろそろ",
+      "meaning": "sebentar lagi, segera",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "たいてい",
+      "reading": "たいてい",
+      "meaning": "sebagian besar",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "だいぶ",
+      "reading": "だいぶ",
+      "meaning": "lumayan",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "たまたま",
+      "reading": "たまたま",
+      "meaning": "kebetulan",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "たまに",
+      "reading": "たまに",
+      "meaning": "jarang, kadang",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "つい",
+      "reading": "つい",
+      "meaning": "tanpa dipikirkan matang matang, reflek",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ついに",
+      "reading": "ついに",
+      "meaning": "akhirnya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "常に",
+      "reading": "つねに",
+      "meaning": "selalu (dalam keadaan)",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "できれば",
+      "reading": "できれば",
+      "meaning": "sebisa mungkin",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "とうとう",
+      "reading": "とうとう",
+      "meaning": "akhirnya (negatif)",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "突然",
+      "reading": "とつぜん",
+      "meaning": "tiba tiba, mendadak",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "とにかく",
+      "reading": "とにかく",
+      "meaning": "pokoknya, intinya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "なるべく",
+      "reading": "なるべく",
+      "meaning": "sebisa mungkin",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ますます",
+      "reading": "ますます",
+      "meaning": "semakin",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "めったに",
+      "reading": "めったに",
+      "meaning": "sangat jarang",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もしかしたら",
+      "reading": "もしかしたら",
+      "meaning": "mungkin saja",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もちろん",
+      "reading": "もちろん",
+      "meaning": "tentu saja, pasti",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "やっと",
+      "reading": "やっと",
+      "meaning": "akhirnya (positif)",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "やはり",
+      "reading": "やはり",
+      "meaning": "sudah kuduga, sesuai pemikiran awal",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "わざと",
+      "reading": "わざと",
+      "meaning": "dengan sengaja",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "一度",
+      "reading": "いちど",
+      "meaning": "sekali",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "一生懸命",
+      "reading": "いっしょうけんめい",
+      "meaning": "dengan sekuat tenaga",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "代わりに",
+      "reading": "かわりに",
+      "meaning": "sebagai gantinya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "必ず",
+      "reading": "かならず",
+      "meaning": "pasti (positif)",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "きっと",
+      "reading": "きっと",
+      "meaning": "pasti (tebakan, harapan)",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "これから",
+      "reading": "これから",
+      "meaning": "mulai saat ini, mulai sekarang",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "最近",
+      "reading": "さいきん",
+      "meaning": "akhir akhir ini, belakangan ini",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "さっき",
+      "reading": "さっき",
+      "meaning": "tadi, barusan",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "十分に",
+      "reading": "じゅうぶんに",
+      "meaning": "dengan cukup",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "全然～ない",
+      "reading": "ぜんぜん～ない",
+      "meaning": "tidak sama sekali",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "それほど～ない",
+      "reading": "それほど～ない",
+      "meaning": "tidak se~ itu",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そんなに～ない",
+      "reading": "そんなに～ない",
+      "meaning": "tidak se~ itu",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "だいたい",
+      "reading": "だいたい",
+      "meaning": "kira kira, kurang lebih, sebagian besar",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "たまに",
+      "reading": "たまに",
+      "meaning": "kadang kadang",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ちっとも～ない",
+      "reading": "ちっとも～ない",
+      "meaning": "tidak~ sedikitpun",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "できるだけ",
+      "reading": "できるだけ",
+      "meaning": "sebisa mungkin",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "特に",
+      "reading": "とくに",
+      "meaning": "terutama",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "なかなか",
+      "reading": "なかなか",
+      "meaning": "tidak kunjung, sulit untuk, jarang ada",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "なるほど",
+      "reading": "なるほど",
+      "meaning": "oh begitu",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "非常に",
+      "reading": "ひじょうに",
+      "meaning": "sangat",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "普通",
+      "reading": "ふつう",
+      "meaning": "biasanya, normalnya",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ほとんど～ない",
+      "reading": "ほとんど～ない",
+      "meaning": "hampir tidak~ sama sekali",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もうすぐ",
+      "reading": "もうすぐ",
+      "meaning": "sebentar lagi",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "最も",
+      "reading": "もっとも",
+      "meaning": "yang paling",
+      "group": "副詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "あるいは",
+      "reading": "あるいは",
+      "meaning": "dan, atau",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "けれども",
+      "reading": "けれども",
+      "meaning": "tetapi",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "さて",
+      "reading": "さて",
+      "meaning": "baiklah",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "しかも",
+      "reading": "しかも",
+      "meaning": "ditambah lagi",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "したがって",
+      "reading": "したがって",
+      "meaning": "makanya, oleh karena itu",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "すると",
+      "reading": "すると",
+      "meaning": "kemudian",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そう言えば",
+      "reading": "そういえば",
+      "meaning": "ngomong ngomong",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そこで",
+      "reading": "そこで",
+      "meaning": "makanya, oleh karena itu",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "その上",
+      "reading": "そのうえ",
+      "meaning": "ditambah lagi",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そのため",
+      "reading": "そのため",
+      "meaning": "makanya, oleh karena itu",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "それでも",
+      "reading": "それでも",
+      "meaning": "meskipun begitu",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "それとも",
+      "reading": "それとも",
+      "meaning": "atau",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "それなのに",
+      "reading": "それなのに",
+      "meaning": "meskipun begitu",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "だが",
+      "reading": "だが",
+      "meaning": "tetapi",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "だけど",
+      "reading": "だけど",
+      "meaning": "tetapi",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ただし",
+      "reading": "ただし",
+      "meaning": "tetapi",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "だって",
+      "reading": "だって",
+      "meaning": "habisnya, soalnya",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ちなみに",
+      "reading": "ちなみに",
+      "meaning": "ngomong ngomong",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "つまり",
+      "reading": "つまり",
+      "meaning": "dengan kata lain",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "では",
+      "reading": "では",
+      "meaning": "kalau begitu, baiklah",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ところが",
+      "reading": "ところが",
+      "meaning": "tetapi, pada kenyataannya",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ところで",
+      "reading": "ところで",
+      "meaning": "ngomong ngomong",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "なお",
+      "reading": "なお",
+      "meaning": "dan, kemudian",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "なぜなら",
+      "reading": "なぜなら",
+      "meaning": "karena, menyatakan alasan",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "まず",
+      "reading": "まず",
+      "meaning": "pertama tama",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "また",
+      "reading": "また",
+      "meaning": "selain itu",
+      "group": "接続詞",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "いらいら",
+      "reading": "いらいら",
+      "meaning": "sedang emosian",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "うっかり",
+      "reading": "うっかり",
+      "meaning": "ceroboh, tidak sengaja",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぐっすり",
+      "reading": "ぐっすり",
+      "meaning": "lelap",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ざっと",
+      "reading": "ざっと",
+      "meaning": "sekilas, tidak secara teliti",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "じっと",
+      "reading": "じっと",
+      "meaning": "melihat dengan seksama, tidak bergerak",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "すっきり",
+      "reading": "すっきり",
+      "meaning": "lega, fresh",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そっくり",
+      "reading": "そっくり",
+      "meaning": "sangat mirip",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そっと",
+      "reading": "そっと",
+      "meaning": "dengan pelan, tanpa suara",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "たっぷり",
+      "reading": "たっぷり",
+      "meaning": "banyak",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "どきどき",
+      "reading": "どきどき",
+      "meaning": "deg-degan, berdebar",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "どんどん",
+      "reading": "どんどん",
+      "meaning": "semakin, secara bertubi tubi, terus menerus",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "にこにこ",
+      "reading": "にこにこ",
+      "meaning": "suka senyum",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "にっこり",
+      "reading": "にっこり",
+      "meaning": "tersenyum",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "のんびり",
+      "reading": "のんびり",
+      "meaning": "santai",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぴかぴか",
+      "reading": "ぴかぴか",
+      "meaning": "mengkilap",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぴったり",
+      "reading": "ぴったり",
+      "meaning": "sangat pas",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぺらぺら",
+      "reading": "ぺらぺら",
+      "meaning": "lancar berbicara bahasa asing, sangat tipis",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ほっと",
+      "reading": "ほっと",
+      "meaning": "lega (tidak khawatir)",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぼろぼろ",
+      "reading": "ぼろぼろ",
+      "meaning": "compang camping, kotor dan rusak",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "むっと",
+      "reading": "むっと",
+      "meaning": "jengkel, kesal, merasa tidak senang",
+      "group": "H-22 JLPT",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "知り合う",
+      "reading": "しりあう",
+      "meaning": "saling kenal",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "話し合う",
+      "reading": "はなしあう",
+      "meaning": "berdiskusi",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "抱き合う",
+      "reading": "だきあう",
+      "meaning": "saling berpelukan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": "(da)"
+    },
+    {
+      "word": "助け合う",
+      "reading": "たすけあう",
+      "meaning": "saling menolong",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "起き上がる",
+      "reading": "おきあがる",
+      "meaning": "berdiri, bangun",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "出来上がる",
+      "reading": "できあがる",
+      "meaning": "jadi (masakan, proyek)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "読み終わる",
+      "reading": "よみおわる",
+      "meaning": "selesai baca",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "食べ終わる",
+      "reading": "たべおわる",
+      "meaning": "selesai makan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "聞き返す",
+      "reading": "ききかえす",
+      "meaning": "mendengarkan sekali lagi, menanyakan balik",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "裏返す",
+      "reading": "うらがえす",
+      "meaning": "membalikkan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": "(uragae)"
+    },
+    {
+      "word": "着替える",
+      "reading": "きがえる",
+      "meaning": "ganti baju",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "取り替える",
+      "reading": "とりかえる",
+      "meaning": "mengganti yang lama dengan yang baru",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "言いかける",
+      "reading": "いいかける",
+      "meaning": "berbicara setengah",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "飲みかけ",
+      "reading": "のみかけ",
+      "meaning": "belum habis diminum",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "見かける",
+      "reading": "みかける",
+      "meaning": "melihat (kebetulan)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "話しかける",
+      "reading": "はなしかける",
+      "meaning": "mengajak bicara",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "走り切る",
+      "reading": "はしりきる",
+      "meaning": "berlari sampai akhir",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "使い切る",
+      "reading": "つかいきる",
+      "meaning": "memakai sampai habis",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "数え切れない",
+      "reading": "かぞえきれない",
+      "meaning": "tidak bisa terhitung",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "申し込む",
+      "reading": "もうしこむ",
+      "meaning": "mendaftar",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "押し込む",
+      "reading": "おしこむ",
+      "meaning": "mendorong sampai benar benar masuk",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "食べ過ぎる",
+      "reading": "たべすぎる",
+      "meaning": "terlalu banyak makan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "若すぎる",
+      "reading": "わかすぎる",
+      "meaning": "terlalu muda",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "大き過ぎる",
+      "reading": "おおきすぎる",
+      "meaning": "terlalu besar",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "生み出す",
+      "reading": "うみだす",
+      "meaning": "melahirkan (ide, karya, dll)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "貸し出す",
+      "reading": "かしだす",
+      "meaning": "meminjamkan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "降り出す",
+      "reading": "ふりだす",
+      "meaning": "mulai turun hujan/salju (tiba tiba)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "泣き出す",
+      "reading": "なきだす",
+      "meaning": "mulai menangis (tiba tiba)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "走り出す",
+      "reading": "はしりだす",
+      "meaning": "mulai berlari, mulai bergerak (tiba tiba)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "受け取る",
+      "reading": "うけとる",
+      "meaning": "menerima (langsung dengan tangan)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "聞き取る",
+      "reading": "ききとる",
+      "meaning": "mendengarkan (menangkap dengan baik)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "作り直す",
+      "reading": "つくりなおす",
+      "meaning": "membuat kembali",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "見直す",
+      "reading": "みなおす",
+      "meaning": "melihat kembali",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "かけ直す",
+      "reading": "かけなおす",
+      "meaning": "menelpon kembali",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "考え直す",
+      "reading": "かんがえなおす",
+      "meaning": "memikirkan kembali",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "咲き始める",
+      "reading": "さきはじめる",
+      "meaning": "mulai mekar",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "話し始める",
+      "reading": "はなしはじめる",
+      "meaning": "mulai berbicara",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "食べ始める",
+      "reading": "たべはじめる",
+      "meaning": "mulai makan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "走り回る",
+      "reading": "はしりまわる",
+      "meaning": "lari berputar mengelilingi",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "見て回る",
+      "reading": "みてまわる",
+      "meaning": "mengelilingi sambil melihat lihat",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "言い忘れる",
+      "reading": "いいわすれる",
+      "meaning": "lupa mengatakan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "置き忘れる",
+      "reading": "おきわすれる",
+      "meaning": "ketinggalan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "書き上げる",
+      "reading": "かきあげる",
+      "meaning": "selesai ditulis",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "書き込む",
+      "reading": "かきこむ",
+      "meaning": "menulis ke dalam",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "書き間違える",
+      "reading": "かきまちがえる",
+      "meaning": "salah menulis",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "立ち上がる",
+      "reading": "たちあがる",
+      "meaning": "berdiri (dari posisi duduk)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "立ち止まる",
+      "reading": "たちどまる",
+      "meaning": "berdiri berhenti (dari jalan atau lari)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "出会う",
+      "reading": "であう",
+      "meaning": "bertemu pertama kali",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "出迎える",
+      "reading": "でむかえる",
+      "meaning": "menjemput dan menyambut",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "通りかかる",
+      "reading": "とおりかかる",
+      "meaning": "lewat",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "通り過ぎる",
+      "reading": "とおりすぎる",
+      "meaning": "lewat (kelewatan dari tempat tujuan)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "取り上げる",
+      "reading": "とりあげる",
+      "meaning": "mengangkat (topik)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "取り入れる",
+      "reading": "とりいれる",
+      "meaning": "mengadopsi (ide)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "取り消す",
+      "reading": "とりけす",
+      "meaning": "membatalkan, cancel",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "取り出す",
+      "reading": "とりだす",
+      "meaning": "mengeluarkan dari dalam",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "取り付ける",
+      "reading": "とりつける",
+      "meaning": "memasang",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "乗り遅れる",
+      "reading": "のりおくれる",
+      "meaning": "telat naik (kereta, bus, pesawat)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "乗り換える",
+      "reading": "のりかえる",
+      "meaning": "pindah naik kendaraan umum",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "乗り越す",
+      "reading": "のりこす",
+      "meaning": "sengaja tidak turun di stasiun tujuan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "乗り過ごす",
+      "reading": "のりすごす",
+      "meaning": "tidak sengaja melewati stasiun tujuan",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "引き受ける",
+      "reading": "ひきうける",
+      "meaning": "menerima (tanggung jawab, pekerjaan, misi)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "引き出す",
+      "reading": "ひきだす",
+      "meaning": "menarik uang dari ATM, menarik keluar",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "見上げる",
+      "reading": "みあげる",
+      "meaning": "melihat ke atas",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "見送る",
+      "reading": "みおくる",
+      "meaning": "mengantar dan melihat sampai pergi",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "見落とす",
+      "reading": "みおとす",
+      "meaning": "terlewat (tidak seksama)",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "見下ろす",
+      "reading": "みおろす",
+      "meaning": "melihat ke bawah dari ketinggian",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "見下す",
+      "reading": "みくだす",
+      "meaning": "memandang rendah orang lain",
+      "group": "Gabungan 2 kata kerja 合う",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": "(kudasu)"
+    },
+    {
+      "word": "クラスメート",
+      "reading": "クラスメート",
+      "meaning": "teman sekelas",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "グループ",
+      "reading": "グループ",
+      "meaning": "grup",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "チーム",
+      "reading": "チーム",
+      "meaning": "team",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "プロ",
+      "reading": "プロフェッショナル",
+      "meaning": "profesional",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "アマチュア",
+      "reading": "アマ",
+      "meaning": "amatir",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "トレーニング",
+      "reading": "トレーニング",
+      "meaning": "training, latihan",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "マッサージ",
+      "reading": "マッサージ",
+      "meaning": "massage",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "アドバイス",
+      "reading": "アドバイス",
+      "meaning": "saran",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "アイデア",
+      "reading": "アイデア",
+      "meaning": "ide",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "トップ",
+      "reading": "トップ",
+      "meaning": "top, paling atas",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "スピード",
+      "reading": "スピード",
+      "meaning": "kecepatan",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ラッシュ",
+      "reading": "ラッシュ",
+      "meaning": "buru buru, sibuk",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "バイク",
+      "reading": "バイク",
+      "meaning": "sepeda, sepeda motor",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ヘルメット",
+      "reading": "ヘルメット",
+      "meaning": "helm",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "コンタクトレンズ",
+      "reading": "コンタクト",
+      "meaning": "kontak lensa",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ガラス",
+      "reading": "ガラス",
+      "meaning": "kaca",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "プラスチック",
+      "reading": "プラスチック",
+      "meaning": "plastik",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ベランダ",
+      "reading": "ベランダ",
+      "meaning": "beranda, balkoni",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ペット",
+      "reading": "ペット",
+      "meaning": "hewan peliharaan",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ベンチ",
+      "reading": "ベンチ",
+      "meaning": "tempat duduk panjang",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "デザイン",
+      "reading": "デザイン",
+      "meaning": "desain",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "バーゲンセール",
+      "reading": "バーゲンセール",
+      "meaning": "diskon",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "パート",
+      "reading": "パート",
+      "meaning": "part, kerja paruh waktu",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "コンビニエンスストア",
+      "reading": "コンビニエンスストア",
+      "meaning": "minimarket",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "レジ",
+      "reading": "レジ",
+      "meaning": "kasir",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "レシート",
+      "reading": "レシート",
+      "meaning": "resit, struk belanja",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "インスタント",
+      "reading": "インスタント",
+      "meaning": "instant",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ファストフード",
+      "reading": "ファストフード",
+      "meaning": "makanan cepat saji",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "フルーツ",
+      "reading": "フルーツ",
+      "meaning": "buah buahan",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "デザート",
+      "reading": "デザート",
+      "meaning": "dessert, makanan penutup",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "インターネット",
+      "reading": "インターネット",
+      "meaning": "internet",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "チャイム",
+      "reading": "チャイム",
+      "meaning": "lonceng",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "アナウンス",
+      "reading": "アナウンス",
+      "meaning": "pengumuman",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "メッセージ",
+      "reading": "メッセージ",
+      "meaning": "pesan",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "パンフレット",
+      "reading": "パンフレット",
+      "meaning": "brosur, pamflet",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "カード",
+      "reading": "カード",
+      "meaning": "kartu",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "インタビュー",
+      "reading": "インタビュー",
+      "meaning": "wawancara",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "アンケート",
+      "reading": "アンケート",
+      "meaning": "survey",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "データ",
+      "reading": "データ",
+      "meaning": "data",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "パーセント",
+      "reading": "パーセント",
+      "meaning": "persen",
+      "group": "Unit 6",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "濃い",
+      "reading": "こい",
+      "meaning": "pekat",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "薄い",
+      "reading": "うすい",
+      "meaning": "hambar, tipis",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "酸っぱい",
+      "reading": "すっぱい",
+      "meaning": "asam",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "臭い",
+      "reading": "くさい",
+      "meaning": "bau",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "おかしい",
+      "reading": "おかしい",
+      "meaning": "aneh",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "かっこいい",
+      "reading": "かっこいい",
+      "meaning": "keren",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "上手い",
+      "reading": "うまい",
+      "meaning": "jago",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "美味い",
+      "reading": "うまい",
+      "meaning": "enak",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "親しい",
+      "reading": "したしい",
+      "meaning": "akrab",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "詳しい",
+      "reading": "くわしい",
+      "meaning": "tahu secara detail",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "細かい",
+      "reading": "こまかい",
+      "meaning": "kecil kecil, terperinci",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "浅い",
+      "reading": "あさい",
+      "meaning": "dangkal",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "固い",
+      "reading": "かたい",
+      "meaning": "keras",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "硬い",
+      "reading": "かたい",
+      "meaning": "keras",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぬるい",
+      "reading": "ぬるい",
+      "meaning": "hangat kuku (agak hangat)",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "眩しい",
+      "reading": "まぶしい",
+      "meaning": "silau",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "蒸し暑い",
+      "reading": "むしあつい",
+      "meaning": "panas pengap",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "清潔",
+      "reading": "せいけつ",
+      "meaning": "bersih, higienis",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "新鮮",
+      "reading": "しんせん",
+      "meaning": "fresh, segar",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "豊か",
+      "reading": "ゆたか",
+      "meaning": "kaya, melimpah",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "立派",
+      "reading": "りっぱ",
+      "meaning": "hebat, luar biasa",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "正確",
+      "reading": "せいかく",
+      "meaning": "tepat",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "確か",
+      "reading": "たしか",
+      "meaning": "pasti",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "重要",
+      "reading": "じゅうよう",
+      "meaning": "penting",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "必要",
+      "reading": "ひつよう",
+      "meaning": "diperlukan",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もったいない",
+      "reading": "もったいない",
+      "meaning": "sayang untuk disia-siakan",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "すごい",
+      "reading": "すごい",
+      "meaning": "hebat, luar biasa",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ひどい",
+      "reading": "ひどい",
+      "meaning": "jahat, buruk",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "激しい",
+      "reading": "はげしい",
+      "meaning": "intens",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そっくり",
+      "reading": "そっくり",
+      "meaning": "mirip sekali",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": "**"
+    },
+    {
+      "word": "急",
+      "reading": "きゅう",
+      "meaning": "tiba tiba, mendadak",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "適当",
+      "reading": "てきとう",
+      "meaning": "tepat, sesuai, asal asalan",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "特別",
+      "reading": "とくべつ",
+      "meaning": "spesial",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "完全",
+      "reading": "かんぜん",
+      "meaning": "sepenuhnya, sempurna",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "盛ん",
+      "reading": "さかん",
+      "meaning": "populer, melimpah (MAKMUR)",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "様々",
+      "reading": "さまざま",
+      "meaning": "berbagai macam",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "可能",
+      "reading": "かのう",
+      "meaning": "memungkinkan",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "不可能",
+      "reading": "ふかのう",
+      "meaning": "tidak mungkin, mustahil",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "基本的",
+      "reading": "きほんてき",
+      "meaning": "secara dasar",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "国際的",
+      "reading": "こくさいてき",
+      "meaning": "secara internasional",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ばらばら",
+      "reading": "ばらばら",
+      "meaning": "terpisah pisah",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぼろぼろ",
+      "reading": "ぼろぼろ",
+      "meaning": "babak belur, compang camping",
+      "group": "Unit 7",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "非常に",
+      "reading": "ひじょうに",
+      "meaning": "sangat",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "大変",
+      "reading": "たいへん",
+      "meaning": "berat, susah, melelahkan",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ほとんど",
+      "reading": "ほとんど",
+      "meaning": "sebagian besar",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "大体",
+      "reading": "だいたい",
+      "meaning": "kurang lebih",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "かなり",
+      "reading": "かなり",
+      "meaning": "lumayan",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "随分",
+      "reading": "ずいぶん",
+      "meaning": "lumayan",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "結構",
+      "reading": "けっこう",
+      "meaning": "lumayan",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "大分",
+      "reading": "だいぶ",
+      "meaning": "lumayan",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もっと",
+      "reading": "もっと",
+      "meaning": "lagi, lebih lagi",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "すっかり",
+      "reading": "すっかり",
+      "meaning": "sama sekali, sepenuhnya",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "一杯",
+      "reading": "いっぱい",
+      "meaning": "secangkir, segelas",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぎりぎり",
+      "reading": "ぎりぎり",
+      "meaning": "hampir saja, sedikit lagi",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぴったり",
+      "reading": "ぴったり",
+      "meaning": "sangat pas",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "大抵",
+      "reading": "たいてい",
+      "meaning": "kebanyakan",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "同時に",
+      "reading": "どうじに",
+      "meaning": "pada saat yang sama",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "前もって",
+      "reading": "まえもって",
+      "meaning": "di muka, di awal, sebelumnya",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "すぐ",
+      "reading": "すぐ",
+      "meaning": "segera",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もうすぐ",
+      "reading": "もうすぐ",
+      "meaning": "sebentar lagi",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "突然",
+      "reading": "とつぜん",
+      "meaning": "tiba tiba",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "あっという間に",
+      "reading": "あっというまに",
+      "meaning": "dalam sekejap",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "いつの間にか",
+      "reading": "いつのまにか",
+      "meaning": "tanpa disadari",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "しばらく",
+      "reading": "しばらく",
+      "meaning": "untuk sementara",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ずっと",
+      "reading": "ずっと",
+      "meaning": "selalu, selamanya",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "相変わらず",
+      "reading": "あいかわらず",
+      "meaning": "seperti biasanya",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "次々に",
+      "reading": "つぎつぎに",
+      "meaning": "satu per satu, berkelanjutan",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "どんどん",
+      "reading": "どんどん",
+      "meaning": "semakin",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ますます",
+      "reading": "ますます",
+      "meaning": "semakin",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "やっと",
+      "reading": "やっと",
+      "meaning": "akhirnya (kalimat berunsur positif)",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "とうとう",
+      "reading": "とうとう",
+      "meaning": "akhirnya (kalimat berunsur negatif)",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ついに",
+      "reading": "ついに",
+      "meaning": "akhirnya",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もちろん",
+      "reading": "もちろん",
+      "meaning": "tentu saja",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "やはり",
+      "reading": "やはり",
+      "meaning": "sudah kuduga, sesuai yang aku pikirkan diawal",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "きっと",
+      "reading": "きっと",
+      "meaning": "pasti",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "是非",
+      "reading": "ぜひ",
+      "meaning": "dengan senang hati, tolong",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "なるべく",
+      "reading": "なるべく",
+      "meaning": "sebisa mungkin",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "案外",
+      "reading": "あんがい",
+      "meaning": "diluar dugaan, tidak sesuai ekspektasi",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もしかすると",
+      "reading": "もしかすると",
+      "meaning": "mungkin",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もしかしたら",
+      "reading": "もしかしたら",
+      "meaning": "mungkin",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "もしかして",
+      "reading": "もしかして",
+      "meaning": "mungkin",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "まさか",
+      "reading": "まさか",
+      "meaning": "jangan jangan, tidak mungkin",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "うっかり",
+      "reading": "うっかり",
+      "meaning": "secara tidak sengaja (ceroboh)",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "つい",
+      "reading": "つい",
+      "meaning": "secara tidak sengaja (karena tidak bisa menahan diri)",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "思わず",
+      "reading": "おもわず",
+      "meaning": "tanpa disengaja (tidak dipikirkan dengan baik)",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ほっと",
+      "reading": "ほっと",
+      "meaning": "lega",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "いらいら",
+      "reading": "いらいら",
+      "meaning": "kesal, sedang tempramen",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "のんびり",
+      "reading": "のんびり",
+      "meaning": "santai",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "実は",
+      "reading": "じつは",
+      "meaning": "sebenarnya",
+      "group": "Unit 8",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "読書",
+      "reading": "どくしょ",
+      "meaning": "baca buku",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "演奏",
+      "reading": "えんそう",
+      "meaning": "pertunjukan musik",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "芸術",
+      "reading": "げいじゅつ",
+      "meaning": "seni",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "検査",
+      "reading": "けんさ",
+      "meaning": "pemeriksaan, inspeksi",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "血液",
+      "reading": "けつえき",
+      "meaning": "darah",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "治療",
+      "reading": "ちりょう",
+      "meaning": "pengobatan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "症状",
+      "reading": "しょうじょう",
+      "meaning": "gejala (penyakit)",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "予防",
+      "reading": "よぼう",
+      "meaning": "pencegahan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "栄養",
+      "reading": "えいよう",
+      "meaning": "nutrisi",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "手術",
+      "reading": "しゅじゅつ",
+      "meaning": "operasi",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "死亡",
+      "reading": "しぼう",
+      "meaning": "mati, meninggal",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "命",
+      "reading": "いのち",
+      "meaning": "nyawa, kehidupan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "一生",
+      "reading": "いっしょう",
+      "meaning": "seumur hidup",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "誤解",
+      "reading": "ごかい",
+      "meaning": "salah paham",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "後悔",
+      "reading": "こうかい",
+      "meaning": "penyesalan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "訳",
+      "reading": "わけ",
+      "meaning": "alasan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "態度",
+      "reading": "たいど",
+      "meaning": "sikap",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "癖",
+      "reading": "くせ",
+      "meaning": "kebiasaan (buruk)",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "礼儀",
+      "reading": "れいぎ",
+      "meaning": "sikap, sopan santun",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "文句",
+      "reading": "もんく",
+      "meaning": "keluhan, komplain",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "表情",
+      "reading": "ひょうじょう",
+      "meaning": "raut wajah",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "表面",
+      "reading": "ひょうめん",
+      "meaning": "permukaan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "禁煙",
+      "reading": "きんえん",
+      "meaning": "dilarang merokok",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "禁止",
+      "reading": "きんし",
+      "meaning": "dilarang, melarang",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "完成",
+      "reading": "かんせい",
+      "meaning": "selesai",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "課題",
+      "reading": "かだい",
+      "meaning": "tugas",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "例外",
+      "reading": "れいがい",
+      "meaning": "pengecualian",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "基本",
+      "reading": "きほん",
+      "meaning": "dasar, basic",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "記録",
+      "reading": "きろく",
+      "meaning": "catatan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "状態",
+      "reading": "じょうたい",
+      "meaning": "situasi, keadaan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "出来事",
+      "reading": "できごと",
+      "meaning": "peristiwa",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "場面",
+      "reading": "ばめん",
+      "meaning": "scene, kejadian",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "機会",
+      "reading": "きかい",
+      "meaning": "kesempatan, peluang",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "距離",
+      "reading": "きょり",
+      "meaning": "jarak",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "提案",
+      "reading": "ていあん",
+      "meaning": "saran, ide",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "やり取り",
+      "reading": "やりとり",
+      "meaning": "saling berbicara (chat)",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "知識",
+      "reading": "ちしき",
+      "meaning": "pengetahuan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "実力",
+      "reading": "じつりょく",
+      "meaning": "kemampuan nyata, kemampuan asli",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "手段",
+      "reading": "しゅだん",
+      "meaning": "cara, metode",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "代表",
+      "reading": "だいひょう",
+      "meaning": "perwakilan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "影響",
+      "reading": "えいきょう",
+      "meaning": "pengaruh",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "効果",
+      "reading": "こうか",
+      "meaning": "efek",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "印象",
+      "reading": "いんしょう",
+      "meaning": "kesan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "印",
+      "reading": "しるし",
+      "meaning": "tanda",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "合図",
+      "reading": "あいず",
+      "meaning": "tanda",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "共通",
+      "reading": "きょうつう",
+      "meaning": "kesamaan, umum",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "強調",
+      "reading": "きょうちょう",
+      "meaning": "penekanan (pada perkataan)",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "省略",
+      "reading": "しょうりゃく",
+      "meaning": "disingkat",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "挑戦",
+      "reading": "ちょうせん",
+      "meaning": "mencoba tantangan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "やる気",
+      "reading": "やるき",
+      "meaning": "keinginan melakukan sesuatu, motivasi",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "勇気",
+      "reading": "ゆうき",
+      "meaning": "keberanian",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "資格",
+      "reading": "しかく",
+      "meaning": "sertifikat kualifikasi",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "申請",
+      "reading": "しんせい",
+      "meaning": "mendaftar, meng-apply",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "本人",
+      "reading": "ほんにん",
+      "meaning": "orang itu sendiri, orang tersebut",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "契約",
+      "reading": "けいやく",
+      "meaning": "kontrak",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "証明",
+      "reading": "しょうめい",
+      "meaning": "bukti, membuktikan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "変更",
+      "reading": "へんこう",
+      "meaning": "mengubah",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "保存",
+      "reading": "ほぞん",
+      "meaning": "menyimpan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "保護",
+      "reading": "ほご",
+      "meaning": "perlindungan, melindungi, menjaga",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "環境",
+      "reading": "かんきょう",
+      "meaning": "lingkungan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "資源",
+      "reading": "しげん",
+      "meaning": "sumber daya",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "不足",
+      "reading": "ふそく",
+      "meaning": "kekurangan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "平均",
+      "reading": "へいきん",
+      "meaning": "rata-rata",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "割合",
+      "reading": "わりあい",
+      "meaning": "perbandingan, rasio, persentase",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "商売",
+      "reading": "しょうばい",
+      "meaning": "bisnis",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "商品",
+      "reading": "しょうひん",
+      "meaning": "barang dagangan",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "質",
+      "reading": "しつ",
+      "meaning": "kualitas",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "型",
+      "reading": "かた",
+      "meaning": "tipe, bentuk",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "生産",
+      "reading": "せいさん",
+      "meaning": "produksi",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "消費",
+      "reading": "しょうひ",
+      "meaning": "konsumsi",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "物価",
+      "reading": "ぶっか",
+      "meaning": "harga barang",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "倒産",
+      "reading": "とうさん",
+      "meaning": "bangkrut",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "携帯",
+      "reading": "けいたい",
+      "meaning": "telepon genggam",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "現代",
+      "reading": "げんだい",
+      "meaning": "jaman sekarang",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "世紀",
+      "reading": "せいき",
+      "meaning": "abad",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "文化",
+      "reading": "ぶんか",
+      "meaning": "budaya",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "都市",
+      "reading": "とし",
+      "meaning": "kota",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "地方",
+      "reading": "ちほう",
+      "meaning": "wilayah lokal (bukan kota)",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "戦争",
+      "reading": "せんそう",
+      "meaning": "perang",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "平和",
+      "reading": "へいわ",
+      "meaning": "perdamaian, damai",
+      "group": "Unit 9",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "上る",
+      "reading": "のぼる",
+      "meaning": "mendaki, menaiki",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "下る",
+      "reading": "くだる",
+      "meaning": "menuruni",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "進む",
+      "reading": "すすむ",
+      "meaning": "bergerak maju",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "進める",
+      "reading": "すすめる",
+      "meaning": "melanjutkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "通る",
+      "reading": "とおる",
+      "meaning": "melewati",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "通す",
+      "reading": "とおす",
+      "meaning": "melewatkan, menembus",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "超える",
+      "reading": "こえる",
+      "meaning": "melampaui",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "過ぎる",
+      "reading": "すぎる",
+      "meaning": "terlewat",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "過ごす",
+      "reading": "すごす",
+      "meaning": "melewati (waktu)",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "移る",
+      "reading": "うつる",
+      "meaning": "bergerak pindah",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "移す",
+      "reading": "うつす",
+      "meaning": "memindahkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "連れる",
+      "reading": "つれる",
+      "meaning": "membawa serta",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "寄る",
+      "reading": "よる",
+      "meaning": "mampir",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "寄せる",
+      "reading": "よせる",
+      "meaning": "mendekatkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "与える",
+      "reading": "あたえる",
+      "meaning": "memberi",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "得る",
+      "reading": "える",
+      "meaning": "memperoleh",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "向く",
+      "reading": "むく",
+      "meaning": "menghadap",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "向ける",
+      "reading": "むける",
+      "meaning": "menghadapkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "勧める",
+      "reading": "すすめる",
+      "meaning": "menyarankan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": "**"
+    },
+    {
+      "word": "薦める",
+      "reading": "すすめる",
+      "meaning": "menyarankan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "任せる",
+      "reading": "まかせる",
+      "meaning": "mempercayakan, menyerahkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "守る",
+      "reading": "まもる",
+      "meaning": "melindungi",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "争う",
+      "reading": "あらそう",
+      "meaning": "bertarung, berlomba",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "望む",
+      "reading": "のぞむ",
+      "meaning": "mengharapkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "信じる",
+      "reading": "しんじる",
+      "meaning": "percaya",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "通じる",
+      "reading": "つうじる",
+      "meaning": "tersampaikan (bisa dimengerti)",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "飽きる",
+      "reading": "あきる",
+      "meaning": "menjadi bosan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "思いつく",
+      "reading": "おもいつく",
+      "meaning": "mendapat sebuah ide",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "思いやる",
+      "reading": "おもいやる",
+      "meaning": "penuh perhatian",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "熱中する",
+      "reading": "ねっちゅうする",
+      "meaning": "terobsesi",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "暮らす",
+      "reading": "くらす",
+      "meaning": "menjalani kehidupan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "巻く",
+      "reading": "まく",
+      "meaning": "menggulung",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "結ぶ",
+      "reading": "むすぶ",
+      "meaning": "mengikat",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "済む",
+      "reading": "すむ",
+      "meaning": "selesai",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "済ませる",
+      "reading": "すませる",
+      "meaning": "menyelesaikan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "出来る",
+      "reading": "できる",
+      "meaning": "bisa",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "切れる",
+      "reading": "きれる",
+      "meaning": "terputus, habis",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "切らす",
+      "reading": "きらす",
+      "meaning": "kehabisan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "伝わる",
+      "reading": "つたわる",
+      "meaning": "tersampaikan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "伝える",
+      "reading": "つたえる",
+      "meaning": "menyampaikan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "続く",
+      "reading": "つづく",
+      "meaning": "berlanjut",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "続ける",
+      "reading": "つづける",
+      "meaning": "melanjutkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "繋がる",
+      "reading": "つながる",
+      "meaning": "tersambung",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "繋ぐ",
+      "reading": "つなぐ",
+      "meaning": "menyambungkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "繋げる",
+      "reading": "つなげる",
+      "meaning": "menyambungkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "伸びる",
+      "reading": "のびる",
+      "meaning": "memanjang, melar",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "伸ばす",
+      "reading": "のばす",
+      "meaning": "memperpanjang",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "延びる",
+      "reading": "のびる",
+      "meaning": "memanjang (waktu)",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "延ばす",
+      "reading": "のばす",
+      "meaning": "memperpanjang (waktu)",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "重なる",
+      "reading": "かさなる",
+      "meaning": "tumpang tindih",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "重ねる",
+      "reading": "かさねる",
+      "meaning": "menumpuk",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "広がる",
+      "reading": "ひろがる",
+      "meaning": "tersebar",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "広げる",
+      "reading": "ひろげる",
+      "meaning": "menyebarkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "載る",
+      "reading": "のる",
+      "meaning": "dimuat",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "載せる",
+      "reading": "のせる",
+      "meaning": "memuat",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そろう",
+      "reading": "そろう",
+      "meaning": "terkumpul lengkap, rapi",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そろえる",
+      "reading": "そろえる",
+      "meaning": "mengumpulkan sampai lengkap, merapikan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "まとまる",
+      "reading": "まとまる",
+      "meaning": "diringkas, dijadikan satu",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "まとめる",
+      "reading": "まとめる",
+      "meaning": "meringkas, mengumpulkan menjadi satu",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "付く",
+      "reading": "つく",
+      "meaning": "menempel, *ada banyak arti lain",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "付ける",
+      "reading": "つける",
+      "meaning": "menempelkan, *ada banyak arti lain",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "たまる",
+      "reading": "たまる",
+      "meaning": "terkumpul",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ためる",
+      "reading": "ためる",
+      "meaning": "mengumpulkan, menabung",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "混じる",
+      "reading": "まじる",
+      "meaning": "tercampur",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "混ざる",
+      "reading": "まざる",
+      "meaning": "tercampur",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "溶ける",
+      "reading": "とける",
+      "meaning": "meleleh",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "解く",
+      "reading": "とく",
+      "meaning": "menjawab (kuis, soal)",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "溶く",
+      "reading": "とく",
+      "meaning": "melelehkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "含む",
+      "reading": "ふくむ",
+      "meaning": "termasuk",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "含める",
+      "reading": "ふくめる",
+      "meaning": "termasuk",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "抜ける",
+      "reading": "ぬける",
+      "meaning": "rontok, keluar",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "抜く",
+      "reading": "ぬく",
+      "meaning": "mencabut",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "現れる",
+      "reading": "あらわれる",
+      "meaning": "muncul",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "現す",
+      "reading": "あらわす",
+      "meaning": "menunjukkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "表れる",
+      "reading": "あらわれる",
+      "meaning": "muncul",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "表す",
+      "reading": "あらわす",
+      "meaning": "menunjukkan",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "散る",
+      "reading": "ちる",
+      "meaning": "tersebar, berguguran",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "散らす",
+      "reading": "ちらす",
+      "meaning": "menyebarkan (sampai berantakan)",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "明ける",
+      "reading": "あける",
+      "meaning": "fajar, sudah pagi",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "差す",
+      "reading": "さす",
+      "meaning": "menggunakan (payung, obat mata)",
+      "group": "H-17 JLPT N3",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "パートナー",
+      "reading": "パートナー",
+      "meaning": "partner",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "リーダー",
+      "reading": "リーダー",
+      "meaning": "pemimpin",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ボランティア",
+      "reading": "ボランティア",
+      "meaning": "suka relawan",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "コミュニケーション",
+      "reading": "コミュニケーション",
+      "meaning": "komunikasi",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ユーモア",
+      "reading": "ユーモア",
+      "meaning": "humor",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ショック",
+      "reading": "ショック",
+      "meaning": "shock, kaget",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ストレス",
+      "reading": "ストレス",
+      "meaning": "stress",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "バランス",
+      "reading": "バランス",
+      "meaning": "keseimbangan",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "レベル",
+      "reading": "レベル",
+      "meaning": "level, tingkat",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "アップ",
+      "reading": "アップ",
+      "meaning": "naik, atas",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ダウン",
+      "reading": "ダウン",
+      "meaning": "turun, bawah",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "プラス",
+      "reading": "プラス",
+      "meaning": "tambah",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "マイナス",
+      "reading": "マイナス",
+      "meaning": "kurang",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "イメージ",
+      "reading": "イメージ",
+      "meaning": "bayangan, imej",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "コンテスト",
+      "reading": "コンテスト",
+      "meaning": "kontes",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "マスコミ",
+      "reading": "マスコミ",
+      "meaning": "wartawan",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "プライバシー",
+      "reading": "プライバシー",
+      "meaning": "privasi",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "オフィス",
+      "reading": "オフィス",
+      "meaning": "kantor",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ルール",
+      "reading": "ルール",
+      "meaning": "peraturan",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "マナー",
+      "reading": "マナー",
+      "meaning": "sikap",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ミス",
+      "reading": "ミス",
+      "meaning": "kesalahan",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "スケジュール",
+      "reading": "スケジュール",
+      "meaning": "jadwal",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "タイトル",
+      "reading": "タイトル",
+      "meaning": "judul",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "テーマ",
+      "reading": "テーマ",
+      "meaning": "tema",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ストーリー",
+      "reading": "ストーリー",
+      "meaning": "cerita",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ヒット",
+      "reading": "ヒット",
+      "meaning": "kena, booming",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ブランド",
+      "reading": "ブランド",
+      "meaning": "brand, merk",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "レンタル",
+      "reading": "レンタル",
+      "meaning": "rental",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "リサイクル",
+      "reading": "リサイクル",
+      "meaning": "daur ulang",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ラベル",
+      "reading": "ラベル",
+      "meaning": "label",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "タイプ",
+      "reading": "タイプ",
+      "meaning": "tipe",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "スタイル",
+      "reading": "スタイル",
+      "meaning": "gaya",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "セット",
+      "reading": "セット",
+      "meaning": "satu paket, menyetel",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ウイルス",
+      "reading": "ウイルス",
+      "meaning": "virus",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ロボット",
+      "reading": "ロボット",
+      "meaning": "robot",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "エネルギー",
+      "reading": "エネルギー",
+      "meaning": "tenaga, energi",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "デジタル",
+      "reading": "デジタル",
+      "meaning": "digital",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "マイク",
+      "reading": "マイク",
+      "meaning": "mikrofon",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ブレーキ",
+      "reading": "ブレーキ",
+      "meaning": "rem",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ペンキ",
+      "reading": "ペンキ",
+      "meaning": "cat",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "炊ける",
+      "reading": "たける",
+      "meaning": "matang (nasi)",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "炊く",
+      "reading": "たく",
+      "meaning": "memasak nasi",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "煮える",
+      "reading": "にえる",
+      "meaning": "matang (dengan direbus)",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "煮る",
+      "reading": "にる",
+      "meaning": "merebus dalam waktu lama",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "炒める",
+      "reading": "いためる",
+      "meaning": "menumis",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "焼ける",
+      "reading": "やける",
+      "meaning": "matang dibakar",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "焼く",
+      "reading": "やく",
+      "meaning": "bakar",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "茹でる",
+      "reading": "ゆでる",
+      "meaning": "merebus",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "揚げる",
+      "reading": "あげる",
+      "meaning": "menggoreng",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "蒸す",
+      "reading": "むす",
+      "meaning": "mengkukus",
+      "group": "Unit 11",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ぐっすり",
+      "reading": "ぐっすり",
+      "meaning": "tidur lelap",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "きちんと",
+      "reading": "きちんと",
+      "meaning": "dengan rapi",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "しっかり",
+      "reading": "しっかり",
+      "meaning": "dengan baik",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "はっきり",
+      "reading": "はっきり",
+      "meaning": "dengan jelas",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "じっと",
+      "reading": "じっと",
+      "meaning": "diam, dengan seksama",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そっと",
+      "reading": "そっと",
+      "meaning": "perlahan, tanpa suara",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "別々に",
+      "reading": "べつべつに",
+      "meaning": "pisah pisah",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "それぞれ",
+      "reading": "それぞれ",
+      "meaning": "masing masing",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "互いに",
+      "reading": "たがいに",
+      "meaning": "saling, satu sama lain",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "直接",
+      "reading": "ちょくせつ",
+      "meaning": "secara langsung",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "本当に",
+      "reading": "ほんとうに",
+      "meaning": "benar benar",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "必ず",
+      "reading": "かならず",
+      "meaning": "pasti",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "絶対に",
+      "reading": "ぜったいに",
+      "meaning": "pasti",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "特に",
+      "reading": "とくに",
+      "meaning": "terutama",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ただ",
+      "reading": "ただ",
+      "meaning": "hanya saja",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "少なくとも",
+      "reading": "すくなくとも",
+      "meaning": "setidaknya",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "決して",
+      "reading": "けっして",
+      "meaning": "tidak akan, bukanlah",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "少しも",
+      "reading": "すこしも",
+      "meaning": "tidak sedikit pun",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ちっとも",
+      "reading": "ちっとも",
+      "meaning": "tidak sedikit pun",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "全く",
+      "reading": "まったく",
+      "meaning": "tidak sama sekali",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "とても",
+      "reading": "とても",
+      "meaning": "sangat",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "どんなに",
+      "reading": "どんなに",
+      "meaning": "bagaimanapun",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "どうしても",
+      "reading": "どうしても",
+      "meaning": "bagaimanapun",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "まるで",
+      "reading": "まるで",
+      "meaning": "bagaikan",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": "***"
+    },
+    {
+      "word": "一体",
+      "reading": "いったい",
+      "meaning": "entah apa, entah kenapa",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "別に",
+      "reading": "べつに",
+      "meaning": "tidak begitu",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "たった",
+      "reading": "たった",
+      "meaning": "hanya",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "ほんの",
+      "reading": "ほんの",
+      "meaning": "hanya sedikit",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "それで",
+      "reading": "それで",
+      "meaning": "karena itulah",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "そこで",
+      "reading": "そこで",
+      "meaning": "maka dari itu",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "その上",
+      "reading": "そのうえ",
+      "meaning": "ditambah lagi",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "また",
+      "reading": "また",
+      "meaning": "selain itu",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "または",
+      "reading": "または",
+      "meaning": "atau",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "それとも",
+      "reading": "それとも",
+      "meaning": "atau",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "脱着",
+      "reading": "だっちゃく",
+      "meaning": "melepas dan memasang",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "つまり",
+      "reading": "つまり",
+      "meaning": "dengan kata lain",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    },
+    {
+      "word": "大げさ",
+      "reading": "おおげさ",
+      "meaning": "alay",
+      "group": "Unit 12",
+      "example": "",
+      "jlpt_level": "N2",
+      "note": ""
+    }
+  ]
+}
