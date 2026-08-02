@@ -8,6 +8,7 @@ export const FREE_PRO_EMAILS: string[] = [
   "yusufnashirsyarifuddin@gmail.com", // owner
   "sirbi269@gmail.com",
   "nbillasanda@gmail.com",
+  "yandip473@gmail.com",
 ];
 
 const SET = new Set(FREE_PRO_EMAILS.map(e => e.trim().toLowerCase()));
