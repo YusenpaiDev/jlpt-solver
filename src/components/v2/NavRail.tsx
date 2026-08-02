@@ -60,7 +60,7 @@ export function NavRail() {
 
       <Link className="nav-upgrade" href="/premium">
         <div className="nav-upgrade-icon">
-          <Sparkles size={14} fill="white" stroke="white" strokeWidth={1.2} />
+          <Sparkles size={16} fill="white" stroke="white" strokeWidth={1.2} />
         </div>
         <div className="nav-upgrade-text">
           <div className="nav-upgrade-title">Upgrade ke Pro</div>

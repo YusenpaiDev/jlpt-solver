@@ -721,6 +721,7 @@ input, textarea, select { font-size: 16px; }
   flex-shrink: 0;
   box-shadow: 0 0 16px rgba(221,65,36,0.5);
 }
+.nav-upgrade-icon svg { display: block; }
 .nav-upgrade-text {
   opacity: 0;
   transition: opacity 200ms 80ms;
