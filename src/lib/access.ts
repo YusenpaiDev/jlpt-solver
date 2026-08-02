@@ -9,6 +9,7 @@ export const FREE_PRO_EMAILS: string[] = [
   "sirbi269@gmail.com",
   "nbillasanda@gmail.com",
   "yandip473@gmail.com",
+  "azizatulaini70@gmail.com", // アイちゃん 💕
 ];
 
 const SET = new Set(FREE_PRO_EMAILS.map(e => e.trim().toLowerCase()));

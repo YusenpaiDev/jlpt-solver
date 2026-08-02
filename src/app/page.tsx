@@ -53,6 +53,14 @@ const scorePct = (s: Session) => (s.score != null && s.total > 0 ? Math.round((s
 
 const xp = 820, xpTarget = 1000; // TODO: profiles.xp
 
+/* Sapaan spesial per orang 💕 (nama + pesan manis di Beranda). */
+const SPECIAL: Record<string, { name: string; note: string }> = {
+  "azizatulaini70@gmail.com": {
+    name: "Ai-chan",
+    note: "がんばってね、アイちゃん 💕 — belajar bareng terus ya, kamu pasti bisa. いつも応援してるよ、ゆうちゃんより 🥰",
+  },
+};
+
 export default function Home() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [streak, setStreak] = useState(0);
@@ -63,6 +71,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("Yusuf");
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [loveNote, setLoveNote] = useState<string | null>(null);
   const [meta, setMeta] = useState<{ date: string; days: number | null }>({ date: "", days: null });
   const [focus, setFocus] = useState<Focus[]>([]);
   const [week, setWeek] = useState<WeekDay[]>([]);
@@ -80,8 +89,12 @@ export default function Home() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
-      const first = (user.user_metadata?.full_name || user.email || "Yusuf").split(/[ @]/)[0];
-      setName(first.charAt(0).toUpperCase() + first.slice(1));
+      const special = SPECIAL[(user.email || "").toLowerCase()];
+      if (special) { setName(special.name); setLoveNote(special.note); }
+      else {
+        const first = (user.user_metadata?.full_name || user.email || "Yusuf").split(/[ @]/)[0];
+        setName(first.charAt(0).toUpperCase() + first.slice(1));
+      }
       // dari user_metadata dulu (Google OAuth), nanti ditimpa profiles.avatar_url kalau ada
       setAvatar(user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null);
 
@@ -162,8 +175,10 @@ export default function Home() {
           {/* topbar */}
           <div className="bv-top">
             <div className="bv-greet">
-              <h1>おかえり, {name} <span className="jp">頑張ろう!</span></h1>
-              <p>{meta.date}{meta.days != null && ` · JLPT N2 · ${meta.days} hari lagi menuju ujian`}</p>
+              <h1>おかえり, {name} <span className="jp">{loveNote ? "💕" : "頑張ろう!"}</span></h1>
+              {loveNote
+                ? <p className="bv-love">{loveNote}</p>
+                : <p>{meta.date}{meta.days != null && ` · JLPT N2 · ${meta.days} hari lagi menuju ujian`}</p>}
             </div>
             <div className="bv-top-r">
               <span className="bv-pill streak"><span className="fl">🔥</span> <b>{streak}</b> hari</span>

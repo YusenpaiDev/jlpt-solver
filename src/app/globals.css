@@ -8667,3 +8667,6 @@ html { scrollbar-gutter: stable; }
 .materi-v3 .part.soon { cursor: default; opacity: .7; }
 .materi-v3 .part.soon:hover { border-color: var(--line); background: rgba(255,255,255,0.03); }
 .materi-v3 .part.soon .part-soon { color: var(--warning); font-weight: 800; background: rgba(212,160,74,0.13); border: 1px solid rgba(212,160,74,0.35); padding: 3px 9px; border-radius: 99px; font-size: 9.5px; letter-spacing: .05em; }
+
+/* Beranda — pesan manis khusus 💕 */
+.beranda-v2 .bv-love { font-size: 13px; color: #F0B49A; margin-top: 7px; line-height: 1.55; max-width: 600px; font-weight: 500; }
