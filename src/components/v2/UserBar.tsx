@@ -10,7 +10,6 @@ interface UserBarProps {
   xpTarget: number;
   avatarLetter: string;
   isPro?: boolean;
-  hasUnread?: boolean;
   onBellClick?: () => void;
   onAvatarClick?: () => void;
 }

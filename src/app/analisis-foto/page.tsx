@@ -14,6 +14,7 @@ import {
   BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
   Highlighter, Undo2, LogOut,
 } from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 type Stage = "upload" | "setup" | "analyzing" | "result";
@@ -188,11 +189,18 @@ function sanitizeQuestion(q: { question: string; options: string[] }): { questio
 }
 
 
-const uploadStats = [
-  { label: "Soal dianalisis",  value: "24",  suffix: "",   color: "var(--text-secondary)", glow: "rgba(74,122,191,0.15)"  },
-  { label: "Akurasi rata-rata",value: "78%", suffix: "",   color: "var(--success)", glow: "rgba(94,168,122,0.15)" },
-  { label: "Hari streak",      value: "5",   suffix: "🔥", color: "var(--primary)", glow: "rgba(224,123,74,0.15)"  },
-];
+/* Angka header. Dulu dipaku "24 / 78% / 5" — kelihatan meyakinkan padahal
+   punya orang lain. Sekarang dari sesi user yang beneran udah dikerjain
+   (yang ada skornya); yang belum dikerjain gak diitung biar akurasinya jujur. */
+interface RingkasUpload { dianalisis: number; akurasi: number | null; streak: number }
+
+function kartuUpload(r: RingkasUpload) {
+  return [
+    { label: "Soal dianalisis",   value: String(r.dianalisis), suffix: "",   color: "var(--text-secondary)", glow: "rgba(74,122,191,0.15)" },
+    { label: "Akurasi rata-rata", value: r.akurasi != null ? `${r.akurasi}%` : "—", suffix: "", color: "var(--success)", glow: "rgba(94,168,122,0.15)" },
+    { label: "Hari streak",       value: String(r.streak),     suffix: "🔥", color: "var(--primary)", glow: "rgba(224,123,74,0.15)" },
+  ];
+}
 
 const recentAnalysis = [
   { kanji: "文法", label: "N2 文法問題 #14", date: "14 Apr", color: "var(--info)" },
@@ -209,7 +217,7 @@ const photoTips = [
 ];
 
 /* ─── Upload State ──────────────────────────────────────────── */
-function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () => void; onCamera: () => void; onOpenResult: () => void; error?: string | null }) {
+function UploadView({ onUpload, onCamera, onOpenResult, error, ringkas }: { onUpload: () => void; onCamera: () => void; onOpenResult: () => void; error?: string | null; ringkas: RingkasUpload }) {
   const hasHistory = recentAnalysis.length > 0;
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5 md:py-7 pb-20 lg:pb-7 relative">
@@ -254,7 +262,7 @@ function UploadView({ onUpload, onCamera, onOpenResult, error }: { onUpload: () 
 
       {/* Stats — compact inline row with color accents */}
       <div className="flex items-center gap-2 md:gap-3 mb-5 overflow-x-auto pb-1">
-        {uploadStats.map(({ label, value, suffix, color, glow }) => (
+        {kartuUpload(ringkas).map(({ label, value, suffix, color, glow }) => (
           <div key={label} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl relative overflow-hidden"
             style={{ background: "var(--surface)" }}>
             <div className="absolute inset-0 opacity-60"
@@ -3176,6 +3184,7 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
 
 /* ─── Page ──────────────────────────────────────────────────── */
 export default function AnalisisFoto() {
+  const stats = useUserStats();
   const [stage,               setStage]               = useState<Stage>("upload");
   const [files,               setFiles]               = useState<FileData[]>([]);
   const [result,              setResult]              = useState<AIResult | null>(null);
@@ -3193,6 +3202,7 @@ export default function AnalisisFoto() {
   const [camModalOpen, setCamModalOpen] = useState(false);
   const [userInitial, setUserInitial] = useState("Y");
   const [streak, setStreak] = useState(0);
+  const [ringkas, setRingkas] = useState<RingkasUpload>({ dianalisis: 0, akurasi: null, streak: 0 });
 
   /* Load user info for v2 UserBar */
   useEffect(() => {
@@ -3201,8 +3211,22 @@ export default function AnalisisFoto() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const { data } = await supabase.from("profiles").select("streak").eq("id", user.id).single();
-      if (data) setStreak(data.streak ?? 0);
+      const [prof, sesi] = await Promise.all([
+        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+        supabase.from("sessions").select("total, score").eq("user_id", user.id),
+      ]);
+      if (prof.data) setStreak(prof.data.streak ?? 0);
+
+      // Cuma sesi yang udah ada skornya — sesi bank soal yang belum dikerjain
+      // kalau ikut diitung bikin akurasinya anjlok palsu.
+      const dikerjain = (sesi.data ?? []).filter(x => x.score != null && (x.total ?? 0) > 0);
+      const totalSoal = dikerjain.reduce((n, x) => n + (x.total ?? 0), 0);
+      const totalBenar = dikerjain.reduce((n, x) => n + (x.score ?? 0), 0);
+      setRingkas({
+        dianalisis: totalSoal,
+        akurasi: totalSoal > 0 ? Math.round((totalBenar / totalSoal) * 100) : null,
+        streak: prof.data?.streak ?? 0,
+      });
     })();
   }, []);
 
@@ -3563,14 +3587,15 @@ export default function AnalisisFoto() {
       <main className="app-shell">
         <UserBar
           streakDays={streak}
-          xp={820}
-          xpTarget={1000}
+          xp={stats.xp}
+          xpTarget={stats.xpTarget}
           avatarLetter={userInitial}
-          isPro
+          isPro={stats.isPro}
         />
 
         {stage === "upload" && (
           <UploadView
+            ringkas={ringkas}
             onUpload={handleUpload}
             onCamera={handleCameraClick}
             onOpenResult={() => setStage("result")}

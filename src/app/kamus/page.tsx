@@ -8,6 +8,7 @@ import {
   Search, BookA, BookOpen, ChevronRight, ChevronLeft, Layers, Zap, Wand2, Plus, Upload,
   X, Edit3, Trash2, Calendar, Camera, Shuffle, Check, Loader2, BarChart3, Star,
 } from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 type LevelFilter = Level | "ALL";
@@ -85,8 +86,9 @@ export default function Kamus() {
   /* User bar */
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
-  const xp = 820;
-  const xpTarget = 1000;
+  const stats = useUserStats();
+  const xp = stats.xp;
+  const xpTarget = stats.xpTarget;
 
   /* Load */
   useEffect(() => {
@@ -450,8 +452,8 @@ export default function Kamus() {
           xp={xp}
           xpTarget={xpTarget}
           avatarLetter={userInitial}
-          isPro
-          hasUnread
+          isPro={stats.isPro}
+         
         />
 
         <header className="kk-header">

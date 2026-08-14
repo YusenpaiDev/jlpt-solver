@@ -8,6 +8,7 @@ import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/com
 import {
   User, Zap, Wand2, Bell, CreditCard, Shield, Trash2, ChevronRight, Camera, Check, Sparkles, X,
 } from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -27,8 +28,9 @@ export default function Pengaturan() {
   const [active, setActive] = useState<SectionId>("profile");
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
-  const xp = 820;
-  const xpTarget = 1000;
+  const stats = useUserStats();
+  const xp = stats.xp;
+  const xpTarget = stats.xpTarget;
 
   /* Profile */
   const [nama, setNama] = useState("");
@@ -91,7 +93,9 @@ export default function Pengaturan() {
         .single();
       if (profile) {
         setNama(profile.username ?? "");
-        setTargetLevel((profile.target_level as Level) ?? "N2");
+        // Jangan jatuh ke level tertentu — kalau kolomnya kosong, biarin
+        // user_metadata di bawah yang nentuin (itu sumber sebenarnya).
+        if (profile.target_level) setTargetLevel(profile.target_level as Level);
         setAvatarUrl(profile.avatar_url ?? null);
         setStreak(profile.streak ?? 0);
       }
@@ -182,8 +186,8 @@ export default function Pengaturan() {
           xp={xp}
           xpTarget={xpTarget}
           avatarLetter={userInitial}
-          isPro
-          hasUnread
+          isPro={stats.isPro}
+         
         />
 
         <header className="pg-header">

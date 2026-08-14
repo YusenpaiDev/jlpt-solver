@@ -7,6 +7,7 @@ import {
   Search, NotebookPen, Folder, Tag as TagIcon, Plus, Trash2, Loader2, Check, Star,
   Bold, Italic, Heading2, Quote, Link as LinkIcon, Code, Wand2, Sparkles,
 } from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
 
 interface Catatan {
   id: string;
@@ -33,6 +34,7 @@ function wordCount(text: string) {
 }
 
 export default function CatatanPage() {
+  const stats = useUserStats();
   const [catatan, setCatatan] = useState<Catatan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
@@ -186,11 +188,11 @@ export default function CatatanPage() {
       <main className="app-shell">
         <UserBar
           streakDays={streak}
-          xp={820}
-          xpTarget={1000}
+          xp={stats.xp}
+          xpTarget={stats.xpTarget}
           avatarLetter={userInitial}
-          isPro
-          hasUnread
+          isPro={stats.isPro}
+         
         />
 
         <header className="ct-header">

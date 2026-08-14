@@ -6,10 +6,19 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Lock } from "lucide-react";
+import kotobaData from "@/data/kotoba-n2.json";
+import { useUserStats } from "@/lib/use-user-stats";
+
+/* Daftar kata yang beneran tampil di /materi/kotoba — saringannya wajib sama
+   persis kayak di halaman itu, kalau beda nanti penyebut progresnya bohong.
+   (Label lama "585 kata" ngitung mentah dari file; yang lolos saringan 505.) */
+const NON_N2 = /\bN[1345]\b/;
+const KOTOBA_WORDS = ((kotobaData as { vocabulary?: { word?: string; group?: string }[] }).vocabulary ?? [])
+  .filter(w => w.word && !NON_N2.test(w.group ?? ""))
+  .map(w => w.word as string);
 
 type Lv = "N1" | "N2" | "N3" | "N4" | "N5";
 const LEVEL_ORDER: Lv[] = ["N1", "N2", "N3", "N4", "N5"];
-const OWNED_LEVEL: Lv = "N2"; // TODO: dari profiles.subscription — gating Step 5
 
 interface Exam {
   id: string;
@@ -43,32 +52,49 @@ type StatusF = "all" | "incomplete" | "done";
 const DEFAULT_SHOWN = 5;
 
 export default function MateriHub() {
-  const [streak, setStreak] = useState(0);
-  const [userInitial, setUserInitial] = useState("Y");
   const [exams, setExams] = useState<Exam[]>([]);
-  const [level, setLevel] = useState<Lv>("N2");
+  /* Progres materi belajar — dihitung dari data, bukan dipatok. Yang diukur
+     "ditandai/disimpan", bukan "dikuasai": itu yang beneran kelacak. */
+  const [bunpou, setBunpou] = useState({ total: 0, ditandai: 0 });
+  const [kotobaTersimpan, setKotobaTersimpan] = useState(0);
+  /* null = profil belum kebaca. Jangan default ke level tertentu di sini —
+     itu yang bikin user yang milih N3 tetap dikasih lihat N2. */
+  const [level, setLevel] = useState<Lv | null>(null);
   const [statusF, setStatusF] = useState<StatusF>("all");
   const [showAll, setShowAll] = useState(false);
   const router = useRouter();
 
-  const targetDate = "Desember 2026"; // TODO: user_metadata.exam_date
+  const stats = useUserStats();
+
+  /* Tanggal ujian dari pilihan user; "Desember 2026" cuma ancar-ancar buat yang
+     belum nentuin (sesi JLPT terdekat). */
+  const targetDate = stats.examDate
+    ? new Date(stats.examDate).toLocaleDateString("id-ID", { month: "long", year: "numeric" })
+    : "Desember 2026";
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [p, ex] = await Promise.all([
-        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+      const [ex, bp, sw] = await Promise.all([
         supabase.from("sessions")
           .select("id, level, title, total, score, created_at, ai_result->section, ai_result->ready")
           .eq("user_id", user.id)
           .eq("ai_result->>kind", "materi")
           .order("created_at", { ascending: false }),
+        supabase.from("bunpou_patterns").select("favorite").eq("user_id", user.id),
+        supabase.from("saved_words").select("kanji").eq("user_id", user.id).eq("favorite", true),
       ]);
-      if (p.data) setStreak(p.data.streak ?? 0);
       setExams((ex.data ?? []) as Exam[]);
+
+      const pola = bp.data ?? [];
+      setBunpou({ total: pola.length, ditandai: pola.filter(r => r.favorite).length });
+
+      // Cuma hitung bintang yang kena daftar 585 kata Kotoba — Kamus juga isinya
+      // kata hasil Analisis Foto, dan itu bukan progres materi ini.
+      const bintang = new Set((sw.data ?? []).map(r => r.kanji));
+      setKotobaTersimpan(KOTOBA_WORDS.filter(w => bintang.has(w)).length);
     }
     load();
   }, []);
@@ -79,13 +105,24 @@ export default function MateriHub() {
     return m;
   }, [exams]);
 
-  const levelsPresent = LEVEL_ORDER.filter(lv => (perLevel[lv]?.length ?? 0) > 0);
-  const locked = level !== OWNED_LEVEL;
+  const levelsPresent = LEVEL_ORDER.filter(x => (perLevel[x]?.length ?? 0) > 0);
+
+  /* Level tampilan: pilihan user kalau dia udah nge-klik tab. Kalau belum,
+     level targetnya — TAPI cuma kalau dia beneran punya materi di situ.
+     Tester yang dikasih paket N2 padahal targetnya N3 harus lihat paketnya,
+     bukan halaman N3 yang kosong. */
+  const lv: Lv = level
+    ?? (levelsPresent.includes(stats.targetLevel) ? stats.targetLevel : levelsPresent[0])
+    ?? stats.targetLevel;
+
+  /* Gembok itu ajakan upgrade buat level yang materinya belum ada di akun dia —
+     bukan penghalang buat materi yang udah jadi miliknya. */
+  const locked = !stats.isPro && (perLevel[lv]?.length ?? 0) === 0;
 
   /* group per tanggal → {hisho, choukai} */
   const groups = useMemo<Group[]>(() => {
     const map = new Map<string, Group>();
-    for (const e of perLevel[level] ?? []) {
+    for (const e of perLevel[lv] ?? []) {
       const { label, sortKey } = examMeta(e.title);
       const key = `${e.level}·${label}`;
       let g = map.get(key);
@@ -93,7 +130,7 @@ export default function MateriHub() {
       if (exType(e) === "聴解") g.choukai = e; else g.hisho = e;
     }
     return [...map.values()].sort((a, b) => b.sortKey - a.sortKey);
-  }, [perLevel, level]);
+  }, [perLevel, lv]);
 
   const gStatus = (g: Group): StatusF => {
     const parts = [g.hisho, g.choukai].filter(Boolean) as Exam[];
@@ -106,17 +143,17 @@ export default function MateriHub() {
   const shown = showAll ? filtered : filtered.slice(0, DEFAULT_SHOWN);
   const moreN = filtered.length - shown.length;
 
-  const counts = (lv: Lv) => {
-    const set = new Set((perLevel[lv] ?? []).map(e => examMeta(e.title).label));
+  const counts = (target: Lv) => {
+    const set = new Set((perLevel[target] ?? []).map(e => examMeta(e.title).label));
     return set.size;
   };
 
   /* pace: berapa set (grup) kelar minggu ini */
   const pace = useMemo(() => {
     const wk = Date.now() - 7 * 86_400_000;
-    const doneThisWk = (perLevel[level] ?? []).filter(e => pctOf(e) != null && +new Date(e.created_at) >= wk).length;
+    const doneThisWk = (perLevel[lv] ?? []).filter(e => pctOf(e) != null && +new Date(e.created_at) >= wk).length;
     return { doneThisWk, target: 2 };
-  }, [perLevel, level]);
+  }, [perLevel, lv]);
 
   /* NEXT: grup terbaru yang belum lengkap di level yang dimiliki */
   const next = useMemo(() => groups.find(g => gStatus(g) !== "done"), [groups]);
@@ -129,7 +166,7 @@ export default function MateriHub() {
       <NavRail />
       <BottomNav />
       <main className="app-shell">
-        <UserBar streakDays={streak} xp={820} xpTarget={1000} avatarLetter={userInitial} isPro hasUnread />
+        <UserBar streakDays={stats.streak} xp={stats.xp} xpTarget={stats.xpTarget} avatarLetter={stats.initial} isPro={stats.isPro} />
 
         <div className="materi-v3">
           <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Materi" }]} />
@@ -140,7 +177,7 @@ export default function MateriHub() {
               <p>Bank soal ujian lengkap + materi belajar terstruktur. Kotoba personal kamu ada di <Link href="/kamus">Kamus →</Link></p>
             </div>
             <div className="m3-pace">
-              <div className="m3-pace-top"><span className="t">Pace menuju {OWNED_LEVEL} · {targetDate}</span><span className="badge">{pace.doneThisWk >= pace.target ? "ON TRACK" : "AYO"}</span></div>
+              <div className="m3-pace-top"><span className="t">Pace menuju {stats.targetLevel} · {targetDate}</span><span className="badge">{pace.doneThisWk >= pace.target ? "ON TRACK" : "AYO"}</span></div>
               <div className="main">Kerjain <b>{pace.target} set / minggu</b> biar konsisten sampai ujian ✓</div>
               <div className="sub">Minggu ini: <b>{pace.doneThisWk} / {pace.target} set</b>{pace.doneThisWk < pace.target && " — lanjut yuk"}</div>
             </div>
@@ -166,9 +203,9 @@ export default function MateriHub() {
 
           {/* filter */}
           <div className="m3-bar">
-            {levelsPresent.map(lv => (
-              <button key={lv} className={`fchip${level === lv ? " on" : ""}`} onClick={() => { setLevel(lv); setShowAll(false); }}>
-                {lv !== OWNED_LEVEL && <span className="lock">🔒</span>} {lv} <span className="c">{counts(lv)} ujian</span>
+            {levelsPresent.map(lvItem => (
+              <button key={lvItem} className={`fchip${lv === lvItem ? " on" : ""}`} onClick={() => { setLevel(lvItem); setShowAll(false); }}>
+                {!stats.isPro && lvItem !== stats.targetLevel && <span className="lock">🔒</span>} {lvItem} <span className="c">{counts(lvItem)} ujian</span>
               </button>
             ))}
             <span className="m3-div" />
@@ -180,7 +217,7 @@ export default function MateriHub() {
 
           {locked && (
             <div className="m3-lock">
-              <Lock size={14} strokeWidth={2} /> Paket kamu: <b>{OWNED_LEVEL}</b>. Upgrade buat akses {level} ({counts(level)} ujian, 2010–2025) <Link href="/premium" className="cta">Upgrade →</Link>
+              <Lock size={14} strokeWidth={2} /> Paket kamu: <b>{stats.targetLevel}</b>. Upgrade buat akses {lv} ({counts(lv)} ujian, 2010–2025) <Link href="/premium" className="cta">Upgrade →</Link>
             </div>
           )}
 
@@ -215,7 +252,7 @@ export default function MateriHub() {
                 <div style={{ textAlign: "center" }}>
                   <div className="n">+{moreN} ujian lagi</div>
                   <div className="l">makin lama makin klasik</div>
-                  <div className="a">Tampilkan semua {level} →</div>
+                  <div className="a">Tampilkan semua {lv} →</div>
                 </div>
               </button>
             )}
@@ -231,7 +268,13 @@ export default function MateriHub() {
                 <span className="mat-eyebrow gold">Tata Bahasa</span>
                 <span className="mat-t">Bunpou</span>
                 <span className="mat-d">Pola grammar JLPT lengkap per level: penjelasan, penyambungan, contoh kalimat, drill per pola.</span>
-                <div className="mat-foot"><div className="mat-track"><i className="gold" style={{ width: "100%" }} /></div><span className="mat-pct">siap dipakai</span><span className="mat-go">Buka Bunpou →</span></div>
+                <div className="mat-foot">
+                  <div className="mat-track"><i className="gold" style={{ width: `${bunpou.total > 0 ? Math.round((bunpou.ditandai / bunpou.total) * 100) : 0}%` }} /></div>
+                  <span className="mat-pct">
+                    {bunpou.total === 0 ? "belum ada pola" : `${bunpou.ditandai} dari ${bunpou.total} pola ditandai`}
+                  </span>
+                  <span className="mat-go">Buka Bunpou →</span>
+                </div>
               </div>
             </Link>
             <Link href="/materi/kotoba" className="mat card" style={{ textDecoration: "none" }}>
@@ -239,8 +282,12 @@ export default function MateriHub() {
               <div className="mat-b">
                 <span className="mat-eyebrow">Kosakata Terstruktur</span>
                 <span className="mat-t">Kotoba</span>
-                <span className="mat-d">585 kata N2 kurasi <b>Nihongo no Mori</b> — flash mode per tema, simpan ⭐ ke Kamus.</span>
-                <div className="mat-foot"><div className="mat-track"><i style={{ width: "100%" }} /></div><span className="mat-pct">585 kata</span><span className="mat-go">Buka Kotoba →</span></div>
+                <span className="mat-d">{KOTOBA_WORDS.length} kata N2 kurasi <b>Nihongo no Mori</b> — flash mode per tema, simpan ⭐ ke Kamus.</span>
+                <div className="mat-foot">
+                  <div className="mat-track"><i style={{ width: `${KOTOBA_WORDS.length > 0 ? Math.round((kotobaTersimpan / KOTOBA_WORDS.length) * 100) : 0}%` }} /></div>
+                  <span className="mat-pct">{kotobaTersimpan} dari {KOTOBA_WORDS.length} kata disimpan</span>
+                  <span className="mat-go">Buka Kotoba →</span>
+                </div>
               </div>
             </Link>
           </div>

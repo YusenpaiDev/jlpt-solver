@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Search, Star, Zap, Shuffle, ArrowLeft, ArrowRight, X, RotateCcw, ChevronRight, Check } from "lucide-react";
 import kotobaData from "@/data/kotoba-n2.json";
+import { useUserStats } from "@/lib/use-user-stats";
 
 interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; jlpt_level?: string; note?: string; }
 const NON_N2 = /\bN[1345]\b/;
@@ -27,15 +28,24 @@ const THEME: Record<string, { jp: string; id: string; label?: string }> = {
   "Unit 12": { jp: "抽象", id: "Konsep abstrak" },
 };
 
-function hash(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 type State = "known" | "seen" | "wrong" | "new";
 interface WStat { state: State; correct: number; wrong: number; seen: number; }
-/* ── STATUS per kata dari tracking latihan asli. Belum ada sistemnya + user
-   belum latihan kotoba → JUJUR semua "belum" (jangan ngaku udah dikerjain).
-   TODO: pas tracking per-kata jadi, baca benar/salah dari situ. ── */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- param disimpen buat API tracking asli nanti
-function statFor(word: string): WStat {
-  return { state: "new", correct: 0, wrong: 0, seen: 0 };
+
+/** Satu baris kotoba_progress — hasil nilai-diri user di flash mode. */
+interface Progres { benar: number; salah: number; riwayat: boolean[] }
+
+/* Status dari data beneran. Ambangnya:
+     belum pernah dinilai        → new
+     lebih sering salah          → wrong
+     benar ≥2 dan unggul         → known
+     sisanya (baru sekali bener) → seen
+   Sengaja butuh 2× benar buat "dikuasai" — sekali bener bisa cuma nebak. */
+function statDari(p?: Progres): WStat {
+  if (!p || p.benar + p.salah === 0) return { state: "new", correct: 0, wrong: 0, seen: 0 };
+  const dasar = { correct: p.benar, wrong: p.salah, seen: p.benar + p.salah };
+  if (p.salah > p.benar) return { ...dasar, state: "wrong" };
+  if (p.benar >= 2 && p.benar > p.salah) return { ...dasar, state: "known" };
+  return { ...dasar, state: "seen" };
 }
 const DOT: Record<State, string> = { known: "d-known", seen: "d-seen", wrong: "d-wrong", new: "d-new" };
 
@@ -56,9 +66,11 @@ function hitsText(s: WStat): { t: string; bad?: boolean } {
 }
 
 export default function KotobaDeck() {
+  const stats = useUserStats();
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const [favs, setFavs] = useState<Set<string>>(new Set());
+  const [progres, setProgres] = useState<Map<string, Progres>>(new Map());
   const [busy, setBusy] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -78,26 +90,31 @@ export default function KotobaDeck() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [p, f] = await Promise.all([
+      const [p, f, kp] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
         supabase.from("saved_words").select("kanji").eq("user_id", user.id).eq("favorite", true),
+        supabase.from("kotoba_progress").select("word, benar, salah, riwayat").eq("user_id", user.id),
       ]);
       if (p.data) setStreak(p.data.streak ?? 0);
       if (f.data) setFavs(new Set(f.data.map(r => r.kanji)));
+      if (kp.data) {
+        setProgres(new Map(kp.data.map(r => [r.word, {
+          benar: r.benar ?? 0, salah: r.salah ?? 0, riwayat: r.riwayat ?? [],
+        }])));
+      }
     }
     load();
   }, []);
 
-  /* ringkasan header (dari dummy status) */
   const summary = useMemo(() => {
     let known = 0, seen = 0, wrong = 0, neu = 0;
     const pos: Record<Pos, number> = { "動詞": 0, "副詞": 0, "接続詞": 0 };
     for (const w of DATA) {
-      const s = statFor(w.word).state; if (s === "known") known++; else if (s === "seen") seen++; else if (s === "wrong") wrong++; else neu++;
+      const s = statDari(progres.get(w.word)).state; if (s === "known") known++; else if (s === "seen") seen++; else if (s === "wrong") wrong++; else neu++;
       const p = posOf(w); if (p) pos[p]++;
     }
     return { known, seen, wrong, neu, pos };
-  }, []);
+  }, [progres]);
 
   const match = (w: Kotoba, q: string) =>
     !q || w.word.toLowerCase().includes(q) || (w.reading ?? "").toLowerCase().includes(q) || (w.meaning ?? "").toLowerCase().includes(q);
@@ -108,13 +125,15 @@ export default function KotobaDeck() {
       let ws = DATA.filter(w => w.group === name && match(w, q));
       if (posF) ws = ws.filter(w => posOf(w) === posF);
       if (statusF === "fav") ws = ws.filter(w => favs.has(w.word));
-      else if (statusF !== "all") ws = ws.filter(w => statFor(w.word).state === statusF);
+      else if (statusF !== "all") ws = ws.filter(w => statDari(progres.get(w.word)).state === statusF);
       ws = ws.slice().sort((a, b) => (a.reading ?? "").localeCompare(b.reading ?? "", "ja"));
-      const known = DATA.filter(w => w.group === name && statFor(w.word).state === "known").length;
+      const known = DATA.filter(w => w.group === name && statDari(progres.get(w.word)).state === "known").length;
       const total = DATA.filter(w => w.group === name).length;
       return { name, words: ws, total, pct: total ? Math.round((known / total) * 100) : 0 };
     }).filter(g => g.words.length > 0);
-  }, [query, statusF, posF, favs]);
+    // `progres` wajib ikut: tanpa itu, filter "Dikuasai/Sering salah" dan
+    // persentase per unit ngendon di nilai lama tiap user nilai satu kartu.
+  }, [query, statusF, posF, favs, progres]);
 
   useEffect(() => { if (query.trim() || statusF !== "all" || posF) setOpenGroups(new Set(groups.map(g => g.name))); }, [query, statusF, posF, groups]);
 
@@ -133,20 +152,48 @@ export default function KotobaDeck() {
 
   const startFlash = (words: Kotoba[]) => {
     if (!words.length) return;
+    // Acak beneran. Dulu urutannya diturunkan dari hash nama kata — hasilnya
+    // sama persis tiap kali flash dibuka, jadi hafalannya ngikut urutan bukan
+    // ngikut katanya. Ini event handler, bukan render, jadi aman dari hydration.
     const arr = words.slice();
-    for (let i = arr.length - 1; i > 0; i--) { const j = (hash(arr[i].word + i) % (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
     setFlashList(arr); setFlashIdx(0); setFlipped(false); setFlashOpen(true);
   };
+  /* Rekam penilaian user, lalu maju ke kartu berikutnya.
+     Angka di layar diperbarui duluan (optimistis) — nunggu balasan server buat
+     tiap kartu bikin flash-nya kerasa berat, sedangkan ini cuma hitungan hafalan. */
+  const nilaiKartu = async (kata: string, benar: boolean) => {
+    setProgres(prev => {
+      const next = new Map(prev);
+      const lama = next.get(kata) ?? { benar: 0, salah: 0, riwayat: [] };
+      next.set(kata, {
+        benar: lama.benar + (benar ? 1 : 0),
+        salah: lama.salah + (benar ? 0 : 1),
+        riwayat: [benar, ...lama.riwayat].slice(0, 5),
+      });
+      return next;
+    });
+    nextCard();
+    try {
+      await createClient().rpc("catat_kotoba", { p_word: kata, p_benar: benar });
+    } catch { /* biarin — hitungannya nyusul pas halaman dimuat ulang */ }
+  };
+
   const flashCard = flashOpen && flashList.length ? flashList[flashIdx] : null;
   const nextCard = () => { setFlipped(false); setFlashIdx(i => (i + 1) % flashList.length); };
   const prevCard = () => { setFlipped(false); setFlashIdx(i => (i - 1 + flashList.length) % flashList.length); };
 
-  const selStat = sel ? statFor(sel.word) : null;
-  const selTrace = useMemo(() => {
-    if (!sel) return [] as boolean[];
-    const h = hash(sel.word + "trace");
-    return Array.from({ length: 5 }, (_, i) => ((h >> i) & 1) === 1);
-  }, [sel]);
+  const selStat = sel ? statDari(progres.get(sel.word)) : null;
+  /* 5 percobaan terakhir, terbaru di depan — dari kotoba_progress.riwayat.
+     Dulu dikarang dari hash nama kata, jadi kata yang belum pernah disentuh
+     pun kelihatan punya rekam jejak. */
+  const selTrace = useMemo(
+    () => (sel ? (progres.get(sel.word)?.riwayat ?? []) : []),
+    [sel, progres],
+  );
   const selConf = useMemo(() => {
     if (!sel) return [] as Kotoba[];
     return DATA.filter(w => w.group === sel.group && w.word !== sel.word && (w.reading?.[0] === sel.reading?.[0] || w.word.length === sel.word.length))
@@ -164,7 +211,7 @@ export default function KotobaDeck() {
       <NavRail />
       <BottomNav />
       <main className="app-shell">
-        <UserBar streakDays={streak} xp={820} xpTarget={1000} avatarLetter={userInitial} isPro hasUnread />
+        <UserBar streakDays={streak} xp={stats.xp} xpTarget={stats.xpTarget} avatarLetter={userInitial} isPro={stats.isPro} />
 
         <div className="kotoba-v2">
           <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Materi", href: "/materi" }, { label: "Kotoba" }]} />
@@ -223,7 +270,7 @@ export default function KotobaDeck() {
                     {open && (
                       <div className="kv-words">
                         {g.words.map(w => {
-                          const st = statFor(w.word); const h = hitsText(st); const fav = favs.has(w.word);
+                          const st = statDari(progres.get(w.word)); const h = hitsText(st); const fav = favs.has(w.word);
                           return (
                             <div className={`kv-w${sel?.word === w.word ? " sel" : ""}`} key={w.word} onClick={() => setSel(w)}>
                               <span className={`kv-dot ${DOT[st.state]}`} />
@@ -292,11 +339,21 @@ export default function KotobaDeck() {
                   ? <div className="kd-card-front"><div className="kd-card-word">{flashCard.word}</div><div className="kd-card-hint">ketuk buat lihat arti</div></div>
                   : <div className="kd-card-back"><div className="kd-card-read">{flashCard.reading}</div><div className="kd-card-mean">{flashCard.meaning}</div>{flashCard.example && <div className="kd-card-ex">{flashCard.example}</div>}</div>}
               </div>
-              <div className="kd-flash-nav">
-                <button onClick={prevCard}><ArrowLeft size={16} /></button>
-                <button className="p" onClick={() => setFlipped(f => !f)}><RotateCcw size={14} /> Balik</button>
-                <button onClick={nextCard}><ArrowRight size={16} /></button>
-              </div>
+              {flipped ? (
+                /* Baru muncul setelah artinya kelihatan — nilai diri sebelum
+                   lihat jawaban gak ada artinya. Ini satu-satunya sumber data
+                   buat segmen "Dikuasai / Sering salah" di header. */
+                <div className="kd-flash-nav">
+                  <button onClick={() => nilaiKartu(flashCard.word, false)}>Belum tau</button>
+                  <button className="p" onClick={() => nilaiKartu(flashCard.word, true)}><Check size={14} /> Udah tau</button>
+                </div>
+              ) : (
+                <div className="kd-flash-nav">
+                  <button onClick={prevCard}><ArrowLeft size={16} /></button>
+                  <button className="p" onClick={() => setFlipped(true)}><RotateCcw size={14} /> Balik</button>
+                  <button onClick={nextCard}><ArrowRight size={16} /></button>
+                </div>
+              )}
               <button className="kd-flash-shuffle" onClick={() => startFlash(flashList)}><Shuffle size={13} /> Acak ulang</button>
             </div>
           </div>

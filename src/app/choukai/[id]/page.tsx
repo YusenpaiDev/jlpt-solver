@@ -10,6 +10,7 @@ import {
   Lightbulb, Grid3x3, Plus, BookOpen, Loader2, Sparkles, AlertCircle, Highlighter, Undo2, Trash2,
 } from "lucide-react";
 import { StabiloLayer, STABILO_COLORS, type HiStroke } from "@/components/StabiloLayer";
+import { useUserStats } from "@/lib/use-user-stats";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -270,6 +271,7 @@ function Pembahasan({ q, correct, correctNum }: { q: ChoukaiQuestion; correct: b
 /* ─── Main page ─── */
 
 export default function ChoukaiPlayer() {
+  const stats = useUserStats();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const sessionId = params?.id;
@@ -417,11 +419,11 @@ export default function ChoukaiPlayer() {
       <main className="app-shell ch-page">
         <UserBar
           streakDays={streak}
-          xp={820}
-          xpTarget={1000}
+          xp={stats.xp}
+          xpTarget={stats.xpTarget}
           avatarLetter={userInitial}
-          isPro
-          hasUnread
+          isPro={stats.isPro}
+         
         />
 
         <header className="ch-header">

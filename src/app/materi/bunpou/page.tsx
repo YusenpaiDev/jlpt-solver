@@ -7,6 +7,7 @@ import {
   Search, BookOpen, Star, ChevronDown, ChevronRight, Info, X, Loader2, Sparkles,
   Zap, Shuffle, ArrowLeft, ArrowRight,
 } from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 type LevelFilter = "ALL" | Level;
@@ -64,8 +65,9 @@ export default function BunpouPage() {
   /* User bar */
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
-  const xp = 820;
-  const xpTarget = 1000;
+  const stats = useUserStats();
+  const xp = stats.xp;
+  const xpTarget = stats.xpTarget;
 
   useEffect(() => {
     // Restore glossary-open state dari localStorage
@@ -230,8 +232,8 @@ export default function BunpouPage() {
             xp={xp}
             xpTarget={xpTarget}
             avatarLetter={userInitial}
-            isPro
-            hasUnread
+            isPro={stats.isPro}
+           
           />
         </div>
 

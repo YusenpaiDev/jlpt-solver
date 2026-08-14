@@ -9,7 +9,7 @@
  *     <NavRail />
  *     <BottomNav />
  *     <main className="app-shell">
- *       <UserBar streakDays={10} xp={820} xpTarget={1000} avatarLetter="Y" isPro hasUnread />
+ *       <UserBar streakDays={10} xp={820} xpTarget={1000} avatarLetter="Y" isPro />
  *       <Breadcrumb items={[{ label: "Sensei", href: "/" }, { label: "Beranda" }]} />
  *       ...
  *     </main>

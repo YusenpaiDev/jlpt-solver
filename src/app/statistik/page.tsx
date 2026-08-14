@@ -8,6 +8,7 @@ import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/com
 import {
   Camera, BarChart3, Zap, BookA, ArrowUp, ArrowDown, Sparkles, Star,
 } from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 type Period = 7 | 30 | 90 | 0; // 0 = all-time
@@ -74,10 +75,10 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
   const [period, setPeriod] = useState<Period>(30);
   const [loading, setLoading] = useState(true);
 
-  // TODO: target level dari profiles
-  const targetLevel: Level = "N2";
-  const xp = 820;
-  const xpTarget = 1000;
+  const stats = useUserStats();
+  const targetLevel = stats.targetLevel as Level;
+  const xp = stats.xp;
+  const xpTarget = stats.xpTarget;
 
   useEffect(() => {
     async function load() {
@@ -546,7 +547,7 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
       <NavRail />
       <BottomNav />
       <main className="app-shell">
-        <UserBar streakDays={streak} xp={xp} xpTarget={xpTarget} avatarLetter={userInitial} isPro hasUnread />
+        <UserBar streakDays={streak} xp={xp} xpTarget={xpTarget} avatarLetter={userInitial} isPro={stats.isPro} />
         {inner}
       </main>
     </>

@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav } from "@/components/v2";
+import { useUserStats } from "@/lib/use-user-stats";
+import kotobaData from "@/data/kotoba-n2.json";
 
 interface Session {
   id: string;
@@ -51,7 +53,21 @@ function relativeTime(iso: string): string {
 }
 const scorePct = (s: Session) => (s.score != null && s.total > 0 ? Math.round((s.score / s.total) * 100) : null);
 
-const xp = 820, xpTarget = 1000; // TODO: profiles.xp
+/* Sumber "Kanji Hari Ini". Dulu kartunya dipaku satu kanji (諦) — sama buat
+   semua orang, tiap hari, selamanya. Sekarang dari dataset kotoba beneran,
+   disaring yang ada kanjinya (281 dari 505). Contoh kalimat gak ada di dataset,
+   jadi barisnya cuma dirender kalau memang ada. */
+interface KanjiHarian { word: string; reading: string; meaning: string; level: string; example?: string }
+const NON_N2 = /\bN[1345]\b/;
+const KANJI_POOL: KanjiHarian[] = ((kotobaData as { vocabulary?: { word?: string; reading?: string; meaning?: string; group?: string; jlpt_level?: string }[] }).vocabulary ?? [])
+  .filter(w => w.word && !NON_N2.test(w.group ?? "") && /[\u4e00-\u9fbf]/.test(w.word))
+  .map(w => ({ word: w.word!, reading: w.reading ?? "", meaning: w.meaning ?? "", level: w.jlpt_level ?? "N2" }));
+
+/** Hari ke-berapa dalam setahun — bikin kartunya ganti tiap hari, bukan acak
+ *  tiap render (biar sehari penuh konsisten). */
+function hariKe(d: Date) {
+  return Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86_400_000);
+}
 
 /* Sapaan spesial per orang 💕 (nama + pesan manis di Beranda). */
 const SPECIAL: Record<string, { name: string; note: string }> = {
@@ -62,6 +78,7 @@ const SPECIAL: Record<string, { name: string; note: string }> = {
 };
 
 export default function Home() {
+  const stats = useUserStats();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [streak, setStreak] = useState(0);
   const [totalSoal, setTotalSoal] = useState(0);
@@ -73,6 +90,11 @@ export default function Home() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [loveNote, setLoveNote] = useState<string | null>(null);
   const [meta, setMeta] = useState<{ date: string; days: number | null }>({ date: "", days: null });
+  const [kanji, setKanji] = useState<KanjiHarian | null>(null);
+
+  const examLabel = stats.examDate
+    ? new Date(stats.examDate).toLocaleDateString("id-ID", { month: "short", year: "numeric" })
+    : "Des 2026";
   const [focus, setFocus] = useState<Focus[]>([]);
   const [week, setWeek] = useState<WeekDay[]>([]);
   const [activeDays, setActiveDays] = useState(0);
@@ -82,9 +104,12 @@ export default function Home() {
       // tanggal + countdown (browser-only → lolos purity)
       const now = new Date();
       const dateStr = now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-      const exam = new Date(2026, 11, 6); // ~JLPT Des 2026
+      // Tanggal ujian pilihan user; kalau dia skip pas onboarding, pakai
+      // sesi JLPT terdekat (Desember) sebagai ancar-ancar.
+      const exam = stats.examDate ? new Date(stats.examDate) : new Date(2026, 11, 6);
       const days = Math.max(0, Math.ceil((exam.getTime() - now.getTime()) / 86_400_000));
       setMeta({ date: dateStr, days });
+      if (KANJI_POOL.length) setKanji(KANJI_POOL[hariKe(now) % KANJI_POOL.length]);
 
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -155,7 +180,10 @@ export default function Home() {
       setLoading(false);
     }
     load();
-  }, []);
+  // stats.examDate dateng belakangan (profil dibaca async), jadi hitung mundurnya
+  // wajib diitung ulang begitu kebaca — kalau dep-nya kosong, yang kepajang
+  // selamanya tanggal ancar-ancar.
+  }, [stats.examDate]);
 
   const resumeHref = resume ? (resume.section === "choukai" ? `/choukai/${resume.id}` : `/latihan/${resume.id}`) : "/materi";
   const dash = "—";
@@ -178,12 +206,12 @@ export default function Home() {
               <h1>おかえり, {name} <span className="jp">{loveNote ? "💕" : "頑張ろう!"}</span></h1>
               {loveNote
                 ? <p className="bv-love">{loveNote}</p>
-                : <p>{meta.date}{meta.days != null && ` · JLPT N2 · ${meta.days} hari lagi menuju ujian`}</p>}
+                : <p>{meta.date}{meta.days != null && ` · JLPT ${stats.targetLevel} · ${meta.days} hari lagi menuju ujian`}</p>}
             </div>
             <div className="bv-top-r">
               <span className="bv-pill streak"><span className="fl">🔥</span> <b>{streak}</b> hari</span>
-              <div className="bv-xp"><div className="bv-xp-top"><span>Level 8</span><b>{xp} / {xpTarget} XP</b></div><div className="bv-xp-bar"><i style={{ width: `${Math.round(xp / xpTarget * 100)}%` }} /></div></div>
-              <span className="bv-lv">N2</span>
+              <div className="bv-xp"><div className="bv-xp-top"><span>Level {stats.level}</span><b>{stats.xp} / {stats.xpTarget} XP</b></div><div className="bv-xp-bar"><i style={{ width: `${Math.round(stats.xp / stats.xpTarget * 100)}%` }} /></div></div>
+              <span className="bv-lv">{stats.targetLevel}</span>
               <div className="bv-ava">{avatar ? <img src={avatar} alt={name} className="bv-ava-img" referrerPolicy="no-referrer" /> : name[0]}</div>
             </div>
           </div>
@@ -213,12 +241,19 @@ export default function Home() {
               {/* kanji + quiz */}
               <div className="bv-duo">
                 <div className="bv-kanji card">
-                  <div className="kj-stage"><span className="kj">諦</span></div>
+                  <div className="kj-stage"><span className="kj">{kanji?.word ?? "—"}</span></div>
                   <div className="kj-meta">
-                    <div className="tagrow"><span className="tag tag-day">● Kanji Hari Ini</span><span className="tag tag-n2">N2</span></div>
-                    <div className="kj-read">あきら・める<span className="rom">akirameru</span></div>
-                    <div className="kj-mean">Menyerah, melepaskan harapan — sering muncul di reading N2.</div>
-                    <div className="kj-ex">夢を <span className="hl">諦</span>めない 限り、必ず 道は 開ける。<span className="tr">Selama tidak menyerah, jalan akan selalu terbuka.</span></div>
+                    {/* Tanpa badge level. Datasetnya N2-only, jadi badge-nya
+                        selalu "N2" — dan buat user yang milih N3/N4/N5 itu
+                        kebaca kayak aplikasinya salah baca profil mereka.
+                        Kartunya emang "kanji hari ini", bukan "kanji level kamu". */}
+                    <div className="tagrow"><span className="tag tag-day">● Kanji Hari Ini</span></div>
+                    <div className="kj-read">{kanji?.reading ?? ""}</div>
+                    <div className="kj-mean">{kanji?.meaning ?? "Memuat…"}</div>
+                    {/* Dataset kotoba belum punya kalimat contoh (0 dari 505),
+                        jadi barisnya cuma nongol kalau datanya ada — daripada
+                        nampilin contoh punya kanji lain. */}
+                    {kanji?.example && <div className="kj-ex">{kanji.example}</div>}
                   </div>
                 </div>
                 <div className="bv-quiz card">
@@ -255,8 +290,8 @@ export default function Home() {
 
               {/* materi shortcuts */}
               <div className="bv-materi2">
-                <Link href="/kamus" className="m-card card"><span className="m-glyph">語</span><div className="m-ic goi">📖</div><div className="m-m"><div className="m-t">Kotoba N2</div><div className="m-s">{kotoba != null ? `${kotoba} kata di Kamus kamu` : "Kamus kotoba pribadi"}</div></div></Link>
-                <Link href="/materi/bunpou" className="m-card card"><span className="m-glyph">文</span><div className="m-ic bun">📐</div><div className="m-m"><div className="m-t">Bunpou N2</div><div className="m-s">Pola grammar lengkap per level</div></div></Link>
+                <Link href="/kamus" className="m-card card"><span className="m-glyph">語</span><div className="m-ic goi">📖</div><div className="m-m"><div className="m-t">Kamus Kotoba</div><div className="m-s">{kotoba != null ? `${kotoba} kata di Kamus kamu` : "Kamus kotoba pribadi"}</div></div></Link>
+                <Link href="/materi/bunpou" className="m-card card"><span className="m-glyph">文</span><div className="m-ic bun">📐</div><div className="m-m"><div className="m-t">Bunpou {stats.targetLevel}</div><div className="m-s">Pola grammar lengkap per level</div></div></Link>
               </div>
             </div>
 
@@ -269,7 +304,7 @@ export default function Home() {
                     <svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="32" fill="none" stroke="var(--surface-3)" strokeWidth="6" /><circle cx="37" cy="37" r="32" fill="none" stroke="var(--primary)" strokeWidth="6" strokeLinecap="round" strokeDasharray="201" strokeDashoffset={meta.days != null ? Math.max(0, 201 - 201 * Math.min(1, (365 - Math.min(365, meta.days)) / 365)) : 80} transform="rotate(-90 37 37)" /></svg>
                     <span className="n">{meta.days ?? dash}</span>
                   </div>
-                  <div className="cd-m"><div className="cd-t">JLPT N2 · Des 2026</div><div className="cd-s">{meta.days != null ? `${meta.days} hari lagi — jaga pace kamu, konsisten menang.` : ""}</div></div>
+                  <div className="cd-m"><div className="cd-t">JLPT {stats.targetLevel} · {examLabel}</div><div className="cd-s">{meta.days != null ? `${meta.days} hari lagi — jaga pace kamu, konsisten menang.` : ""}</div></div>
                 </div>
               </div>
 

@@ -82,7 +82,10 @@ export default function Onboarding() {
     if (saved) return;
     setSaved(true);
     try {
-      await createClient().auth.updateUser({
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      await supabase.auth.updateUser({
         data: {
           target_level: level,
           exam_date: examIso,
@@ -90,6 +93,15 @@ export default function Onboarding() {
           onboarding_completed: true,
         },
       });
+
+      /* Tulis ke tabel juga, jangan cuma ke metadata. Dulu cuma metadata, dan
+         trigger handle_new_user() gak nyalin target_level — jadi kolom di
+         profiles nyangkut di default 'N3' buat semua orang, dan halaman yang
+         baca tabel nampilin level yang gak pernah dipilih user. */
+      if (user) {
+        await supabase.from("profiles").update({ target_level: level }).eq("id", user.id);
+      }
+
       localStorage.removeItem(LS_KEY);
     } catch { /* biarin — user tetap bisa lanjut */ }
   };

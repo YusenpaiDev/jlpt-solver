@@ -8,6 +8,7 @@ import {
   Check, X, ChevronLeft, ChevronRight, Clock, History, Sparkles, Wand2, Flag, Pause,
   BookOpen, BookA, Zap, NotebookPen,
 } from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
 
 type Difficulty = "mudah" | "sedang" | "sulit";
 type CategoryAll = "全" | "語彙" | "文法" | "文字" | "読解";
@@ -19,7 +20,10 @@ interface Soal {
   id: number;
   no: string;
   category: string;
-  difficulty: Difficulty;
+  /* Opsional: soal dari bank itu 真題 JLPT asli, dan tingkat kesulitan per soal
+     gak pernah diumumkan. Dulu wajib karena soal buatan AI selalu ngarang
+     labelnya — mending kosong daripada ditebak. */
+  difficulty?: Difficulty;
   question: string;
   context?: string;
   options: Option[];
@@ -105,8 +109,9 @@ export default function LembarTugas() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const xp = 820;
-  const xpTarget = 1000;
+  const stats = useUserStats();
+  const xp = stats.xp;
+  const xpTarget = stats.xpTarget;
 
   /* Load profile + history */
   useEffect(() => {
@@ -155,16 +160,20 @@ export default function LembarTugas() {
     setError(null);
     setStage("generating");
     try {
-      const res = await fetch("/api/tugas/generate", {
+      // Ambil dari bank soal JLPT asli, bukan bikin baru pakai Claude.
+      // /api/tugas/generate masih ada dan tetap jalan — dipakai nanti buat level
+      // yang banknya belum keisi (N1/N5).
+      const res = await fetch("/api/tugas/bank", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ level, category: kategori, count }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error);
+      if (!json.success) throw new Error(json.error ?? "Gagal membuat soal. Coba lagi.");
       const questions: Soal[] = json.data.questions.map((q: Omit<Soal, "id">, i: number) => ({
         ...q, id: i + 1,
       }));
+      if (questions.length === 0) throw new Error("Soal yang dibuat AI gak lolos pemeriksaan. Coba lagi.");
       setSoalList(questions);
       setAnswers({});
       setFlagged(new Set());
@@ -173,8 +182,8 @@ export default function LembarTugas() {
       setNow(Date.now());
       setSaved(false);
       setStage("quiz");
-    } catch {
-      setError("Gagal membuat soal. Coba lagi.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal membuat soal. Coba lagi.");
       setStage("setup");
     }
   }
@@ -231,8 +240,8 @@ export default function LembarTugas() {
           xp={xp}
           xpTarget={xpTarget}
           avatarLetter={userInitial}
-          isPro
-          hasUnread
+          isPro={stats.isPro}
+         
         />
 
         <header className="lt-header">

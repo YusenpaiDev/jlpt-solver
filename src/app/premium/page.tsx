@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Check, X, Sparkles, Star } from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
 
 /* ─── Midtrans Snap types ─────────────────────────────────────── */
 declare global {
@@ -143,10 +144,13 @@ export default function Premium() {
   const [paying, setPaying] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
-  // TODO: load actual plan dari profiles.plan; default "free" untuk sementara
-  const currentPlan: "free" | "pro" | "lifetime" = "free";
-  const xp = 820;
-  const xpTarget = 1000;
+  const stats = useUserStats();
+  /* Paket aktif dari status PRO yang sebenarnya — whitelist email atau flag
+     is_premium hasil bayar (logikanya di access.ts). Skema belum punya kolom
+     buat mbedain pro vs lifetime, jadi keduanya kebaca "pro". */
+  const currentPlan: "free" | "pro" | "lifetime" = stats.isPro ? "pro" : "free";
+  const xp = stats.xp;
+  const xpTarget = stats.xpTarget;
 
   useEffect(() => {
     async function load() {
@@ -156,7 +160,6 @@ export default function Premium() {
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
       const { data } = await supabase.from("profiles").select("streak").eq("id", user.id).single();
       if (data) setStreak(data.streak ?? 0);
-      // TODO: load actual plan from profiles.plan once schema has it
     }
     load();
   }, []);
@@ -180,7 +183,7 @@ export default function Premium() {
           xp={xp}
           xpTarget={xpTarget}
           avatarLetter={userInitial}
-          hasUnread
+         
         />
 
         <header className="pr-header">

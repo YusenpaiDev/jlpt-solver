@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { History, BarChart3, RotateCcw } from "lucide-react";
 import { StatistikView } from "@/app/statistik/page";
+import { useUserStats } from "@/lib/use-user-stats";
 
 type Tab = "log" | "stat";
 
@@ -66,6 +67,7 @@ export default function ProgresPage() {
 }
 
 function Progres() {
+  const stats = useUserStats();
   const searchParams = useSearchParams();
   const router = useRouter();
   const tab: Tab = searchParams.get("tab") === "stat" ? "stat" : "log";
@@ -165,7 +167,7 @@ function Progres() {
       <NavRail />
       <BottomNav />
       <main className="app-shell">
-        <UserBar streakDays={streak} xp={820} xpTarget={1000} avatarLetter={userInitial} isPro hasUnread />
+        <UserBar streakDays={streak} xp={stats.xp} xpTarget={stats.xpTarget} avatarLetter={userInitial} isPro={stats.isPro} />
 
         <header className="pr-header">
           <div>
