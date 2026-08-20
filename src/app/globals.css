@@ -8664,6 +8664,20 @@ html { scrollbar-gutter: stable; }
 .kotoba-v2 .kv-conf .conf-i:hover { border-color: rgba(221,65,36,0.35); }
 .kotoba-v2 .kv-conf .conf-i .m { font-family: var(--font-sans); font-size: 10.5px; color: var(--text-dim); font-weight: 500; margin-left: auto; }
 
+/* Pemilih level N5→N1 */
+.kotoba-v2 .kv-levels { display: flex; align-items: center; gap: 7px; margin-top: 13px; flex-wrap: wrap; }
+.kotoba-v2 .kv-lvl { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-family: var(--font-sans); font-size: 12px; font-weight: 700; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid var(--line-2); cursor: pointer; transition: .14s; }
+.kotoba-v2 .kv-lvl:hover:not(:disabled) { border-color: rgba(221,65,36,0.4); color: #E8704F; }
+.kotoba-v2 .kv-lvl:disabled { cursor: default; opacity: .55; }
+.kotoba-v2 .kv-lvl.on { background: rgba(221,65,36,0.16); border-color: rgba(221,65,36,0.55); color: #F0906F; }
+.kotoba-v2 .kv-lvl .c { font-size: 10px; font-weight: 600; color: var(--text-dim); padding: 1px 6px; border-radius: 99px; background: rgba(255,255,255,0.06); }
+.kotoba-v2 .kv-lvl.on .c { color: #E8704F; background: rgba(221,65,36,0.16); }
+.kotoba-v2 .kv-lvl-load { font-size: 11px; color: var(--text-dim); font-style: italic; margin-left: 4px; }
+
+/* Terjemahan Indonesia contoh kalimat */
+.kotoba-v2 .kv-ex-id { font-family: var(--font-sans); font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-top: 6px; padding-left: 14px; }
+.kotoba-v2 .kd-card-ex .id { display: block; font-family: var(--font-sans); font-size: 11.5px; color: var(--text-dim); margin-top: 6px; }
+
 /* Materi v3 — bagian ujian yang belum siap (lock SOON) */
 .materi-v3 .part.soon { cursor: default; opacity: .7; }
 .materi-v3 .part.soon:hover { border-color: var(--line); background: rgba(255,255,255,0.03); }

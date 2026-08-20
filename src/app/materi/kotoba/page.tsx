@@ -4,14 +4,23 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Search, Star, Zap, Shuffle, ArrowLeft, ArrowRight, X, RotateCcw, ChevronRight, Check } from "lucide-react";
-import kotobaData from "@/data/kotoba-n2.json";
+import kotobaN2 from "@/data/kotoba/N2.json";
+import kotobaIndex from "@/data/kotoba/index.json";
 import { useUserStats } from "@/lib/use-user-stats";
 
-interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; jlpt_level?: string; note?: string; }
-const NON_N2 = /\bN[1345]\b/;
-const DATA = ((kotobaData as { vocabulary?: Kotoba[] }).vocabulary ?? []).filter(w => w.word && !NON_N2.test(w.group || ""));
-const GROUP_ORDER: string[] = [];
-for (const w of DATA) if (!GROUP_ORDER.includes(w.group)) GROUP_ORDER.push(w.group);
+interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; note?: string; }
+interface Deck { level: string; title: string; source: string; count: number; groupOrder: string[]; vocabulary: Kotoba[]; }
+
+/* Level dari termudah → tersulit (badge jumlah kata dari index.json). */
+const LEVEL_META = (kotobaIndex as { levels: { level: string; count: number }[] }).levels;
+/* Deck default = N2 (deck Nihongo no Mori kamu + kosakata inti). Level lain di-load
+   dinamis pas dipilih biar bundle awal ringan. Ini dipanggil di event handler, aman. */
+const LOADERS: Record<string, () => Promise<Deck>> = {
+  N5: () => import("@/data/kotoba/N5.json").then(m => m.default as Deck),
+  N4: () => import("@/data/kotoba/N4.json").then(m => m.default as Deck),
+  N3: () => import("@/data/kotoba/N3.json").then(m => m.default as Deck),
+  N1: () => import("@/data/kotoba/N1.json").then(m => m.default as Deck),
+};
 
 /* Tema unit (dari Nihongo no Mori / claude design). Yang belum ada = tampil polos. */
 const THEME: Record<string, { jp: string; id: string; label?: string }> = {
@@ -49,15 +58,18 @@ function statDari(p?: Progres): WStat {
 }
 const DOT: Record<State, string> = { known: "d-known", seen: "d-seen", wrong: "d-wrong", new: "d-new" };
 
-/* Jenis kata (POS) — dari grup + akhiran ます. */
-type Pos = "動詞" | "副詞" | "接続詞";
+/* Jenis kata (POS). Kata hasil generate udah punya field `pos` (名詞/動詞/形容詞/
+   副詞/接続詞/その他). Deck N2 basis (Nihongo no Mori) belum, jadi ditebak dari
+   grup + akhiran ます. その他 dianggap null biar gak jadi chip filter. */
+type Pos = string;
+const POS_ALL: Pos[] = ["名詞", "動詞", "形容詞", "副詞", "接続詞"];
 function posOf(w: Kotoba): Pos | null {
+  if (w.pos) return w.pos === "その他" ? null : w.pos;
   if (w.group === "副詞") return "副詞";
   if (w.group === "接続詞") return "接続詞";
   if (/ます$/.test(w.word) || w.group === "動詞" || w.group.includes("合う")) return "動詞";
   return null;
 }
-const POS_LIST: Pos[] = ["動詞", "副詞", "接続詞"];
 function hitsText(s: WStat): { t: string; bad?: boolean } {
   if (s.state === "wrong") return { t: `salah ${s.wrong}×`, bad: true };
   if (s.state === "known") return { t: `benar ${s.correct}×` };
@@ -73,16 +85,36 @@ export default function KotobaDeck() {
   const [progres, setProgres] = useState<Map<string, Progres>>(new Map());
   const [busy, setBusy] = useState<string | null>(null);
 
+  const N2_DECK = kotobaN2 as Deck;
+  const [level, setLevel] = useState("N2");
+  const [deck, setDeck] = useState<Deck>(N2_DECK);
+  const [deckLoading, setDeckLoading] = useState(false);
+  const DATA = deck.vocabulary as Kotoba[];
+  const GROUP_ORDER = deck.groupOrder;
+  const POS_LIST = useMemo(() => POS_ALL.filter(p => DATA.some(w => posOf(w) === p)), [DATA]);
+
   const [query, setQuery] = useState("");
   const [statusF, setStatusF] = useState<"all" | State | "fav">("all");
   const [posF, setPosF] = useState<Pos | null>(null);
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([GROUP_ORDER[0]]));
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([N2_DECK.groupOrder[0]]));
   const [sel, setSel] = useState<Kotoba | null>(null);
 
   const [flashOpen, setFlashOpen] = useState(false);
   const [flashList, setFlashList] = useState<Kotoba[]>([]);
   const [flashIdx, setFlashIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
+
+  /* Ganti level: load deck dinamis (event handler, aman dari purity), reset panel
+     & filter jenis-kata, buka grup pertama. */
+  const changeLevel = async (lv: string) => {
+    if (lv === level || deckLoading) return;
+    setLevel(lv); setDeckLoading(true); setSel(null); setPosF(null);
+    try {
+      const d = lv === "N2" ? N2_DECK : await LOADERS[lv]();
+      setDeck(d);
+      setOpenGroups(new Set([d.groupOrder[0]]));
+    } finally { setDeckLoading(false); }
+  };
 
   useEffect(() => {
     async function load() {
@@ -108,13 +140,13 @@ export default function KotobaDeck() {
 
   const summary = useMemo(() => {
     let known = 0, seen = 0, wrong = 0, neu = 0;
-    const pos: Record<Pos, number> = { "動詞": 0, "副詞": 0, "接続詞": 0 };
+    const pos: Record<Pos, number> = {};
     for (const w of DATA) {
       const s = statDari(progres.get(w.word)).state; if (s === "known") known++; else if (s === "seen") seen++; else if (s === "wrong") wrong++; else neu++;
-      const p = posOf(w); if (p) pos[p]++;
+      const p = posOf(w); if (p) pos[p] = (pos[p] ?? 0) + 1;
     }
     return { known, seen, wrong, neu, pos };
-  }, [progres]);
+  }, [progres, DATA]);
 
   const match = (w: Kotoba, q: string) =>
     !q || w.word.toLowerCase().includes(q) || (w.reading ?? "").toLowerCase().includes(q) || (w.meaning ?? "").toLowerCase().includes(q);
@@ -133,7 +165,7 @@ export default function KotobaDeck() {
     }).filter(g => g.words.length > 0);
     // `progres` wajib ikut: tanpa itu, filter "Dikuasai/Sering salah" dan
     // persentase per unit ngendon di nilai lama tiap user nilai satu kartu.
-  }, [query, statusF, posF, favs, progres]);
+  }, [query, statusF, posF, favs, progres, DATA, GROUP_ORDER]);
 
   useEffect(() => { if (query.trim() || statusF !== "all" || posF) setOpenGroups(new Set(groups.map(g => g.name))); }, [query, statusF, posF, groups]);
 
@@ -198,7 +230,7 @@ export default function KotobaDeck() {
     if (!sel) return [] as Kotoba[];
     return DATA.filter(w => w.group === sel.group && w.word !== sel.word && (w.reading?.[0] === sel.reading?.[0] || w.word.length === sel.word.length))
       .slice(0, 2);
-  }, [sel]);
+  }, [sel, DATA]);
 
   const STATUS_BADGE: Record<State, { t: string; cls: string }> = {
     known: { t: "DIKUASAI", cls: "s-known" }, seen: { t: "PERNAH MUNCUL", cls: "s-seen" },
@@ -218,8 +250,16 @@ export default function KotobaDeck() {
 
           <div className="kv-hd">
             <div>
-              <h1>Kotoba <span className="jp">語彙</span><span className="lvtag">N2</span></h1>
-              <p>{DATA.length} kata kurasi · <b>Nihongo no Mori</b> — status tiap kata keisi otomatis dari latihanmu.</p>
+              <h1>Kotoba <span className="jp">語彙</span><span className="lvtag">{level}</span></h1>
+              <p>{deck.count} kata · <b>{deck.source}</b> — status tiap kata keisi otomatis dari latihanmu.</p>
+              <div className="kv-levels">
+                {LEVEL_META.map(m => (
+                  <button key={m.level} className={`kv-lvl${level === m.level ? " on" : ""}`} onClick={() => changeLevel(m.level)} disabled={deckLoading}>
+                    {m.level}<span className="c">{m.count}</span>
+                  </button>
+                ))}
+                {deckLoading && <span className="kv-lvl-load">memuat…</span>}
+              </div>
             </div>
             <div className="kv-prog">
               <div className="seg"><div className="n g">{summary.known}</div><div className="l">Dikuasai</div></div>
@@ -234,7 +274,7 @@ export default function KotobaDeck() {
 
           <div className="kv-fbar">
             <div className="kv-search"><Search size={15} /><input placeholder="Cari kata / bacaan / arti…" value={query} onChange={e => setQuery(e.target.value)} /></div>
-            <div className="kv-src">📚 Sumber: <b>Nihongo no Mori</b></div>
+            <div className="kv-src">📚 Sumber: <b>{deck.source}</b></div>
           </div>
 
           <div className="kv-chips">
@@ -296,9 +336,9 @@ export default function KotobaDeck() {
                   <div className="kv-det-kanji">{sel.word}</div>
                   <div className="kv-det-read">{sel.reading}</div>
                   <div className="kv-det-mean">{sel.meaning}</div>
-                  <div className="kv-det-tags">{THEME[sel.group] && <span className="dtag">{THEME[sel.group].jp || sel.group}</span>}<span className="dtag">{sel.group.replace(/ 合う$/, "")}</span><span className="dtag">{sel.jlpt_level || "N2"}</span></div>
+                  <div className="kv-det-tags">{THEME[sel.group] && <span className="dtag">{THEME[sel.group].jp || sel.group}</span>}<span className="dtag">{sel.group.replace(/ 合う$/, "")}</span>{sel.pos && sel.pos !== "その他" && <span className="dtag">{sel.pos}</span>}<span className="dtag">{sel.jlpt_level || level}</span></div>
 
-                  {sel.example && (<div className="kv-det-sec"><div className="kv-det-h">Contoh kalimat</div><div className="kv-ex">{sel.example}</div></div>)}
+                  {sel.example && (<div className="kv-det-sec"><div className="kv-det-h">Contoh kalimat</div><div className="kv-ex">{sel.example}</div>{sel.example_id && <div className="kv-ex-id">{sel.example_id}</div>}</div>)}
                   {sel.note && (<div className="kv-det-sec"><div className="kv-det-h">Catatan</div><div className="kv-det-none">{sel.note}</div></div>)}
 
                   <div className="kv-det-sec">
@@ -337,7 +377,7 @@ export default function KotobaDeck() {
               <div className={`kd-card${flipped ? " flip" : ""}`} onClick={() => setFlipped(f => !f)}>
                 {!flipped
                   ? <div className="kd-card-front"><div className="kd-card-word">{flashCard.word}</div><div className="kd-card-hint">ketuk buat lihat arti</div></div>
-                  : <div className="kd-card-back"><div className="kd-card-read">{flashCard.reading}</div><div className="kd-card-mean">{flashCard.meaning}</div>{flashCard.example && <div className="kd-card-ex">{flashCard.example}</div>}</div>}
+                  : <div className="kd-card-back"><div className="kd-card-read">{flashCard.reading}</div><div className="kd-card-mean">{flashCard.meaning}</div>{flashCard.example && <div className="kd-card-ex">{flashCard.example}{flashCard.example_id && <span className="id">{flashCard.example_id}</span>}</div>}</div>}
               </div>
               {flipped ? (
                 /* Baru muncul setelah artinya kelihatan — nilai diri sebelum

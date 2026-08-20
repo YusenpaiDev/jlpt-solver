@@ -1,0 +1,20 @@
+# secrets
+.env
+
+# cache & hasil (regenerate-able)
+data/raw/*.csv
+data/progress/*.json
+output/*.json
+errors.log
+*.log
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# tapi tetap track folder-nya
+!data/raw/.gitkeep
+!data/progress/.gitkeep
+!output/.gitkeep

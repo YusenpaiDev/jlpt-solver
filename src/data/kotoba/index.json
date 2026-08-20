@@ -1,0 +1,34 @@
+{
+  "levels": [
+    {
+      "level": "N5",
+      "count": 709,
+      "title": "JLPT N5 — Kotoba (709 kata)",
+      "source": "Kosakata inti JLPT N5"
+    },
+    {
+      "level": "N4",
+      "count": 666,
+      "title": "JLPT N4 — Kotoba (666 kata)",
+      "source": "Kosakata inti JLPT N4"
+    },
+    {
+      "level": "N3",
+      "count": 2102,
+      "title": "JLPT N3 — Kotoba (2102 kata)",
+      "source": "Kosakata inti JLPT N3"
+    },
+    {
+      "level": "N2",
+      "count": 2180,
+      "title": "JLPT N2 — Kotoba (2180 kata)",
+      "source": "Nihongo no Mori + kosakata inti N2"
+    },
+    {
+      "level": "N1",
+      "count": 2685,
+      "title": "JLPT N1 — Kotoba (2685 kata)",
+      "source": "Kosakata inti JLPT N1"
+    }
+  ]
+}
