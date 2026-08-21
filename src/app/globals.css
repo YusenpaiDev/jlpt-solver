@@ -4142,6 +4142,15 @@ input, textarea, select { font-size: 16px; }
 .lvt-n4.on .lvt-letter { color: var(--n4); }
 .lvt-n5.on .lvt-letter { color: var(--n5); }
 .level-tile.on .lvt-desc { color: var(--text-secondary); }
+/* Level yang banknya belum keisi (N1/N5) — dikunci */
+.level-tile.locked { cursor: not-allowed; opacity: 0.5; }
+.level-tile.locked:hover { background: var(--surface-1); border-color: var(--edge-soft); transform: none; }
+.lvt-soon {
+  position: absolute; top: 9px; right: 9px;
+  font-family: var(--font-sans); font-size: 8.5px; font-weight: 800; letter-spacing: 0.08em;
+  padding: 2px 6px; border-radius: 6px;
+  color: var(--text-tertiary); background: var(--surface-3, rgba(255,255,255,0.06)); border: 1px solid var(--edge-soft);
+}
 .lvt-check {
   position: absolute; top: 10px; right: 10px;
   width: 18px; height: 18px;

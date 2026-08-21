@@ -45,6 +45,9 @@ interface RiwayatItem {
   created_at: string;
 }
 
+/* Bank soal asli baru keisi N2/N3/N4. N1 & N5 dikunci ("SOON") biar gak error
+   pas dipilih — isi soal aslinya nyusul. */
+const LOCKED_LEVELS = new Set<Level>(["N1", "N5"]);
 const LEVELS: { lv: Level; desc: string }[] = [
   { lv: "N5", desc: "Pemula" },
   { lv: "N4", desc: "Dasar" },
@@ -129,7 +132,8 @@ export default function LembarTugas() {
           .limit(24),
       ]);
       if (profileRes.data) {
-        if (profileRes.data.target_level) setLevel(profileRes.data.target_level as Level);
+        const tgt = profileRes.data.target_level as Level | null;
+        if (tgt && !LOCKED_LEVELS.has(tgt)) setLevel(tgt); // target N1/N5 masih dikunci → biarin default N2
         setStreak(profileRes.data.streak ?? 0);
       }
       setRiwayat((sessionRes.data ?? []) as RiwayatItem[]);
@@ -375,22 +379,28 @@ function SetupView({
             </div>
           </div>
           <div className="level-picker">
-            {LEVELS.map(opt => (
-              <button
-                key={opt.lv}
-                type="button"
-                className={`level-tile lvt-${opt.lv.toLowerCase()}${level === opt.lv ? " on" : ""}`}
-                onClick={() => setLevel(opt.lv)}
-              >
-                <span className="lvt-letter">{opt.lv}</span>
-                <span className="lvt-desc">{opt.desc}</span>
-                {level === opt.lv && (
-                  <span className="lvt-check">
-                    <Check size={10} strokeWidth={3} style={{ color: "var(--bg)" }} />
-                  </span>
-                )}
-              </button>
-            ))}
+            {LEVELS.map(opt => {
+              const locked = LOCKED_LEVELS.has(opt.lv);
+              return (
+                <button
+                  key={opt.lv}
+                  type="button"
+                  disabled={locked}
+                  aria-disabled={locked}
+                  className={`level-tile lvt-${opt.lv.toLowerCase()}${level === opt.lv ? " on" : ""}${locked ? " locked" : ""}`}
+                  onClick={() => { if (!locked) setLevel(opt.lv); }}
+                >
+                  <span className="lvt-letter">{opt.lv}</span>
+                  <span className="lvt-desc">{locked ? "Segera" : opt.desc}</span>
+                  {locked && <span className="lvt-soon">SOON</span>}
+                  {level === opt.lv && !locked && (
+                    <span className="lvt-check">
+                      <Check size={10} strokeWidth={3} style={{ color: "var(--bg)" }} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </section>
 
