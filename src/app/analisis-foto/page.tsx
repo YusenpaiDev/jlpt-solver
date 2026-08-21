@@ -3393,7 +3393,7 @@ export default function AnalisisFoto() {
       const supabase = createClient();
       const { data } = await supabase
         .from("sessions")
-        .select("ai_result, level, category")
+        .select("ai_result, level, category, score")
         .eq("id", id)
         .single();
       if (data?.ai_result) {
@@ -3409,7 +3409,10 @@ export default function AnalisisFoto() {
         setResultCategory(((data.category === "AI" ? "ai" : data.category) ?? null) as Category | null);
         setSavedSessionId(id);
         setChatMsgs([]);
-        setIsReviewMode(true);
+        // Review cuma kalau sesi UDAH selesai (ada skor). Sesi baru/partial =
+        // bisa dikerjain & progres/skor/XP-nya kesimpen. Dulu ini selalu true,
+        // jadi tiap soal yang dibuka read-only → gak pernah kecatat.
+        setIsReviewMode((data.score as number | null) != null);
         setStage("result");
       }
     } catch {
