@@ -3,535 +3,273 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
-import {
-  Search, BookOpen, Star, ChevronDown, ChevronRight, Info, X, Loader2, Sparkles,
-  Zap, Shuffle, ArrowLeft, ArrowRight,
-} from "lucide-react";
+import { Search, Star, Zap, ChevronRight, Check, X, ArrowUpDown } from "lucide-react";
+import bunpouN2 from "@/data/bunpou/N2.json";
 import { useUserStats } from "@/lib/use-user-stats";
 
-type Level = "N1" | "N2" | "N3" | "N4" | "N5";
-type LevelFilter = "ALL" | Level;
-
-interface BunpouPattern {
-  id: string;
-  pattern: string;
-  meaning: string;
-  connects_to: string | null;
-  notes: string | null;
-  example_jp: string | null;
-  example_id: string | null;
-  level: string | null;
-  favorite: boolean | null;
-  created_at: string;
+interface Ex { jp: string; highlight: string; id: string; }
+interface Pattern {
+  id: string; pattern: string; meaning: string; level: string;
+  functionGroup: string; setsuzoku: string[]; nuance: string;
+  examples: Ex[]; confusableWith: string[]; discriminator: string; quickTip: string;
 }
+interface Grp { key: string; name: string; jp: string; }
+interface Deck { level: string; count: number; groups: Grp[]; patterns: Pattern[]; }
 
-const LEVEL_OPTS: LevelFilter[] = ["ALL", "N1", "N2", "N3", "N4", "N5"];
+const DECK = bunpouN2 as Deck;
+const PATTERNS = DECK.patterns;
+const GROUPS = DECK.groups;
+const BY_ID = new Map(PATTERNS.map(p => [p.id, p]));
+const GROUP_META = new Map(GROUPS.map(g => [g.key, g]));
 
-const GLOSSARY_DASAR: { jp: string; id: string; example: string }[] = [
-  { jp: "名詞",     id: "Noun (kata benda)",       example: "本, 人, 学校" },
-  { jp: "い形容詞", id: "i-adjective (kata sifat-i)", example: "高い, 新しい" },
-  { jp: "な形容詞", id: "na-adjective (kata sifat-na)", example: "静か, 元気" },
-  { jp: "動詞",     id: "Verb (kata kerja)",       example: "食べる, 見る" },
-];
+/* Status latihan — SRS belum dibangun, jadi semua "new" (jujur, nggak dikarang).
+   Struktur disiapin biar tinggal disambung pas engine drill jadi. */
+type State = "known" | "seen" | "wrong" | "new";
+const DOT: Record<State, string> = { known: "d-known", seen: "d-seen", wrong: "d-wrong", new: "d-new" };
+function statOf(_id: string): State { return "new"; }
 
-const GLOSSARY_BENTUK: { jp: string; id: string; example: string }[] = [
-  { jp: "動詞辞書形", id: "Verb bentuk kamus (dictionary form)",    example: "食べる, 行く" },
-  { jp: "動詞ます形", id: "Verb bentuk masu (masu-stem)",            example: "食べ-, 行き-" },
-  { jp: "動詞て形",   id: "Verb bentuk te (te-form)",                example: "食べて, 行って" },
-  { jp: "動詞た形",   id: "Verb bentuk lampau (past form)",          example: "食べた, 行った" },
-  { jp: "動詞ない形", id: "Verb bentuk negatif (negative form)",     example: "食べない, 行かない" },
-  { jp: "動詞普通形", id: "Verb bentuk biasa / plain (semua bentuk)", example: "食べる/食べた/食べない/食べなかった" },
-];
+type Sort = "fungsi" | "az";
 
-export default function BunpouPage() {
-  /* Data */
-  const [patterns, setPatterns] = useState<BunpouPattern[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  /* UI state */
-  const [query, setQuery] = useState("");
-  const [levelF, setLevelF] = useState<LevelFilter>("ALL");
-  const [favOnly, setFavOnly] = useState(false);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [glossaryOpen, setGlossaryOpen] = useState(true);
-
-  /* Flashcard mode */
-  const [flashOpen, setFlashOpen] = useState(false);
-  const [flashIdx, setFlashIdx] = useState(0);
-  const [flashOrder, setFlashOrder] = useState<number[]>([]);
-  const [flashFlipped, setFlashFlipped] = useState(false);
-  const [flashShuffled, setFlashShuffled] = useState(false);
-
-  /* User bar */
+export default function BunpouDeck() {
+  const stats = useUserStats();
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
-  const stats = useUserStats();
-  const xp = stats.xp;
-  const xpTarget = stats.xpTarget;
+  const [favs, setFavs] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const [query, setQuery] = useState("");
+  const [statusF, setStatusF] = useState<"all" | State | "fav" | "warn">("all");
+  const [sort, setSort] = useState<Sort>("fungsi");
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([GROUPS[0]?.key]));
+  const [sel, setSel] = useState<Pattern | null>(PATTERNS[0] ?? null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    // Restore glossary-open state dari localStorage
-    if (typeof window !== "undefined") {
-      const v = localStorage.getItem("bunpou:glossaryOpen");
-      if (v === "0") setGlossaryOpen(false);
+    async function load() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
+      const [p, f] = await Promise.all([
+        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+        supabase.from("bunpou_patterns").select("pattern").eq("user_id", user.id).eq("favorite", true),
+      ]);
+      if (p.data) setStreak(p.data.streak ?? 0);
+      if (f.data) setFavs(new Set(f.data.map(r => r.pattern)));
     }
-
-    (async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-
-        const profileRes = await supabase.from("profiles").select("streak").eq("id", user.id).single();
-        if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
-
-        const res = await supabase
-          .from("bunpou_patterns")
-          .select("id, pattern, meaning, connects_to, notes, example_jp, example_id, level, favorite, created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: true });
-
-        if (res.error) {
-          // Tabel belum di-migrate — biarin patterns kosong, UI tampilin empty state
-          console.warn("Bunpou table query error:", res.error.message);
-          setPatterns([]);
-        } else {
-          setPatterns((res.data ?? []) as BunpouPattern[]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
+    load();
   }, []);
 
-  const toggleGlossary = () => {
-    setGlossaryOpen(open => {
-      const next = !open;
-      if (typeof window !== "undefined") {
-        localStorage.setItem("bunpou:glossaryOpen", next ? "1" : "0");
-      }
-      return next;
-    });
-  };
-
-  const toggleExpanded = (id: string) => {
-    setExpanded(s => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleFavorite = async (id: string) => {
-    const p = patterns.find(x => x.id === id);
-    if (!p) return;
-    const next = !p.favorite;
-    setPatterns(prev => prev.map(x => x.id === id ? { ...x, favorite: next } : x));
-    try {
-      const { error } = await createClient().from("bunpou_patterns").update({ favorite: next }).eq("id", id);
-      if (error) throw error;
-    } catch {
-      setPatterns(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
+  const summary = useMemo(() => {
+    let known = 0, seen = 0, wrong = 0, neu = 0, warn = 0;
+    for (const p of PATTERNS) {
+      const s = statOf(p.id);
+      if (s === "known") known++; else if (s === "seen") seen++; else if (s === "wrong") wrong++; else neu++;
+      if (p.confusableWith.length) warn++;
     }
-  };
+    return { known, seen, wrong, neu, warn };
+  }, []);
 
-  const filtered = useMemo(() => {
-    let r = patterns;
-    if (levelF !== "ALL") r = r.filter(p => p.level === levelF);
-    if (favOnly) r = r.filter(p => p.favorite);
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      r = r.filter(p =>
-        p.pattern.includes(query) ||
-        p.meaning.toLowerCase().includes(q) ||
-        (p.notes ?? "").toLowerCase().includes(q) ||
-        (p.connects_to ?? "").toLowerCase().includes(q)
-      );
-    }
-    return r;
-  }, [patterns, levelF, query, favOnly]);
+  const match = (p: Pattern, q: string) =>
+    !q || p.pattern.toLowerCase().includes(q) || p.meaning.toLowerCase().includes(q)
+    || p.setsuzoku.some(s => s.toLowerCase().includes(q));
 
-  const levelCounts = useMemo(() => {
-    const counts: Record<LevelFilter, number> = { ALL: patterns.length, N1: 0, N2: 0, N3: 0, N4: 0, N5: 0 };
-    patterns.forEach(p => {
-      if (p.level && counts[p.level as Level] != null) counts[p.level as Level]++;
-    });
-    return counts;
-  }, [patterns]);
-
-  const favCount = useMemo(() => patterns.filter(p => p.favorite).length, [patterns]);
-
-  /* ── Flashcard mode helpers ── */
-  const openFlash = () => {
-    if (filtered.length === 0) return;
-    setFlashOrder(filtered.map((_, i) => i));
-    setFlashIdx(0);
-    setFlashFlipped(false);
-    setFlashShuffled(false);
-    setFlashOpen(true);
-  };
-  const closeFlash = () => setFlashOpen(false);
-  const flashNext = () => {
-    setFlashFlipped(false);
-    setFlashIdx(i => Math.min(filtered.length - 1, i + 1));
-  };
-  const flashPrev = () => {
-    setFlashFlipped(false);
-    setFlashIdx(i => Math.max(0, i - 1));
-  };
-  const flashShuffle = () => {
-    const order = filtered.map((_, i) => i);
-    // Fisher-Yates di state init biar gak nge-trigger purity error
-    for (let i = order.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [order[i], order[j]] = [order[j], order[i]];
-    }
-    setFlashOrder(order);
-    setFlashIdx(0);
-    setFlashFlipped(false);
-    setFlashShuffled(true);
-  };
-
-  // ESC / arrow keyboard nav
-  useEffect(() => {
-    if (!flashOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeFlash();
-      else if (e.key === "ArrowRight") flashNext();
-      else if (e.key === "ArrowLeft") flashPrev();
-      else if (e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        setFlashFlipped(f => !f);
-      }
+  const groups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const keep = (p: Pattern) => {
+      if (!match(p, q)) return false;
+      if (statusF === "fav") return favs.has(p.pattern);
+      if (statusF === "warn") return p.confusableWith.length > 0;
+      if (statusF !== "all") return statOf(p.id) === statusF;
+      return true;
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flashOpen, flashIdx, filtered.length]);
+    return GROUPS.map(g => {
+      let ps = PATTERNS.filter(p => p.functionGroup === g.key && keep(p));
+      if (sort === "az") ps = ps.slice().sort((a, b) => a.pattern.localeCompare(b.pattern, "ja"));
+      const total = PATTERNS.filter(p => p.functionGroup === g.key).length;
+      const known = PATTERNS.filter(p => p.functionGroup === g.key && statOf(p.id) === "known").length;
+      const warn = PATTERNS.filter(p => p.functionGroup === g.key && p.confusableWith.length > 0).length;
+      return { ...g, patterns: ps, total, warn, pct: total ? Math.round((known / total) * 100) : 0 };
+    }).filter(g => g.patterns.length > 0);
+  }, [query, statusF, sort, favs]);
 
-  const flashPattern = flashOpen && filtered.length > 0
-    ? filtered[flashOrder[flashIdx] ?? 0]
-    : null;
+  useEffect(() => {
+    if (query.trim() || statusF !== "all") setOpenGroups(new Set(groups.map(g => g.key)));
+  }, [query, statusF, groups]);
+
+  const toggleFav = async (p: Pattern) => {
+    if (busy) return;
+    setBusy(p.pattern);
+    const next = !favs.has(p.pattern);
+    setFavs(prev => { const s = new Set(prev); if (next) s.add(p.pattern); else s.delete(p.pattern); return s; });
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await supabase.from("bunpou_patterns").update({ favorite: next }).eq("user_id", user.id).eq("pattern", p.pattern);
+    } catch { /* optimistic */ } finally { setBusy(null); }
+  };
+
+  const soon = (msg: string) => { setNotice(msg); };
+
+  const selConfusables = useMemo(() => {
+    if (!sel) return [] as Pattern[];
+    return sel.confusableWith.map(id => BY_ID.get(id)).filter(Boolean) as Pattern[];
+  }, [sel]);
+
+  const STATUS_BADGE: Record<State, { t: string; cls: string }> = {
+    known: { t: "DIKUASAI", cls: "s-known" }, seen: { t: "PERNAH MUNCUL", cls: "s-seen" },
+    wrong: { t: "SERING SALAH", cls: "s-wrong" }, new: { t: "BELUM DILATIH", cls: "s-new" },
+  };
+
+  function renderExample(ex: Ex) {
+    if (!ex.highlight || !ex.jp.includes(ex.highlight)) return <span>{ex.jp}</span>;
+    const i = ex.jp.indexOf(ex.highlight);
+    return <>{ex.jp.slice(0, i)}<span className="hl">{ex.highlight}</span>{ex.jp.slice(i + ex.highlight.length)}</>;
+  }
 
   return (
     <>
       <AuroraBackground />
       <NavRail />
       <BottomNav />
-
       <main className="app-shell">
-        <div className="top-bar">
-          <Breadcrumb items={[
-            { label: "Beranda", href: "/" },
-            { label: "Materi", href: "/materi" },
-            { label: "Bunpou" },
-          ]} />
-          <UserBar
-            streakDays={streak}
-            xp={xp}
-            xpTarget={xpTarget}
-            avatarLetter={userInitial}
-            isPro={stats.isPro}
-           
-          />
-        </div>
+        <UserBar streakDays={streak} xp={stats.xp} xpTarget={stats.xpTarget} avatarLetter={userInitial} isPro={stats.isPro} />
 
-        <header className="bp-header">
-          <div>
-            <h1 className="bp-title">
-              Bunpou <span className="bp-title-jp">文法</span>
-            </h1>
-            <p className="bp-sub">
-              Pola tata bahasa JLPT — kapan dipake, nyambung ke jenis kata apa, contoh konkretnya. Klik baris buat lihat detail + contoh kalimat.
-            </p>
-          </div>
-          <div className="bp-header-right">
-            <div className="bp-count-pill">
-              <span className="bp-count-num">{patterns.length}</span>
-              <span className="bp-count-label">POLA</span>
+        <div className="bunpou-v3">
+          <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Materi", href: "/materi" }, { label: "Bunpou" }]} />
+
+          <div className="bv-hd">
+            <div>
+              <h1>Bunpou <span className="jp">文法</span><span className="lvtag">N2</span></h1>
+              <p>{DECK.count} pola dikelompokin per <b>fungsi</b> — bukan urutan kamus. Pola yang mirip duduk bareng biar keliatan bedanya.</p>
             </div>
-            <button
-              type="button"
-              className="bp-flash-btn"
-              onClick={openFlash}
-              disabled={patterns.length === 0}
-            >
-              <Zap size={14} fill="currentColor" strokeWidth={1.2} />
-              Latihan Kilat
-            </button>
-          </div>
-        </header>
-
-        {/* ── Pengenalan / Glossary ── */}
-        <section className={`glass-card bp-intro${glossaryOpen ? " open" : ""}`}>
-          <button type="button" className="bp-intro-toggle" onClick={toggleGlossary}>
-            <Info size={14} strokeWidth={1.8} style={{ color: "var(--accent-iris)" }} />
-            <span className="bp-intro-title">Pengenalan — Istilah Grammar Dasar</span>
-            <span className="bp-intro-state">
-              {glossaryOpen ? "Sembunyikan" : "Tampilkan"}
-              {glossaryOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </span>
-          </button>
-
-          {glossaryOpen && (
-            <div className="bp-intro-body">
-              <p className="bp-intro-desc">
-                Bunpou (文法) adalah pola tata bahasa Jepang yang harus disambung ke jenis kata tertentu.
-                Misalnya pattern <code>〜あげく</code> cuma nyambung sama <code>動詞た形</code> (verb bentuk lampau).
-                Ini istilah dasar yang sering muncul di kolom <strong>接続 (Penyambungan)</strong>:
-              </p>
-
-              <div className="bp-gloss-grid">
-                <div className="bp-gloss-section">
-                  <div className="bp-gloss-eyebrow">Jenis Kata Dasar</div>
-                  <ul className="bp-gloss-list">
-                    {GLOSSARY_DASAR.map(g => (
-                      <li key={g.jp} className="bp-gloss-row">
-                        <span className="bp-gloss-jp">{g.jp}</span>
-                        <span className="bp-gloss-id">{g.id}</span>
-                        <span className="bp-gloss-ex">{g.example}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="bp-gloss-section">
-                  <div className="bp-gloss-eyebrow">Bentuk Kata Kerja</div>
-                  <ul className="bp-gloss-list">
-                    {GLOSSARY_BENTUK.map(g => (
-                      <li key={g.jp} className="bp-gloss-row">
-                        <span className="bp-gloss-jp">{g.jp}</span>
-                        <span className="bp-gloss-id">{g.id}</span>
-                        <span className="bp-gloss-ex">{g.example}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+            <div className="bv-hd-right">
+              <div className="bv-prog">
+                <div className="seg"><div className="n g">{summary.known}</div><div className="l">Dikuasai</div></div>
+                <div className="sep" />
+                <div className="seg"><div className="n y">{summary.seen}</div><div className="l">Pernah muncul</div></div>
+                <div className="sep" />
+                <div className="seg"><div className="n r">{summary.wrong}</div><div className="l">Sering salah</div></div>
+                <div className="sep" />
+                <div className="seg"><div className="n" style={{ color: "var(--text-dim)" }}>{summary.neu}</div><div className="l">Belum</div></div>
               </div>
+              <button className="bv-cta" onClick={() => soon("⚡ Latihan Kilat segera hadir")}><Zap size={14} /> Latihan Kilat</button>
             </div>
-          )}
-        </section>
-
-        {/* ── Toolbar: search + level + fav ── */}
-        <div className="bp-toolbar">
-          <div className="bp-search">
-            <Search size={13} strokeWidth={1.6} style={{ color: "var(--text-tertiary)" }} />
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Cari pattern, arti, atau penyambungan..."
-            />
-            {query && (
-              <button type="button" className="bp-search-clear" onClick={() => setQuery("")} aria-label="Hapus">
-                <X size={12} />
-              </button>
-            )}
           </div>
 
-          <div className="bp-level-chips">
-            {LEVEL_OPTS.map(l => (
-              <button
-                key={l}
-                type="button"
-                className={`bp-chip${levelF === l ? " on" : ""}`}
-                onClick={() => setLevelF(l)}
-              >
-                {l === "ALL" ? "Semua" : l}
-                <span className="bp-chip-count">{levelCounts[l]}</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              className={`bp-chip bp-chip-fav${favOnly ? " on" : ""}`}
-              onClick={() => setFavOnly(v => !v)}
-              title={favOnly ? "Tampilkan semua" : "Hanya favorit"}
-            >
-              <Star size={11} strokeWidth={2} fill={favOnly ? "currentColor" : "none"} />
-              Favorit
-              {favCount > 0 && <span className="bp-chip-count">{favCount}</span>}
+          <div className="bv-fbar">
+            <div className="bv-search"><Search size={15} /><input placeholder="Cari pola, arti, atau penyambungan…" value={query} onChange={e => setQuery(e.target.value)} /></div>
+            <button className="bv-sort" onClick={() => setSort(s => s === "fungsi" ? "az" : "fungsi")}>
+              <ArrowUpDown size={13} /> Urut: <b>{sort === "fungsi" ? "Fungsi" : "A→Z"}</b>
             </button>
           </div>
-        </div>
 
-        {/* ── Table list ── */}
-        <section className="glass-card bp-list">
-          <div className="bp-list-head">
-            <span className="bp-col-no">No</span>
-            <span className="bp-col-pattern">文法</span>
-            <span className="bp-col-meaning">意味</span>
-            <span className="bp-col-connect">接続</span>
-            <span className="bp-col-level">Level</span>
-            <span className="bp-col-fav" aria-hidden="true"></span>
+          <div className="bv-chips">
+            <button className={`chip${statusF === "all" ? " on" : ""}`} onClick={() => setStatusF("all")}>Semua <span className="n">{DECK.count}</span></button>
+            <button className={`chip wrong${statusF === "wrong" ? " on" : ""}`} onClick={() => setStatusF("wrong")}><span className="d d-wrong" />Sering salah <span className="n">{summary.wrong}</span></button>
+            <button className={`chip${statusF === "seen" ? " on" : ""}`} onClick={() => setStatusF("seen")}><span className="d d-seen" />Pernah muncul <span className="n">{summary.seen}</span></button>
+            <button className={`chip${statusF === "new" ? " on" : ""}`} onClick={() => setStatusF("new")}><span className="d d-new" />Belum <span className="n">{summary.neu}</span></button>
+            <span className="csep" />
+            <button className={`chip${statusF === "warn" ? " on" : ""}`} onClick={() => setStatusF(s => s === "warn" ? "all" : "warn")}>⚠️ Rawan ketuker <span className="n">{summary.warn}</span></button>
+            <button className={`chip${statusF === "fav" ? " on" : ""}`} onClick={() => setStatusF(s => s === "fav" ? "all" : "fav")}><Star size={11} fill={statusF === "fav" ? "currentColor" : "none"} /> Favorit {favs.size > 0 && <span className="n">{favs.size}</span>}</button>
           </div>
 
-          {loading ? (
-            <div className="bp-empty">
-              <Loader2 className="animate-spin" size={20} style={{ color: "var(--text-tertiary)" }} />
-            </div>
-          ) : patterns.length === 0 ? (
-            <div className="bp-empty">
-              <BookOpen size={28} strokeWidth={1.4} style={{ color: "var(--text-tertiary)" }} />
-              <h3 className="bp-empty-title">Belum ada pola tata bahasa</h3>
-              <p className="bp-empty-desc">
-                Generate JSON di Claude.ai pakai prompt <code>materi/PROMPT-BUNPOU.md</code>,
-                drop ke <code>materi/import-bunpou/</code>, lalu jalanin <code>npm run import-bunpou</code>.
-              </p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="bp-empty">
-              <Search size={28} strokeWidth={1.4} style={{ color: "var(--text-tertiary)" }} />
-              <p className="bp-empty-desc">Tidak ada pola yang cocok dengan filter.</p>
-            </div>
-          ) : (
-            <ul className="bp-rows">
-              {filtered.map((p, idx) => {
-                const isOpen = expanded.has(p.id);
+          <div className="bv-grid">
+            <div className="bv-main">
+              {groups.map(g => {
+                const open = openGroups.has(g.key);
                 return (
-                  <li key={p.id} className={`bp-row${isOpen ? " open" : ""}`}>
-                    <button
-                      type="button"
-                      className="bp-row-summary"
-                      onClick={() => toggleExpanded(p.id)}
-                      aria-expanded={isOpen}
-                    >
-                      <span className="bp-col-no">{idx + 1}</span>
-                      <span className="bp-col-pattern font-jp-sans">{p.pattern}</span>
-                      <span className="bp-col-meaning">{p.meaning}</span>
-                      <span className="bp-col-connect font-jp-sans">{p.connects_to ?? "—"}</span>
-                      <span className="bp-col-level">
-                        {p.level && <span className={`bp-lv-tag bp-lv-${p.level.toLowerCase()}`}>{p.level}</span>}
+                  <div className={`bv-fn${open ? " open" : ""}`} key={g.key}>
+                    <div className="bv-fn-head" onClick={() => setOpenGroups(s => { const n = new Set(s); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n; })}>
+                      <ChevronRight size={14} className="bv-chev" />
+                      <span className="bv-fn-t">
+                        {g.name} · <span className="jpt">{g.jp}</span> <span className="cnt">{g.total} pola</span>
+                        {g.warn > 0 && <span className="warn-tag">⚠️ {g.warn} RAWAN KETUKER</span>}
                       </span>
-                      <span className="bp-col-fav">
-                        <button
-                          type="button"
-                          className={`bp-row-fav${p.favorite ? " on" : ""}`}
-                          onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }}
-                          title={p.favorite ? "Hapus favorit" : "Tambah favorit"}
-                          aria-label={p.favorite ? "Hapus favorit" : "Tambah favorit"}
-                        >
-                          <Star size={13} strokeWidth={1.8} fill={p.favorite ? "currentColor" : "none"} />
-                        </button>
-                        <ChevronDown size={13} className={`bp-row-chevron${isOpen ? " on" : ""}`} />
-                      </span>
-                    </button>
-
-                    {isOpen && (
-                      <div className="bp-row-detail">
-                        {p.notes && (
-                          <div className="bp-detail-section">
-                            <div className="bp-detail-label">
-                              <Sparkles size={11} strokeWidth={2} /> CATATAN
+                      <div className="bv-track"><i style={{ width: `${g.pct}%`, background: "var(--success2)" }} /></div>
+                      <span className="bv-pct" style={g.pct === 0 ? { color: "var(--text-dim)", fontWeight: 500 } : undefined}>{g.pct === 0 ? "belum dilatih" : `${g.pct}% dikuasai`}</span>
+                      <button className="bv-drill" onClick={e => { e.stopPropagation(); soon(`⚡ Drill kelompok ${g.name} segera hadir`); }}><Zap size={11} /> Drill kelompok ({g.total})</button>
+                    </div>
+                    {open && (
+                      <div className="bv-pats">
+                        {g.patterns.map(p => {
+                          const st = statOf(p.id); const fav = favs.has(p.pattern);
+                          return (
+                            <div className={`bv-p${sel?.id === p.id ? " sel" : ""}`} key={p.id} onClick={() => setSel(p)}>
+                              <span className={`bv-dot ${DOT[st]}`} />
+                              <span className="bv-p-gm">{p.pattern}</span>
+                              <span className="bv-p-arti">{p.meaning}</span>
+                              <div className="bv-p-setsu">{p.setsuzoku.slice(0, 2).map((s, i) => <span key={s} className={`schip${i ? " alt" : ""}`}>{s}</span>)}</div>
+                              <span className="bv-p-hits">—</span>
+                              <button className={`bv-star${fav ? " on" : ""}`} onClick={e => { e.stopPropagation(); toggleFav(p); }} disabled={busy === p.pattern}><Star size={14} fill={fav ? "currentColor" : "none"} /></button>
                             </div>
-                            <p className="bp-detail-text">{p.notes}</p>
-                          </div>
-                        )}
-                        {(p.example_jp || p.example_id) && (
-                          <div className="bp-detail-section">
-                            <div className="bp-detail-label">
-                              <BookOpen size={11} strokeWidth={2} /> CONTOH
-                            </div>
-                            {p.example_jp && <p className="bp-detail-jp font-jp-sans">{p.example_jp}</p>}
-                            {p.example_id && <p className="bp-detail-id">{p.example_id}</p>}
-                          </div>
-                        )}
+                          );
+                        })}
                       </div>
                     )}
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
-          )}
-        </section>
-      </main>
-
-      {/* ── Flashcard mode (modal overlay) ── */}
-      {flashOpen && flashPattern && (
-        <div className="bp-flash-mask" role="dialog" aria-modal="true">
-          <div className="bp-flash-shell">
-            <div className="bp-flash-top">
-              <button type="button" className="bp-flash-close" onClick={closeFlash} aria-label="Tutup">
-                <X size={16} />
-              </button>
-              <div className="bp-flash-meta">
-                <span className="bp-flash-counter">{flashIdx + 1} / {filtered.length}</span>
-                {flashPattern.level && (
-                  <span className={`bp-lv-tag bp-lv-${flashPattern.level.toLowerCase()}`}>{flashPattern.level}</span>
-                )}
-                {flashShuffled && <span className="bp-flash-tag">SHUFFLED</span>}
-              </div>
-              <button
-                type="button"
-                className={`bp-flash-shuffle${flashShuffled ? " on" : ""}`}
-                onClick={flashShuffle}
-                title="Acak urutan"
-              >
-                <Shuffle size={13} strokeWidth={1.8} />
-              </button>
+              {groups.length === 0 && <p className="bv-empty">Nggak ada pola yang cocok.</p>}
             </div>
 
-            <div
-              className={`bp-flash-card${flashFlipped ? " flipped" : ""}`}
-              onClick={() => setFlashFlipped(f => !f)}
-              role="button"
-              tabIndex={0}
-              aria-label="Klik untuk balik kartu"
-            >
-              {!flashFlipped ? (
-                <div className="bp-flash-face bp-flash-front">
-                  <div className="bp-flash-eyebrow">FUMI · KAPAN DIPAKE</div>
-                  <h2 className="bp-flash-pattern font-jp-sans">{flashPattern.pattern}</h2>
-                  {flashPattern.connects_to && (
-                    <p className="bp-flash-connect font-jp-sans">{flashPattern.connects_to}</p>
+            <aside className="bv-side">
+              {sel ? (
+                <div className="bv-det card">
+                  <span className={`bv-status ${STATUS_BADGE[statOf(sel.id)].cls}`}>● {STATUS_BADGE[statOf(sel.id)].t}</span>
+                  <div className="bv-det-gm">{sel.pattern}</div>
+                  <div className="bv-det-arti">{sel.meaning}</div>
+                  {sel.setsuzoku.length > 0 && (
+                    <div className="bv-det-setsu">{sel.setsuzoku.map((s, i) => <span key={s} className={`schip${i ? " alt" : ""}`}>{s}</span>)}</div>
                   )}
-                  <span className="bp-flash-hint">Klik / spasi → tampilkan arti</span>
-                </div>
-              ) : (
-                <div className="bp-flash-face bp-flash-back">
-                  <div className="bp-flash-eyebrow">ARTI · CATATAN · CONTOH</div>
-                  <h3 className="bp-flash-meaning">{flashPattern.meaning}</h3>
-                  {flashPattern.notes && <p className="bp-flash-notes">{flashPattern.notes}</p>}
-                  {flashPattern.example_jp && (
-                    <div className="bp-flash-example">
-                      <p className="bp-flash-ex-jp font-jp-sans">{flashPattern.example_jp}</p>
-                      {flashPattern.example_id && (
-                        <p className="bp-flash-ex-id">{flashPattern.example_id}</p>
-                      )}
+
+                  {sel.nuance && (
+                    <div className="bv-det-sec"><div className="bv-det-h">Nuansa</div><div className="bv-nuance">{sel.nuance}</div></div>
+                  )}
+
+                  {sel.examples[0] && (
+                    <div className="bv-det-sec">
+                      <div className="bv-det-h">Contoh kalimat</div>
+                      <div className="bv-ex">{renderExample(sel.examples[0])}{sel.examples[0].id && <span className="tr">{sel.examples[0].id}</span>}</div>
                     </div>
                   )}
-                </div>
-              )}
-            </div>
 
-            <div className="bp-flash-controls">
-              <button
-                type="button"
-                className="bp-flash-arrow"
-                onClick={flashPrev}
-                disabled={flashIdx === 0}
-                aria-label="Sebelumnya"
-              >
-                <ArrowLeft size={14} />
-              </button>
-              <button
-                type="button"
-                className="bp-flash-flip-cta"
-                onClick={() => setFlashFlipped(f => !f)}
-              >
-                {flashFlipped ? "Sembunyikan" : "Lihat Arti"}
-              </button>
-              <button
-                type="button"
-                className="bp-flash-arrow"
-                onClick={flashNext}
-                disabled={flashIdx >= filtered.length - 1}
-                aria-label="Berikutnya"
-              >
-                <ArrowRight size={14} />
-              </button>
-            </div>
+                  {selConfusables.length > 0 && (
+                    <div className="bv-det-sec">
+                      <div className="bv-det-h">Bedanya sama yang mirip</div>
+                      <div className="bv-cmp">
+                        <div className="cmp-i self"><span className="cmp-gm">{sel.pattern}</span><span className="cmp-key">{sel.discriminator}</span></div>
+                        {selConfusables.map(c => (
+                          <div className="cmp-i" key={c.id} onClick={() => setSel(c)}><span className="cmp-gm">{c.pattern}</span><span className="cmp-key">{c.discriminator}</span></div>
+                        ))}
+                      </div>
+                      {sel.quickTip && <p className="cmp-note"><b>Cara cepat:</b> {sel.quickTip}</p>}
+                    </div>
+                  )}
+
+                  <div className="bv-det-sec">
+                    <div className="bv-det-h">Jejak latihanmu</div>
+                    <div className="bv-det-none">Belum ada — nyala setelah kamu ngerjain soal yang mengandung pola ini.</div>
+                  </div>
+
+                  <div className="bv-det-act">
+                    <button className="btn btn-p" onClick={() => soon(`⚡ Drill ${sel.pattern} segera hadir`)}><Zap size={13} /> Drill pola ini (5 soal)</button>
+                    <button className="btn btn-g" onClick={() => soon("Modal 'Bandingkan pola' segera hadir")}>Bandingkan</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bv-det card bv-det-empty"><div className="bv-det-glyph">法</div><p>Ketuk salah satu pola buat lihat detail — arti, penyambungan, contoh, dan bedanya sama pola mirip.</p></div>
+              )}
+            </aside>
           </div>
         </div>
-      )}
+
+        {notice && (
+          <div className="bv-toast" onClick={() => setNotice(null)}>
+            {notice} <span className="x"><X size={13} /></span>
+          </div>
+        )}
+      </main>
     </>
   );
 }
