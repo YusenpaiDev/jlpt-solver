@@ -297,6 +297,9 @@ export default function ChoukaiPlayer() {
   const [stabiloColor, setStabiloColor] = useState<string>(STABILO_COLORS[0].rgba);
   const [highlights, setHighlights] = useState<Record<string, HiStroke[]>>({});
   const hasAnyStroke = Object.values(highlights).some(a => a.length > 0);
+
+  // Guard biar skor/XP cuma disimpan sekali per sesi.
+  const [saved, setSaved] = useState(false);
   const commitStroke = (key: string, s: HiStroke) =>
     setHighlights(h => ({ ...h, [key]: [...(h[key] ?? []), s] }));
   // Undo global: buang coretan dgn timestamp terbaru di seluruh soal.
@@ -334,7 +337,12 @@ export default function ChoukaiPlayer() {
         ]);
         if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
         if (sessionRes.error) throw sessionRes.error;
-        setSession(sessionRes.data as SessionRow);
+        const row = sessionRes.data as SessionRow;
+        setSession(row);
+        // Restore jawaban kalau sesi ini pernah dikerjain (biar bisa di-review).
+        const prev = (row.ai_result as { user_progress?: { answers?: Record<number, AnswerState> } } | null)?.user_progress?.answers;
+        if (prev) setAnswers(prev);
+        if (row.score != null) setSaved(true); // udah selesai → jangan re-save/re-XP
       } catch (err) {
         setFetchError(err instanceof Error ? err.message : "Gagal memuat sesi.");
       } finally {
@@ -357,6 +365,30 @@ export default function ChoukaiPlayer() {
     setPicked(prev ? prev.picked : null);
     setSubmitted(!!prev);
   }, [idx, q, answers]);
+
+  /* Simpan skor + stats + XP pas SEMUA soal kejawab. Dulu choukai gak pernah
+     nyimpen apa-apa (doSubmit cuma state lokal) → Statistik/Riwayat kosong. */
+  useEffect(() => {
+    const total = questions.length;
+    if (!sessionId || total === 0 || saved || !session) return;
+    if (session.score != null) return;                 // udah selesai sebelumnya
+    const answered = Object.keys(answers).length;
+    if (answered < total) return;                       // belum semua dijawab
+    const correct = Object.values(answers).filter(a => a.correct).length;
+    setSaved(true);
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const stats = { answered, correct, perCat: { "聴解": { a: answered, c: correct } } };
+        const nextAi = { ...(session.ai_result ?? {}), stats, user_progress: { answers } };
+        await supabase.from("sessions").update({ score: correct, ai_result: nextAi }).eq("id", sessionId);
+        const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
+        await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + correct * 10 + 5 }).eq("id", user.id);
+      } catch { /* biarin — nyusul kalau gagal */ }
+    })();
+  }, [answers, questions.length, sessionId, saved, session]);
 
   if (loading) {
     return (
