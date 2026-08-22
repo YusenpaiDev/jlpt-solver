@@ -285,7 +285,7 @@ export default function Home() {
               {/* kanji + quiz */}
               <div className="bv-duo">
                 <div className="bv-kanji card">
-                  <div className="kj-stage"><span className={`kj kj-len${Math.min((kanji?.highlight ?? kanji?.word ?? "").length || 1, 3)}`}>{kanji?.highlight ?? kanji?.word ?? "—"}</span></div>
+                  <div className="kj-stage"><span className="kj">{(kanji?.highlight ?? kanji?.word ?? "—").charAt(0) || "—"}</span></div>
                   <div className="kj-meta">
                     {/* Badge level = level asli kanji-nya (data N1-N5). Kartunya
                         "kanji hari ini", jadi badge nunjukin level kanji itu. */}
