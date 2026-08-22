@@ -69,10 +69,10 @@ const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Sensei Pro",
-    tagline: "Untuk persiapan ujian serius",
-    monthly: 89_000,
-    yearly: 79_000,
-    yearlyDiscount: 11,
+    tagline: "Serius nyiapin ujian — belajar sampai lulus",
+    monthly: 129_000,
+    yearly: 99_000,        // per-bulan kalau ambil Paket Ujian 6 bulan (total 594rb)
+    yearlyDiscount: 23,
     cta: "Pilih Pro",
     popular: true,
     color: "iris",
@@ -133,6 +133,7 @@ const FAQ = [
   { q: "Kalau downgrade, kotoba & catatan saya hilang?", a: "Nggak. Semua data kamu aman selamanya. Cuma fitur Pro yang non-aktif. Kalau resub, semua langsung balik." },
   { q: "Pakai metode pembayaran apa?",               a: "Visa/Mastercard, GoPay, OVO, Dana, transfer bank, bahkan QRIS — semua via Midtrans." },
   { q: "Ada garansi uang kembali?",                  a: "Ya — 14 hari refund tanpa pertanyaan. Email aja support@senseijlpt.id." },
+  { q: "Ada garansi sampai lulus?",                  a: "Ambil Paket Ujian 6 bulan — kalau belum lulus di sesi ujian dalam periode itu, perpanjang gratis 1 periode. Cukup tunjukin hasil ujianmu ke support@senseijlpt.id." },
   { q: "Bedanya Pro vs Lifetime apa?",               a: "Fitur identik. Pro = subscription. Lifetime = bayar sekali, akses semua fitur Pro selamanya termasuk fitur masa depan." },
 ];
 
@@ -198,7 +199,7 @@ export default function Premium() {
           </h1>
           <p className="pr-sub">
             Lepas semua limit. Analisis berapa pun foto kamu. Tanya Sensei AI sebanyak yang mau.
-            Akses semua materi struktural. Mulai dari Rp 79.000/bulan.
+            Akses semua materi struktural. Belajar sampai lulus — mulai Rp 99.000/bulan (Paket Ujian 6 bulan).
           </p>
 
           <div className="pr-toggle">
@@ -207,15 +208,15 @@ export default function Premium() {
               className={`pr-toggle-btn ${cycle === "monthly" ? "on" : ""}`}
               onClick={() => setCycle("monthly")}
             >
-              Bayar bulanan
+              Bulanan
             </button>
             <button
               type="button"
               className={`pr-toggle-btn ${cycle === "yearly" ? "on" : ""}`}
               onClick={() => setCycle("yearly")}
             >
-              Bayar tahunan
-              <span className="pr-toggle-save">Hemat 11%</span>
+              Paket Ujian 6 bulan
+              <span className="pr-toggle-save">Hemat 23%</span>
             </button>
           </div>
         </header>
@@ -266,7 +267,7 @@ export default function Premium() {
               color="iris"
             />
             <Testi
-              quote="Best Rp 79k yang gw spend tahun ini. Kayak punya tutor pribadi 24/7 — gw bisa foto soal jam berapa aja."
+              quote="Best Rp 99k yang gw spend. Kayak punya tutor pribadi 24/7 — gw bisa foto soal jam berapa aja."
               name="Reza · prep N1"
               avatar="R"
               color="amber"
@@ -351,7 +352,7 @@ function PlanCard({
         ) : (
           <>
             <span className="plan-amount">{fmt(price)}</span>
-            <span className="plan-period">/ bulan</span>
+            <span className="plan-period">/ bulan{cycle === "yearly" ? ` · total ${fmt(price * 6)} / 6 bln` : ""}</span>
             {cycle === "yearly" && plan.monthly != null && (
               <span className="plan-original">{fmt(plan.monthly)}</span>
             )}
