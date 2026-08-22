@@ -8705,6 +8705,12 @@ html { scrollbar-gutter: stable; }
 .bunpou-v3 .lvtag { display: inline-block; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 8px; background: rgba(221,65,36,0.16); border: 1px solid rgba(221,65,36,0.4); color: #E8704F; vertical-align: 6px; margin-left: 10px; }
 .bunpou-v3 .bv-hd p { font-size: 12.5px; color: var(--text-dim); margin-top: 9px; max-width: 540px; line-height: 1.5; }
 .bunpou-v3 .bv-hd p b { color: var(--text-muted); }
+.bunpou-v3 .bv-levels { display: flex; align-items: center; gap: 7px; margin-top: 13px; flex-wrap: wrap; }
+.bunpou-v3 .bv-lvl { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-family: var(--font-sans); font-size: 12px; font-weight: 700; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid var(--line-2); cursor: pointer; transition: .14s; }
+.bunpou-v3 .bv-lvl:hover { border-color: rgba(221,65,36,0.4); color: #E8704F; }
+.bunpou-v3 .bv-lvl.on { background: rgba(221,65,36,0.16); border-color: rgba(221,65,36,0.55); color: #F0906F; }
+.bunpou-v3 .bv-lvl .c { font-size: 10px; font-weight: 600; color: var(--text-dim); padding: 1px 6px; border-radius: 99px; background: rgba(255,255,255,0.06); }
+.bunpou-v3 .bv-lvl.on .c { color: #E8704F; background: rgba(221,65,36,0.16); }
 .bunpou-v3 .bv-hd-right { display: flex; align-items: center; gap: 12px; }
 .bunpou-v3 .bv-prog { display: flex; align-items: center; gap: 15px; padding: 13px 18px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
 .bunpou-v3 .bv-prog .seg { text-align: center; min-width: 62px; }

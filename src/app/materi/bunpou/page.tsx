@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Search, Star, Zap, ChevronRight, Check, X, ArrowUpDown } from "lucide-react";
+import bunpouN1 from "@/data/bunpou/N1.json";
 import bunpouN2 from "@/data/bunpou/N2.json";
+import bunpouN3 from "@/data/bunpou/N3.json";
+import bunpouN4 from "@/data/bunpou/N4.json";
+import bunpouN5 from "@/data/bunpou/N5.json";
 import { useUserStats } from "@/lib/use-user-stats";
 
 interface Ex { jp: string; highlight: string; id: string; }
@@ -16,11 +20,11 @@ interface Pattern {
 interface Grp { key: string; name: string; jp: string; }
 interface Deck { level: string; count: number; groups: Grp[]; patterns: Pattern[]; }
 
-const DECK = bunpouN2 as Deck;
-const PATTERNS = DECK.patterns;
-const GROUPS = DECK.groups;
-const BY_ID = new Map(PATTERNS.map(p => [p.id, p]));
-const GROUP_META = new Map(GROUPS.map(g => [g.key, g]));
+const DECKS: Record<string, Deck> = {
+  N5: bunpouN5 as Deck, N4: bunpouN4 as Deck, N3: bunpouN3 as Deck, N2: bunpouN2 as Deck, N1: bunpouN1 as Deck,
+};
+const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+const DEFAULT_LEVEL = "N2";
 
 /* Status latihan — SRS belum dibangun, jadi semua "new" (jujur, nggak dikarang).
    Struktur disiapin biar tinggal disambung pas engine drill jadi. */
@@ -37,12 +41,27 @@ export default function BunpouDeck() {
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
 
+  const [level, setLevel] = useState(DEFAULT_LEVEL);
+  const DECK = DECKS[level];
+  const PATTERNS = DECK.patterns;
+  const GROUPS = DECK.groups;
+  const BY_ID = useMemo(() => new Map(PATTERNS.map(p => [p.id, p])), [PATTERNS]);
+
   const [query, setQuery] = useState("");
   const [statusF, setStatusF] = useState<"all" | State | "fav" | "warn">("all");
   const [sort, setSort] = useState<Sort>("fungsi");
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([GROUPS[0]?.key]));
-  const [sel, setSel] = useState<Pattern | null>(PATTERNS[0] ?? null);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([DECKS[DEFAULT_LEVEL].groups[0]?.key]));
+  const [sel, setSel] = useState<Pattern | null>(DECKS[DEFAULT_LEVEL].patterns[0] ?? null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const changeLevel = (lv: string) => {
+    if (lv === level) return;
+    const d = DECKS[lv];
+    setLevel(lv);
+    setOpenGroups(new Set([d.groups[0]?.key]));
+    setSel(d.patterns[0] ?? null);
+    setStatusF("all"); setQuery("");
+  };
 
   useEffect(() => {
     async function load() {
@@ -68,7 +87,7 @@ export default function BunpouDeck() {
       if (p.confusableWith.length) warn++;
     }
     return { known, seen, wrong, neu, warn };
-  }, []);
+  }, [PATTERNS]);
 
   const match = (p: Pattern, q: string) =>
     !q || p.pattern.toLowerCase().includes(q) || p.meaning.toLowerCase().includes(q)
@@ -91,7 +110,7 @@ export default function BunpouDeck() {
       const warn = PATTERNS.filter(p => p.functionGroup === g.key && p.confusableWith.length > 0).length;
       return { ...g, patterns: ps, total, warn, pct: total ? Math.round((known / total) * 100) : 0 };
     }).filter(g => g.patterns.length > 0);
-  }, [query, statusF, sort, favs]);
+  }, [query, statusF, sort, favs, PATTERNS, GROUPS]);
 
   useEffect(() => {
     if (query.trim() || statusF !== "all") setOpenGroups(new Set(groups.map(g => g.key)));
@@ -114,7 +133,7 @@ export default function BunpouDeck() {
   const selConfusables = useMemo(() => {
     if (!sel) return [] as Pattern[];
     return sel.confusableWith.map(id => BY_ID.get(id)).filter(Boolean) as Pattern[];
-  }, [sel]);
+  }, [sel, BY_ID]);
 
   const STATUS_BADGE: Record<State, { t: string; cls: string }> = {
     known: { t: "DIKUASAI", cls: "s-known" }, seen: { t: "PERNAH MUNCUL", cls: "s-seen" },
@@ -140,8 +159,15 @@ export default function BunpouDeck() {
 
           <div className="bv-hd">
             <div>
-              <h1>Bunpou <span className="jp">文法</span><span className="lvtag">N2</span></h1>
+              <h1>Bunpou <span className="jp">文法</span><span className="lvtag">{level}</span></h1>
               <p>{DECK.count} pola dikelompokin per <b>fungsi</b> — bukan urutan kamus. Pola yang mirip duduk bareng biar keliatan bedanya.</p>
+              <div className="bv-levels">
+                {LEVELS.map(lv => (
+                  <button key={lv} className={`bv-lvl${level === lv ? " on" : ""}`} onClick={() => changeLevel(lv)}>
+                    {lv}<span className="c">{DECKS[lv].count}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="bv-hd-right">
               <div className="bv-prog">
