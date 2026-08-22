@@ -5,7 +5,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
-import kotobaData from "@/data/kotoba-n2.json";
+import kotobaN1 from "@/data/kotoba/N1.json";
+import kotobaN2 from "@/data/kotoba/N2.json";
+import kotobaN3 from "@/data/kotoba/N3.json";
+import kotobaN4 from "@/data/kotoba/N4.json";
+import kotobaN5 from "@/data/kotoba/N5.json";
 
 interface Session {
   id: string;
@@ -57,11 +61,51 @@ const scorePct = (s: Session) => (s.score != null && s.total > 0 ? Math.round((s
    semua orang, tiap hari, selamanya. Sekarang dari dataset kotoba beneran,
    disaring yang ada kanjinya (281 dari 505). Contoh kalimat gak ada di dataset,
    jadi barisnya cuma dirender kalau memang ada. */
-interface KanjiHarian { word: string; reading: string; meaning: string; level: string; example?: string }
-const NON_N2 = /\bN[1345]\b/;
-const KANJI_POOL: KanjiHarian[] = ((kotobaData as { vocabulary?: { word?: string; reading?: string; meaning?: string; group?: string; jlpt_level?: string }[] }).vocabulary ?? [])
-  .filter(w => w.word && !NON_N2.test(w.group ?? "") && /[\u4e00-\u9fbf]/.test(w.word))
-  .map(w => ({ word: w.word!, reading: w.reading ?? "", meaning: w.meaning ?? "", level: w.jlpt_level ?? "N2" }));
+interface KanjiVocab { word?: string; reading?: string; meaning?: string; example?: string; example_id?: string; jlpt_level?: string }
+interface KanjiHarian { word: string; reading: string; readingDot: string; romaji: string; meaning: string; level: string; example?: string; example_id?: string; highlight?: string }
+
+const KANA_ROMA: Record<string, string> = { \u3042:"a",\u3044:"i",\u3046:"u",\u3048:"e",\u304a:"o",\u304b:"ka",\u304d:"ki",\u304f:"ku",\u3051:"ke",\u3053:"ko",\u304c:"ga",\u304e:"gi",\u3050:"gu",\u3052:"ge",\u3054:"go",\u3055:"sa",\u3057:"shi",\u3059:"su",\u305b:"se",\u305d:"so",\u3056:"za",\u3058:"ji",\u305a:"zu",\u305c:"ze",\u305e:"zo",\u305f:"ta",\u3061:"chi",\u3064:"tsu",\u3066:"te",\u3068:"to",\u3060:"da",\u3062:"ji",\u3065:"zu",\u3067:"de",\u3069:"do",\u306a:"na",\u306b:"ni",\u306c:"nu",\u306d:"ne",\u306e:"no",\u306f:"ha",\u3072:"hi",\u3075:"fu",\u3078:"he",\u307b:"ho",\u3070:"ba",\u3073:"bi",\u3076:"bu",\u3079:"be",\u307c:"bo",\u3071:"pa",\u3074:"pi",\u3077:"pu",\u307a:"pe",\u307d:"po",\u307e:"ma",\u307f:"mi",\u3080:"mu",\u3081:"me",\u3082:"mo",\u3084:"ya",\u3086:"yu",\u3088:"yo",\u3089:"ra",\u308a:"ri",\u308b:"ru",\u308c:"re",\u308d:"ro",\u308f:"wa",\u3092:"o",\u3093:"n",\u30fc:"" };
+const KANA_YOON: Record<string, string> = { \u304d\u3083:"kya",\u304d\u3085:"kyu",\u304d\u3087:"kyo",\u3057\u3083:"sha",\u3057\u3085:"shu",\u3057\u3087:"sho",\u3061\u3083:"cha",\u3061\u3085:"chu",\u3061\u3087:"cho",\u306b\u3083:"nya",\u306b\u3085:"nyu",\u306b\u3087:"nyo",\u3072\u3083:"hya",\u3072\u3085:"hyu",\u3072\u3087:"hyo",\u307f\u3083:"mya",\u307f\u3085:"myu",\u307f\u3087:"myo",\u308a\u3083:"rya",\u308a\u3085:"ryu",\u308a\u3087:"ryo",\u304e\u3083:"gya",\u304e\u3085:"gyu",\u304e\u3087:"gyo",\u3058\u3083:"ja",\u3058\u3085:"ju",\u3058\u3087:"jo",\u3073\u3083:"bya",\u3073\u3085:"byu",\u3073\u3087:"byo",\u3074\u3083:"pya",\u3074\u3085:"pyu",\u3074\u3087:"pyo" };
+function toRomaji(kana: string): string {
+  let out = "", i = 0;
+  while (i < kana.length) {
+    const two = kana.slice(i, i + 2);
+    if (KANA_YOON[two]) { out += KANA_YOON[two]; i += 2; continue; }
+    const ch = kana[i];
+    if (ch === "\u3063") { const r = KANA_YOON[kana.slice(i + 1, i + 3)] || KANA_ROMA[kana[i + 1]] || ""; if (r) out += r[0]; i++; continue; }
+    out += KANA_ROMA[ch] ?? ch;
+    i++;
+  }
+  return out;
+}
+/* \u6311\u3080 + \u3044\u3069\u3080 \u2192 \u3044\u3069\u30fb\u3080 (pisah di batas okurigana). */
+function okuriDot(word: string, reading: string): string {
+  const tail = word.match(/[\u3041-\u3093]+$/);
+  if (!tail || tail[0].length >= reading.length) return reading;
+  const cut = reading.length - tail[0].length;
+  return reading.slice(0, cut) + "\u30fb" + reading.slice(cut);
+}
+const kanjiCore = (word: string) => word.match(/^[\u4e00-\u9fbf\u3005]+/)?.[0] ?? word;
+
+const KANJI_SRC: KanjiVocab[] = [kotobaN5, kotobaN4, kotobaN3, kotobaN2, kotobaN1]
+  .flatMap(d => (d as { vocabulary?: KanjiVocab[] }).vocabulary ?? []);
+const KANJI_POOL: KanjiHarian[] = KANJI_SRC
+  .filter(w => w.word && /[\u4e00-\u9fbf]/.test(w.word) && w.example)
+  .map(w => {
+    const reading = w.reading ?? "";
+    return {
+      word: w.word!, reading, readingDot: okuriDot(w.word!, reading), romaji: toRomaji(reading),
+      meaning: w.meaning ?? "", level: w.jlpt_level ?? "N2",
+      example: w.example, example_id: w.example_id, highlight: kanjiCore(w.word!),
+    };
+  });
+
+/* Render contoh kalimat + highlight kanji-nya (#E8704F). */
+function renderKjExample(example: string, highlight?: string) {
+  if (!highlight || !example.includes(highlight)) return <>{example}</>;
+  const i = example.indexOf(highlight);
+  return <>{example.slice(0, i)}<span className="hl">{highlight}</span>{example.slice(i + highlight.length)}</>;
+}
 
 /** Hari ke-berapa dalam setahun — bikin kartunya ganti tiap hari, bukan acak
  *  tiap render (biar sehari penuh konsisten). */
@@ -243,17 +287,20 @@ export default function Home() {
                 <div className="bv-kanji card">
                   <div className="kj-stage"><span className="kj">{kanji?.word ?? "—"}</span></div>
                   <div className="kj-meta">
-                    {/* Tanpa badge level. Datasetnya N2-only, jadi badge-nya
-                        selalu "N2" — dan buat user yang milih N3/N4/N5 itu
-                        kebaca kayak aplikasinya salah baca profil mereka.
-                        Kartunya emang "kanji hari ini", bukan "kanji level kamu". */}
-                    <div className="tagrow"><span className="tag tag-day">● Kanji Hari Ini</span></div>
-                    <div className="kj-read">{kanji?.reading ?? ""}</div>
+                    {/* Badge level = level asli kanji-nya (data N1-N5). Kartunya
+                        "kanji hari ini", jadi badge nunjukin level kanji itu. */}
+                    <div className="tagrow">
+                      <span className="tag tag-day">● Kanji Hari Ini</span>
+                      {kanji?.level && <span className="tag tag-lvl">{kanji.level}</span>}
+                    </div>
+                    <div className="kj-read">{kanji?.readingDot ?? ""}{kanji?.romaji && <span className="rom">{kanji.romaji}</span>}</div>
                     <div className="kj-mean">{kanji?.meaning ?? "Memuat…"}</div>
-                    {/* Dataset kotoba belum punya kalimat contoh (0 dari 505),
-                        jadi barisnya cuma nongol kalau datanya ada — daripada
-                        nampilin contoh punya kanji lain. */}
-                    {kanji?.example && <div className="kj-ex">{kanji.example}</div>}
+                    {kanji?.example && (
+                      <div className="kj-ex">
+                        {renderKjExample(kanji.example, kanji.highlight)}
+                        {kanji.example_id && <span className="tr">{kanji.example_id}</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="bv-quiz card">
