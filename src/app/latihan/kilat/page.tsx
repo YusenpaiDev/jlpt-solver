@@ -130,6 +130,19 @@ function KilatPlayer() {
 
   const pick = useCallback((n: number) => { if (locked || !q || n >= q.opts.length) return; setSel(n); }, [locked, q]);
 
+  // Rekam SATU jawaban langsung ke DB (biar 1 soal aja udah kecatat, walau keluar di tengah).
+  const recordOne = useCallback(async (pattern: string, correct: boolean) => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("bunpou_progress").select("benar, salah").eq("user_id", user.id).eq("pattern", pattern).maybeSingle();
+      await supabase.from("bunpou_progress").upsert({ user_id: user.id, pattern, benar: (data?.benar ?? 0) + (correct ? 1 : 0), salah: (data?.salah ?? 0) + (correct ? 0 : 1) }, { onConflict: "user_id,pattern" });
+      const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
+      await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + (correct ? 8 : 2) }).eq("id", user.id);
+    } catch { /* nyusul */ }
+  }, []);
+
   const submit = useCallback(() => {
     if (locked || sel === null || !q) return;
     setLocked(true);
@@ -137,6 +150,7 @@ function KilatPlayer() {
     setResults(r => [...r, correct]);
     if (correct) { setOk(o => o + 1); setStreak(s => s + 1); setXp(x => x + 8); }
     else { setWrong(w => w + 1); setStreak(0); setXp(x => x + 2); }
+    recordOne(q.opts[q.ans].gm, correct);
     setLog(l => {
       const prevStreak = l.filter(e => e.gm === q.opts[q.ans].gm && e.correct).length;
       const s = correct ? prevStreak + 1 : 0;
@@ -145,7 +159,7 @@ function KilatPlayer() {
         : `Kamu pilih ${q.opts[sel].gm} — ${q.opts[sel].d.toLowerCase()}`;
       return [...l, { gm: q.opts[q.ans].gm, correct, note, streak: s }];
     });
-  }, [locked, sel, q]);
+  }, [locked, sel, q, recordOne]);
 
   const next = useCallback(() => {
     if (!qs) return;
@@ -163,21 +177,11 @@ function KilatPlayer() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        // akumulasi benar/salah per pola
-        const acc = new Map<string, { b: number; s: number }>();
-        log.forEach(r => { const c = acc.get(r.gm) ?? { b: 0, s: 0 }; if (r.correct) c.b++; else c.s++; acc.set(r.gm, c); });
-        for (const [pattern, c] of acc) {
-          const { data } = await supabase.from("bunpou_progress").select("benar, salah").eq("user_id", user.id).eq("pattern", pattern).maybeSingle();
-          await supabase.from("bunpou_progress").upsert({ user_id: user.id, pattern, benar: (data?.benar ?? 0) + c.b, salah: (data?.salah ?? 0) + c.s }, { onConflict: "user_id,pattern" });
-        }
-        // XP
-        const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
-        await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + xp }).eq("id", user.id);
-        // Entry Riwayat
+        // progress + XP udah dicatat per-soal (recordOne). Di sini cuma entry Riwayat sesi lengkap.
         await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 文法", title: `Drill Bunpou ${level} — ${qs.length} soal`, total: qs.length, score: ok });
       } catch { /* biarin */ }
     })();
-  }, [done, saved, qs, log, xp, ok, level]);
+  }, [done, saved, qs, ok, level]);
 
   // keyboard
   useEffect(() => {

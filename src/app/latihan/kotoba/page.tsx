@@ -146,7 +146,15 @@ function KotobaPlayer() {
       const note = correct ? (s >= 3 ? `Benar — streak ${s}×, naik jadi dikuasai` : s === 1 ? "Benar — pertama kali di sesi ini" : `Benar — ${s}× berturut`) : `Belum tepat — arti/baca ketuker`;
       return [...l, { word: q.word, correct, note, streak: s }];
     });
-    (async () => { try { await createClient().rpc("catat_kotoba", { p_word: q.word, p_benar: correct }); } catch { /* nyusul */ } })();
+    // Rekam per-soal LANGSUNG (progress via catat_kotoba + XP) — 1 soal aja kecatat.
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.rpc("catat_kotoba", { p_word: q.word, p_benar: correct });
+        if (user) { const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single(); await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + (correct ? 8 : 2) }).eq("id", user.id); }
+      } catch { /* nyusul */ }
+    })();
   }, [locked, sel, q]);
   const next = useCallback(() => { if (!qs) return; if (idx + 1 >= qs.length) { setDone(true); return; } setIdx(i => i + 1); setSel(null); setLocked(false); setStarred(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, [qs, idx]);
 
@@ -157,12 +165,11 @@ function KotobaPlayer() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
-        await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + xp }).eq("id", user.id);
+        // progress + XP udah per-soal; di sini cuma entry Riwayat sesi lengkap.
         await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 語彙", title: `Drill Kotoba ${level} — ${qs.length} kata`, total: qs.length, score: ok });
       } catch { /* biarin */ }
     })();
-  }, [done, saved, qs, xp, ok, level]);
+  }, [done, saved, qs, ok, level]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (done) return; if (["1", "2", "3", "4"].includes(e.key)) pick(+e.key - 1); if (e.key === "Enter") { locked ? next() : submit(); } if (e.key === "Escape") router.push("/materi/kotoba"); };
