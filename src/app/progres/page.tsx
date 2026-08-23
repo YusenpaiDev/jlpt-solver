@@ -70,7 +70,7 @@ function Progres() {
   const stats = useUserStats();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tab: Tab = searchParams.get("tab") === "stat" ? "stat" : "log";
+  const tab: Tab = searchParams.get("tab") === "log" ? "log" : "stat";
 
   const [sessions, setSessions] = useState<Sess[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,8 +182,8 @@ function Progres() {
         </header>
 
         <div className="pr-tabs">
-          <button type="button" className={`pr-tab${tab === "log" ? " on" : ""}`} onClick={() => setTab("log")}><History size={14} strokeWidth={1.8} /> Log</button>
           <button type="button" className={`pr-tab${tab === "stat" ? " on" : ""}`} onClick={() => setTab("stat")}><BarChart3 size={14} strokeWidth={1.8} /> Statistik</button>
+          <button type="button" className={`pr-tab${tab === "log" ? " on" : ""}`} onClick={() => setTab("log")}><History size={14} strokeWidth={1.8} /> Log</button>
         </div>
 
         {tab === "stat" ? (
