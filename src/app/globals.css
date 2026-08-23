@@ -8982,6 +8982,20 @@ html { scrollbar-gutter: stable; }
 .latihan-kilat .srs-i b { font-family:var(--jp); font-weight:700; }
 .latihan-kilat .srs-when { margin-left:auto; font-size:10.5px; color:var(--dim); white-space:nowrap; }
 .latihan-kilat .sum-act { display:flex; gap:10px; margin-top:22px; justify-content:center; }
+/* Kotoba-specific: prompt kata + opsi arti/kata + contoh */
+.latihan-kilat .prompt { text-align:center; position:relative; padding:8px 0 4px; }
+.latihan-kilat .pr-jp { font-family:var(--jp); font-size:56px; font-weight:700; line-height:1.2; letter-spacing:.02em; }
+.latihan-kilat .pr-read { font-family:var(--jp); font-size:15px; color:#E8704F; font-weight:600; margin-top:8px; opacity:0; max-height:0; transition:.35s; overflow:hidden; }
+.latihan-kilat .pr-read.show { opacity:1; max-height:40px; }
+.latihan-kilat .pr-read .rom { font-family:var(--sans); font-size:11.5px; color:var(--dim); margin-left:8px; font-weight:500; }
+.latihan-kilat .pr-id { font-size:32px; font-weight:600; letter-spacing:-0.02em; line-height:1.35; max-width:600px; margin:0 auto; }
+.latihan-kilat .opt-main { font-size:15px; font-weight:600; letter-spacing:-0.005em; line-height:1.4; }
+.latihan-kilat .opt-main.jp { font-family:var(--jp); font-size:19px; font-weight:700; }
+.latihan-kilat .opt-sub { display:block; font-size:11px; color:var(--dim); margin-top:4px; font-family:var(--jp); }
+.latihan-kilat .ex { margin-top:11px; padding:12px 16px; border-radius:12px; background:rgba(221,65,36,0.06); border-left:2px solid var(--primary); font-family:var(--jp); font-size:14px; line-height:1.8; }
+.latihan-kilat .ex .lbl2 { font-family:var(--sans); font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); display:block; margin-bottom:6px; }
+.latihan-kilat .ex .hl { color:#E8704F; font-weight:700; }
+.latihan-kilat .ex .tr { display:block; font-family:var(--sans); font-size:11.5px; color:var(--dim); margin-top:4px; }
 @media (prefers-reduced-motion: reduce) { .latihan-kilat *, .latihan-kilat *::before, .latihan-kilat *::after { animation:none !important; transition:none !important; } }
 
 @media (max-width: 1100px) { .bunpou-v3 .bv-grid { grid-template-columns: 1fr; } .bunpou-v3 .bv-side { position: static; } }

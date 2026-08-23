@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Search, Star, Zap, Shuffle, ArrowLeft, ArrowRight, X, RotateCcw, ChevronRight, Check } from "lucide-react";
@@ -79,6 +80,7 @@ function hitsText(s: WStat): { t: string; bad?: boolean } {
 
 export default function KotobaDeck() {
   const stats = useUserStats();
+  const router = useRouter();
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const [favs, setFavs] = useState<Set<string>>(new Set());
@@ -261,14 +263,17 @@ export default function KotobaDeck() {
                 {deckLoading && <span className="kv-lvl-load">memuat…</span>}
               </div>
             </div>
-            <div className="kv-prog">
-              <div className="seg"><div className="n g">{summary.known}</div><div className="l">Dikuasai</div></div>
-              <div className="sep" />
-              <div className="seg"><div className="n y">{summary.seen}</div><div className="l">Pernah muncul</div></div>
-              <div className="sep" />
-              <div className="seg"><div className="n r">{summary.wrong}</div><div className="l">Sering salah</div></div>
-              <div className="sep" />
-              <div className="seg"><div className="n" style={{ color: "var(--text-dim)" }}>{summary.neu}</div><div className="l">Belum</div></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div className="kv-prog">
+                <div className="seg"><div className="n g">{summary.known}</div><div className="l">Dikuasai</div></div>
+                <div className="sep" />
+                <div className="seg"><div className="n y">{summary.seen}</div><div className="l">Pernah muncul</div></div>
+                <div className="sep" />
+                <div className="seg"><div className="n r">{summary.wrong}</div><div className="l">Sering salah</div></div>
+                <div className="sep" />
+                <div className="seg"><div className="n" style={{ color: "var(--text-dim)" }}>{summary.neu}</div><div className="l">Belum</div></div>
+              </div>
+              <button onClick={() => router.push(`/latihan/kotoba?level=${level}`)} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "13px 22px", borderRadius: 99, background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 8px 22px -8px rgba(221,65,36,0.7)" }}><Zap size={14} /> Latihan Kilat</button>
             </div>
           </div>
 
