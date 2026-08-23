@@ -102,9 +102,11 @@ export default function FlashPlayer({ words, onClose }: { words: FlashWord[]; on
   const dotsStart = Math.max(0, Math.min(idx - 4, total - 9));
   const dots = Array.from({ length: Math.min(9, total) }, (_, i) => dotsStart + i);
   const lvCls = word.level ? `lv-${word.level.toLowerCase()}` : "";
-  /* Font kanji adaptif. Ukuran default (110–180px) itu buat kanji tunggal —
-     kata verb panjang (飽きます) kalau dipaksa segitu bakal wrap & mencong.
-     Kecilin ikut jumlah glyph + nowrap biar selalu 1 baris dan ketengah. */
+  /* Font kanji adaptif (desktop). Ukuran default (110–180px) itu buat kanji
+     tunggal — kata verb panjang (飽きます) kalau dipaksa segitu bakal wrap &
+     mencong. Kecilin ikut jumlah glyph biar muat 1 baris & ketengah.
+     Di HP inline ini ditimpa aturan .fc-kanji !important (globals.css @768px)
+     yang udah scale + wrap sendiri, jadi jangan pasang white-space:nowrap. */
   const glyphs = [...word.kanji].length;
   const frontSize = glyphs <= 1 ? "clamp(110px,14vw,180px)"
     : glyphs === 2 ? "clamp(92px,11vw,148px)"
@@ -135,14 +137,14 @@ export default function FlashPlayer({ words, onClose }: { words: FlashWord[]; on
           <div className="fc-side fc-front">
             {word.level && <span className={`fc-level ${lvCls}`}>{word.level}</span>}
             <div className="fc-bg" />
-            <h2 className="fc-kanji" style={{ fontSize: frontSize, whiteSpace: "nowrap" }}>{word.kanji}</h2>
+            <h2 className="fc-kanji" style={{ fontSize: frontSize }}>{word.kanji}</h2>
             <span className="fc-hint">Klik buat lihat jawaban</span>
           </div>
           <div className="fc-side fc-back">
             {word.level && <span className={`fc-level ${lvCls}`}>{word.level}</span>}
             <div className="fc-back-bg" />
             {word.reading && <div className="fc-reading">{word.reading}</div>}
-            <h2 className="fc-kanji fc-kanji-back" style={{ fontSize: backSize, whiteSpace: "nowrap" }}>{word.kanji}</h2>
+            <h2 className="fc-kanji fc-kanji-back" style={{ fontSize: backSize }}>{word.kanji}</h2>
             <p className="fc-meaning">{word.meaning}</p>
             {word.example && <div className="fc-example font-jp-sans">{word.example}</div>}
           </div>
