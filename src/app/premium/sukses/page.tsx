@@ -67,7 +67,7 @@ export default function PremiumSukses() {
           </p>
           <div className="flex flex-col gap-2">
             {[
-              "Analisis foto unlimited tanpa batas",
+              "Bank soal 過去問 lengkap semua level",
               "Kamus lengkap N1–N5 dengan stroke order",
               "Statistik detail & heatmap progres",
               "Lembar tugas otomatis dari AI",

@@ -654,7 +654,7 @@ function SubscriptionSection() {
             </span>
             <h2 className="pg-sub-title">Sensei Free</h2>
             <p className="pg-sub-desc">
-              Kamu sedang di plan Free · 10 analisis foto/hari · 50 kotoba di Kamus
+              Kamu sedang di plan Free · latihan kilat harian · 50 kotoba di Kamus
             </p>
           </div>
           <div className="pg-sub-price">
@@ -698,7 +698,7 @@ function PrivacySection({
       <Card title="Privasi" desc="Atur apa yang dilihat orang lain">
         <Toggle label="Tampilkan profil di leaderboard publik" sub="Kalau off, masih kelihatan oleh teman"             on={leaderboard}   onChange={setLeaderboard} />
         <Toggle label="Bagikan progress ke teman"              sub="Teman bisa lihat streak & XP kamu"                  on={shareFriends}  onChange={setShareFriends} />
-        <Toggle label="Foto soal boleh dipakai untuk training AI" sub="Anonim, tidak terikat akun kamu · membantu akurasi AI" on={aiTraining}    onChange={setAiTraining} />
+        <Toggle label="Data latihan boleh dipakai untuk ningkatin AI" sub="Anonim, tidak terikat akun kamu · bantu akurasi materi & pembahasan" on={aiTraining}    onChange={setAiTraining} />
       </Card>
       <Card title="Data kamu" desc="Export atau hapus data sesuai keinginan">
         <div className="pg-data-row">

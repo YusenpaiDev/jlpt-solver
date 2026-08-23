@@ -133,9 +133,9 @@ export default function Onboarding() {
                 <div><div className="ob-wname">JLPT <span>Solver</span></div><div className="ob-wtag">日本語能力試験 · AI study buddy</div></div>
               </div>
               <h1 className="ob-h1">Selamat datang! 👋</h1>
-              <p className="ob-sub">Foto soal, AI yang jelasin. Sebelum mulai, siapin dulu profil belajarmu — <b>1 menit aja</b>, dan semua bisa diganti nanti di Pengaturan.</p>
+              <p className="ob-sub">Soal 過去問 asli + pembahasan lengkap. Sebelum mulai, siapin dulu profil belajarmu — <b>1 menit aja</b>, dan semua bisa diganti nanti di Pengaturan.</p>
               <div className="ob-feat">
-                <div className="ob-wf"><span className="ob-wfic">📷</span>Upload foto soal → dapet jawaban + pembahasan</div>
+                <div className="ob-wf"><span className="ob-wfic">⚡</span>Latihan kilat Bunpou & Kotoba tiap hari</div>
                 <div className="ob-wf"><span className="ob-wfic">✍️</span>Bank Soal 過去問 asli per level</div>
                 <div className="ob-wf"><span className="ob-wfic">🎧</span>Latihan listening 聴解 dengan audio</div>
                 <div className="ob-wf"><span className="ob-wfic">📖</span>Kamus kotoba pribadi + flashcard</div>

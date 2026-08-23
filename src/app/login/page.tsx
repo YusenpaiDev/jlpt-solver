@@ -131,7 +131,7 @@ export default function Login() {
               <>
                 <h1 className="lg-title">Mulai belajar smart.</h1>
                 <p className="lg-sub">
-                  Gratis selamanya — 10 analisis foto/hari + 50 kotoba. Upgrade kapan aja.
+                  Gratis selamanya — latihan kilat harian + 50 kotoba. Upgrade kapan aja.
                 </p>
               </>
             )}
@@ -379,19 +379,19 @@ function VisualPanel() {
           Sensei JLPT
         </span>
         <h2 className="lg-visual-title">
-          Foto soal.<br />
-          Dapatkan pembahasan.<br />
-          <span className="grad">Hafal lebih cepat.</span>
+          Soal 過去問 asli.<br />
+          Lengkap sama pembahasan.<br />
+          <span className="grad">Lulus lebih pede.</span>
         </h2>
 
         <ul className="lg-visual-bullets">
           <li>
             <span className="lvb-icon iris"><Zap size={11} strokeWidth={1.6} /></span>
-            Analisis foto soal Jepang dalam detik
+            Bank soal 過去問 asli tiap level
           </li>
           <li>
             <span className="lvb-icon emerald"><Check size={11} strokeWidth={2.4} /></span>
-            Kotoba auto-tersimpan ke Kamus
+            Kamus kotoba pribadi + flashcard
           </li>
           <li>
             <span className="lvb-icon amber"><Shield size={11} strokeWidth={1.6} /></span>

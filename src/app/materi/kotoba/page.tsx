@@ -279,7 +279,7 @@ export default function KotobaDeck() {
                       </span>
                       <div className="kv-utrack"><i style={{ width: `${g.pct}%` }} /></div>
                       <span className="kv-upct" style={g.pct === 0 ? { color: "var(--text-dim)", fontWeight: 500 } : undefined}>{g.pct === 0 ? "belum dilatih" : `${g.pct}% dikuasai`}</span>
-                      <button className="kv-drill" onClick={e => { e.stopPropagation(); openFlash(DATA.filter(w => w.group === g.name)); }}><Zap size={11} /> Drill unit ({g.total})</button>
+                      <button className="kv-drill" onClick={e => { e.stopPropagation(); openFlash(DATA.filter(w => w.group === g.name)); }}><Zap size={11} /> Flash unit ({g.total})</button>
                     </div>
                     {open && (
                       <div className="kv-words">

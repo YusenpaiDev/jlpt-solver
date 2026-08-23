@@ -195,7 +195,7 @@ function Progres() {
           <div className="glass-card pr-empty">
             <History size={22} strokeWidth={1.6} />
             <div className="pr-empty-t">Belum ada sesi latihan</div>
-            <p className="pr-empty-s">Kerjain set di Bank Soal atau upload foto soal — sesi yang udah dikerjain muncul di sini.</p>
+            <p className="pr-empty-s">Kerjain set di Bank Soal atau latihan kilat — sesi yang udah dikerjain muncul di sini.</p>
             <div className="pr-empty-cta">
               <Link href="/materi#bank-soal" className="btn btn-primary">Buka Bank Soal</Link>
               <Link href="/lembar-tugas" className="btn btn-secondary">Lembar Tugas</Link>
@@ -204,7 +204,7 @@ function Progres() {
         ) : (
           <>
             <div className="pr-filters">
-              {([["all", "Semua"], ["exam", "✍️ Bank Soal"], ["foto", "📷 Analisis Foto"], ["choukai", "🎧 Choukai"]] as const).map(([v, l]) => (
+              {([["all", "Semua"], ["exam", "✍️ Bank Soal"], ["choukai", "🎧 Choukai"]] as const).map(([v, l]) => (
                 <button key={v} type="button" className={`pr-fchip${typeF === v ? " on" : ""}`} onClick={() => setTypeF(v as typeof typeF)}>{l}</button>
               ))}
               {levelsPresent.length > 1 && <span className="pr-fsep" />}

@@ -55,7 +55,7 @@ const PLANS: Plan[] = [
     cta: "Plan kamu sekarang",
     color: "slate",
     features: [
-      { t: "10 analisis foto / hari", on: true },
+      { t: "Bank soal 過去問 (terbatas)", on: true },
       { t: "50 kotoba di Kamus", on: true },
       { t: "Latihan kilat dasar", on: true },
       { t: "5 chat Sensei AI / hari", on: true },
@@ -77,7 +77,7 @@ const PLANS: Plan[] = [
     popular: true,
     color: "iris",
     features: [
-      { t: "Analisis foto unlimited", on: true, highlight: true },
+      { t: "Bank soal 過去問 lengkap", on: true, highlight: true },
       { t: "Kotoba unlimited di Kamus", on: true, highlight: true },
       { t: "Sensei chat unlimited", on: true, highlight: true },
       { t: "Semua materi struktural", on: true },
@@ -116,7 +116,7 @@ interface CompareRow {
 }
 
 const COMPARE: CompareRow[] = [
-  { label: "Analisis foto",            free: "10 / hari",  pro: "Unlimited",   life: "Unlimited" },
+  { label: "Bank soal 過去問",         free: "Terbatas",   pro: "Lengkap",     life: "Lengkap" },
   { label: "Kotoba di Kamus",          free: "50 max",     pro: "Unlimited",   life: "Unlimited" },
   { label: "Sensei AI chat",           free: "5 / hari",   pro: "Unlimited",   life: "Unlimited" },
   { label: "Materi struktural",        free: false,        pro: true,          life: true },
@@ -261,19 +261,19 @@ export default function Premium() {
           <h2 className="pr-section-title centered">Dari para Senpai 先輩</h2>
           <div className="pr-testi-grid">
             <Testi
-              quote="Sensei nge-detect grammar yang gw udah salah berkali-kali di mock test. Akurasi langsung naik 18%."
+              quote="Latihan kilat Bunpou-nya nyorot pola yang gw sering salah. Akurasi mock test langsung naik 18%."
               name="Bella · N2 (lulus 2026/03)"
               avatar="B"
               color="iris"
             />
             <Testi
-              quote="Best Rp 99k yang gw spend. Kayak punya tutor pribadi 24/7 — gw bisa foto soal jam berapa aja."
+              quote="Best Rp 99k yang gw spend. Bank soal 過去問-nya lengkap — gw bisa latihan jam berapa aja, kayak punya tutor 24/7."
               name="Reza · prep N1"
               avatar="R"
               color="amber"
             />
             <Testi
-              quote="Kamus auto-save dari foto = game changer. Vocab gw tumbuh 3× lebih cepat dibanding pake Anki manual."
+              quote="Kamus kotoba + flashcard-nya game changer. Vocab gw tumbuh 3× lebih cepat dibanding pake Anki manual."
               name="Putri · N3 → N2"
               avatar="P"
               color="emerald"

@@ -304,7 +304,7 @@ export default function CatatanPage() {
             ) : filtered.length === 0 ? (
               <div style={{ padding: 32, textAlign: "center", color: "var(--text-tertiary)", fontSize: 12.5 }}>
                 {catatan.length === 0
-                  ? "Belum ada catatan. Klik 'Catatan Baru' atau simpan dari Analisis Foto."
+                  ? "Belum ada catatan. Klik 'Catatan Baru' buat mulai nulis."
                   : "Tidak ada catatan cocok dengan pencarian."}
               </div>
             ) : (

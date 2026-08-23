@@ -463,7 +463,7 @@ export default function Kamus() {
               Kamus <span className="kk-title-jp">辞書</span>
             </h1>
             <p className="kk-sub">
-              Kotoba pribadi kamu — auto-saved dari Analisis Foto, atau tambah sendiri.
+              Kotoba pribadi kamu — tambah sendiri atau simpan dari materi.
               Pakai FLASH buat hafalan cepat — kotoba dipecah jadi dek 50 kata.
             </p>
           </div>
@@ -546,7 +546,7 @@ export default function Kamus() {
                 <div className="detail-hero-bg" />
                 <p style={{ position: "relative", color: "var(--text-tertiary)", fontSize: 13, padding: "40px 20px" }}>
                   Belum ada kata. Tambah pertama lewat <strong style={{ color: "var(--accent-emerald)" }}>TAMBAH</strong>{" "}
-                  atau biarkan auto-saved dari Analisis Foto.
+                  atau simpan langsung dari halaman materi.
                 </p>
               </div>
             </aside>
@@ -879,7 +879,7 @@ function WordList({
         ) : words.length === 0 ? (
           <li style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-tertiary)", fontSize: 12.5 }}>
             {totalWords === 0
-              ? "Belum ada kata. Klik TAMBAH atau auto-save dari Analisis Foto."
+              ? "Belum ada kata. Klik TAMBAH buat nyimpen kotoba pertamamu."
               : "Tidak ada kata cocok dengan filter."}
           </li>
         ) : words.map(w => (
