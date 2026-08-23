@@ -7,7 +7,6 @@ import { Home, BookOpen, Camera, History, BookA } from "lucide-react";
 const BOTTOM_ITEMS = [
   { href: "/",              label: "Beranda",  Icon: Home },
   { href: "/materi",        label: "Materi",   Icon: BookOpen },
-  { href: "/analisis-foto", label: "Foto",     Icon: Camera },
   { href: "/progres",       label: "Progres",  Icon: History },
   { href: "/kamus",         label: "Kamus",    Icon: BookA },
 ] as const;

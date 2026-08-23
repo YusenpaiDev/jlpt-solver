@@ -83,7 +83,7 @@ export default function PremiumSukses() {
 
         {/* CTA */}
         <div className="flex items-center gap-3 w-full">
-          <a href="/analisis-foto"
+          <a href="/materi"
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:brightness-110"
             style={{ background: "linear-gradient(135deg,#3a8a5a,#5ea87a)", color: "#fff", fontFamily: "var(--font-jakarta)" }}>
             Mulai Belajar <ArrowRight className="size-4" />

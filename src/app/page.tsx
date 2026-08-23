@@ -385,8 +385,8 @@ export default function Home() {
 
               <div className="bv-scard card insight">
                 <div className="s-h" style={{ color: "#E8704F" }}>Tips Belajar</div>
-                <p>Upload foto soal yang bikin bingung — AI bakal jelasin grammar &amp; vocab-nya. <b>Fokus 1 kategori</b> per sesi biar nempel.</p>
-                <Link href="/analisis-foto?mode=camera" className="btn btn-p sm">📷 Analisis Foto</Link>
+                <p>Latihan rutin lebih nempel daripada nyicil banyak sekaligus. <b>Fokus 1 kategori</b> per sesi biar kebentuk.</p>
+                <Link href="/lembar-tugas" className="btn btn-p sm">▶ Mulai Latihan</Link>
               </div>
             </aside>
           </div>

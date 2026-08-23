@@ -216,7 +216,7 @@ export default function Onboarding() {
                 {goal && <div className="ob-sumr"><span className="k">TARGET HARIAN</span><span className="v">{GOALS.find(g => g.v === goal)?.t} — {goal} menit/hari</span></div>}
               </div>
               <div className="ob-donecta">
-                <button className="ob-btn ob-btn-p" onClick={() => finish("/analisis-foto")}>📷 Analisis foto pertamamu</button>
+                <button className="ob-btn ob-btn-p" onClick={() => finish("/materi")}>▶ Mulai belajar materi</button>
                 <button className="ob-btn ob-btn-g" onClick={() => finish("/")}>Buka Beranda</button>
               </div>
               <div className="ob-hintset">Semua bisa diganti di Pengaturan → Target belajar</div>

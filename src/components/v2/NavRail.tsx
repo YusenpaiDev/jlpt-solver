@@ -10,7 +10,6 @@ import {
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
   { href: "/materi",        label: "Materi",        Icon: BookOpen },
-  { href: "/analisis-foto", label: "Analisis Foto", Icon: Camera },
   { href: "/lembar-tugas",  label: "Lembar Tugas",  Icon: ListTodo },
   { href: "/kamus",         label: "Kamus",         Icon: BookA },
   { href: "/catatan",       label: "Catatan",       Icon: NotebookPen },

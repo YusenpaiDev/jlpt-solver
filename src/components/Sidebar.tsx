@@ -23,7 +23,6 @@ interface Profile {
 const navItems = [
   { icon: House,         label: "Beranda",        href: "/"               },
   { icon: GraduationCap, label: "Materi",         href: "/materi"         },
-  { icon: Camera,        label: "Analisis Foto",   href: "/analisis-foto"  },
   { icon: ClipboardList, label: "Lembar Tugas",    href: "/lembar-tugas"   },
   { icon: BookOpen,      label: "Kamus",           href: "/kamus"          },
   { icon: NotebookPen,   label: "Catatan",          href: "/catatan"        },

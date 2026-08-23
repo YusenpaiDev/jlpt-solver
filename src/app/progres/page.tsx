@@ -198,7 +198,7 @@ function Progres() {
             <p className="pr-empty-s">Kerjain set di Bank Soal atau upload foto soal — sesi yang udah dikerjain muncul di sini.</p>
             <div className="pr-empty-cta">
               <Link href="/materi#bank-soal" className="btn btn-primary">Buka Bank Soal</Link>
-              <Link href="/analisis-foto" className="btn btn-secondary">Analisis Foto</Link>
+              <Link href="/lembar-tugas" className="btn btn-secondary">Lembar Tugas</Link>
             </div>
           </div>
         ) : (

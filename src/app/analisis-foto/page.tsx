@@ -3372,18 +3372,12 @@ export default function AnalisisFoto() {
     }
   };
 
-  /* Load session from ?session=<id> URL param, or auto-trigger mode */
+  /* Halaman ini sekarang CUMA player buat ngerjain soal (via ?session=<id>).
+     Fitur upload/analisis-foto udah dibuang — tanpa session → balik ke Materi. */
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sid  = params.get("session");
-    const mode = params.get("mode");
-    if (sid) {
-      loadSession(sid);
-    } else if (mode === "upload") {
-      fileInputRef.current?.click();
-    } else if (mode === "camera") {
-      handleCameraClick();
-    }
+    const sid = new URLSearchParams(window.location.search).get("session");
+    if (sid) loadSession(sid);
+    else window.location.replace("/materi");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

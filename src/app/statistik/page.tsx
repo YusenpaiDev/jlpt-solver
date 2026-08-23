@@ -474,9 +474,9 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
                     Akurasi <strong style={{ color: "var(--text-primary)" }}>{insight.jp} ({insight.label})</strong> paling rendah ({insight.pct}%).
                   </p>
                   <p className="st-insight-body">
-                    Coba latih lebih banyak soal kategori ini — atau buka <strong>Analisis Foto</strong> dan analisis materi {insight.label} buat boost akurasi.
+                    Coba latih lebih banyak soal kategori {insight.label} — kerjain set di Lembar Tugas buat boost akurasi.
                   </p>
-                  <Link href="/analisis-foto" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
+                  <Link href="/lembar-tugas" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
                     Mulai sesi fokus →
                   </Link>
                 </>
