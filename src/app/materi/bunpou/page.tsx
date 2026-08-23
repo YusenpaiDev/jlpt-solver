@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Search, Star, Zap, ChevronRight, Check, X, ArrowUpDown } from "lucide-react";
@@ -68,6 +69,7 @@ function genQuestions(pats: Pattern[], all: Pattern[], byId: Map<string, Pattern
 
 export default function BunpouDeck() {
   const stats = useUserStats();
+  const router = useRouter();
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const [favs, setFavs] = useState<Set<string>>(new Set());
@@ -257,7 +259,7 @@ export default function BunpouDeck() {
                 <div className="sep" />
                 <div className="seg"><div className="n" style={{ color: "var(--text-dim)" }}>{summary.neu}</div><div className="l">Belum</div></div>
               </div>
-              <button className="bv-cta" onClick={() => startDrill(PATTERNS, 10)}><Zap size={14} /> Latihan Kilat</button>
+              <button className="bv-cta" onClick={() => router.push(`/latihan/kilat?level=${level}`)}><Zap size={14} /> Latihan Kilat</button>
             </div>
           </div>
 
@@ -292,7 +294,7 @@ export default function BunpouDeck() {
                       </span>
                       <div className="bv-track"><i style={{ width: `${g.pct}%`, background: "var(--success2)" }} /></div>
                       <span className="bv-pct" style={g.pct === 0 ? { color: "var(--text-dim)", fontWeight: 500 } : undefined}>{g.pct === 0 ? "belum dilatih" : `${g.pct}% dikuasai`}</span>
-                      <button className="bv-drill" onClick={e => { e.stopPropagation(); startDrill(PATTERNS.filter(p => p.functionGroup === g.key), 10); }}><Zap size={11} /> Drill kelompok ({g.total})</button>
+                      <button className="bv-drill" onClick={e => { e.stopPropagation(); router.push(`/latihan/kilat?level=${level}&group=${g.key}`); }}><Zap size={11} /> Drill kelompok ({g.total})</button>
                     </div>
                     {open && (
                       <div className="bv-pats">
@@ -360,8 +362,8 @@ export default function BunpouDeck() {
                   </div>
 
                   <div className="bv-det-act">
-                    <button className="btn btn-p" onClick={() => startDrill([sel, ...selConfusables], 5)}><Zap size={13} /> Drill pola ini (5 soal)</button>
-                    <button className="btn btn-g" onClick={() => startDrill(PATTERNS.filter(p => p.functionGroup === sel.functionGroup), 10)}>Drill kelompok</button>
+                    <button className="btn btn-p" onClick={() => router.push(`/latihan/kilat?level=${level}&item=${sel.id}`)}><Zap size={13} /> Drill pola ini (5 soal)</button>
+                    <button className="btn btn-g" onClick={() => router.push(`/latihan/kilat?level=${level}&group=${sel.functionGroup}`)}>Drill kelompok</button>
                   </div>
                 </div>
               ) : (
