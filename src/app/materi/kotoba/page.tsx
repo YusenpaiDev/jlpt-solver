@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
-import { Search, Star, Zap, Shuffle, ArrowLeft, ArrowRight, X, RotateCcw, ChevronRight, Check } from "lucide-react";
+import { Search, Star, Zap, X, ChevronRight, Check } from "lucide-react";
 import kotobaN2 from "@/data/kotoba/N2.json";
 import kotobaIndex from "@/data/kotoba/index.json";
 import { useUserStats } from "@/lib/use-user-stats";
+import FlashPlayer, { type FlashWord } from "@/components/FlashPlayer";
 
 interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; note?: string; }
 interface Deck { level: string; title: string; source: string; count: number; groupOrder: string[]; vocabulary: Kotoba[]; }
@@ -101,10 +102,7 @@ export default function KotobaDeck() {
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([N2_DECK.groupOrder[0]]));
   const [sel, setSel] = useState<Kotoba | null>(null);
 
-  const [flashOpen, setFlashOpen] = useState(false);
-  const [flashList, setFlashList] = useState<Kotoba[]>([]);
-  const [flashIdx, setFlashIdx] = useState(0);
-  const [flipped, setFlipped] = useState(false);
+  const [flashWords, setFlashWords] = useState<FlashWord[] | null>(null);
 
   /* Ganti level: load deck dinamis (event handler, aman dari purity), reset panel
      & filter jenis-kata, buka grup pertama. */
@@ -184,41 +182,12 @@ export default function KotobaDeck() {
     } catch { /* optimistic */ } finally { setBusy(null); }
   };
 
-  const startFlash = (words: Kotoba[]) => {
+  /* Flashcard pasif (flip aja) — pakai FlashPlayer yang sama kayak Kamus.
+     Recording/SRS lewat Latihan Kilat, bukan flashcard (sesuai design). */
+  const openFlash = (words: Kotoba[]) => {
     if (!words.length) return;
-    // Acak beneran. Dulu urutannya diturunkan dari hash nama kata — hasilnya
-    // sama persis tiap kali flash dibuka, jadi hafalannya ngikut urutan bukan
-    // ngikut katanya. Ini event handler, bukan render, jadi aman dari hydration.
-    const arr = words.slice();
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    setFlashList(arr); setFlashIdx(0); setFlipped(false); setFlashOpen(true);
+    setFlashWords(words.map(w => ({ id: w.word, kanji: w.word, reading: w.reading, meaning: w.meaning, level: w.jlpt_level ?? level, example: w.example ?? null })));
   };
-  /* Rekam penilaian user, lalu maju ke kartu berikutnya.
-     Angka di layar diperbarui duluan (optimistis) — nunggu balasan server buat
-     tiap kartu bikin flash-nya kerasa berat, sedangkan ini cuma hitungan hafalan. */
-  const nilaiKartu = async (kata: string, benar: boolean) => {
-    setProgres(prev => {
-      const next = new Map(prev);
-      const lama = next.get(kata) ?? { benar: 0, salah: 0, riwayat: [] };
-      next.set(kata, {
-        benar: lama.benar + (benar ? 1 : 0),
-        salah: lama.salah + (benar ? 0 : 1),
-        riwayat: [benar, ...lama.riwayat].slice(0, 5),
-      });
-      return next;
-    });
-    nextCard();
-    try {
-      await createClient().rpc("catat_kotoba", { p_word: kata, p_benar: benar });
-    } catch { /* biarin — hitungannya nyusul pas halaman dimuat ulang */ }
-  };
-
-  const flashCard = flashOpen && flashList.length ? flashList[flashIdx] : null;
-  const nextCard = () => { setFlipped(false); setFlashIdx(i => (i + 1) % flashList.length); };
-  const prevCard = () => { setFlipped(false); setFlashIdx(i => (i - 1 + flashList.length) % flashList.length); };
 
   const selStat = sel ? statDari(progres.get(sel.word)) : null;
   /* 5 percobaan terakhir, terbaru di depan — dari kotoba_progress.riwayat.
@@ -310,7 +279,7 @@ export default function KotobaDeck() {
                       </span>
                       <div className="kv-utrack"><i style={{ width: `${g.pct}%` }} /></div>
                       <span className="kv-upct" style={g.pct === 0 ? { color: "var(--text-dim)", fontWeight: 500 } : undefined}>{g.pct === 0 ? "belum dilatih" : `${g.pct}% dikuasai`}</span>
-                      <button className="kv-drill" onClick={e => { e.stopPropagation(); startFlash(DATA.filter(w => w.group === g.name)); }}><Zap size={11} /> Drill unit ({g.total})</button>
+                      <button className="kv-drill" onClick={e => { e.stopPropagation(); openFlash(DATA.filter(w => w.group === g.name)); }}><Zap size={11} /> Drill unit ({g.total})</button>
                     </div>
                     {open && (
                       <div className="kv-words">
@@ -363,8 +332,8 @@ export default function KotobaDeck() {
                   )}
 
                   <div className="kv-det-act">
-                    <button className="btn btn-p" onClick={() => startFlash([sel])}><Zap size={13} /> Flash kata ini</button>
-                    <button className="btn btn-g" onClick={() => startFlash(DATA.filter(w => w.group === sel.group))}>Flash unit</button>
+                    <button className="btn btn-p" onClick={() => openFlash([sel])}><Zap size={13} /> Flash kata ini</button>
+                    <button className="btn btn-g" onClick={() => openFlash(DATA.filter(w => w.group === sel.group))}>Flash unit</button>
                   </div>
                   <button className={`kv-det-fav${favs.has(sel.word) ? " on" : ""}`} onClick={() => toggleFav(sel)}><Star size={14} fill={favs.has(sel.word) ? "currentColor" : "none"} /> {favs.has(sel.word) ? "Tersimpan di Kamus" : "Simpan ⭐ ke Kamus"}</button>
                 </div>
@@ -375,34 +344,7 @@ export default function KotobaDeck() {
           </div>
         </div>
 
-        {flashCard && (
-          <div className="kd-flash" onClick={() => setFlashOpen(false)}>
-            <div className="kd-flash-inner" onClick={e => e.stopPropagation()}>
-              <div className="kd-flash-top"><span>{flashIdx + 1} / {flashList.length}</span><button onClick={() => setFlashOpen(false)}><X size={18} /></button></div>
-              <div className={`kd-card${flipped ? " flip" : ""}`} onClick={() => setFlipped(f => !f)}>
-                {!flipped
-                  ? <div className="kd-card-front"><div className="kd-card-word">{flashCard.word}</div><div className="kd-card-hint">ketuk buat lihat arti</div></div>
-                  : <div className="kd-card-back"><div className="kd-card-read">{flashCard.reading}</div><div className="kd-card-mean">{flashCard.meaning}</div>{flashCard.example && <div className="kd-card-ex">{flashCard.example}{flashCard.example_id && <span className="id">{flashCard.example_id}</span>}</div>}</div>}
-              </div>
-              {flipped ? (
-                /* Baru muncul setelah artinya kelihatan — nilai diri sebelum
-                   lihat jawaban gak ada artinya. Ini satu-satunya sumber data
-                   buat segmen "Dikuasai / Sering salah" di header. */
-                <div className="kd-flash-nav">
-                  <button onClick={() => nilaiKartu(flashCard.word, false)}>Belum tau</button>
-                  <button className="p" onClick={() => nilaiKartu(flashCard.word, true)}><Check size={14} /> Udah tau</button>
-                </div>
-              ) : (
-                <div className="kd-flash-nav">
-                  <button onClick={prevCard}><ArrowLeft size={16} /></button>
-                  <button className="p" onClick={() => setFlipped(true)}><RotateCcw size={14} /> Balik</button>
-                  <button onClick={nextCard}><ArrowRight size={16} /></button>
-                </div>
-              )}
-              <button className="kd-flash-shuffle" onClick={() => startFlash(flashList)}><Shuffle size={13} /> Acak ulang</button>
-            </div>
-          </div>
-        )}
+        {flashWords && <FlashPlayer words={flashWords} onClose={() => setFlashWords(null)} />}
       </main>
     </>
   );
