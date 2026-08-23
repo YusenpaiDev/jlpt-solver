@@ -101,8 +101,10 @@ function Progres() {
 
   const setTab = (t: Tab) => router.replace(`/progres?tab=${t}`, { scroll: false });
 
-  /* Sesi yang jadi "log latihan" = udah dikerjain (ada skor). */
+  /* Sesi yang jadi "log latihan" = udah dikerjain (ada skor). Buat statistik/akurasi. */
   const done = useMemo(() => sessions.filter(s => s.score != null && s.total > 0), [sessions]);
+  /* Log timeline = selesai + sedang dikerjain (belum ada skor tapi udah dijawab sebagian). */
+  const logSessions = useMemo(() => sessions.filter(s => (s.score != null && (s.total ?? 0) > 0) || (s.score == null && (s.stats?.answered ?? 0) > 0)), [sessions]);
 
   /* Header pills */
   const weekCount = done.filter(s => within(s.created_at, 7)).length;
@@ -117,11 +119,12 @@ function Progres() {
   }, [done]);
   const totalSoal = done.reduce((n, s) => n + (s.total ?? 0), 0);
 
-  /* Filter + group untuk timeline */
-  const filtered = useMemo(() => done.filter(s =>
+  /* Filter + group untuk timeline (Log). Termasuk sesi "sedang dikerjain"
+     (belum ada skor tapi udah dijawab sebagian) — bukan cuma yang selesai. */
+  const filtered = useMemo(() => logSessions.filter(s =>
     (typeF === "all" || sessType(s) === typeF) &&
     (levelF === "all" || s.level === levelF)
-  ), [done, typeF, levelF]);
+  ), [logSessions, typeF, levelF]);
 
   const groups = useMemo(() => {
     const g: Record<Group, Sess[]> = { "Hari ini": [], "Kemarin": [], "Minggu ini": [], "Lebih lama": [] };
@@ -157,9 +160,9 @@ function Progres() {
   const activeDays = week.filter(w => w.n > 0).length;
   const weakest = useMemo(() => catAcc.filter(c => c.pct != null).sort((a, b) => a.pct! - b.pct!)[0], [catAcc]);
 
-  const levelsPresent = useMemo(() => Array.from(new Set(done.map(s => s.level))).sort(), [done]);
+  const levelsPresent = useMemo(() => Array.from(new Set(logSessions.map(s => s.level))).sort(), [logSessions]);
   const resetF = () => { setTypeF("all"); setLevelF("all"); };
-  const isEmpty = !loading && done.length === 0;
+  const isEmpty = !loading && logSessions.length === 0;
 
   return (
     <>
@@ -226,18 +229,22 @@ function Progres() {
                       {g.items.map(s => {
                         const t = sessType(s);
                         const meta = TYPE_META[t];
+                        const inProg = s.score == null;
+                        const answered = s.stats?.answered ?? 0;
                         const pct = Math.round(((s.score ?? 0) / (s.total || 1)) * 100);
-                        const tn = tone(pct);
+                        const tn = inProg ? "" : tone(pct);
                         const href = t === "choukai" ? `/choukai/${s.id}` : `/analisis-foto?session=${s.id}`;
                         return (
                           <Link key={s.id} href={href} className={`pr-sess ${tn}`}>
                             <div className={`pr-sess-ic ${meta.ic}`}>{meta.icon}</div>
                             <div className="pr-sess-m">
-                              <div className="pr-sess-t"><span className="pr-jpt">{shortTitle(s.title)}</span> <span className={`pr-typetag ${meta.tt}`}>{meta.tag}</span></div>
+                              <div className="pr-sess-t"><span className="pr-jpt">{shortTitle(s.title)}</span> <span className={`pr-typetag ${meta.tt}`}>{meta.tag}</span>{inProg && <span className="pr-typetag" style={{ background: "rgba(212,160,74,0.14)", color: "var(--warning)", borderColor: "rgba(212,160,74,0.4)" }}>sedang dikerjain</span>}</div>
                               <div className="pr-sess-s">{timeStr(s.created_at)} <span className="pr-dot" /> {s.total} soal</div>
                             </div>
-                            <div className="pr-sess-score"><div className={`pr-ss-pct ${tn}`}>{pct}%</div><div className="pr-ss-frac">{s.score} / {s.total}</div></div>
-                            <div className="pr-sess-act"><span className={`pr-sa${tn === "bad" ? " solid" : ""}`}>{tn === "bad" ? <><RotateCcw size={12} /> Ulangi</> : "Review →"}</span></div>
+                            <div className="pr-sess-score">{inProg
+                              ? <><div className="pr-ss-pct" style={{ color: "var(--warning)" }}>{answered}</div><div className="pr-ss-frac">dijawab / {s.total}</div></>
+                              : <><div className={`pr-ss-pct ${tn}`}>{pct}%</div><div className="pr-ss-frac">{s.score} / {s.total}</div></>}</div>
+                            <div className="pr-sess-act"><span className={`pr-sa${inProg || tn === "bad" ? " solid" : ""}`}>{inProg ? <><RotateCcw size={12} /> Lanjut</> : tn === "bad" ? <><RotateCcw size={12} /> Ulangi</> : "Review →"}</span></div>
                           </Link>
                         );
                       })}
