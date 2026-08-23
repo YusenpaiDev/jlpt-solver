@@ -3186,6 +3186,8 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
 export default function AnalisisFoto() {
   const stats = useUserStats();
   const [stage,               setStage]               = useState<Stage>("upload");
+  // Tanpa ?session = halaman ini bakal redirect ke /materi → jangan render UI upload, tampilin loader aja.
+  const [redirecting] = useState(() => typeof window !== "undefined" && !new URLSearchParams(window.location.search).has("session"));
   const [files,               setFiles]               = useState<FileData[]>([]);
   const [result,              setResult]              = useState<AIResult | null>(null);
   const [resultLevel,         setResultLevel]         = useState<Level | null>(null);
@@ -3590,7 +3592,7 @@ export default function AnalisisFoto() {
           isPro={stats.isPro}
         />
 
-        {stage === "upload" && (
+        {!loadingSession && !redirecting && stage === "upload" && (
           <UploadView
             ringkas={ringkas}
             onUpload={handleUpload}
@@ -3611,10 +3613,10 @@ export default function AnalisisFoto() {
           />
         )}
 
-        {loadingSession && (
+        {(loadingSession || redirecting) && (
           <div className="af-analyzing">
             <div className="af-analyzing-spinner" />
-            <p className="af-analyzing-title">Memuat sesi...</p>
+            <p className="af-analyzing-title">{redirecting ? "Mengalihkan…" : "Memuat sesi..."}</p>
           </div>
         )}
 
