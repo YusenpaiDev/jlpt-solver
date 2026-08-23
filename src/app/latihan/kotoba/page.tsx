@@ -114,7 +114,7 @@ function KotobaPlayer() {
   const [log, setLog] = useState<{ word: string; correct: boolean; note: string; streak: number }[]>([]);
   const [starred, setStarred] = useState(false);
   const [done, setDone] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [sessId, setSessId] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -146,30 +146,23 @@ function KotobaPlayer() {
       const note = correct ? (s >= 3 ? `Benar — streak ${s}×, naik jadi dikuasai` : s === 1 ? "Benar — pertama kali di sesi ini" : `Benar — ${s}× berturut`) : `Belum tepat — arti/baca ketuker`;
       return [...l, { word: q.word, correct, note, streak: s }];
     });
-    // Rekam per-soal LANGSUNG (progress via catat_kotoba + XP) — 1 soal aja kecatat.
+    // Rekam per-soal LANGSUNG: progress (catat_kotoba) + XP + entry Riwayat (biar 1 soal aja nongol di Log).
+    const answered = results.length + 1, correctCount = ok + (correct ? 1 : 0);
     (async () => {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         await supabase.rpc("catat_kotoba", { p_word: q.word, p_benar: correct });
-        if (user) { const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single(); await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + (correct ? 8 : 2) }).eq("id", user.id); }
+        if (!user) return;
+        const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
+        await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + (correct ? 8 : 2) }).eq("id", user.id);
+        const ai_result = { kind: "drill", stats: { answered, correct: correctCount, perCat: { "語彙": { a: answered, c: correctCount } } } };
+        if (sessId) await supabase.from("sessions").update({ total: answered, score: correctCount, ai_result }).eq("id", sessId);
+        else { const { data } = await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 語彙", title: `Drill Kotoba ${level}`, total: answered, score: correctCount, ai_result }).select("id").single(); if (data) setSessId(data.id); }
       } catch { /* nyusul */ }
     })();
-  }, [locked, sel, q]);
+  }, [locked, sel, q, results.length, ok, sessId, level]);
   const next = useCallback(() => { if (!qs) return; if (idx + 1 >= qs.length) { setDone(true); return; } setIdx(i => i + 1); setSel(null); setLocked(false); setStarred(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, [qs, idx]);
-
-  useEffect(() => {
-    if (!done || saved || !qs) return; setSaved(true);
-    (async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        // progress + XP udah per-soal; di sini cuma entry Riwayat sesi lengkap.
-        await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 語彙", title: `Drill Kotoba ${level} — ${qs.length} kata`, total: qs.length, score: ok });
-      } catch { /* biarin */ }
-    })();
-  }, [done, saved, qs, ok, level]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (done) return; if (["1", "2", "3", "4"].includes(e.key)) pick(+e.key - 1); if (e.key === "Enter") { locked ? next() : submit(); } if (e.key === "Escape") router.push("/materi/kotoba"); };

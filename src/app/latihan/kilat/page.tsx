@@ -105,7 +105,7 @@ function KilatPlayer() {
   const [log, setLog] = useState<{ gm: string; correct: boolean; note: string; streak: number }[]>([]);
   const [starred, setStarred] = useState(false);
   const [done, setDone] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [sessId, setSessId] = useState<string | null>(null);
 
   // Bangun soal di effect (Math.random aman di luar render)
   useEffect(() => {
@@ -143,6 +143,22 @@ function KilatPlayer() {
     } catch { /* nyusul */ }
   }, []);
 
+  // Bikin/entri Riwayat drill dari jawaban PERTAMA, update tiap jawab → muncul di Log walau 1 soal.
+  const saveSession = useCallback(async (answered: number, correctCount: number) => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const ai_result = { kind: "drill", stats: { answered, correct: correctCount, perCat: { "文法": { a: answered, c: correctCount } } } };
+      if (sessId) {
+        await supabase.from("sessions").update({ total: answered, score: correctCount, ai_result }).eq("id", sessId);
+      } else {
+        const { data } = await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 文法", title: `Drill Bunpou ${level}`, total: answered, score: correctCount, ai_result }).select("id").single();
+        if (data) setSessId(data.id);
+      }
+    } catch { /* nyusul */ }
+  }, [sessId, level]);
+
   const submit = useCallback(() => {
     if (locked || sel === null || !q) return;
     setLocked(true);
@@ -151,6 +167,7 @@ function KilatPlayer() {
     if (correct) { setOk(o => o + 1); setStreak(s => s + 1); setXp(x => x + 8); }
     else { setWrong(w => w + 1); setStreak(0); setXp(x => x + 2); }
     recordOne(q.opts[q.ans].gm, correct);
+    saveSession(results.length + 1, ok + (correct ? 1 : 0));
     setLog(l => {
       const prevStreak = l.filter(e => e.gm === q.opts[q.ans].gm && e.correct).length;
       const s = correct ? prevStreak + 1 : 0;
@@ -159,7 +176,7 @@ function KilatPlayer() {
         : `Kamu pilih ${q.opts[sel].gm} — ${q.opts[sel].d.toLowerCase()}`;
       return [...l, { gm: q.opts[q.ans].gm, correct, note, streak: s }];
     });
-  }, [locked, sel, q, recordOne]);
+  }, [locked, sel, q, recordOne, saveSession, results.length, ok]);
 
   const next = useCallback(() => {
     if (!qs) return;
@@ -167,21 +184,6 @@ function KilatPlayer() {
     setIdx(i => i + 1); setSel(null); setLocked(false); setStarred(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [qs, idx]);
-
-  // Simpan hasil pas selesai
-  useEffect(() => {
-    if (!done || saved || !qs) return;
-    setSaved(true);
-    (async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        // progress + XP udah dicatat per-soal (recordOne). Di sini cuma entry Riwayat sesi lengkap.
-        await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 文法", title: `Drill Bunpou ${level} — ${qs.length} soal`, total: qs.length, score: ok });
-      } catch { /* biarin */ }
-    })();
-  }, [done, saved, qs, ok, level]);
 
   // keyboard
   useEffect(() => {
