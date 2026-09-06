@@ -9064,3 +9064,26 @@ html { scrollbar-gutter: stable; }
 @media (max-width: 520px) {
   .kt-buckets { grid-template-columns: repeat(2, 1fr); }
 }
+
+
+/* ── Nilai-diri di FlashPlayer (cuma dipakai dari Kotoba) ─────
+   Muncul di bawah tombol LIHAT JAWABAN, dan cuma sesudah kartu dibalik. */
+.flash-nilai { display: flex; gap: 10px; margin-top: 12px; }
+.flash-nilai-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 104px; padding: 9px 18px; border-radius: var(--radius-full, 99px);
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  border: 1px solid var(--edge-soft); background: var(--surface-1);
+  color: var(--text-secondary);
+  transition: transform .12s ease, border-color .15s ease, color .15s ease, background .15s ease;
+}
+.flash-nilai-btn:hover { transform: translateY(-1px); }
+.flash-nilai-btn.tau:hover   { color: var(--accent-emerald); border-color: var(--accent-emerald); }
+.flash-nilai-btn.belum:hover { color: var(--accent-rose);    border-color: var(--accent-rose); }
+
+.flash-nilai-done {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; font-size: 12.5px; font-weight: 600;
+}
+.flash-nilai-done.tau   { color: var(--accent-emerald); }
+.flash-nilai-done.belum { color: var(--accent-rose); }

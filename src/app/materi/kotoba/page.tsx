@@ -182,8 +182,37 @@ export default function KotobaDeck() {
     } catch { /* optimistic */ } finally { setBusy(null); }
   };
 
-  /* Flashcard pasif (flip aja) — pakai FlashPlayer yang sama kayak Kamus.
-     Recording/SRS lewat Latihan Kilat, bukan flashcard (sesuai design). */
+  /* Nilai-diri dari flashcard — lewat catat_kotoba yang SAMA persis kayak
+     Latihan Kilat, jadi ambang "dikuasai" (benar >=2 dan unggul) berlaku sama
+     buat dua jalur. Kalau flash punya aturan sendiri, dua angka yang ngaku
+     "penguasaan" bakal beda artinya.
+
+     Peta progres di layar ikut dinaikin di tempat: titik status, "% dikuasai"
+     per unit, dan hitungan 4 ember semuanya baca dari `progres`, jadi tanpa ini
+     angkanya baru gerak sesudah reload. */
+  const nilaiKata = async (word: string, tau: boolean) => {
+    setProgres(prev => {
+      const next = new Map(prev);
+      const p = next.get(word) ?? { benar: 0, salah: 0, riwayat: [] };
+      next.set(word, {
+        benar: p.benar + (tau ? 1 : 0),
+        salah: p.salah + (tau ? 0 : 1),
+        riwayat: [tau, ...p.riwayat].slice(0, 5),
+      });
+      return next;
+    });
+    try {
+      await createClient().rpc("catat_kotoba", { p_word: word, p_benar: tau, p_level: level });
+    } catch {
+      // Gagal simpan: biarin angka di layar naik. Nilai-diri itu ritmenya cepat,
+      // dan ngebalikin angka di tengah sesi lebih ngebingungin daripada satu
+      // catatan yang meleset — ke-sync lagi pas halaman dibuka ulang.
+    }
+  };
+
+  /* Flashcard: sekarang bisa dinilai (tombol Belum/Tau muncul sesudah dibalik).
+     Kamus pakai FlashPlayer yang sama TANPA prop onNilai — kata simpanan di
+     sana gak punya konsep level/penguasaan, jadi player-nya tetap polos. */
   const openFlash = (words: Kotoba[]) => {
     if (!words.length) return;
     setFlashWords(words.map(w => ({ id: w.word, kanji: w.word, reading: w.reading, meaning: w.meaning, level: w.jlpt_level ?? level, example: w.example ?? null })));
@@ -344,7 +373,7 @@ export default function KotobaDeck() {
           </div>
         </div>
 
-        {flashWords && <FlashPlayer words={flashWords} onClose={() => setFlashWords(null)} />}
+        {flashWords && <FlashPlayer words={flashWords} onClose={() => setFlashWords(null)} onNilai={(w, tau) => nilaiKata(w.id, tau)} />}
       </main>
     </>
   );
