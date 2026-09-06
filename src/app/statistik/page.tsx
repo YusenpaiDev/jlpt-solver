@@ -42,6 +42,8 @@ interface RingkasKotoba {
   muncul: number;
   sering_salah: number;
   total_dilatih: number;
+  /** Ukuran deck, dihitung di DB. index.json cuma dipakai kalau RPC belum ada. */
+  total_deck?: number;
 }
 
 type CatStat = { answered: number; correct: number };
@@ -100,15 +102,19 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
     return (kotobaIndex.levels as { level: string; count: number }[])
       .map(l => {
         const k = dariDb.get(l.level);
+        // Ukuran deck diambil dari DB kalau ada — dia yang dipakai ringkas_kotoba()
+        // buat ngitung, jadi angkanya dijamin konsisten. index.json cuma jaring
+        // pengaman kalau migrasi kotoba-deck.sql belum jalan.
+        const total = k?.total_deck ?? l.count;
         const dikuasai = k?.dikuasai ?? 0;
         return {
           lv: l.level,
-          total: l.count,
+          total,
           dikuasai,
           muncul: k?.muncul ?? 0,
           seringSalah: k?.sering_salah ?? 0,
-          belum: l.count - (k?.total_dilatih ?? 0),
-          pct: l.count ? Math.round((dikuasai / l.count) * 100) : 0,
+          belum: Math.max(0, total - (k?.total_dilatih ?? 0)),
+          pct: total ? Math.round((dikuasai / total) * 100) : 0,
         };
       })
       .sort((a, b) => LEVEL_URUT.indexOf(a.lv) - LEVEL_URUT.indexOf(b.lv));
