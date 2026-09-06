@@ -867,8 +867,7 @@ function StabiloLayer({
     const ro = new ResizeObserver(sync);
     ro.observe(parent);
     return () => ro.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    }, []);
 
   // Redraw tiap strokes/warna berubah.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3186,8 +3185,18 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
 export default function AnalisisFoto() {
   const stats = useUserStats();
   const [stage,               setStage]               = useState<Stage>("upload");
-  // Tanpa ?session = halaman ini bakal redirect ke /materi → jangan render UI upload, tampilin loader aja.
-  const [redirecting] = useState(() => typeof window !== "undefined" && !new URLSearchParams(window.location.search).has("session"));
+  /* Fase pembuka halaman. Dulu ini flag `redirecting` yang dihitung di
+     initializer useState — yaitu waktu RENDER — sedangkan yang mutusin
+     ada/gaknya ?session itu useEffect yang jalan SETELAH mount. Pas navigasi
+     client-side, URL di-update lewat History API dan render bisa keburu
+     jalan sebelum URL-nya berubah: initializer baca URL lama (gak ada
+     session) → flag nyala permanen (gak ada setter-nya), padahal effect-nya
+     baca URL baru dan tetap muat sesinya. Hasilnya loader "Mengalihkan…"
+     nyangkut selamanya di atas konten yang udah kebuka.
+
+     Sekarang cuma effect yang mutusin, dan "cek" itu keadaan awal — jadi
+     UI upload juga gak sempat ngeflash sebelum keputusannya keluar. */
+  const [fase, setFase] = useState<"cek" | "alih" | "siap">("cek");
   const [files,               setFiles]               = useState<FileData[]>([]);
   const [result,              setResult]              = useState<AIResult | null>(null);
   const [resultLevel,         setResultLevel]         = useState<Level | null>(null);
@@ -3378,8 +3387,8 @@ export default function AnalisisFoto() {
      Fitur upload/analisis-foto udah dibuang — tanpa session → balik ke Materi. */
   useEffect(() => {
     const sid = new URLSearchParams(window.location.search).get("session");
-    if (sid) loadSession(sid);
-    else window.location.replace("/materi");
+    if (sid) { setFase("siap"); loadSession(sid); }
+    else { setFase("alih"); window.location.replace("/materi"); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -3417,6 +3426,12 @@ export default function AnalisisFoto() {
       setLoadingSession(false);
     }
   };
+
+  /* Loader dan isi halaman saling meniadakan — bukan ditumpuk. Dulu tiap view
+     punya guard sendiri-sendiri dan tiga di antaranya kelewat, jadi loader bisa
+     kerender BARENGAN sama ResultView. Satu gerbang di sini bikin itu gak mungkin
+     kejadian lagi, termasuk buat view yang ditambahin nanti. */
+  const sedangMuat = fase === "cek" || fase === "alih" || loadingSession;
 
   const handleUpload = () => fileInputRef.current?.click();
 
@@ -3592,7 +3607,14 @@ export default function AnalisisFoto() {
           isPro={stats.isPro}
         />
 
-        {!loadingSession && !redirecting && stage === "upload" && (
+        {sedangMuat ? (
+          <div className="af-analyzing">
+            <div className="af-analyzing-spinner" />
+            <p className="af-analyzing-title">{fase === "alih" ? "Mengalihkan…" : "Memuat sesi..."}</p>
+          </div>
+        ) : (
+          <>
+        {stage === "upload" && (
           <UploadView
             ringkas={ringkas}
             onUpload={handleUpload}
@@ -3613,14 +3635,7 @@ export default function AnalisisFoto() {
           />
         )}
 
-        {(loadingSession || redirecting) && (
-          <div className="af-analyzing">
-            <div className="af-analyzing-spinner" />
-            <p className="af-analyzing-title">{redirecting ? "Mengalihkan…" : "Memuat sesi..."}</p>
-          </div>
-        )}
-
-        {!loadingSession && stage === "analyzing" && (
+        {stage === "analyzing" && (
           <AnalyzingView
             imageUrl={files[currentAnalyzingIdx - 1]?.url}
             currentIdx={currentAnalyzingIdx}
@@ -3629,7 +3644,7 @@ export default function AnalisisFoto() {
           />
         )}
 
-        {!loadingSession && stage === "result" && result && (
+        {stage === "result" && result && (
           <ResultView
             result={result}
             setResult={setResult}
@@ -3642,6 +3657,8 @@ export default function AnalisisFoto() {
             sessionLevel={resultLevel}
             sessionCategory={resultCategory}
           />
+        )}
+          </>
         )}
       </main>
     </>
