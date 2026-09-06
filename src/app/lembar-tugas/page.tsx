@@ -45,9 +45,9 @@ interface RiwayatItem {
   created_at: string;
 }
 
-/* Bank soal asli baru keisi N2/N3/N4. N1 & N5 dikunci ("SOON") biar gak error
-   pas dipilih — isi soal aslinya nyusul. */
-const LOCKED_LEVELS = new Set<Level>(["N1", "N5"]);
+/* Bank soal asli udah keisi N1/N2/N3/N4. Tinggal N5 yang dikunci ("SOON") biar
+   gak error pas dipilih — isi soal aslinya nyusul. */
+const LOCKED_LEVELS = new Set<Level>(["N5"]);
 const LEVELS: { lv: Level; desc: string }[] = [
   { lv: "N5", desc: "Pemula" },
   { lv: "N4", desc: "Dasar" },
