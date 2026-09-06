@@ -9,8 +9,11 @@ import {
   Camera, BarChart3, Zap, BookA, ArrowUp, ArrowDown, Sparkles, Star,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import kotobaIndex from "@/data/kotoba/index.json";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
+/* Termudah → tersulit, sama kayak urutan chip di halaman Kotoba. */
+const LEVEL_URUT = ["N5", "N4", "N3", "N2", "N1"];
 type Period = 7 | 30 | 90 | 0; // 0 = all-time
 
 /* Ringkasan kompak per-sesi yang disimpan di ai_result.stats sama
@@ -29,6 +32,16 @@ interface RawSession {
   score: number | null;
   created_at: string;
   stats: SessionStats | null; // dari sub-select ai_result->stats
+}
+
+/** Satu baris ringkas_kotoba() — status kata yang UDAH pernah dilatih.
+ *  "belum" gak ikut: totalnya cuma diketahui app, dari src/data/kotoba/index.json. */
+interface RingkasKotoba {
+  level: string;
+  dikuasai: number;
+  muncul: number;
+  sering_salah: number;
+  total_dilatih: number;
 }
 
 type CatStat = { answered: number; correct: number };
@@ -70,10 +83,43 @@ function colorForPct(pct: number): "iris" | "amber" | "emerald" | "rose" {
 export function StatistikView({ embedded = false }: { embedded?: boolean }) {
   const [sessions, setSessions] = useState<RawSession[]>([]);
   const [savedWordsCount, setSavedWordsCount] = useState(0);
+  /* Ringkasan penguasaan Kotoba. Dihitung di Postgres lewat ringkas_kotoba()
+     — kalau dihitung di sini, halaman ini mesti muat 5 deck (~2,3 MB) cuma
+     buat tau kata mana level berapa. */
+  const [kotoba, setKotoba] = useState<RingkasKotoba[]>([]);
   const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const [period, setPeriod] = useState<Period>(30);
   const [loading, setLoading] = useState(true);
+
+  /* Gabung ringkasan dari DB sama total kata per level. Level yang belum pernah
+     disentuh tetap ditampilin (0 dari sekian) — biar keliatan yang belum digarap,
+     bukan cuma yang udah. */
+  const kotobaPerLevel = useMemo(() => {
+    const dariDb = new Map(kotoba.map(k => [k.level, k]));
+    return (kotobaIndex.levels as { level: string; count: number }[])
+      .map(l => {
+        const k = dariDb.get(l.level);
+        const dikuasai = k?.dikuasai ?? 0;
+        return {
+          lv: l.level,
+          total: l.count,
+          dikuasai,
+          muncul: k?.muncul ?? 0,
+          seringSalah: k?.sering_salah ?? 0,
+          belum: l.count - (k?.total_dilatih ?? 0),
+          pct: l.count ? Math.round((dikuasai / l.count) * 100) : 0,
+        };
+      })
+      .sort((a, b) => LEVEL_URUT.indexOf(a.lv) - LEVEL_URUT.indexOf(b.lv));
+  }, [kotoba]);
+
+  const kotobaTotal = useMemo(() => kotobaPerLevel.reduce((a, l) => ({
+    dikuasai: a.dikuasai + l.dikuasai,
+    muncul: a.muncul + l.muncul,
+    seringSalah: a.seringSalah + l.seringSalah,
+    belum: a.belum + l.belum,
+  }), { dikuasai: 0, muncul: 0, seringSalah: 0, belum: 0 }), [kotobaPerLevel]);
 
   const stats = useUserStats();
   const targetLevel = stats.targetLevel as Level;
@@ -87,16 +133,20 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
       if (!user) { setLoading(false); return; }
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
-      const [profileRes, sessionRes, wordsRes] = await Promise.all([
+      const [profileRes, sessionRes, wordsRes, kotobaRes] = await Promise.all([
         supabase.from("profiles").select("streak").eq("id", user.id).single(),
         supabase.from("sessions").select("id, level, category, total, score, created_at, ai_result->stats")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.rpc("ringkas_kotoba"),
       ]);
       if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
       setSessions((sessionRes.data ?? []) as RawSession[]);
       setSavedWordsCount(wordsRes.count ?? 0);
+      // Migrasi kotoba-level.sql belum jalan → RPC-nya belum ada. Biarin kosong,
+      // kartunya nampilin ajakan mulai latihan, bukan error.
+      setKotoba((kotobaRes.data ?? []) as RingkasKotoba[]);
       setLoading(false);
     }
     load();
@@ -458,6 +508,52 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
                   </div>
                 ))}
               </div>
+            </section>
+
+            {/* ── Penguasaan Kotoba ──
+                Angkanya sengaja pakai ambang yang SAMA persis kayak halaman
+                Kotoba (dikuasai = benar ≥2 dan unggul), biar orang gak nemu
+                dua angka beda buat hal yang sama. Ambangnya hidup di
+                ringkas_kotoba() — lihat supabase/migrations/kotoba-level.sql. */}
+            <section className="glass-card st-card">
+              <div className="st-card-head">
+                <div>
+                  <span className="st-card-eyebrow">Vocab Mastery</span>
+                  <h3 className="st-card-title">Penguasaan Kotoba</h3>
+                </div>
+                <Link className="st-link" href="/materi/kotoba">Lihat detail →</Link>
+              </div>
+
+              <div className="kt-buckets">
+                <div className="kt-bucket kt-known"><strong>{loading ? "—" : kotobaTotal.dikuasai.toLocaleString("id-ID")}</strong><span>Dikuasai</span></div>
+                <div className="kt-bucket kt-seen"><strong>{loading ? "—" : kotobaTotal.muncul.toLocaleString("id-ID")}</strong><span>Pernah muncul</span></div>
+                <div className="kt-bucket kt-wrong"><strong>{loading ? "—" : kotobaTotal.seringSalah.toLocaleString("id-ID")}</strong><span>Sering salah</span></div>
+                <div className="kt-bucket kt-new"><strong>{loading ? "—" : kotobaTotal.belum.toLocaleString("id-ID")}</strong><span>Belum</span></div>
+              </div>
+
+              <div className="level-progress">
+                {kotobaPerLevel.map(l => (
+                  <div key={l.lv} className={`lp-row lp-${l.lv.toLowerCase()}`}>
+                    <div className="lp-label">
+                      <span className={`lp-tag lv-${l.lv.toLowerCase()}`}>{l.lv}</span>
+                    </div>
+                    <div className="lp-bar-wrap">
+                      <div className="lp-bar">
+                        <div className={`lp-fill lv-bar-${l.lv.toLowerCase()}`} style={{ width: `${l.pct}%` }} />
+                      </div>
+                      <span className="lp-soal">{l.dikuasai.toLocaleString("id-ID")} / {l.total.toLocaleString("id-ID")} kata</span>
+                    </div>
+                    <div className="lp-pct">{l.pct}%</div>
+                  </div>
+                ))}
+              </div>
+
+              {!loading && kotobaTotal.dikuasai + kotobaTotal.muncul + kotobaTotal.seringSalah === 0 && (
+                <p className="kt-empty">
+                  Belum ada kata yang dinilai. Status kepenuhan otomatis dari <strong>Latihan Kilat</strong> di halaman Kotoba —
+                  satu kata dihitung dikuasai setelah benar 2×.
+                </p>
+              )}
             </section>
           </div>
 

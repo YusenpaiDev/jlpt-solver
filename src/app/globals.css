@@ -9029,3 +9029,38 @@ html { scrollbar-gutter: stable; }
 @media (prefers-reduced-motion: reduce) { .latihan-kilat *, .latihan-kilat *::before, .latihan-kilat *::after { animation:none !important; transition:none !important; } }
 
 @media (max-width: 1100px) { .bunpou-v3 .bv-grid { grid-template-columns: 1fr; } .bunpou-v3 .bv-side { position: static; } }
+
+
+/* ── Kartu Penguasaan Kotoba (Statistik) ──────────────────────
+   Empat ember status, warnanya sengaja disamain sama titik status di
+   halaman Kotoba (d-known/d-seen/d-wrong/d-new) — orang yang bolak-balik
+   dua halaman ini harus lihat bahasa warna yang sama. */
+.kt-buckets {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  margin-bottom: 18px;
+}
+.kt-bucket {
+  display: flex; flex-direction: column; gap: 2px; align-items: center;
+  padding: 12px 8px; border-radius: var(--radius-md, 12px);
+  background: var(--surface-1); border: 1px solid var(--edge-soft);
+  text-align: center;
+}
+.kt-bucket strong {
+  font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.kt-bucket span { font-size: 11px; color: var(--text-secondary); }
+.kt-known strong { color: var(--accent-emerald); }
+.kt-seen  strong { color: var(--accent-amber); }
+.kt-wrong strong { color: var(--accent-rose); }
+.kt-new   strong { color: var(--text-dim, var(--text-secondary)); }
+
+.kt-empty {
+  margin: 14px 0 0; padding-top: 14px;
+  border-top: 1px solid var(--edge-soft);
+  font-size: 12.5px; line-height: 1.6; color: var(--text-secondary);
+}
+
+@media (max-width: 520px) {
+  .kt-buckets { grid-template-columns: repeat(2, 1fr); }
+}
