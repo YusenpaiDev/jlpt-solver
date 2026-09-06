@@ -1058,6 +1058,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [toast,        setToast]        = useState<{ text: string; ok: boolean } | null>(null);
   const [scoreSaved,   setScoreSaved]   = useState(false);
   const [showCompletion, setShowCompletion] = useState(false); // popup skor pas selesai
+  const [konfirmReset, setKonfirmReset] = useState(false); // modal sebelum jawaban dihapus
   const [resetting,    setResetting]    = useState(false);
   const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
   const [savingNote,   setSavingNote]   = useState<number | null>(null);
@@ -1594,6 +1595,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
      ulang. XP gak dibalikin & gak dobel (xp_claimed tetap true). Coretan
      stabilo dibiarin (catatan, bukan jawaban). */
   const resetSession = async () => {
+    setKonfirmReset(false);
     setResetting(true);
     try {
       setAnswers({});
@@ -1881,6 +1883,22 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 <span className="meta-chip">
                   <Loader2 className="size-3 animate-spin" /> Menyimpan...
                 </span>
+              )}
+              {/* Reset cuma ditawarin kalau emang ada yang bisa direset. Sebelum
+                  ini pintunya cuma di popup "Selesai!", jadi mustahil dijangkau
+                  sampai semua soal kejawab. */}
+              {hasProgress && !isReview && (
+                <button
+                  type="button"
+                  className="meta-chip meta-chip-btn"
+                  onClick={() => setKonfirmReset(true)}
+                  disabled={resetting}
+                >
+                  {resetting
+                    ? <Loader2 className="size-3 animate-spin" />
+                    : <RotateCcw size={12} strokeWidth={2} />}
+                  Ulang dari awal
+                </button>
               )}
             </div>
           </div>
@@ -2988,6 +3006,43 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         </>
       )}
 
+      {/* ── Konfirmasi sebelum jawaban dihapus ── */}
+      {konfirmReset && (
+        <>
+          <div className="af-modal-overlay" onClick={() => setKonfirmReset(false)} />
+          <div className="af-modal af-complete" role="dialog" aria-modal="true">
+            <div className="af-complete-emoji">↺</div>
+            <h2 className="af-complete-title">Ulang dari awal?</h2>
+            <p className="af-complete-sub">
+              {Object.keys(answers).length} jawaban kamu di sesi ini bakal dihapus dan soalnya balik kosong.
+              Nggak bisa dibatalin. XP yang udah kamu dapet tetap aman, dan coretan stabilo
+              nggak ikut kehapus.
+            </p>
+            <div className="af-complete-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setKonfirmReset(false)}
+                disabled={resetting}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={resetSession}
+                disabled={resetting}
+              >
+                {resetting
+                  ? <Loader2 className="size-4 animate-spin" />
+                  : <RotateCcw size={14} strokeWidth={2} />}
+                Ya, hapus jawaban
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Popup skor: muncul sekali pas semua soal kejawab ── */}
       {showCompletion && isComplete && (
         <>
@@ -3007,12 +3062,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={resetSession}
+                onClick={() => { setShowCompletion(false); setKonfirmReset(true); }}
                 disabled={resetting}
               >
-                {resetting
-                  ? <Loader2 className="size-4 animate-spin" />
-                  : <RotateCcw size={14} strokeWidth={2} />}
+                <RotateCcw size={14} strokeWidth={2} />
                 Ulang dari awal
               </button>
               <button

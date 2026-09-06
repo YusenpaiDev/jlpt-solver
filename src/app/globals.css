@@ -5523,6 +5523,20 @@ input, textarea, select { font-size: 16px; }
   font-size: 12px; color: var(--text-secondary);
 }
 .meta-chip .meta-num { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Chip yang bisa diklik — dipakai "Ulang dari awal". Sengaja TIDAK dikasih
+   warna merah: dia duduk di deretan chip informasi, dan chip merah di situ
+   kebaca kayak peringatan error, bukan aksi. Konfirmasinya yang jadi rem. */
+.meta-chip-btn {
+  cursor: pointer; font-family: inherit;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.meta-chip-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--edge-strong, var(--edge-soft));
+  background: var(--surface-2, var(--surface-1));
+}
+.meta-chip-btn:disabled { opacity: .6; cursor: default; }
 .meta-chip .meta-dot { width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
 .meta-chip.status-saved {
   background: rgba(107, 142, 63, 0.08);
