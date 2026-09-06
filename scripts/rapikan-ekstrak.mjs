@@ -8,10 +8,14 @@
  *        筆記  → materi/import/<LV>/<LV>_JLPT_JSON/<LV>_YYYY_MM.json
  *        聴解  → materi/import/<LV>/CHOUKAI/YYYY_MM_聴解.json   (ikut pola N2)
  *
- *   2. Buang soal 聴解 yang opsinya gak tercetak (問題3/4/5 = 概要理解・統合理解・
- *      即時応答, plus 問題1 yang opsinya gambar). Di ujian asli opsinya cuma
- *      dibacain lewat audio — tanpa audio + transkrip soalnya gak bisa dijawab,
- *      jadi mendingan gak usah masuk daripada jadi soal buntu.
+ *   2. Soal 聴解 yang opsinya gak tercetak (問題3/4/5 = 概要理解・統合理解・
+ *      即時応答) TETAP MASUK, tapi opsinya diganti nomor polos "1/2/3(/4)" dan
+ *      ditandai `opsiLisan: true`. Persis kayak ujian aslinya: opsinya cuma
+ *      dibacain lewat audio, peserta milih nomor. Player baca flag itu buat
+ *      nampilin tombol angka, bukan teks placeholder.
+ *
+ *      Yang dibuang cuma yang opsinya GAMBAR (問題1 tertentu) — gambarnya gak
+ *      ikut ke-ekstrak, jadi beneran gak bisa dijawab.
  *
  *   3. Angkat catatan ekstraksi keluar dari teks soal. Ekstraktor nulis
  *      peringatan langsung di dalam `question` ("※CATATAN PENTING: … REKONSTRUKSI
@@ -46,6 +50,19 @@ const MIN_SOAL_CHOUKAI = 5;
  * hasil ekstraksi berbentuk array 1 elemen, jadi jumlah opsi udah cukup jadi
  * penanda. Ambang 3 (bukan 4) karena 即時応答 emang cuma 3 pilihan. */
 const opsiNyata = q => Array.isArray(q.options) && q.options.length >= 3;
+
+/** Opsi cuma dibacain lewat audio. Jumlahnya beda per mondai: 即時応答 3 pilihan,
+ *  概要理解/統合理解 4 — sumbernya nyebut "3 pilihan"/"3択" kalau cuma tiga. */
+const OPSI_GAMBAR = /gambar|絵/i;
+const TIGA = /3\s*(pilihan|択)/i;
+function opsiLisan(q) {
+  const blob = String(q.options ?? "") + String(q.question ?? "");
+  if (OPSI_GAMBAR.test(blob)) return null;              // gambar gak ke-ekstrak → buang
+  const n = TIGA.test(blob) ? 3 : 4;
+  const k = parseInt(q.correct, 10);
+  if (!(k >= 1 && k <= n)) return null;                 // kunci di luar jangkauan → buang
+  return Array.from({ length: n }, (_, i) => String(i + 1));
+}
 
 const BUANG = /TEBAKAN|OCR\s*で欠落/;
 const REKONSTRUKSI = /REKONSTRUKSI|rekonstruksi/;
@@ -84,7 +101,7 @@ async function main() {
   files.sort();
 
   const laporan = [];
-  const stat = { masuk: 0, buangOpsi: 0, buangRagu: 0, rekon: 0, nimpa: 0, skipFile: 0 };
+  const stat = { masuk: 0, buangOpsi: 0, buangRagu: 0, rekon: 0, nimpa: 0, skipFile: 0, lisan: 0 };
 
   for (const f of files) {
     const meta = bedah(f);
@@ -94,14 +111,20 @@ async function main() {
 
     const asli = raw.questions ?? [];
     const keluar = [];
-    let buangOpsi = 0, buangRagu = 0, rekon = 0;
+    let buangOpsi = 0, buangRagu = 0, rekon = 0, lisanN = 0;
 
     for (const q of asli) {
-      if (chokai && !opsiNyata(q)) { buangOpsi++; continue; }
       if (BUANG.test(q.question ?? "")) { buangRagu++; continue; }
+
+      let lisan = null;
+      if (chokai && !opsiNyata(q)) {
+        lisan = opsiLisan(q);
+        if (!lisan) { buangOpsi++; continue; }
+      }
 
       const { question, catatan } = pisahCatatan(q.question);
       const bersih = { ...q, question, catatan };
+      if (lisan) { bersih.options = lisan; bersih.opsiLisan = true; lisanN++; }
       if (catatan && REKONSTRUKSI.test(catatan)) { bersih.rekonstruksi = true; rekon++; }
       if (chokai) Object.assign(bersih, { mondai: nomorMondai(question), audio: null, transcript: null, image: null });
       keluar.push(bersih);
@@ -121,17 +144,19 @@ async function main() {
       raw.note,
       rekon > 0 && `⚠️ ${rekon} soal di file ini isinya REKONSTRUKSI (bukan teks ujian asli) — lihat field "catatan" per soal.`,
       buangRagu > 0 && `${buangRagu} soal dibuang waktu perapian: kunci jawaban gak resmi / bacaan hilang di sumber.`,
-      chokai && buangOpsi > 0 && `${buangOpsi} soal 問題3/4/5 dibuang: opsinya cuma lewat audio dan audio N1/N3 belum ada.`,
+      lisanN > 0 && `${lisanN} soal opsinya cuma lewat audio (nomor polos 1/2/3) — butuh klip audio biar bisa dijawab.`,
+      chokai && buangOpsi > 0 && `${buangOpsi} soal dibuang: opsinya berupa gambar yang gak ikut ke-ekstrak.`,
     ].filter(Boolean).join(" ");
 
     const hasil = { ...raw, ...(chokai && { section: "choukai" }), ...(note && { note }), questions: keluar };
 
     const nimpa = existsSync(tujuan);
     if (nimpa) stat.nimpa++;
-    stat.masuk += keluar.length; stat.buangOpsi += buangOpsi; stat.buangRagu += buangRagu; stat.rekon += rekon;
+    stat.masuk += keluar.length; stat.buangOpsi += buangOpsi; stat.buangRagu += buangRagu; stat.rekon += rekon; stat.lisan += lisanN;
 
     const catatanBuang = [
-      buangOpsi && `-${buangOpsi} opsi-audio`,
+      buangOpsi && `-${buangOpsi} opsi-gambar`,
+      lisanN && `${lisanN} opsi-lisan`,
       buangRagu && `-${buangRagu} diragukan`,
       rekon && `${rekon} rekonstruksi`,
     ].filter(Boolean).join(", ");
@@ -146,7 +171,7 @@ async function main() {
   for (const [a, b] of laporan) console.log(`${a.padEnd(56)} ${b ?? ""}`);
   console.log(
     `\n${APPLY ? "" : "[DRY-RUN] "}file: ${files.length} · ditulis: ${files.length - stat.skipFile} (nimpa ${stat.nimpa}, skip ${stat.skipFile})\n` +
-    `soal masuk: ${stat.masuk} · buang opsi-audio: ${stat.buangOpsi} · buang diragukan: ${stat.buangRagu} · ditandai rekonstruksi: ${stat.rekon}`
+    `soal masuk: ${stat.masuk} · opsi-lisan: ${stat.lisan} · buang opsi-gambar: ${stat.buangOpsi} · buang diragukan: ${stat.buangRagu} · rekonstruksi: ${stat.rekon}`
   );
   if (!APPLY) console.log("Jalanin lagi dengan --apply buat beneran nulis.");
 }

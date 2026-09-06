@@ -7940,6 +7940,22 @@ html { scrollbar-gutter: stable; }
 
 /* text options */
 .ch-opts { display: flex; flex-direction: column; gap: 9px; }
+
+/* Soal 問題3/4/5: opsinya gak tercetak di lembar ujian, cuma dibacain lewat
+   audio. Tombolnya jadi deretan angka gede — sama kayak ngisi lembar jawaban
+   asli, di mana yang kelihatan cuma nomornya. */
+.ch-opt-lisan-note {
+  margin: 0 0 10px; font-size: 13px; line-height: 1.5;
+  color: var(--text-muted, #94a3b8);
+}
+.ch-opts.lisan { flex-direction: row; flex-wrap: wrap; gap: 12px; }
+.ch-opts.lisan .ch-opt {
+  flex: 1 1 0; min-width: 72px; justify-content: center;
+  padding-block: 18px;
+}
+.ch-opts.lisan .ch-opt-k {
+  font-size: 22px; font-weight: 700; min-width: auto;
+}
 .ch-opt { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px;
   background: var(--surface-1); border: 1.5px solid var(--edge-soft); cursor: pointer; text-align: left;
   transition: .2s var(--ease-out-back); font-family: inherit; }

@@ -31,6 +31,9 @@ interface ChoukaiQuestion {
   tip?: string;
   transcript?: TranscriptLine[];
   prompt?: string;
+  /* Opsi gak dicetak di lembar ujian — cuma dibacain lewat audio (問題3/4/5).
+     `options` isinya nomor polos ["1","2","3"], jadi teksnya gak usah dirender. */
+  opsiLisan?: boolean;
 }
 
 interface ChoukaiAiResult {
@@ -538,7 +541,13 @@ export default function ChoukaiPlayer() {
                 </div>
               )}
 
-              <div className="ch-opts">
+              {q.opsiLisan && (
+                <p className="ch-opt-lisan-note">
+                  Opsi nggak dicetak di lembar ujian — dengar audionya, terus pilih nomornya.
+                </p>
+              )}
+
+              <div className={`ch-opts${q.opsiLisan ? " lisan" : ""}`}>
                 {q.options.map((opt, i) => {
                   const st = stateFor(i, picked, submitted, correctIdx);
                   return (
@@ -549,7 +558,7 @@ export default function ChoukaiPlayer() {
                       onClick={() => !submitted && setPicked(i)}
                     >
                       <span className="ch-opt-k">{i + 1}</span>
-                      <span className="ch-opt-t">{stripOptionPrefix(opt)}</span>
+                      {!q.opsiLisan && <span className="ch-opt-t">{stripOptionPrefix(opt)}</span>}
                       {submitted && st === "correct" && (
                         <Check size={17} strokeWidth={2.4} style={{ color: "var(--accent-emerald)" }} />
                       )}

@@ -97,6 +97,9 @@ export function normalizeResult(raw, fallbackTitle) {
     // ikut ke DB biar soal yang isinya rekonstruksi masih bisa dilacak dari app.
     catatan: q.catatan ?? null,
     rekonstruksi: q.rekonstruksi === true,
+    // Opsi 問題3/4/5 gak tercetak di lembar ujian — `options` cuma nomor polos.
+    // Player baca flag ini buat nampilin tombol angka, bukan teks.
+    opsiLisan: q.opsiLisan === true,
   })).filter(q => q.question && q.options.length > 0) : [];
 
   // `kind: "materi"` → sesi hasil import = bank soal/materi, bukan log latihan.
