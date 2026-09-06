@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { hasProAccess } from "@/lib/access";
+import { fetchProAccess } from "@/lib/access";
 
 /**
  * Satu sumber data buat header tiap halaman: streak, XP, level target, status PRO.
@@ -69,6 +69,9 @@ export function useUserStats(): UserStats {
         .single();
       if (batal) return;
 
+      const isPro = await fetchProAccess(supabase);
+      if (batal) return;
+
       const xp = profil?.xp ?? 0;
       const nama = profil?.username || user.user_metadata?.full_name || user.email || "Y";
 
@@ -94,9 +97,10 @@ export function useUserStats(): UserStats {
         xp: xp % XP_PER_LEVEL,
         xpTarget: XP_PER_LEVEL,
         targetLevel,
-        // Whitelist email ATAU flag hasil bayar — logikanya udah ada di access.ts,
-        // jangan ditulis ulang di sini biar gak beda-beda antar halaman.
-        isPro: hasProAccess(user.email, profil?.is_premium),
+        // Diputusin Postgres lewat is_pro() — flag bayar ATAU whitelist.
+        // Jangan hitung ulang dari email di sini: daftarnya udah gak ada di
+        // client, dan entitlement yang dihitung di browser gampang dipalsuin.
+        isPro,
         examDate,
         initial: String(nama)[0].toUpperCase(),
         loaded: true,

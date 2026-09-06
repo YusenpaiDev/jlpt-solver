@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { hasProAccess } from "@/lib/access";
+import { fetchProAccess } from "@/lib/access";
 import {
   House, Camera, BookOpen, BarChart2,
   Settings, LogOut, Zap, ArrowUpRight, Flame, ClipboardList, NotebookPen, GraduationCap,
@@ -34,14 +34,14 @@ const XP_PER_LEVEL = 1000;
 /* ─── Sidebar ───────────────────────────────────────────────── */
 export function Sidebar({ activeHref }: { activeHref: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
+  const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      setEmail(user.email ?? null);
+      setIsPro(await fetchProAccess(supabase));
 
       const { data } = await supabase
         .from("profiles")
@@ -76,7 +76,7 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
   const streak        = profile?.streak ?? 0;
   const xpInLevel     = xp % XP_PER_LEVEL;
   const xpPct         = Math.round((xpInLevel / XP_PER_LEVEL) * 100);
-  const isPremium     = hasProAccess(email, profile?.is_premium); // whitelist ATAU flag bayar
+  const isPremium     = isPro; // diputusin is_pro() di Postgres, lihat lib/access.ts
 
   return (
     <aside
