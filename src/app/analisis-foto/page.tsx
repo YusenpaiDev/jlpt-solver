@@ -15,6 +15,7 @@ import {
   Highlighter, Undo2, LogOut,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import { catatAktivitas } from "@/lib/aktivitas";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 type Stage = "upload" | "setup" | "analyzing" | "result";
@@ -1758,6 +1759,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const pick = (qi: number, id: string) => {
     if (revealed.has(qi)) return;
     setAnswers(a => ({ ...a, [qi]: id }));
+    catatAktivitas("soal");
   };
   const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
 

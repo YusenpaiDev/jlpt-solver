@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { StabiloLayer, STABILO_COLORS, type HiStroke } from "@/components/StabiloLayer";
 import { useUserStats } from "@/lib/use-user-stats";
+import { catatAktivitas } from "@/lib/aktivitas";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -430,6 +431,7 @@ export default function ChoukaiPlayer() {
     if (picked == null) return;
     setSubmitted(true);
     setAnswers(s => ({ ...s, [idx]: { picked, correct: picked === correctIdx } }));
+    catatAktivitas("choukai");
   };
 
   const go = (delta: number) => {

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import kotobaIndex from "@/data/kotoba/index.json";
+import { tanggalLokal } from "@/lib/aktivitas";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 /* Termudah → tersulit, sama kayak urutan chip di halaman Kotoba. */
@@ -89,7 +90,12 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
      — kalau dihitung di sini, halaman ini mesti muat 5 deck (~2,3 MB) cuma
      buat tau kata mana level berapa. */
   const [kotoba, setKotoba] = useState<RingkasKotoba[]>([]);
-  const [streak, setStreak] = useState(0);
+  /* Streak dari aktivitas_harian — sumber yang SAMA dipakai header tiap
+     halaman. Sebelumnya halaman ini ngitung "terpanjang" sendiri dari tabel
+     sessions, sementara header baca profiles.streak: dua angka, dua arti,
+     dua-duanya ngaku streak. */
+  const [streakDb, setStreakDb] = useState<{ sekarang: number; terpanjang: number; total_hari: number } | null>(null);
+
   const [userInitial, setUserInitial] = useState("Y");
   const [period, setPeriod] = useState<Period>(30);
   const [loading, setLoading] = useState(true);
@@ -139,20 +145,22 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
       if (!user) { setLoading(false); return; }
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
-      const [profileRes, sessionRes, wordsRes, kotobaRes] = await Promise.all([
-        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+      const [sessionRes, wordsRes, kotobaRes, streakRes] = await Promise.all([
         supabase.from("sessions").select("id, level, category, total, score, created_at, ai_result->stats")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.rpc("ringkas_kotoba"),
+        supabase.rpc("streak_saya", { p_hari_ini: tanggalLokal() }),
       ]);
-      if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
+
       setSessions((sessionRes.data ?? []) as RawSession[]);
       setSavedWordsCount(wordsRes.count ?? 0);
       // Migrasi kotoba-level.sql belum jalan → RPC-nya belum ada. Biarin kosong,
       // kartunya nampilin ajakan mulai latihan, bukan error.
       setKotoba((kotobaRes.data ?? []) as RingkasKotoba[]);
+      const sb0 = Array.isArray(streakRes.data) ? streakRes.data[0] : streakRes.data;
+      if (sb0) setStreakDb(sb0);
       setLoading(false);
     }
     load();
@@ -197,7 +205,9 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
   const accuracyDelta = avgAccuracy != null && avgAccuracyPrev != null ? avgAccuracy - avgAccuracyPrev : null;
 
   /* ── Longest streak (from session dates) ── */
-  const longestStreak = useMemo(() => {
+  /* Dipertahankan sebagai cadangan: kalau migrasi streak.sql belum jalan,
+     RPC-nya balik null dan halaman ini masih nunjukin angka dari sessions. */
+  const longestDariSesi = useMemo(() => {
     if (sessions.length === 0) return 0;
     const days = new Set(sessions.map(s => s.created_at.slice(0, 10)));
     const sorted = Array.from(days).sort();
@@ -214,6 +224,9 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
     }
     return best;
   }, [sessions]);
+
+  const longestStreak = streakDb?.terpanjang ?? longestDariSesi;
+  const streak = streakDb?.sekarang ?? 0;
 
   /* ── Saved words this week delta ── */
   const wordsDelta = useMemo(() => {

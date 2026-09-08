@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchProAccess } from "@/lib/access";
+import { tanggalLokal } from "@/lib/aktivitas";
 
 /**
  * Satu sumber data buat header tiap halaman: streak, XP, level target, status PRO.
@@ -72,6 +73,13 @@ export function useUserStats(): UserStats {
       const isPro = await fetchProAccess(supabase);
       if (batal) return;
 
+      /* Streak dari aktivitas nyata, bukan kolom profiles.streak. Kolom itu
+         dulu dinaikin di <Sidebar> — komponen yang gak dirender halaman mana
+         pun — jadi isinya angka beku yang gak nyambung sama apa pun. */
+      const { data: st } = await supabase.rpc("streak_saya", { p_hari_ini: tanggalLokal() });
+      const streakBaris = Array.isArray(st) ? st[0] : st;
+      if (batal) return;
+
       const xp = profil?.xp ?? 0;
       const nama = profil?.username || user.user_metadata?.full_name || user.email || "Y";
 
@@ -90,7 +98,7 @@ export function useUserStats(): UserStats {
       const targetLevel = mdLevel ?? (profil?.target_level as TargetLevel) ?? "N3";
 
       setStats({
-        streak: profil?.streak ?? 0,
+        streak: streakBaris?.sekarang ?? 0,
         // XP jalan terus lintas level; yang ditampilin sisa di level sekarang.
         level: Math.floor(xp / XP_PER_LEVEL) + 1,
         xpTotal: xp,

@@ -8,6 +8,7 @@ import { Search, Star, Zap, X, ChevronRight, Check } from "lucide-react";
 import kotobaN2 from "@/data/kotoba/N2.json";
 import kotobaIndex from "@/data/kotoba/index.json";
 import { useUserStats } from "@/lib/use-user-stats";
+import { catatAktivitas } from "@/lib/aktivitas";
 import FlashPlayer, { type FlashWord } from "@/components/FlashPlayer";
 
 interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; note?: string; }
@@ -203,6 +204,7 @@ export default function KotobaDeck() {
     });
     try {
       await createClient().rpc("catat_kotoba", { p_word: word, p_benar: tau, p_level: level });
+      catatAktivitas("kotoba");
     } catch {
       // Gagal simpan: biarin angka di layar naik. Nilai-diri itu ritmenya cepat,
       // dan ngebalikin angka di tengah sesi lebih ngebingungin daripada satu
