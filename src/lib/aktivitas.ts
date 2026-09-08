@@ -35,11 +35,15 @@ export async function catatAktivitas(sumber: SumberAktivitas): Promise<void> {
   if (udah.has(kunci)) return;
   udah.add(kunci);
 
-  try {
-    await createClient().rpc("catat_aktivitas", { p_tanggal: tanggal, p_sumber: sumber });
-  } catch {
-    /* Gagal catat: jangan ganggu latihan yang lagi jalan. Dicoba lagi sendiri
-       pas dia ngerjain hal berikutnya di hari yang sama. */
-    udah.delete(kunci);
+  /* Gagal catat gak boleh ganggu latihan yang lagi jalan — tapi WAJIB berisik
+     di console. Versi pertama nelen errornya diam-diam, dan gara-gara itu bug
+     RLS (fungsinya security invoker, tabelnya gak punya policy INSERT) nyaris
+     lolos: streaknya bakal diam terus di produksi tanpa sinyal apa pun. */
+  const { error } = await createClient()
+    .rpc("catat_aktivitas", { p_tanggal: tanggal, p_sumber: sumber });
+
+  if (error) {
+    udah.delete(kunci); // dicoba lagi pas dia ngerjain hal berikutnya hari ini
+    console.warn(`[aktivitas] gagal catat "${sumber}" (${tanggal}): ${error.message}`);
   }
 }

@@ -53,10 +53,15 @@ create policy "aktivitas_harian: baca sendiri" on public.aktivitas_harian
 -- Konsekuensinya tanggalnya bisa dikarang dari browser. Buat streak belajar
 -- itu pertukaran yang wajar: yang dirugiin cuma dirinya sendiri.
 
+-- security DEFINER, bukan invoker. Tabelnya sengaja gak punya policy INSERT
+-- biar streak gak bisa dikarang lewat supabase-js langsung — tapi itu berarti
+-- fungsi ini pun kena blokir kalau jalan sebagai user. Sebagai definer dia
+-- lewat RLS, dan auth.uid() tetap kebaca dari JWT jadi barisnya tetap nempel
+-- ke user yang bener.
 create or replace function public.catat_aktivitas(p_tanggal date, p_sumber text)
 returns void
 language sql
-security invoker
+security definer
 set search_path = public
 as $$
   insert into public.aktivitas_harian (user_id, tanggal, jumlah, sumber)
