@@ -32,6 +32,10 @@ create index if not exists kotoba_progress_user_level_idx
 -- Kata yang sama gak pindah level; kalau nanti ada kata nongol di dua deck,
 -- yang pertama kecatat itu yang dipegang — bukan yang terakhir dilatih.
 
+-- ⚠️ CREATE OR REPLACE cuma nimpa kalau TANDA TANGANnya sama persis. Nambah
+--    p_level bikin tanda tangan baru, jadi versi 2-argumen yang lama TETAP ADA
+--    dan panggilan 2 argumen jadi ambigu ("could not choose the best candidate").
+--    Versi lamanya dibuang di _URGENT-catat-kotoba-ambigu.sql.
 create or replace function public.catat_kotoba(
   p_word  text,
   p_benar boolean,
