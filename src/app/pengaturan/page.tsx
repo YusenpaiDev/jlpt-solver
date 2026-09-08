@@ -26,9 +26,12 @@ type SectionId = typeof SECTIONS[number]["id"];
 
 export default function Pengaturan() {
   const [active, setActive] = useState<SectionId>("profile");
-  const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const stats = useUserStats();
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const xp = stats.xp;
   const xpTarget = stats.xpTarget;
 
@@ -97,7 +100,6 @@ export default function Pengaturan() {
         // user_metadata di bawah yang nentuin (itu sumber sebenarnya).
         if (profile.target_level) setTargetLevel(profile.target_level as Level);
         setAvatarUrl(profile.avatar_url ?? null);
-        setStreak(profile.streak ?? 0);
       }
       // Target belajar sekarang di-source dari user_metadata (dipakai onboarding
       // + proxy). Override kalau ada.

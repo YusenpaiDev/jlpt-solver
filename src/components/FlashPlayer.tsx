@@ -17,14 +17,26 @@ const DECK_COLORS = ["iris", "purple", "emerald", "amber", "rose", "iris", "emer
 type DeckColor = typeof DECK_COLORS[number];
 interface Deck { id: number; count: number; color: DeckColor; preview: FlashWord[]; incomplete: boolean; }
 
-/* Player flashcard full-screen (dipakai Kamus & Drill Kotoba). Kelas .flash-* / .fp-* global. */
-export default function FlashPlayer({ words, onClose }: { words: FlashWord[]; onClose: () => void }) {
+/* Player flashcard full-screen (dipakai Kamus & Kotoba). Kelas .flash-* / .fp-* global.
+ *
+ * `onNilai` opsional: kalau dikasih, sesudah kartu dibalik muncul tombol
+ * "Belum / Tau" buat nilai diri sendiri. Kamus gak ngirim prop ini — kata
+ * simpanan di situ gak punya konsep level/penguasaan, jadi player-nya tetap
+ * polos kayak sebelumnya. */
+export default function FlashPlayer({ words, onClose, onNilai }: {
+  words: FlashWord[];
+  onClose: () => void;
+  onNilai?: (word: FlashWord, tau: boolean) => void;
+}) {
   const [mode, setMode] = useState<"picker" | "card">(words.length > ALBUM_SIZE ? "picker" : "card");
   const [deckId, setDeckId] = useState<"all" | number>("all");
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [order, setOrder] = useState<number[]>([]);
   const [shuffled, setShuffled] = useState(false);
+  /* Kartu yang udah dinilai di sesi ini — biar tombolnya berubah jadi tanda
+     "kecatat" dan gak kepencet dua kali buat kata yang sama. */
+  const [dinilai, setDinilai] = useState<Record<string, boolean>>({});
 
   const decks = useMemo<Deck[]>(() => {
     const out: Deck[] = [];
@@ -46,6 +58,14 @@ export default function FlashPlayer({ words, onClose }: { words: FlashWord[]; on
     setIdx(0); setFlipped(false);
   };
   const next = () => { setFlipped(false); setTimeout(() => setIdx(i => Math.min(flashWords.length - 1, i + 1)), 60); };
+  /* Nilai kartu sekarang, terus maju. Sengaja maju otomatis: nilai-diri itu
+     ritmenya cepat, dan mesti klik panah tiap kali bikin capek sendiri. */
+  const nilai = (w: FlashWord, tau: boolean) => {
+    if (dinilai[w.id] !== undefined) return;
+    setDinilai(d => ({ ...d, [w.id]: tau }));
+    onNilai?.(w, tau);
+    setTimeout(next, 180);
+  };
   const prev = () => { setFlipped(false); setTimeout(() => setIdx(i => Math.max(0, i - 1)), 60); };
 
   useEffect(() => {
@@ -55,12 +75,20 @@ export default function FlashPlayer({ words, onClose }: { words: FlashWord[]; on
       else if (e.key === "ArrowRight") next();
       else if (e.key === " ") { e.preventDefault(); setFlipped(f => !f); }
       else if (e.key === "s" || e.key === "S") toggleShuffle();
+      // Nilai lewat keyboard cuma jalan pas jawabannya udah kelihatan — aturan
+      // yang sama kayak tombolnya, biar gak ada jalan pintas buat nilai buta.
+      else if (onNilai && flipped && word && (e.key === "1" || e.key === "2")) nilai(word, e.key === "2");
       else if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
+    /* `flipped` & `word?.id` WAJIB ikut deps: pintasan 1/2 baca dua nilai itu
+       langsung, bukan lewat updater kayak prev/next. Tanpa ini handler-nya
+       megang nilai basi dari render pertama — flipped selalu false, dan
+       kartunya selalu kartu pertama. Panah & spasi gak kena karena mereka cuma
+       manggil setState updater. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, flashWords.length]);
+  }, [mode, flashWords.length, flipped, word?.id, dinilai]);
 
   if (mode === "picker") {
     return (
@@ -159,6 +187,25 @@ export default function FlashPlayer({ words, onClose }: { words: FlashWord[]; on
             {dotsStart + 9 < total && <span className="dot-spill">…</span>}
           </div>
           <button type="button" className="flash-flip-cta" onClick={() => setFlipped(f => !f)}>{flipped ? "SEMBUNYIKAN" : "LIHAT JAWABAN"}</button>
+          {/* Nilai-diri cuma kebuka SESUDAH jawabannya kelihatan — kalau belum
+              lihat, "tau/belum"-nya cuma tebakan dan datanya jadi ngawur. */}
+          {onNilai && flipped && (
+            <div className="flash-nilai">
+              {dinilai[word.id] !== undefined ? (
+                <span className={`flash-nilai-done${dinilai[word.id] ? " tau" : " belum"}`}>
+                  <Check size={12} strokeWidth={2.6} />
+                  {dinilai[word.id] ? "Dicatat: tau" : "Dicatat: belum"}
+                </span>
+              ) : (
+                <>
+                  <button type="button" className="flash-nilai-btn belum" onClick={() => nilai(word, false)}>Belum</button>
+                  <button type="button" className="flash-nilai-btn tau" onClick={() => nilai(word, true)}>
+                    <Check size={13} strokeWidth={2.6} /> Tau
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <button type="button" className="flash-arrow" onClick={next} disabled={isLast} aria-label="Berikutnya"><ChevronRight size={16} strokeWidth={2} /></button>
       </footer>
@@ -166,6 +213,7 @@ export default function FlashPlayer({ words, onClose }: { words: FlashWord[]; on
         <span><kbd>←</kbd> <kbd>→</kbd> Navigasi</span>
         <span><kbd>Space</kbd> Flip</span>
         <span><kbd>S</kbd> Acak</span>
+        {onNilai && <span><kbd>1</kbd> Belum <kbd>2</kbd> Tau</span>}
         <span><kbd>Esc</kbd> Keluar</span>
       </div>
     </div>

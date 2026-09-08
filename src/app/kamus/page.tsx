@@ -84,9 +84,12 @@ export default function Kamus() {
   const [genProgress, setGenProgress] = useState(0);
 
   /* User bar */
-  const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const stats = useUserStats();
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const xp = stats.xp;
   const xpTarget = stats.xpTarget;
 
@@ -98,9 +101,6 @@ export default function Kamus() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-
-        const profileRes = await supabase.from("profiles").select("streak").eq("id", user.id).single();
-        if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
 
         // Ambil SEMUA kotoba — paginasi per 1000 (Supabase hard-cap 1000/query).
         const fetchAllWords = async (cols: string): Promise<{ data: SavedWord[]; error: { message: string } | null }> => {

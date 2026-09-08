@@ -1,28 +1,34 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 /**
- * Whitelist akses PRO gratis. Email di sini otomatis dapet akses penuh
- * tanpa bayar (buat owner + temen yang dikasih gratis).
+ * Entitlement PRO — sumber kebenarannya DATABASE, bukan file ini.
  *
- * Tambah/kurangin cukup di array ini. Cek entitlement lewat hasProAccess().
+ * Dulu daftar email gratisan ditulis sebagai array di sini. Masalahnya file ini
+ * ke-import komponen client, jadi ikut ke-bundle ke JS dan 6 email pribadi
+ * kebaca siapa pun yang buka app + View Source. Sekarang daftarnya pindah ke
+ * tabel `pro_whitelist` yang gak punya policy baca buat user biasa; yang
+ * mutusin cuma fungsi `is_pro()` di Postgres.
+ *
+ * Lihat supabase/migrations/kuota-free.sql.
  */
-export const FREE_PRO_EMAILS: string[] = [
-  "yusufnashirsyarifuddin@gmail.com", // owner
-  "sirbi269@gmail.com",
-  "nbillasanda@gmail.com",
-  "yandip473@gmail.com",
-  "rukmanafaris@gmail.com",
-  "azizatulaini70@gmail.com", // アイちゃん 💕
-];
 
-const SET = new Set(FREE_PRO_EMAILS.map(e => e.trim().toLowerCase()));
-
-/** True kalau user berhak PRO — dari whitelist ATAU flag is_premium (hasil bayar). */
-export function hasProAccess(email?: string | null, isPremium?: boolean | null): boolean {
-  if (isPremium) return true;
-  if (!email) return false;
-  return SET.has(email.trim().toLowerCase());
+/** Tanya DB: user yang lagi login ini Pro apa enggak. */
+export async function fetchProAccess(supabase: SupabaseClient): Promise<boolean> {
+  const { data, error } = await supabase.rpc("is_pro");
+  if (error) {
+    // Migrasi belum dijalanin → anggap Free. Sengaja gak nebak "Pro" biar
+    // fitur berbayar gak kebuka diam-diam gara-gara RPC-nya belum ada.
+    console.warn("[access] is_pro() gagal, dianggap Free:", error.message);
+    return false;
+  }
+  return data === true;
 }
 
-/** Cuma cek whitelist (tanpa flag DB). */
-export function isWhitelisted(email?: string | null): boolean {
-  return !!email && SET.has(email.trim().toLowerCase());
+/**
+ * Versi sinkron buat dipakai kalau flag-nya UDAH ke-ambil dari DB.
+ * `isPremium` di sini hasil `fetchProAccess()` atau kolom `profiles.is_premium`
+ * — bukan tebakan dari email.
+ */
+export function hasProAccess(isPremium?: boolean | null): boolean {
+  return isPremium === true;
 }

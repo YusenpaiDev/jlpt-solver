@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { hasProAccess } from "@/lib/access";
+import { fetchProAccess } from "@/lib/access";
+import { useUserStats } from "@/lib/use-user-stats";
 import {
   House, Camera, BookOpen, BarChart2,
   Settings, LogOut, Zap, ArrowUpRight, Flame, ClipboardList, NotebookPen, GraduationCap,
@@ -34,14 +35,15 @@ const XP_PER_LEVEL = 1000;
 /* ─── Sidebar ───────────────────────────────────────────────── */
 export function Sidebar({ activeHref }: { activeHref: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
+  const [isPro, setIsPro] = useState(false);
+  const stats = useUserStats();
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      setEmail(user.email ?? null);
+      setIsPro(await fetchProAccess(supabase));
 
       const { data } = await supabase
         .from("profiles")
@@ -50,20 +52,13 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
         .single();
       if (!data) return;
 
-      /* ── Streak update ── */
-      const today = new Date().toISOString().split("T")[0];
-      let newStreak = data.streak ?? 0;
-
-      if (data.last_active !== today) {
-        const yesterday = new Date(Date.now() - 86_400_000).toISOString().split("T")[0];
-        newStreak = data.last_active === yesterday ? newStreak + 1 : 1;
-        await supabase
-          .from("profiles")
-          .update({ streak: newStreak, last_active: today })
-          .eq("id", user.id);
-      }
-
-      setProfile({ ...data, streak: newStreak, avatar_url: data.avatar_url ?? null });
+      /* Streak SENGAJA gak diurus di sini lagi.
+         Blok lama naikin profiles.streak tiap komponen ini mount — dan yang
+         dihitung "buka app", bukan "belajar". Lebih parah: komponen ini ternyata
+         gak dirender halaman mana pun, jadi kodenya gak pernah jalan dan
+         angkanya beku berbulan-bulan tanpa ketahuan.
+         Sekarang streak turunan dari aktivitas_harian; lihat lib/aktivitas.ts. */
+      setProfile({ ...data, avatar_url: data.avatar_url ?? null });
     }
     load();
   }, []);
@@ -73,10 +68,10 @@ export function Sidebar({ activeHref }: { activeHref: string }) {
   const initial       = displayName[0].toUpperCase();
   const targetLevel   = profile?.target_level || "N3";
   const xp            = profile?.xp ?? 0;
-  const streak        = profile?.streak ?? 0;
+  const streak        = stats.streak;
   const xpInLevel     = xp % XP_PER_LEVEL;
   const xpPct         = Math.round((xpInLevel / XP_PER_LEVEL) * 100);
-  const isPremium     = hasProAccess(email, profile?.is_premium); // whitelist ATAU flag bayar
+  const isPremium     = isPro; // diputusin is_pro() di Postgres, lihat lib/access.ts
 
   return (
     <aside

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { hasProAccess } from "@/lib/access";
+import { fetchProAccess } from "@/lib/access";
+import { tanggalLokal } from "@/lib/aktivitas";
 
 /**
  * Satu sumber data buat header tiap halaman: streak, XP, level target, status PRO.
@@ -69,6 +70,16 @@ export function useUserStats(): UserStats {
         .single();
       if (batal) return;
 
+      const isPro = await fetchProAccess(supabase);
+      if (batal) return;
+
+      /* Streak dari aktivitas nyata, bukan kolom profiles.streak. Kolom itu
+         dulu dinaikin di <Sidebar> — komponen yang gak dirender halaman mana
+         pun — jadi isinya angka beku yang gak nyambung sama apa pun. */
+      const { data: st } = await supabase.rpc("streak_saya", { p_hari_ini: tanggalLokal() });
+      const streakBaris = Array.isArray(st) ? st[0] : st;
+      if (batal) return;
+
       const xp = profil?.xp ?? 0;
       const nama = profil?.username || user.user_metadata?.full_name || user.email || "Y";
 
@@ -87,16 +98,17 @@ export function useUserStats(): UserStats {
       const targetLevel = mdLevel ?? (profil?.target_level as TargetLevel) ?? "N3";
 
       setStats({
-        streak: profil?.streak ?? 0,
+        streak: streakBaris?.sekarang ?? 0,
         // XP jalan terus lintas level; yang ditampilin sisa di level sekarang.
         level: Math.floor(xp / XP_PER_LEVEL) + 1,
         xpTotal: xp,
         xp: xp % XP_PER_LEVEL,
         xpTarget: XP_PER_LEVEL,
         targetLevel,
-        // Whitelist email ATAU flag hasil bayar — logikanya udah ada di access.ts,
-        // jangan ditulis ulang di sini biar gak beda-beda antar halaman.
-        isPro: hasProAccess(user.email, profil?.is_premium),
+        // Diputusin Postgres lewat is_pro() — flag bayar ATAU whitelist.
+        // Jangan hitung ulang dari email di sini: daftarnya udah gak ada di
+        // client, dan entitlement yang dihitung di browser gampang dipalsuin.
+        isPro,
         examDate,
         initial: String(nama)[0].toUpperCase(),
         loaded: true,

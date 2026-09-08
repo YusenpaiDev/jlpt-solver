@@ -45,9 +45,9 @@ interface RiwayatItem {
   created_at: string;
 }
 
-/* Bank soal asli baru keisi N2/N3/N4. N1 & N5 dikunci ("SOON") biar gak error
-   pas dipilih — isi soal aslinya nyusul. */
-const LOCKED_LEVELS = new Set<Level>(["N1", "N5"]);
+/* Bank soal asli udah keisi N1/N2/N3/N4. Tinggal N5 yang dikunci ("SOON") biar
+   gak error pas dipilih — isi soal aslinya nyusul. */
+const LOCKED_LEVELS = new Set<Level>(["N5"]);
 const LEVELS: { lv: Level; desc: string }[] = [
   { lv: "N5", desc: "Pemula" },
   { lv: "N4", desc: "Dasar" },
@@ -106,13 +106,16 @@ export default function LembarTugas() {
   const [error, setError] = useState<string | null>(null);
 
   /* Shared */
-  const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const [riwayat, setRiwayat] = useState<RiwayatItem[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const stats = useUserStats();
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const xp = stats.xp;
   const xpTarget = stats.xpTarget;
 
@@ -124,7 +127,7 @@ export default function LembarTugas() {
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
       const [profileRes, sessionRes] = await Promise.all([
-        supabase.from("profiles").select("target_level, streak").eq("id", user.id).single(),
+        supabase.from("profiles").select("target_level").eq("id", user.id).single(),
         supabase.from("sessions")
           .select("id, title, category, level, total, score, created_at")
           .eq("user_id", user.id)
@@ -134,7 +137,6 @@ export default function LembarTugas() {
       if (profileRes.data) {
         const tgt = profileRes.data.target_level as Level | null;
         if (tgt && !LOCKED_LEVELS.has(tgt)) setLevel(tgt); // target N1/N5 masih dikunci → biarin default N2
-        setStreak(profileRes.data.streak ?? 0);
       }
       setRiwayat((sessionRes.data ?? []) as RiwayatItem[]);
     }

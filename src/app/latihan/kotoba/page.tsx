@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { catatAktivitas } from "@/lib/aktivitas";
 import kotobaN1 from "@/data/kotoba/N1.json";
 import kotobaN2 from "@/data/kotoba/N2.json";
 import kotobaN3 from "@/data/kotoba/N3.json";
@@ -152,7 +153,10 @@ function KotobaPlayer() {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        await supabase.rpc("catat_kotoba", { p_word: q.word, p_benar: correct });
+        // p_level dikirim biar Statistik bisa ngerinci penguasaan per level tanpa
+        // mesti muat deck (2,3 MB) cuma buat nyocokin kata → level.
+        await supabase.rpc("catat_kotoba", { p_word: q.word, p_benar: correct, p_level: level });
+        catatAktivitas("kotoba");
         if (!user) return;
         const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
         await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + (correct ? 8 : 2) }).eq("id", user.id);

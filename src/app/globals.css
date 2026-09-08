@@ -5523,6 +5523,20 @@ input, textarea, select { font-size: 16px; }
   font-size: 12px; color: var(--text-secondary);
 }
 .meta-chip .meta-num { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Chip yang bisa diklik — dipakai "Ulang dari awal". Sengaja TIDAK dikasih
+   warna merah: dia duduk di deretan chip informasi, dan chip merah di situ
+   kebaca kayak peringatan error, bukan aksi. Konfirmasinya yang jadi rem. */
+.meta-chip-btn {
+  cursor: pointer; font-family: inherit;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.meta-chip-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--edge-strong, var(--edge-soft));
+  background: var(--surface-2, var(--surface-1));
+}
+.meta-chip-btn:disabled { opacity: .6; cursor: default; }
 .meta-chip .meta-dot { width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
 .meta-chip.status-saved {
   background: rgba(107, 142, 63, 0.08);
@@ -7940,6 +7954,22 @@ html { scrollbar-gutter: stable; }
 
 /* text options */
 .ch-opts { display: flex; flex-direction: column; gap: 9px; }
+
+/* Soal 問題3/4/5: opsinya gak tercetak di lembar ujian, cuma dibacain lewat
+   audio. Tombolnya jadi deretan angka gede — sama kayak ngisi lembar jawaban
+   asli, di mana yang kelihatan cuma nomornya. */
+.ch-opt-lisan-note {
+  margin: 0 0 10px; font-size: 13px; line-height: 1.5;
+  color: var(--text-muted, #94a3b8);
+}
+.ch-opts.lisan { flex-direction: row; flex-wrap: wrap; gap: 12px; }
+.ch-opts.lisan .ch-opt {
+  flex: 1 1 0; min-width: 72px; justify-content: center;
+  padding-block: 18px;
+}
+.ch-opts.lisan .ch-opt-k {
+  font-size: 22px; font-weight: 700; min-width: auto;
+}
 .ch-opt { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px;
   background: var(--surface-1); border: 1.5px solid var(--edge-soft); cursor: pointer; text-align: left;
   transition: .2s var(--ease-out-back); font-family: inherit; }
@@ -8999,3 +9029,61 @@ html { scrollbar-gutter: stable; }
 @media (prefers-reduced-motion: reduce) { .latihan-kilat *, .latihan-kilat *::before, .latihan-kilat *::after { animation:none !important; transition:none !important; } }
 
 @media (max-width: 1100px) { .bunpou-v3 .bv-grid { grid-template-columns: 1fr; } .bunpou-v3 .bv-side { position: static; } }
+
+
+/* ── Kartu Penguasaan Kotoba (Statistik) ──────────────────────
+   Empat ember status, warnanya sengaja disamain sama titik status di
+   halaman Kotoba (d-known/d-seen/d-wrong/d-new) — orang yang bolak-balik
+   dua halaman ini harus lihat bahasa warna yang sama. */
+.kt-buckets {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  margin-bottom: 18px;
+}
+.kt-bucket {
+  display: flex; flex-direction: column; gap: 2px; align-items: center;
+  padding: 12px 8px; border-radius: var(--radius-md, 12px);
+  background: var(--surface-1); border: 1px solid var(--edge-soft);
+  text-align: center;
+}
+.kt-bucket strong {
+  font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.kt-bucket span { font-size: 11px; color: var(--text-secondary); }
+.kt-known strong { color: var(--accent-emerald); }
+.kt-seen  strong { color: var(--accent-amber); }
+.kt-wrong strong { color: var(--accent-rose); }
+.kt-new   strong { color: var(--text-dim, var(--text-secondary)); }
+
+.kt-empty {
+  margin: 14px 0 0; padding-top: 14px;
+  border-top: 1px solid var(--edge-soft);
+  font-size: 12.5px; line-height: 1.6; color: var(--text-secondary);
+}
+
+@media (max-width: 520px) {
+  .kt-buckets { grid-template-columns: repeat(2, 1fr); }
+}
+
+
+/* ── Nilai-diri di FlashPlayer (cuma dipakai dari Kotoba) ─────
+   Muncul di bawah tombol LIHAT JAWABAN, dan cuma sesudah kartu dibalik. */
+.flash-nilai { display: flex; gap: 10px; margin-top: 12px; }
+.flash-nilai-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 104px; padding: 9px 18px; border-radius: var(--radius-full, 99px);
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  border: 1px solid var(--edge-soft); background: var(--surface-1);
+  color: var(--text-secondary);
+  transition: transform .12s ease, border-color .15s ease, color .15s ease, background .15s ease;
+}
+.flash-nilai-btn:hover { transform: translateY(-1px); }
+.flash-nilai-btn.tau:hover   { color: var(--accent-emerald); border-color: var(--accent-emerald); }
+.flash-nilai-btn.belum:hover { color: var(--accent-rose);    border-color: var(--accent-rose); }
+
+.flash-nilai-done {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; font-size: 12.5px; font-weight: 600;
+}
+.flash-nilai-done.tau   { color: var(--accent-emerald); }
+.flash-nilai-done.belum { color: var(--accent-rose); }

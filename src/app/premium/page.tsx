@@ -61,9 +61,8 @@ const PLANS: Plan[] = [
       { t: "5 chat Sensei AI / hari", on: true },
       { t: "Materi struktural (Kotoba, Bunpou)", on: false },
       { t: "Sensei chat unlimited", on: false },
-      { t: "Export PDF / CSV", on: false },
       { t: "Statistik lanjutan", on: false },
-      { t: "Prioritas AI (lebih cepat)", on: false },
+      { t: "Kuota AI harian jauh lebih besar", on: false },
     ],
   },
   {
@@ -82,9 +81,8 @@ const PLANS: Plan[] = [
       { t: "Sensei chat unlimited", on: true, highlight: true },
       { t: "Semua materi struktural", on: true },
       { t: "Latihan kilat + AI personalize", on: true },
-      { t: "Export PDF / CSV / Anki", on: true },
       { t: "Statistik lanjutan + insight", on: true },
-      { t: "Prioritas AI (2× lebih cepat)", on: true },
+      { t: "Kuota AI harian jauh lebih besar", on: true },
       { t: "Akses fitur beta lebih dulu", on: true },
     ],
   },
@@ -120,9 +118,8 @@ const COMPARE: CompareRow[] = [
   { label: "Kotoba di Kamus",          free: "50 max",     pro: "Unlimited",   life: "Unlimited" },
   { label: "Sensei AI chat",           free: "5 / hari",   pro: "Unlimited",   life: "Unlimited" },
   { label: "Materi struktural",        free: false,        pro: true,          life: true },
-  { label: "Export (PDF/CSV/Anki)",    free: false,        pro: true,          life: true },
   { label: "Statistik lanjutan",       free: false,        pro: true,          life: true },
-  { label: "Prioritas AI",             free: false,        pro: "Standard ×2", life: "Standard ×2" },
+  { label: "Kuota AI harian",          free: "5 chat/hari", pro: "200 chat/hari", life: "200 chat/hari" },
   { label: "Akses fitur beta",         free: false,        pro: true,          life: true },
   { label: "Discord komunitas",        free: false,        pro: false,         life: true },
   { label: "Sertifikat digital",       free: false,        pro: false,         life: true },
@@ -143,9 +140,12 @@ export default function Premium() {
   const router = useRouter();
   const [cycle, setCycle] = useState<Cycle>("monthly");
   const [paying, setPaying] = useState<string | null>(null);
-  const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const stats = useUserStats();
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   /* Paket aktif dari status PRO yang sebenarnya — whitelist email atau flag
      is_premium hasil bayar (logikanya di access.ts). Skema belum punya kolom
      buat mbedain pro vs lifetime, jadi keduanya kebaca "pro". */
@@ -159,8 +159,6 @@ export default function Premium() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const { data } = await supabase.from("profiles").select("streak").eq("id", user.id).single();
-      if (data) setStreak(data.streak ?? 0);
     }
     load();
   }, []);

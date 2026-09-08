@@ -15,6 +15,7 @@ import {
   Highlighter, Undo2, LogOut,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import { catatAktivitas } from "@/lib/aktivitas";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 type Stage = "upload" | "setup" | "analyzing" | "result";
@@ -867,8 +868,7 @@ function StabiloLayer({
     const ro = new ResizeObserver(sync);
     ro.observe(parent);
     return () => ro.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    }, []);
 
   // Redraw tiap strokes/warna berubah.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1059,6 +1059,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [toast,        setToast]        = useState<{ text: string; ok: boolean } | null>(null);
   const [scoreSaved,   setScoreSaved]   = useState(false);
   const [showCompletion, setShowCompletion] = useState(false); // popup skor pas selesai
+  const [konfirmReset, setKonfirmReset] = useState(false); // modal sebelum jawaban dihapus
   const [resetting,    setResetting]    = useState(false);
   const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
   const [savingNote,   setSavingNote]   = useState<number | null>(null);
@@ -1595,6 +1596,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
      ulang. XP gak dibalikin & gak dobel (xp_claimed tetap true). Coretan
      stabilo dibiarin (catatan, bukan jawaban). */
   const resetSession = async () => {
+    setKonfirmReset(false);
     setResetting(true);
     try {
       setAnswers({});
@@ -1757,6 +1759,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const pick = (qi: number, id: string) => {
     if (revealed.has(qi)) return;
     setAnswers(a => ({ ...a, [qi]: id }));
+    catatAktivitas("soal");
   };
   const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
 
@@ -1882,6 +1885,22 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 <span className="meta-chip">
                   <Loader2 className="size-3 animate-spin" /> Menyimpan...
                 </span>
+              )}
+              {/* Reset cuma ditawarin kalau emang ada yang bisa direset. Sebelum
+                  ini pintunya cuma di popup "Selesai!", jadi mustahil dijangkau
+                  sampai semua soal kejawab. */}
+              {hasProgress && !isReview && (
+                <button
+                  type="button"
+                  className="meta-chip meta-chip-btn"
+                  onClick={() => setKonfirmReset(true)}
+                  disabled={resetting}
+                >
+                  {resetting
+                    ? <Loader2 className="size-3 animate-spin" />
+                    : <RotateCcw size={12} strokeWidth={2} />}
+                  Ulang dari awal
+                </button>
               )}
             </div>
           </div>
@@ -2989,6 +3008,43 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         </>
       )}
 
+      {/* ── Konfirmasi sebelum jawaban dihapus ── */}
+      {konfirmReset && (
+        <>
+          <div className="af-modal-overlay" onClick={() => setKonfirmReset(false)} />
+          <div className="af-modal af-complete" role="dialog" aria-modal="true">
+            <div className="af-complete-emoji">↺</div>
+            <h2 className="af-complete-title">Ulang dari awal?</h2>
+            <p className="af-complete-sub">
+              {Object.keys(answers).length} jawaban kamu di sesi ini bakal dihapus dan soalnya balik kosong.
+              Nggak bisa dibatalin. XP yang udah kamu dapet tetap aman, dan coretan stabilo
+              nggak ikut kehapus.
+            </p>
+            <div className="af-complete-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setKonfirmReset(false)}
+                disabled={resetting}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={resetSession}
+                disabled={resetting}
+              >
+                {resetting
+                  ? <Loader2 className="size-4 animate-spin" />
+                  : <RotateCcw size={14} strokeWidth={2} />}
+                Ya, hapus jawaban
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Popup skor: muncul sekali pas semua soal kejawab ── */}
       {showCompletion && isComplete && (
         <>
@@ -3008,12 +3064,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={resetSession}
+                onClick={() => { setShowCompletion(false); setKonfirmReset(true); }}
                 disabled={resetting}
               >
-                {resetting
-                  ? <Loader2 className="size-4 animate-spin" />
-                  : <RotateCcw size={14} strokeWidth={2} />}
+                <RotateCcw size={14} strokeWidth={2} />
                 Ulang dari awal
               </button>
               <button
@@ -3186,8 +3240,18 @@ function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; 
 export default function AnalisisFoto() {
   const stats = useUserStats();
   const [stage,               setStage]               = useState<Stage>("upload");
-  // Tanpa ?session = halaman ini bakal redirect ke /materi → jangan render UI upload, tampilin loader aja.
-  const [redirecting] = useState(() => typeof window !== "undefined" && !new URLSearchParams(window.location.search).has("session"));
+  /* Fase pembuka halaman. Dulu ini flag `redirecting` yang dihitung di
+     initializer useState — yaitu waktu RENDER — sedangkan yang mutusin
+     ada/gaknya ?session itu useEffect yang jalan SETELAH mount. Pas navigasi
+     client-side, URL di-update lewat History API dan render bisa keburu
+     jalan sebelum URL-nya berubah: initializer baca URL lama (gak ada
+     session) → flag nyala permanen (gak ada setter-nya), padahal effect-nya
+     baca URL baru dan tetap muat sesinya. Hasilnya loader "Mengalihkan…"
+     nyangkut selamanya di atas konten yang udah kebuka.
+
+     Sekarang cuma effect yang mutusin, dan "cek" itu keadaan awal — jadi
+     UI upload juga gak sempat ngeflash sebelum keputusannya keluar. */
+  const [fase, setFase] = useState<"cek" | "alih" | "siap">("cek");
   const [files,               setFiles]               = useState<FileData[]>([]);
   const [result,              setResult]              = useState<AIResult | null>(null);
   const [resultLevel,         setResultLevel]         = useState<Level | null>(null);
@@ -3203,7 +3267,10 @@ export default function AnalisisFoto() {
   const camInputRef    = useRef<HTMLInputElement>(null);
   const [camModalOpen, setCamModalOpen] = useState(false);
   const [userInitial, setUserInitial] = useState("Y");
-  const [streak, setStreak] = useState(0);
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const [ringkas, setRingkas] = useState<RingkasUpload>({ dianalisis: 0, akurasi: null, streak: 0 });
 
   /* Load user info for v2 UserBar */
@@ -3213,11 +3280,9 @@ export default function AnalisisFoto() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [prof, sesi] = await Promise.all([
-        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+      const [sesi] = await Promise.all([
         supabase.from("sessions").select("total, score").eq("user_id", user.id),
       ]);
-      if (prof.data) setStreak(prof.data.streak ?? 0);
 
       // Cuma sesi yang udah ada skornya — sesi bank soal yang belum dikerjain
       // kalau ikut diitung bikin akurasinya anjlok palsu.
@@ -3227,7 +3292,8 @@ export default function AnalisisFoto() {
       setRingkas({
         dianalisis: totalSoal,
         akurasi: totalSoal > 0 ? Math.round((totalBenar / totalSoal) * 100) : null,
-        streak: prof.data?.streak ?? 0,
+        // Sumber yang sama kayak header — bukan profiles.streak yang beku.
+        streak: stats.streak,
       });
     })();
   }, []);
@@ -3378,8 +3444,8 @@ export default function AnalisisFoto() {
      Fitur upload/analisis-foto udah dibuang — tanpa session → balik ke Materi. */
   useEffect(() => {
     const sid = new URLSearchParams(window.location.search).get("session");
-    if (sid) loadSession(sid);
-    else window.location.replace("/materi");
+    if (sid) { setFase("siap"); loadSession(sid); }
+    else { setFase("alih"); window.location.replace("/materi"); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -3417,6 +3483,12 @@ export default function AnalisisFoto() {
       setLoadingSession(false);
     }
   };
+
+  /* Loader dan isi halaman saling meniadakan — bukan ditumpuk. Dulu tiap view
+     punya guard sendiri-sendiri dan tiga di antaranya kelewat, jadi loader bisa
+     kerender BARENGAN sama ResultView. Satu gerbang di sini bikin itu gak mungkin
+     kejadian lagi, termasuk buat view yang ditambahin nanti. */
+  const sedangMuat = fase === "cek" || fase === "alih" || loadingSession;
 
   const handleUpload = () => fileInputRef.current?.click();
 
@@ -3592,7 +3664,14 @@ export default function AnalisisFoto() {
           isPro={stats.isPro}
         />
 
-        {!loadingSession && !redirecting && stage === "upload" && (
+        {sedangMuat ? (
+          <div className="af-analyzing">
+            <div className="af-analyzing-spinner" />
+            <p className="af-analyzing-title">{fase === "alih" ? "Mengalihkan…" : "Memuat sesi..."}</p>
+          </div>
+        ) : (
+          <>
+        {stage === "upload" && (
           <UploadView
             ringkas={ringkas}
             onUpload={handleUpload}
@@ -3613,14 +3692,7 @@ export default function AnalisisFoto() {
           />
         )}
 
-        {(loadingSession || redirecting) && (
-          <div className="af-analyzing">
-            <div className="af-analyzing-spinner" />
-            <p className="af-analyzing-title">{redirecting ? "Mengalihkan…" : "Memuat sesi..."}</p>
-          </div>
-        )}
-
-        {!loadingSession && stage === "analyzing" && (
+        {stage === "analyzing" && (
           <AnalyzingView
             imageUrl={files[currentAnalyzingIdx - 1]?.url}
             currentIdx={currentAnalyzingIdx}
@@ -3629,7 +3701,7 @@ export default function AnalisisFoto() {
           />
         )}
 
-        {!loadingSession && stage === "result" && result && (
+        {stage === "result" && result && (
           <ResultView
             result={result}
             setResult={setResult}
@@ -3642,6 +3714,8 @@ export default function AnalisisFoto() {
             sessionLevel={resultLevel}
             sessionCategory={resultCategory}
           />
+        )}
+          </>
         )}
       </main>
     </>

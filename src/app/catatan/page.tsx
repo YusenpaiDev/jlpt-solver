@@ -47,7 +47,10 @@ export default function CatatanPage() {
   const [addMode, setAddMode] = useState(false);
 
   /* UserBar */
-  const [streak, setStreak] = useState(0);
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const [userInitial, setUserInitial] = useState("Y");
 
   useEffect(() => {
@@ -58,14 +61,12 @@ export default function CatatanPage() {
         if (!user) return;
         setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
-        const [profileRes, catatanRes] = await Promise.all([
-          supabase.from("profiles").select("streak").eq("id", user.id).single(),
+        const [catatanRes] = await Promise.all([
           supabase.from("catatan")
             .select("id, judul, isi, source, created_at, updated_at")
             .eq("user_id", user.id)
             .order("updated_at", { ascending: false }),
         ]);
-        if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
         const list = (catatanRes.data ?? []) as Catatan[];
         setCatatan(list);
         if (list.length > 0) {

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { StabiloLayer, STABILO_COLORS, type HiStroke } from "@/components/StabiloLayer";
 import { useUserStats } from "@/lib/use-user-stats";
+import { catatAktivitas } from "@/lib/aktivitas";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -31,6 +32,9 @@ interface ChoukaiQuestion {
   tip?: string;
   transcript?: TranscriptLine[];
   prompt?: string;
+  /* Opsi gak dicetak di lembar ujian — cuma dibacain lewat audio (問題3/4/5).
+     `options` isinya nomor polos ["1","2","3"], jadi teksnya gak usah dirender. */
+  opsiLisan?: boolean;
 }
 
 interface ChoukaiAiResult {
@@ -279,7 +283,10 @@ export default function ChoukaiPlayer() {
   const [session, setSession] = useState<SessionRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [streak, setStreak] = useState(0);
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const [userInitial, setUserInitial] = useState("Y");
 
   const [idx, setIdx] = useState(0);
@@ -331,11 +338,9 @@ export default function ChoukaiPlayer() {
         }
         setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
-        const [profileRes, sessionRes] = await Promise.all([
-          supabase.from("profiles").select("streak").eq("id", user.id).single(),
+        const [sessionRes] = await Promise.all([
           supabase.from("sessions").select("*").eq("id", sessionId).single(),
         ]);
-        if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
         if (sessionRes.error) throw sessionRes.error;
         const row = sessionRes.data as SessionRow;
         setSession(row);
@@ -427,6 +432,7 @@ export default function ChoukaiPlayer() {
     if (picked == null) return;
     setSubmitted(true);
     setAnswers(s => ({ ...s, [idx]: { picked, correct: picked === correctIdx } }));
+    catatAktivitas("choukai");
   };
 
   const go = (delta: number) => {
@@ -538,7 +544,13 @@ export default function ChoukaiPlayer() {
                 </div>
               )}
 
-              <div className="ch-opts">
+              {q.opsiLisan && (
+                <p className="ch-opt-lisan-note">
+                  Opsi nggak dicetak di lembar ujian — dengar audionya, terus pilih nomornya.
+                </p>
+              )}
+
+              <div className={`ch-opts${q.opsiLisan ? " lisan" : ""}`}>
                 {q.options.map((opt, i) => {
                   const st = stateFor(i, picked, submitted, correctIdx);
                   return (
@@ -549,7 +561,7 @@ export default function ChoukaiPlayer() {
                       onClick={() => !submitted && setPicked(i)}
                     >
                       <span className="ch-opt-k">{i + 1}</span>
-                      <span className="ch-opt-t">{stripOptionPrefix(opt)}</span>
+                      {!q.opsiLisan && <span className="ch-opt-t">{stripOptionPrefix(opt)}</span>}
                       {submitted && st === "correct" && (
                         <Check size={17} strokeWidth={2.4} style={{ color: "var(--accent-emerald)" }} />
                       )}
