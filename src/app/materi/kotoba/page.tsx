@@ -83,7 +83,10 @@ function hitsText(s: WStat): { t: string; bad?: boolean } {
 export default function KotobaDeck() {
   const stats = useUserStats();
   const router = useRouter();
-  const [streak, setStreak] = useState(0);
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const [userInitial, setUserInitial] = useState("Y");
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [progres, setProgres] = useState<Map<string, Progres>>(new Map());
@@ -123,12 +126,10 @@ export default function KotobaDeck() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [p, f, kp] = await Promise.all([
-        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+      const [f, kp] = await Promise.all([
         supabase.from("saved_words").select("kanji").eq("user_id", user.id).eq("favorite", true),
         supabase.from("kotoba_progress").select("word, benar, salah, riwayat").eq("user_id", user.id),
       ]);
-      if (p.data) setStreak(p.data.streak ?? 0);
       if (f.data) setFavs(new Set(f.data.map(r => r.kanji)));
       if (kp.data) {
         setProgres(new Map(kp.data.map(r => [r.word, {

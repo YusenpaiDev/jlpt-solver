@@ -143,9 +143,12 @@ export default function Premium() {
   const router = useRouter();
   const [cycle, setCycle] = useState<Cycle>("monthly");
   const [paying, setPaying] = useState<string | null>(null);
-  const [streak, setStreak] = useState(0);
   const [userInitial, setUserInitial] = useState("Y");
   const stats = useUserStats();
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   /* Paket aktif dari status PRO yang sebenarnya — whitelist email atau flag
      is_premium hasil bayar (logikanya di access.ts). Skema belum punya kolom
      buat mbedain pro vs lifetime, jadi keduanya kebaca "pro". */
@@ -159,8 +162,6 @@ export default function Premium() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const { data } = await supabase.from("profiles").select("streak").eq("id", user.id).single();
-      if (data) setStreak(data.streak ?? 0);
     }
     load();
   }, []);

@@ -283,7 +283,10 @@ export default function ChoukaiPlayer() {
   const [session, setSession] = useState<SessionRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [streak, setStreak] = useState(0);
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const [userInitial, setUserInitial] = useState("Y");
 
   const [idx, setIdx] = useState(0);
@@ -335,11 +338,9 @@ export default function ChoukaiPlayer() {
         }
         setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
-        const [profileRes, sessionRes] = await Promise.all([
-          supabase.from("profiles").select("streak").eq("id", user.id).single(),
+        const [sessionRes] = await Promise.all([
           supabase.from("sessions").select("*").eq("id", sessionId).single(),
         ]);
-        if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
         if (sessionRes.error) throw sessionRes.error;
         const row = sessionRes.data as SessionRow;
         setSession(row);

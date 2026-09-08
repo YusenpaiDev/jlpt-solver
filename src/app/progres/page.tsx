@@ -74,7 +74,10 @@ function Progres() {
 
   const [sessions, setSessions] = useState<Sess[]>([]);
   const [loading, setLoading] = useState(true);
-  const [streak, setStreak] = useState(0);
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const [userInitial, setUserInitial] = useState("Y");
   const [typeF, setTypeF] = useState<"all" | SType>("all");
   const [levelF, setLevelF] = useState<"all" | string>("all");
@@ -85,14 +88,12 @@ function Progres() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [profileRes, sessRes] = await Promise.all([
-        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+      const [sessRes] = await Promise.all([
         supabase.from("sessions")
           .select("id, level, category, title, total, score, created_at, ai_result->section, ai_result->kind, ai_result->stats")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
       ]);
-      if (profileRes.data) setStreak(profileRes.data.streak ?? 0);
       setSessions((sessRes.data ?? []) as Sess[]);
       setLoading(false);
     }

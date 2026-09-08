@@ -124,7 +124,10 @@ const SPECIAL: Record<string, { name: string; note: string }> = {
 export default function Home() {
   const stats = useUserStats();
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [streak, setStreak] = useState(0);
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const [totalSoal, setTotalSoal] = useState(0);
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const [kotoba, setKotoba] = useState<number | null>(null);
@@ -168,13 +171,12 @@ export default function Home() {
       setAvatar(user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null);
 
       const [profileRes, sessionRes, kotobaRes] = await Promise.all([
-        supabase.from("profiles").select("streak, avatar_url").eq("id", user.id).single(),
+        supabase.from("profiles").select("avatar_url").eq("id", user.id).single(),
         supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section,ai_result->stats,ai_result->kind")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(300),
         supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       ]);
       if (profileRes.data) {
-        setStreak(profileRes.data.streak ?? 0);
         if (profileRes.data.avatar_url) setAvatar(profileRes.data.avatar_url);
       }
       if (kotobaRes.count != null) setKotoba(kotobaRes.count);

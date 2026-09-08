@@ -3267,7 +3267,10 @@ export default function AnalisisFoto() {
   const camInputRef    = useRef<HTMLInputElement>(null);
   const [camModalOpen, setCamModalOpen] = useState(false);
   const [userInitial, setUserInitial] = useState("Y");
-  const [streak, setStreak] = useState(0);
+  /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
+     profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
+     halaman nampilin angka beku yang sama. */
+  const streak = stats.streak;
   const [ringkas, setRingkas] = useState<RingkasUpload>({ dianalisis: 0, akurasi: null, streak: 0 });
 
   /* Load user info for v2 UserBar */
@@ -3277,11 +3280,9 @@ export default function AnalisisFoto() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [prof, sesi] = await Promise.all([
-        supabase.from("profiles").select("streak").eq("id", user.id).single(),
+      const [sesi] = await Promise.all([
         supabase.from("sessions").select("total, score").eq("user_id", user.id),
       ]);
-      if (prof.data) setStreak(prof.data.streak ?? 0);
 
       // Cuma sesi yang udah ada skornya — sesi bank soal yang belum dikerjain
       // kalau ikut diitung bikin akurasinya anjlok palsu.
@@ -3291,7 +3292,8 @@ export default function AnalisisFoto() {
       setRingkas({
         dianalisis: totalSoal,
         akurasi: totalSoal > 0 ? Math.round((totalBenar / totalSoal) * 100) : null,
-        streak: prof.data?.streak ?? 0,
+        // Sumber yang sama kayak header — bukan profiles.streak yang beku.
+        streak: stats.streak,
       });
     })();
   }, []);
