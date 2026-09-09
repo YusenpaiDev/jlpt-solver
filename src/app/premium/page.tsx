@@ -55,14 +55,15 @@ const PLANS: Plan[] = [
     cta: "Plan kamu sekarang",
     color: "slate",
     features: [
-      { t: "Bank soal 過去問 (terbatas)", on: true },
-      { t: "50 kotoba di Kamus", on: true },
-      { t: "Latihan kilat dasar", on: true },
+      { t: "Bank soal 過去問 lengkap", on: true },
+      { t: "Choukai + audio per soal", on: true },
+      { t: "Materi Kotoba & Bunpou", on: true },
+      { t: "50 kotoba tersimpan di Kamus", on: true },
       { t: "5 chat Sensei AI / hari", on: true },
-      { t: "Materi struktural (Kotoba, Bunpou)", on: false },
-      { t: "Sensei chat unlimited", on: false },
-      { t: "Statistik lanjutan", on: false },
-      { t: "Kuota AI harian jauh lebih besar", on: false },
+      { t: "3 analisis foto / hari", on: true },
+      { t: "Kotoba tersimpan tanpa batas", on: false },
+      { t: "200 chat Sensei AI / hari", on: false },
+      { t: "50 analisis foto / hari", on: false },
     ],
   },
   {
@@ -76,14 +77,13 @@ const PLANS: Plan[] = [
     popular: true,
     color: "iris",
     features: [
-      { t: "Bank soal 過去問 lengkap", on: true, highlight: true },
-      { t: "Kotoba unlimited di Kamus", on: true, highlight: true },
-      { t: "Sensei chat unlimited", on: true, highlight: true },
-      { t: "Semua materi struktural", on: true },
-      { t: "Latihan kilat + AI personalize", on: true },
-      { t: "Statistik lanjutan + insight", on: true },
-      { t: "Kuota AI harian jauh lebih besar", on: true },
-      { t: "Akses fitur beta lebih dulu", on: true },
+      { t: "Kotoba tersimpan tanpa batas", on: true, highlight: true },
+      { t: "200 chat Sensei AI / hari", on: true, highlight: true },
+      { t: "50 analisis foto / hari", on: true, highlight: true },
+      { t: "500 furigana / hari", on: true },
+      { t: "Bank soal 過去問 lengkap", on: true },
+      { t: "Choukai + audio per soal", on: true },
+      { t: "Materi Kotoba & Bunpou", on: true },
     ],
   },
   {
@@ -98,10 +98,6 @@ const PLANS: Plan[] = [
       { t: "Semua fitur Pro · selamanya", on: true, highlight: true },
       { t: "Tidak ada perpanjangan", on: true, highlight: true },
       { t: "Fitur baru gratis selamanya", on: true, highlight: true },
-      { t: "Priority support", on: true },
-      { t: "Akses Discord komunitas exclusive", on: true },
-      { t: "Sertifikat digital pencapaian", on: true },
-      { t: "+ semua fitur Pro", on: true },
     ],
   },
 ];
@@ -114,24 +110,33 @@ interface CompareRow {
 }
 
 const COMPARE: CompareRow[] = [
-  { label: "Bank soal 過去問",         free: "Terbatas",   pro: "Lengkap",     life: "Lengkap" },
-  { label: "Kotoba di Kamus",          free: "50 max",     pro: "Unlimited",   life: "Unlimited" },
-  { label: "Sensei AI chat",           free: "5 / hari",   pro: "Unlimited",   life: "Unlimited" },
-  { label: "Materi struktural",        free: false,        pro: true,          life: true },
-  { label: "Statistik lanjutan",       free: false,        pro: true,          life: true },
-  { label: "Kuota AI harian",          free: "5 chat/hari", pro: "200 chat/hari", life: "200 chat/hari" },
-  { label: "Akses fitur beta",         free: false,        pro: true,          life: true },
-  { label: "Discord komunitas",        free: false,        pro: false,         life: true },
-  { label: "Sertifikat digital",       free: false,        pro: false,         life: true },
+  { label: "Bank soal 過去問",         free: "Lengkap",     pro: "Lengkap",      life: "Lengkap" },
+  { label: "Choukai + audio",          free: true,          pro: true,           life: true },
+  { label: "Materi Kotoba & Bunpou",   free: true,          pro: true,           life: true },
+  { label: "Kotoba tersimpan",         free: "50 max",      pro: "Tanpa batas",  life: "Tanpa batas" },
+  { label: "Chat Sensei AI",           free: "5 / hari",    pro: "200 / hari",   life: "200 / hari" },
+  { label: "Analisis foto",            free: "3 / hari",    pro: "50 / hari",    life: "50 / hari" },
+  { label: "Furigana otomatis",        free: "30 / hari",   pro: "500 / hari",   life: "500 / hari" },
+  { label: "Perpanjangan",             free: "—",           pro: "Bulanan",      life: "Sekali bayar" },
 ];
 
+/* ⚠️ KONTAK: ganti KONTAK_SUPPORT di bawah sama email/WA yang beneran kamu
+   pegang sebelum halaman ini dipakai jualan. FAQ lama nyebut
+   support@senseijlpt.id — kalau alamat itu gak ada, orang yang mau berhenti
+   atau komplain gak punya jalan sama sekali. */
+const KONTAK_SUPPORT = "GANTI_INI@email-kamu.com";
+
 const FAQ = [
-  { q: "Bisa cancel kapan saja?",                    a: "Bisa banget. Bisa di-cancel langsung dari /pengaturan dan kamu tetap dapat akses Pro sampai akhir periode billing." },
-  { q: "Kalau downgrade, kotoba & catatan saya hilang?", a: "Nggak. Semua data kamu aman selamanya. Cuma fitur Pro yang non-aktif. Kalau resub, semua langsung balik." },
-  { q: "Pakai metode pembayaran apa?",               a: "Visa/Mastercard, GoPay, OVO, Dana, transfer bank, bahkan QRIS — semua via Midtrans." },
-  { q: "Ada garansi uang kembali?",                  a: "Ya — 14 hari refund tanpa pertanyaan. Email aja support@senseijlpt.id." },
-  { q: "Ada garansi sampai lulus?",                  a: "Ambil Paket Ujian 6 bulan — kalau belum lulus di sesi ujian dalam periode itu, perpanjang gratis 1 periode. Cukup tunjukin hasil ujianmu ke support@senseijlpt.id." },
-  { q: "Bedanya Pro vs Lifetime apa?",               a: "Fitur identik. Pro = subscription. Lifetime = bayar sekali, akses semua fitur Pro selamanya termasuk fitur masa depan." },
+  { q: "Gimana cara bayarnya?",
+    a: `Sekarang masih manual: hubungi ${KONTAK_SUPPORT}, transfer, terus akses Pro-nya diaktifin. Pembayaran otomatis (kartu, GoPay, QRIS) lagi disiapin.` },
+  { q: "Bisa berhenti kapan saja?",
+    a: "Bisa. Pro itu bulanan — kalau gak diperpanjang, akses Pro berhenti di akhir periode dan akunmu balik ke Free. Gak ada ikatan." },
+  { q: "Kalau balik ke Free, kotoba & catatan saya hilang?",
+    a: "Nggak. Semua data kamu tetap ada. Yang berubah cuma batas hariannya — dan kotoba di atas 50 tetap kesimpen, cuma gak bisa nambah lagi sampai berlangganan." },
+  { q: "Bedanya Pro vs Lifetime apa?",
+    a: "Fitur identik. Pro dibayar bulanan; Lifetime sekali bayar buat akses selamanya, termasuk fitur yang nyusul nanti." },
+  { q: "Bank soalnya beneran soal asli?",
+    a: "Iya — 過去問 dari ujian yang udah lewat, bukan soal karangan AI. Choukai-nya juga pakai audio asli, dipotong per soal. Sebagian kecil soal N1 bacaannya hasil rekonstruksi karena teks aslinya rusak waktu diekstrak; itu ditandai di datanya." },
 ];
 
 const fmt = (n: number) => "Rp " + n.toLocaleString("id-ID");
@@ -193,11 +198,12 @@ export default function Premium() {
           </div>
           <h1 className="pr-title">
             Belajar JLPT <span className="pr-title-jp">真剣に</span>.<br />
-            Sensei <span className="pr-grad">tanpa batas</span>.
+            Jatah harian <span className="pr-grad">jauh lebih lega</span>.
           </h1>
           <p className="pr-sub">
-            Lepas semua limit. Analisis berapa pun foto kamu. Tanya Sensei AI sebanyak yang mau.
-            Akses semua materi struktural. Belajar sampai lulus — mulai Rp 99.000/bulan (Paket Ujian 6 bulan).
+            Jatah harian naik banyak: 50 analisis foto, 200 chat Sensei, 500 furigana.
+            Kotoba tersimpan tanpa batas. Bank soal 過去問 dan choukai beraudio kebuka
+            buat semua — mulai Rp 99.000/bulan (Paket Ujian 6 bulan).
           </p>
 
           <div className="pr-toggle">
