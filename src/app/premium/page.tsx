@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Check, X, Sparkles, Star } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import { PAKET, type PaketId } from "@/lib/paket";
 
 /* ─── Midtrans Snap types ─────────────────────────────────────── */
 declare global {
@@ -168,11 +169,62 @@ export default function Premium() {
     load();
   }, []);
 
+  const [galat, setGalat] = useState<string | null>(null);
+
+  /* Kartu di halaman ini pakai id "pro"/"lifetime" + toggle bulanan/tahunan,
+     sedangkan yang dijual sebenarnya tiga paket. Dipetakan di satu tempat
+     supaya harga di layar dan harga yang ditagih gak bisa beda. */
+  const paketDari = (planId: string): PaketId | null =>
+    planId === "lifetime" ? "lifetime"
+    : planId === "pro" ? (cycle === "yearly" ? "pro-ujian" : "pro-bulanan")
+    : null;
+
+  /* Snap.js dimuat pas dibutuhin, bukan di setiap kunjungan — kebanyakan orang
+     buka halaman ini cuma buat lihat harga. */
+  const muatSnap = (clientKey: string, produksi: boolean) =>
+    new Promise<void>((selesai, gagal) => {
+      if (window.snap) return selesai();
+      const el = document.createElement("script");
+      el.src = produksi
+        ? "https://app.midtrans.com/snap/snap.js"
+        : "https://app.sandbox.midtrans.com/snap/snap.js";
+      el.setAttribute("data-client-key", clientKey);
+      el.onload = () => selesai();
+      el.onerror = () => gagal(new Error("Gagal memuat pembayaran"));
+      document.body.appendChild(el);
+    });
+
   const handlePay = async (planId: string) => {
+    const paketId = paketDari(planId);
+    if (!paketId) return;
+
+    setGalat(null);
     setPaying(planId);
-    // TODO: ganti dengan Midtrans/Xendit saat API key siap
-    await new Promise(r => setTimeout(r, 1500));
-    router.push("/premium/sukses");
+    try {
+      const res = await fetch("/api/payment/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paketId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Gagal memulai pembayaran.");
+
+      await muatSnap(data.client_key, data.produksi);
+      if (!window.snap) throw new Error("Pembayaran gak bisa dibuka. Coba lagi.");
+
+      window.snap.pay(data.token, {
+        /* Aktivasi Pro TIDAK dikerjain di sini — callback ini jalan di browser
+           dan gampang dipalsukan. Yang mengaktifkan cuma webhook dari Midtrans
+           ke server. Ini murni buat mindahin halaman. */
+        onSuccess: () => router.push(`/premium/sukses?order_id=${data.order_id}`),
+        onPending: () => router.push(`/premium/sukses?order_id=${data.order_id}&pending=1`),
+        onError: () => { setGalat("Pembayaran gagal. Coba lagi ya."); setPaying(null); },
+        onClose: () => setPaying(null),
+      });
+    } catch (e) {
+      setGalat(e instanceof Error ? e.message : "Ada yang salah. Coba lagi.");
+      setPaying(null);
+    }
   };
 
   return (
@@ -305,12 +357,20 @@ export default function Premium() {
                 onClick={() => handlePay("pro")}
               >
                 <Sparkles size={14} fill="currentColor" strokeWidth={1.2} />
-                {paying === "pro" ? "Memproses..." : "Coba Pro 14 hari gratis"}
+                {paying === "pro" ? "Memproses..." : `Ambil Pro — ${fmt(PAKET[cycle === "yearly" ? "pro-ujian" : "pro-bulanan"].harga)}`}
               </button>
               <Link href="#compare" className="btn btn-secondary btn-lg">
                 Bandingkan plan dulu →
               </Link>
             </div>
+
+            {/* Kegagalan pembayaran WAJIB kelihatan. Kalau cuma di-console,
+                orang bakal ngeklik berkali-kali tanpa tau apa yang salah. */}
+            {galat && (
+              <p className="pr-galat" role="alert">
+                <X size={14} strokeWidth={2.4} /> {galat}
+              </p>
+            )}
           </div>
         </section>
       </main>

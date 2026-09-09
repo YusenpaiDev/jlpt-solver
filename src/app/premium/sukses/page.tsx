@@ -1,14 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
+
+type Status = "cek" | "aktif" | "diproses";
 
 export default function PremiumSukses() {
   const [show, setShow] = useState(false);
+  /* Halaman ini dulu SELALU bilang "premium kamu sudah aktif" — padahal yang
+     mengaktifkan itu webhook dari Midtrans ke server, dan waktu browser sampai
+     sini webhook-nya sering belum masuk. Untuk transfer bank/VA malah bisa
+     berjam-jam. Jadi statusnya ditanya beneran, bukan diasumsikan. */
+  const [status, setStatus] = useState<Status>("cek");
 
   useEffect(() => {
     const t = setTimeout(() => setShow(true), 100);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    let batal = false;
+    let sisa = 10;                      // ~30 detik; lebih dari itu suruh cek nanti
+    const sb = createClient();
+
+    async function cek() {
+      const { data } = await sb.rpc("is_pro");
+      if (batal) return;
+      if (data === true) { setStatus("aktif"); return; }
+      if (--sisa <= 0) { setStatus("diproses"); return; }
+      setTimeout(cek, 3000);
+    }
+    cek();
+    return () => { batal = true; };
+    /* Sengaja gak baca ?order_id: status ditentukan is_pro(), dan
+       useSearchParams() maksa halaman ini dibungkus Suspense tanpa nambah
+       apa-apa buat kita. */
   }, []);
 
   return (
@@ -51,11 +78,15 @@ export default function PremiumSukses() {
               background: "linear-gradient(135deg,#5ea87a,#bbc6e2)",
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
             }}>
-              sudah Pro.
+              {status === "aktif" ? "sudah Pro." : "pembayaranmu masuk."}
             </span>
           </h1>
           <p className="text-sm text-[#8a9bbf] leading-relaxed">
-            Akses premium kamu sudah aktif. Selamat belajar — semoga lulus JLPT dengan nilai terbaik! 🎌
+            {status === "cek"
+              ? "Sebentar, lagi mastiin pembayaranmu sampai…"
+              : status === "aktif"
+                ? "Akses Pro kamu udah aktif. Selamat belajar — semoga lulus JLPT dengan nilai terbaik! 🎌"
+                : "Pembayaranmu udah kami terima, tapi konfirmasi dari penyedia pembayaran belum masuk. Untuk transfer bank atau VA ini bisa sampai beberapa jam. Akses Pro-nya nyala otomatis begitu konfirmasinya sampai — nggak perlu bayar lagi."}
           </p>
         </div>
 
@@ -63,7 +94,7 @@ export default function PremiumSukses() {
         <div className="w-full p-5 rounded-2xl text-left"
           style={{ background: "#101b30", border: "1px solid rgba(94,168,122,0.15)" }}>
           <p className="text-[10px] font-bold text-[#5ea87a] mb-3" style={{ fontFamily: "var(--font-space)" }}>
-            YANG SUDAH TERBUKA UNTUKMU
+            {status === "aktif" ? "YANG SUDAH TERBUKA UNTUKMU" : "YANG BAKAL TERBUKA"}
           </p>
           <div className="flex flex-col gap-2">
             {[

@@ -1,98 +1,107 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdmin } from "@supabase/supabase-js";
+import { PAKET, adalahPaket, buatOrderId } from "@/lib/paket";
 
-/* ─── Plan definitions ─────────────────────────────────────────── */
-const PLANS: Record<string, { name: string; amount: number }> = {
-  "pro-monthly":    { name: "Sensei JLPT Pro - Bulanan",   amount: 49_000  },
-  "pro-yearly":     { name: "Sensei JLPT Pro - Tahunan",   amount: 399_000 },
-  "sensei-monthly": { name: "Sensei JLPT Sensei - Bulanan", amount: 149_000 },
-  "sensei-yearly":  { name: "Sensei JLPT Sensei - Tahunan", amount: 799_000 },
-};
-
-const IS_PRODUCTION = process.env.MIDTRANS_IS_PRODUCTION === "true";
-const MIDTRANS_BASE = IS_PRODUCTION
+/* Sandbox vs produksi cuma beda host. Default-nya sandbox: kalau env-nya
+   kelupaan di-set waktu deploy, yang kejadian adalah pembayaran gak jalan —
+   bukan transaksi beneran ke kunci yang salah. */
+const PRODUKSI = process.env.MIDTRANS_IS_PRODUCTION === "true";
+const SNAP_URL = PRODUKSI
   ? "https://app.midtrans.com/snap/v1/transactions"
   : "https://app.sandbox.midtrans.com/snap/v1/transactions";
 
+/** Bypass RLS buat nyatat transaksi — user gak boleh bisa nulis ke tabel ini. */
+function admin() {
+  return createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),
+    process.env.SUPABASE_SECRET_KEY!.trim(),
+    { auth: { persistSession: false } }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { planId } = await req.json();
+    const { paketId } = await req.json();
 
-    const plan = PLANS[planId];
-    if (!plan) {
-      return NextResponse.json({ error: "Plan tidak valid" }, { status: 400 });
+    if (!adalahPaket(paketId)) {
+      return NextResponse.json({ error: "Paket tidak dikenal." }, { status: 400 });
     }
+    const paket = PAKET[paketId];
 
-    /* ── Get current user ── */
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: "Kamu harus login dulu" }, { status: 401 });
+      return NextResponse.json({ error: "Login dulu sebelum berlangganan." }, { status: 401 });
     }
 
-    /* ── Get profile for display name ── */
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single();
+    const serverKey = process.env.MIDTRANS_SERVER_KEY?.trim();
+    if (!serverKey) {
+      /* Kejadian nyata sebelumnya: env-nya gak pernah di-set, dan kodenya
+         nembak Midtrans pakai `undefined` — signature-nya gak akan pernah
+         cocok, dan errornya cuma kelihatan di log. Ditolak di depan aja. */
+      console.error("[payment] MIDTRANS_SERVER_KEY belum di-set");
+      return NextResponse.json({ error: "Pembayaran belum aktif. Hubungi kami dulu ya." }, { status: 503 });
+    }
 
-    const orderId = `SJLPT-${user.id.slice(0, 8)}-${planId}-${Date.now()}`;
+    const { data: profil } = await supabase
+      .from("profiles").select("username").eq("id", user.id).single();
 
-    /* ── Create Midtrans Snap transaction ── */
-    const serverKey = process.env.MIDTRANS_SERVER_KEY!;
-    const authHeader = "Basic " + Buffer.from(serverKey + ":").toString("base64");
+    const orderId = buatOrderId(paket.id);
 
-    const body = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: plan.amount,
-      },
-      customer_details: {
-        email: user.email,
-        first_name: profile?.username || user.email?.split("@")[0] || "Pengguna",
-      },
-      item_details: [
-        {
-          id: planId,
-          price: plan.amount,
-          quantity: 1,
-          name: plan.name,
-        },
-      ],
-      callbacks: {
-        finish: `${process.env.NEXT_PUBLIC_SITE_URL}/premium/sukses`,
-        error:  `${process.env.NEXT_PUBLIC_SITE_URL}/premium`,
-        pending: `${process.env.NEXT_PUBLIC_SITE_URL}/premium`,
-      },
-    };
+    /* Dicatat SEBELUM ke Midtrans. Webhook nanti nyari pemiliknya lewat baris
+       ini — bukan nebak dari potongan uuid di order_id. */
+    const { error: eTx } = await admin().from("transaksi").insert({
+      order_id: orderId,
+      user_id: user.id,
+      paket_id: paket.id,
+      jumlah: paket.harga,
+      status: "pending",
+    });
+    if (eTx) {
+      console.error("[payment] gagal nyatat transaksi:", eTx.message);
+      return NextResponse.json({ error: "Gagal memulai pembayaran. Coba lagi." }, { status: 500 });
+    }
 
-    const midtransRes = await fetch(MIDTRANS_BASE, {
+    const situs = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+    const res = await fetch(SNAP_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        Authorization: authHeader,
+        Authorization: "Basic " + Buffer.from(serverKey + ":").toString("base64"),
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        transaction_details: { order_id: orderId, gross_amount: paket.harga },
+        item_details: [{ id: paket.id, name: paket.nama.slice(0, 50), price: paket.harga, quantity: 1 }],
+        customer_details: {
+          email: user.email,
+          first_name: profil?.username || user.email?.split("@")[0] || "Pengguna",
+        },
+        callbacks: { finish: `${situs}/premium/sukses?order_id=${orderId}` },
+      }),
     });
 
-    const midtransData = await midtransRes.json();
-
-    if (!midtransRes.ok) {
-      console.error("Midtrans error:", midtransData);
-      return NextResponse.json(
-        { error: "Gagal membuat transaksi. Coba lagi." },
-        { status: 500 }
-      );
+    const hasil = await res.json();
+    if (!res.ok) {
+      console.error("[payment] Midtrans nolak:", hasil);
+      await admin().from("transaksi")
+        .update({ status: "gagal", midtrans: hasil, diperbarui: new Date().toISOString() })
+        .eq("order_id", orderId);
+      return NextResponse.json({ error: "Gagal membuat transaksi. Coba lagi." }, { status: 502 });
     }
 
     return NextResponse.json({
-      snapToken: midtransData.token,
-      orderId,
+      token: hasil.token,
+      redirect_url: hasil.redirect_url,
+      order_id: orderId,
+      /* Client key aman dikirim ke browser — memang dipakai di sisi klien
+         buat Snap.js. Server key TIDAK boleh ikut. */
+      client_key: process.env.MIDTRANS_CLIENT_KEY ?? "",
+      produksi: PRODUKSI,
     });
-  } catch (err) {
-    console.error("Payment create error:", err);
-    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
+  } catch (e) {
+    console.error("[payment] error:", e);
+    return NextResponse.json({ error: "Ada yang salah. Coba lagi." }, { status: 500 });
   }
 }
