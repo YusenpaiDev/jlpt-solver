@@ -9087,3 +9087,14 @@ html { scrollbar-gutter: stable; }
 }
 .flash-nilai-done.tau   { color: var(--accent-emerald); }
 .flash-nilai-done.belum { color: var(--accent-rose); }
+
+/* Pesan gagal bayar di /premium — merah, tapi gak teriak. */
+.pr-galat {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin: 14px 0 0; padding: 9px 15px;
+  border-radius: var(--radius-full, 99px);
+  background: color-mix(in srgb, var(--accent-rose) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-rose) 35%, transparent);
+  color: var(--accent-rose);
+  font-size: 13px; font-weight: 600;
+}
