@@ -29,7 +29,12 @@ export async function proxy(request: NextRequest) {
 
   // Redirect unauthenticated users to login
   // (except login page itself and public routes)
-  const publicPaths = ["/login", "/premium", "/auth"];
+  /* /api/payment/webhook WAJIB publik: yang manggil itu server Midtrans, dan
+     dia gak punya sesi login. Tanpa ini middleware balas 307 ke /login,
+     notifikasi pembayaran gak pernah sampai, dan Pro gak pernah nyala walau
+     uangnya udah masuk. Keamanannya bukan dari sesi — payload-nya diverifikasi
+     pakai tanda tangan SHA512 di route handler-nya. */
+  const publicPaths = ["/login", "/premium", "/auth", "/api/payment/webhook"];
   const isPublic = publicPaths.some(p => request.nextUrl.pathname.startsWith(p));
 
   if (!user && !isPublic) {
