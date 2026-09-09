@@ -60,10 +60,10 @@ const PLANS: Plan[] = [
       { t: "Materi Kotoba & Bunpou", on: true },
       { t: "50 kotoba tersimpan di Kamus", on: true },
       { t: "5 chat Sensei AI / hari", on: true },
-      { t: "3 analisis foto / hari", on: true },
+      { t: "2 analisis foto / hari", on: true },
       { t: "Kotoba tersimpan tanpa batas", on: false },
-      { t: "200 chat Sensei AI / hari", on: false },
-      { t: "50 analisis foto / hari", on: false },
+      { t: "50 chat Sensei AI / hari", on: false },
+      { t: "10 analisis foto / hari", on: false },
     ],
   },
   {
@@ -78,9 +78,9 @@ const PLANS: Plan[] = [
     color: "iris",
     features: [
       { t: "Kotoba tersimpan tanpa batas", on: true, highlight: true },
-      { t: "200 chat Sensei AI / hari", on: true, highlight: true },
-      { t: "50 analisis foto / hari", on: true, highlight: true },
-      { t: "500 furigana / hari", on: true },
+      { t: "50 chat Sensei AI / hari", on: true, highlight: true },
+      { t: "10 analisis foto / hari", on: true, highlight: true },
+      { t: "100 furigana / hari", on: true },
       { t: "Bank soal 過去問 lengkap", on: true },
       { t: "Choukai + audio per soal", on: true },
       { t: "Materi Kotoba & Bunpou", on: true },
@@ -114,9 +114,9 @@ const COMPARE: CompareRow[] = [
   { label: "Choukai + audio",          free: true,          pro: true,           life: true },
   { label: "Materi Kotoba & Bunpou",   free: true,          pro: true,           life: true },
   { label: "Kotoba tersimpan",         free: "50 max",      pro: "Tanpa batas",  life: "Tanpa batas" },
-  { label: "Chat Sensei AI",           free: "5 / hari",    pro: "200 / hari",   life: "200 / hari" },
-  { label: "Analisis foto",            free: "3 / hari",    pro: "50 / hari",    life: "50 / hari" },
-  { label: "Furigana otomatis",        free: "30 / hari",   pro: "500 / hari",   life: "500 / hari" },
+  { label: "Chat Sensei AI",           free: "5 / hari",    pro: "50 / hari",    life: "50 / hari" },
+  { label: "Analisis foto",            free: "2 / hari",    pro: "10 / hari",    life: "10 / hari" },
+  { label: "Furigana otomatis",        free: "20 / hari",   pro: "100 / hari",   life: "100 / hari" },
   { label: "Perpanjangan",             free: "—",           pro: "Bulanan",      life: "Sekali bayar" },
 ];
 
@@ -201,7 +201,7 @@ export default function Premium() {
             Jatah harian <span className="pr-grad">jauh lebih lega</span>.
           </h1>
           <p className="pr-sub">
-            Jatah harian naik banyak: 50 analisis foto, 200 chat Sensei, 500 furigana.
+            Jatah harian naik banyak: 10 analisis foto, 50 chat Sensei, 100 furigana.
             Kotoba tersimpan tanpa batas. Bank soal 過去問 dan choukai beraudio kebuka
             buat semua — mulai Rp 99.000/bulan (Paket Ujian 6 bulan).
           </p>
