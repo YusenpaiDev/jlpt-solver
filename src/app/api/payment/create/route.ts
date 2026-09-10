@@ -63,7 +63,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Gagal memulai pembayaran. Coba lagi." }, { status: 500 });
     }
 
-    const situs = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+    /* Cuma kepakai di sini — sisi server. Prefix NEXT_PUBLIC_ itu salah kaprah
+       dari awal (Vercel nolak nandain variabel ber-prefix itu sebagai Secret,
+       karena nilainya memang dikirim ke browser). SITE_URL yang bener; nama
+       lamanya tetap dibaca supaya deployment yang udah nyetel itu gak pecah. */
+    const situs = (process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "")
+      .replace(/\/$/, "");
     const res = await fetch(SNAP_URL, {
       method: "POST",
       headers: {
