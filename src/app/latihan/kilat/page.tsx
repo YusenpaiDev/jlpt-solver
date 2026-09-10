@@ -3,11 +3,7 @@
 import { Suspense, useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import bunpouN1 from "@/data/bunpou/N1.json";
-import bunpouN2 from "@/data/bunpou/N2.json";
-import bunpouN3 from "@/data/bunpou/N3.json";
-import bunpouN4 from "@/data/bunpou/N4.json";
-import bunpouN5 from "@/data/bunpou/N5.json";
+
 
 interface Ex { jp: string; highlight: string; id: string; }
 interface Pattern {
@@ -17,8 +13,16 @@ interface Pattern {
 }
 interface Grp { key: string; name: string; jp: string; }
 interface Deck { level: string; count: number; groups: Grp[]; patterns: Pattern[]; }
-const DECKS: Record<string, Deck> = {
-  N5: bunpouN5 as Deck, N4: bunpouN4 as Deck, N3: bunpouN3 as Deck, N2: bunpouN2 as Deck, N1: bunpouN1 as Deck,
+/* Deck di-load per level, bukan lima-limanya sekaligus. Import statis bikin
+   siapa pun yang buka drill narik 369 KB pola semua level dulu, padahal cuma
+   satu yang kepakai. Pola yang sama dipakai /materi/kotoba dan
+   /latihan/kotoba. */
+const LOADERS: Record<string, () => Promise<Deck>> = {
+  N5: () => import("@/data/bunpou/N5.json").then(m => m.default as Deck),
+  N4: () => import("@/data/bunpou/N4.json").then(m => m.default as Deck),
+  N3: () => import("@/data/bunpou/N3.json").then(m => m.default as Deck),
+  N2: () => import("@/data/bunpou/N2.json").then(m => m.default as Deck),
+  N1: () => import("@/data/bunpou/N1.json").then(m => m.default as Deck),
 };
 
 type Prog = { benar: number; salah: number };
@@ -91,7 +95,6 @@ function KilatPlayer() {
   const group = params.get("group");
   const item = params.get("item");
   const count = Math.min(20, Math.max(1, Number(params.get("count")) || (item ? 5 : 10)));
-  const deck = DECKS[level] ?? DECKS.N2;
 
   const [qs, setQs] = useState<KilatQ[] | null>(null);
   const [idx, setIdx] = useState(0);
@@ -106,25 +109,39 @@ function KilatPlayer() {
   const [starred, setStarred] = useState(false);
   const [done, setDone] = useState(false);
   const [sessId, setSessId] = useState<string | null>(null);
+  /* Deck jadi state karena dipakai juga di render (tombol "drill pola yang
+     salah"), bukan cuma di dalam effect. */
+  const [deck, setDeck] = useState<Deck | null>(null);
 
   // Bangun soal di effect (Math.random aman di luar render)
   useEffect(() => {
-    const byId = new Map(deck.patterns.map(p => [p.id, p]));
+    let batal = false;
     async function init() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      /* Deck dan progres ditarik barengan — gak saling nunggu. */
+      const [d, { data: { user } }] = await Promise.all([
+        (LOADERS[level] ?? LOADERS.N2)(),
+        supabase.auth.getUser(),
+      ]);
+      if (batal) return;
+      setDeck(d);
+
+      const byId = new Map(d.patterns.map(p => [p.id, p]));
       let progres = new Map<string, Prog>();
       if (user) {
         const { data } = await supabase.from("bunpou_progress").select("pattern, benar, salah").eq("user_id", user.id);
         if (data) progres = new Map(data.map(r => [r.pattern, { benar: r.benar ?? 0, salah: r.salah ?? 0 }]));
       }
-      let pats = deck.patterns;
+      if (batal) return;
+
+      let pats = d.patterns;
       if (group) pats = pats.filter(p => p.functionGroup === group);
-      else if (item) { const it = byId.get(item); pats = it ? [it, ...it.confusableWith.map(c => byId.get(c)).filter(Boolean) as Pattern[]] : deck.patterns; }
-      setQs(buildQuestions(pats, deck.patterns, byId, deck.groups, progres, count));
+      else if (item) { const it = byId.get(item); pats = it ? [it, ...it.confusableWith.map(c => byId.get(c)).filter(Boolean) as Pattern[]] : d.patterns; }
+      setQs(buildQuestions(pats, d.patterns, byId, d.groups, progres, count));
     }
     init();
-  }, [level, group, item, count, deck]);
+    return () => { batal = true; };
+  }, [level, group, item, count]);
 
   const q = qs && !done ? qs[idx] : null;
 
@@ -259,7 +276,7 @@ function KilatPlayer() {
           </div>
           <div className="sum-act">
             {wrongPats.length > 0
-              ? <button className="btn btn-p" onClick={() => { const it = deck.patterns.find(p => p.pattern === wrongPats[0]); router.push(`/latihan/kilat?level=${level}${it ? `&item=${it.id}` : ""}&count=${Math.max(5, wrongPats.length)}`); }}>⚡ Drill {wrongPats.length} pola yang salah</button>
+              ? <button className="btn btn-p" onClick={() => { const it = deck?.patterns.find(p => p.pattern === wrongPats[0]); router.push(`/latihan/kilat?level=${level}${it ? `&item=${it.id}` : ""}&count=${Math.max(5, wrongPats.length)}`); }}>⚡ Drill {wrongPats.length} pola yang salah</button>
               : <button className="btn btn-p" onClick={() => router.push(`/latihan/kilat?level=${level}`)}>⚡ Sesi lagi</button>}
             <button className="btn btn-g" onClick={() => router.push("/materi/bunpou")}>Kembali ke Bunpou</button>
           </div>
