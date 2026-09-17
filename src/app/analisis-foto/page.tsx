@@ -110,6 +110,8 @@ interface FileData {
 interface ChatMsg {
   role: "user" | "model";
   text: string;
+  /** Balasan ini bukan jawaban Sensei, tapi pemberitahuan jatah habis. */
+  kuotaHabis?: boolean;
 }
 
 /* Sometimes the AI bundles options ("1xxx 2xxx 3xxx 4xxx") into the question
@@ -1248,7 +1250,17 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         }),
       });
       const json = await res.json();
-      setChatMsgs([...newMsgs, { role: "model", text: json.reply || "Maaf, gagal membalas." }]);
+
+      /* 429 = jatah harian habis, dan route-nya udah ngirim pesan yang enak
+         dibaca. Sebelumnya pesan itu dibuang dan diganti "gagal membalas",
+         jadi orang gak pernah tau kenapa — dia cuma mikir aplikasinya rusak. */
+      if (res.status === 429) {
+        setChatMsgs([...newMsgs, { role: "model", text: json.error, kuotaHabis: true }]);
+      } else if (!res.ok) {
+        setChatMsgs([...newMsgs, { role: "model", text: json.error || "Maaf, gagal membalas." }]);
+      } else {
+        setChatMsgs([...newMsgs, { role: "model", text: json.reply || "Maaf, gagal membalas." }]);
+      }
     } catch {
       setChatMsgs([...newMsgs, { role: "model", text: "Maaf, terjadi kesalahan. Coba lagi." }]);
     } finally {
@@ -1853,8 +1865,13 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             ) : (
               <div className="sensei-msgs">
                 {chatMsgs.map((m, i) => (
-                  <div key={i} className={`sensei-msg ${m.role === "user" ? "user" : "bot"}`}>
+                  <div key={i} className={`sensei-msg ${m.role === "user" ? "user" : "bot"}${m.kuotaHabis ? " kuota" : ""}`}>
                     {m.text}
+                    {/* Ajakan upgrade cuma nempel di pesan jatah-habis, dan tanpa
+                        desakan — orangnya lagi belajar, bukan lagi belanja. */}
+                    {m.kuotaHabis && (
+                      <a href="/premium" className="sensei-kuota-link">Lihat paket Pro →</a>
+                    )}
                   </div>
                 ))}
                 {chatLoading && (

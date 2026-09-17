@@ -9098,3 +9098,65 @@ html { scrollbar-gutter: stable; }
   color: var(--accent-rose);
   font-size: 13px; font-weight: 600;
 }
+
+/* ── Langganan di /pengaturan ─────────────────────────────────
+   Angka jatah di kartu ini HARUS sama dengan src/lib/kuota.ts. */
+.pg-sub-sisa {
+  display: flex; align-items: center; gap: 8px;
+  margin: 14px 0 0; padding: 10px 14px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface-1); border: 1px solid var(--edge-soft);
+  font-size: 13px; color: var(--text-secondary);
+}
+.pg-sub-sisa strong { color: var(--text-primary); }
+/* H-7: cukup buat kelihatan, bukan buat bikin panik di tengah belajar. */
+.pg-sub-sisa.segera {
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent-amber) 32%, transparent);
+}
+.pg-sub-sisa.segera strong { color: var(--accent-amber); }
+
+.pg-sub-lifetime { font-size: 13px; font-weight: 600; color: var(--accent-amber); }
+.pg-sub-catatan {
+  margin: 12px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--text-secondary);
+}
+.pg-sub-kosong { font-size: 13px; color: var(--text-secondary); margin: 6px 0 0; }
+
+.pg-tx-list { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
+.pg-tx-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--edge-soft);
+}
+.pg-tx-row:last-child { border-bottom: none; }
+.pg-tx-row > div:first-child { display: flex; flex-direction: column; gap: 2px; }
+.pg-tx-row strong { font-size: 13.5px; font-weight: 600; }
+.pg-tx-row span { font-size: 12px; color: var(--text-secondary); }
+.pg-tx-kanan { display: flex; align-items: center; gap: 12px; }
+.pg-tx-jumlah { font-variant-numeric: tabular-nums; color: var(--text-primary) !important; }
+.pg-tx-status {
+  padding: 3px 10px; border-radius: var(--radius-full, 99px);
+  font-size: 11px !important; font-weight: 600;
+  background: var(--surface-1); border: 1px solid var(--edge-soft);
+}
+.pg-tx-status.s-lunas      { color: var(--accent-emerald) !important; border-color: color-mix(in srgb, var(--accent-emerald) 34%, transparent); }
+.pg-tx-status.s-pending    { color: var(--accent-amber)   !important; border-color: color-mix(in srgb, var(--accent-amber) 34%, transparent); }
+.pg-tx-status.s-gagal,
+.pg-tx-status.s-kadaluarsa  { color: var(--accent-rose)    !important; border-color: color-mix(in srgb, var(--accent-rose) 34%, transparent); }
+
+@media (max-width: 560px) {
+  .pg-tx-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+}
+
+/* Pesan "jatah harian habis" di chat Sensei — dibedain dari balasan biasa
+   supaya jelas ini pemberitahuan, bukan jawaban yang gagal. */
+.sensei-msg.kuota {
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 34%, transparent);
+  background: color-mix(in srgb, var(--accent-amber) 9%, transparent);
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+}
+.sensei-kuota-link {
+  font-size: 12px; font-weight: 700; color: var(--accent-amber);
+  text-decoration: none;
+}
+.sensei-kuota-link:hover { text-decoration: underline; }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
+import { CheckCircle2, ArrowRight, Sparkles, Clock3 } from "lucide-react";
 
 type Status = "cek" | "aktif" | "diproses";
 
@@ -53,32 +53,42 @@ export default function PremiumSukses() {
           transition: "opacity 0.5s ease, transform 0.5s ease",
         }}>
 
-        {/* Icon */}
+        {/* Ikon & badge ikut keadaan. Dulu selalu centang hijau + "PEMBAYARAN
+            BERHASIL" walau Pro-nya belum nyala — bikin orang kira selesai,
+            padahal buat VA konfirmasinya bisa berjam-jam lagi. */}
         <div className="size-20 rounded-full flex items-center justify-center relative"
-          style={{ background: "rgba(94,168,122,0.15)", border: "1px solid rgba(94,168,122,0.3)" }}>
+          style={{
+            background: status === "aktif" ? "rgba(94,168,122,0.15)" : "rgba(212,160,74,0.13)",
+            border: `1px solid ${status === "aktif" ? "rgba(94,168,122,0.3)" : "rgba(212,160,74,0.3)"}`,
+          }}>
           <div className="absolute inset-0 rounded-full"
-            style={{ boxShadow: "0 0 40px rgba(94,168,122,0.3)" }} />
-          <CheckCircle2 className="size-9 text-[#5ea87a] relative" />
+            style={{ boxShadow: `0 0 40px ${status === "aktif" ? "rgba(94,168,122,0.3)" : "rgba(212,160,74,0.22)"}` }} />
+          {status === "aktif"
+            ? <CheckCircle2 className="size-9 text-[#5ea87a] relative" />
+            : <Clock3 className="size-9 text-[#d4a04a] relative" />}
         </div>
 
-        {/* Badge */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
           style={{ background: "#101b30" }}>
           <Sparkles className="size-3 text-[#bbc6e2]" />
           <span className="text-[10px] font-semibold text-[#bbc6e2]"
-            style={{ fontFamily: "var(--font-space)" }}>PEMBAYARAN BERHASIL</span>
+            style={{ fontFamily: "var(--font-space)" }}>
+            {status === "cek" ? "MEMERIKSA PEMBAYARAN"
+              : status === "aktif" ? "PRO SUDAH AKTIF"
+              : "MENUNGGU KONFIRMASI"}
+          </span>
         </div>
 
         {/* Heading */}
         <div>
           <h1 className="text-[2.5rem] font-extrabold leading-tight mb-2"
             style={{ fontFamily: "var(--font-jakarta)" }}>
-            Selamat! Kamu{" "}
+            {status === "aktif" ? "Selamat! Kamu " : "Pembayaranmu "}
             <span style={{
               background: "linear-gradient(135deg,#5ea87a,#bbc6e2)",
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
             }}>
-              {status === "aktif" ? "sudah Pro." : "pembayaranmu masuk."}
+              {status === "aktif" ? "sudah Pro." : status === "cek" ? "lagi dicek." : "sudah kami terima."}
             </span>
           </h1>
           <p className="text-sm text-[#8a9bbf] leading-relaxed">

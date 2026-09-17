@@ -32,6 +32,10 @@ export interface UserStats {
   /** Level yang dipilih user waktu onboarding / di Pengaturan. */
   targetLevel: TargetLevel;
   isPro: boolean;
+  /** Kapan akses Pro habis. null = gak punya langganan berjangka. */
+  premiumUntil: string | null;
+  /** Lifetime: gak punya tanggal habis sama sekali. */
+  isLifetime: boolean;
   /** Tanggal ujian pilihan user (ISO). null = belum diisi / sengaja "none". */
   examDate: string | null;
   initial: string;
@@ -47,6 +51,8 @@ const AWAL: UserStats = {
   xpTarget: XP_PER_LEVEL,
   targetLevel: "N3",   // samain sama default kolom profiles.target_level
   isPro: false,
+  premiumUntil: null,
+  isLifetime: false,
   examDate: null,
   initial: "Y",
   loaded: false,
@@ -65,7 +71,7 @@ export function useUserStats(): UserStats {
 
       const { data: profil } = await supabase
         .from("profiles")
-        .select("username, target_level, xp, streak, is_premium")
+        .select("username, target_level, xp, streak, is_premium, premium_until, is_lifetime")
         .eq("id", user.id)
         .single();
       if (batal) return;
@@ -109,6 +115,8 @@ export function useUserStats(): UserStats {
         // Jangan hitung ulang dari email di sini: daftarnya udah gak ada di
         // client, dan entitlement yang dihitung di browser gampang dipalsuin.
         isPro,
+        premiumUntil: (profil?.premium_until as string | null) ?? null,
+        isLifetime: profil?.is_lifetime === true,
         examDate,
         initial: String(nama)[0].toUpperCase(),
         loaded: true,
