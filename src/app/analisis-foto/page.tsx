@@ -571,7 +571,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
   /* Re-photo: upload a new image, send to /api/analisis with the session's
      level/category, append returned questions to current session. */
-  const addPhotoRef = useRef<HTMLInputElement>(null);
   const [addingPhoto, setAddingPhoto] = useState(false);
 
   /* Ensure we know the session level/category — re-fetch lazily if state is empty
@@ -672,12 +671,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     }
   };
 
-  const onAddPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    handleAddFromPhoto(file);
-    e.target.value = "";
-  };
 
   /* Copy text to clipboard, with toast confirmation */
   const copyToClipboard = async (text: string, label = "Tersalin!") => {
@@ -1336,9 +1329,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 {timerOn ? "ON" : "OFF"}
               </button>
             </div>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={onReset}>
-              <Upload size={14} /> Upload Baru
-            </button>
             <button
               type="button"
               className="btn btn-sm af-exit-btn"
@@ -1756,13 +1746,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
         {/* ── Tambah soal v2: manual / dari file ── */}
         <div className="af-add-row">
-          <input
-            ref={addPhotoRef}
-            type="file"
-            accept="image/*,application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="hidden"
-            onChange={onAddPhotoChange}
-          />
           <button
             type="button"
             className="af-add-btn manual"
@@ -1770,17 +1753,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             disabled={addingPhoto}
           >
             <Plus size={14} strokeWidth={2.2} /> Tambah soal manual
-          </button>
-          <button
-            type="button"
-            className="af-add-btn from-file"
-            onClick={() => addPhotoRef.current?.click()}
-            disabled={addingPhoto}
-            title="Upload foto/PDF/Word — AI analisis & append ke sesi ini"
-          >
-            {addingPhoto
-              ? <><Loader2 size={14} className="animate-spin" /> Menganalisis...</>
-              : <><Upload size={14} strokeWidth={1.8} /> Tambah dari file</>}
           </button>
         </div>
         </div>
@@ -2575,7 +2547,6 @@ export default function AnalisisFoto() {
   const [savedSessionId,      setSavedSessionId]      = useState<string | null>(null);
   const [loadingSession,      setLoadingSession]      = useState(false);
   const [isReviewMode,        setIsReviewMode]        = useState(false);
-  const abortRef       = useRef<AbortController | null>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const camInputRef    = useRef<HTMLInputElement>(null);
   /* Dari useUserStats — sumber yang sama dipakai halaman lain. Efek yang dulu
