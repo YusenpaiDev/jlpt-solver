@@ -7,6 +7,7 @@ import {
   Shield, Zap, AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { kenaliGangguan } from "@/lib/gangguan";
 import { AuroraBackground } from "@/components/v2";
 
 type Mode = "signin" | "signup";
@@ -57,6 +58,15 @@ export default function Login() {
         setPassword("");
       }
     } catch (err: unknown) {
+      /* Gangguan layanan dicegat DULUAN. Kalau enggak, pesan mentah Supabase
+         yang kelempar ke layar — termasuk kalimat soal kuota dan tagihan yang
+         gak ada urusannya sama orang yang cuma mau belajar. */
+      const gangguan = kenaliGangguan(err);
+      if (gangguan) {
+        console.warn("[login] gangguan layanan:", gangguan.asli);
+        setError(gangguan.pesan);
+        return;
+      }
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan";
       if (msg.includes("Invalid login credentials")) setError("Email atau password salah.");
       else if (msg.includes("Email not confirmed")) setError("Email belum dikonfirmasi. Cek inbox kamu untuk link konfirmasi.");
@@ -70,10 +80,17 @@ export default function Login() {
 
   async function handleGoogle() {
     setError(null);
-    await supabase.auth.signInWithOAuth({
+    /* Galatnya dulu gak pernah dicek sama sekali — kalau layanannya lagi mati,
+       tombolnya cuma diam dan orang ngeklik berkali-kali tanpa tau kenapa. */
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
+    if (error) {
+      const gangguan = kenaliGangguan(error);
+      console.warn("[login] google gagal:", error.message);
+      setError(gangguan ? gangguan.pesan : "Gagal masuk lewat Google. Coba lagi ya.");
+    }
   }
 
   const passwordStrength = password.length === 0 ? 0
