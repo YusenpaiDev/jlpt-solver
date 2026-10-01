@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import { catatAktivitas } from "@/lib/aktivitas";
+import { JatahHabisInline, JatahHabisDialog } from "@/components/pembayaran/JatahHabis";
+import { bacaKuotaHabis, sisaWaktuReset, type KuotaHabis } from "@/lib/kuota-habis";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 type Stage = "upload" | "setup" | "analyzing" | "result";
@@ -110,8 +112,12 @@ interface FileData {
 interface ChatMsg {
   role: "user" | "model";
   text: string;
-  /** Balasan ini bukan jawaban Sensei, tapi pemberitahuan jatah habis. */
+  /** Versi lama (masih ada di sesi tersimpan): pemberitahuan jatah habis berupa teks. */
   kuotaHabis?: boolean;
+  /** Jatah chat habis — dirender jadi catatan inline, bukan gelembung Sensei. */
+  kuota?: KuotaHabis;
+  /** User pilih "Tunggu besok" → catatannya diringkas jadi satu baris. */
+  kuotaRingkas?: boolean;
 }
 
 /* Sometimes the AI bundles options ("1xxx 2xxx 3xxx 4xxx") into the question
@@ -364,6 +370,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   // Snapshot progress pas masuk sesi — buat opsi "keluar tanpa simpan".
   const initialProgressRef = useRef<UserProgress | undefined>(result.user_progress);
   const [exitTo,   setExitTo]   = useState<string | null>(null);
+  /* Furigana kena 429 → lembar bawah / modal jatah habis. */
+  const [jatahHabis, setJatahHabis] = useState<KuotaHabis | null>(null);
   const [exitBusy, setExitBusy] = useState<"save" | "discard" | null>(null);
   const hasProgress = revealed.size > 0 || Object.keys(answers).length > 0;
   useEffect(() => {
@@ -732,6 +740,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         body: JSON.stringify({ word: addKanji.trim(), withMeaning: true }),
       });
       const json = await res.json();
+      const habis = bacaKuotaHabis(res, json);
+      if (habis) { setJatahHabis(habis); return; }
       setAddReading(json.reading ?? "");
       setAddMeaning(json.meaning ?? "");
     } catch { /* ignore */ }
@@ -757,6 +767,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         body: JSON.stringify({ passage: text }),
       });
       const json = await res.json();
+      const habis = bacaKuotaHabis(res, json);
+      if (habis) { setJatahHabis(habis); return; }
       if (json.marked) {
         setFuriganaMarked(m => ({ ...m, [key]: json.marked }));
         setShowFurigana(s => new Set(s).add(key));
@@ -1232,8 +1244,12 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     }
   };
 
+  /* Composer dimatiin selama jatah chat masih habis (sampai resetAt). */
+  const chatHabis = chatMsgs.findLast(m => m.kuota)?.kuota;
+  const chatMasihHabis = chatHabis && new Date(chatHabis.resetAt).getTime() > Date.now() ? chatHabis : null;
+
   const sendChat = async () => {
-    if (!chatInput.trim() || chatLoading) return;
+    if (!chatInput.trim() || chatLoading || chatMasihHabis) return;
     const msg = chatInput.trim();
     setChatInput("");
     const newMsgs: ChatMsg[] = [...chatMsgs, { role: "user", text: msg }];
@@ -1254,8 +1270,11 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       /* 429 = jatah harian habis, dan route-nya udah ngirim pesan yang enak
          dibaca. Sebelumnya pesan itu dibuang dan diganti "gagal membalas",
          jadi orang gak pernah tau kenapa — dia cuma mikir aplikasinya rusak. */
-      if (res.status === 429) {
-        setChatMsgs([...newMsgs, { role: "model", text: json.error, kuotaHabis: true }]);
+      const habis = bacaKuotaHabis(res, json);
+      if (habis) {
+        setChatMsgs([...newMsgs, { role: "model", text: habis.message, kuota: habis }]);
+      } else if (res.status === 429) {
+        setChatMsgs([...newMsgs, { role: "model", text: json.message ?? json.error, kuotaHabis: true }]);
       } else if (!res.ok) {
         setChatMsgs([...newMsgs, { role: "model", text: json.error || "Maaf, gagal membalas." }]);
       } else {
@@ -1864,7 +1883,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               </div>
             ) : (
               <div className="sensei-msgs">
-                {chatMsgs.map((m, i) => (
+                {chatMsgs.map((m, i) => m.kuota ? (
+                  /* Catatan inline, bukan modal: jawaban sebelumnya tetap
+                     kebaca dan tempat orangnya gak hilang. */
+                  m.kuotaRingkas
+                    ? <div key={i} className="sensei-msg bot kuota">Chat habis — reset {sisaWaktuReset(m.kuota.resetAt)}.</div>
+                    : <JatahHabisInline key={i} kuota={m.kuota} sempit
+                        onTunggu={() => setChatMsgs(chatMsgs.map((x, j) => j === i ? { ...x, kuotaRingkas: true } : x))} />
+                ) : (
                   <div key={i} className={`sensei-msg ${m.role === "user" ? "user" : "bot"}${m.kuotaHabis ? " kuota" : ""}`}>
                     {m.text}
                     {/* Ajakan upgrade cuma nempel di pesan jatah-habis, dan tanpa
@@ -1887,13 +1913,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
-                placeholder="Tanya tentang soal ini..."
+                placeholder={chatMasihHabis ? `Chat habis — reset ${sisaWaktuReset(chatMasihHabis.resetAt)}` : "Tanya tentang soal ini..."}
+                disabled={!!chatMasihHabis}
               />
               <button
                 type="button"
                 className="sensei-send"
                 onClick={sendChat}
-                disabled={!chatInput.trim() || chatLoading}
+                disabled={!chatInput.trim() || chatLoading || !!chatMasihHabis}
                 aria-label="Kirim"
               >
                 <Send size={13} strokeWidth={2} />
@@ -2534,6 +2561,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           {drawMode ? "Selesai" : "Coret"}
         </button>
       </div>
+
+      <JatahHabisDialog kuota={jatahHabis} onClose={() => setJatahHabis(null)} />
     </div>
   );
 }

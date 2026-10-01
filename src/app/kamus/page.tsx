@@ -9,6 +9,8 @@ import {
   X, Edit3, Trash2, Calendar, Camera, Shuffle, Check, Loader2, BarChart3, Star,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import { JatahHabisDialog } from "@/components/pembayaran/JatahHabis";
+import { bacaKuotaHabis, type KuotaHabis } from "@/lib/kuota-habis";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 type LevelFilter = Level | "ALL";
@@ -70,6 +72,8 @@ export default function Kamus() {
   const [addOpen, setAddOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addErr, setAddErr] = useState<string | null>(null);
+  /* Furigana kena 429 → lembar bawah / modal jatah habis. */
+  const [jatahHabis, setJatahHabis] = useState<KuotaHabis | null>(null);
   const [genReading, setGenReading] = useState(false);
   const [form, setForm] = useState({ kanji: "", reading: "", meaning: "", level: "", example: "" });
 
@@ -208,6 +212,8 @@ export default function Kamus() {
         body: JSON.stringify({ word: form.kanji.trim(), withMeaning: !form.meaning.trim() }),
       });
       const json = await res.json();
+      const habis = bacaKuotaHabis(res, json);
+      if (habis) { setJatahHabis(habis); return; }
       setForm(f => ({
         ...f,
         reading: json.reading ?? f.reading,
@@ -285,6 +291,8 @@ export default function Kamus() {
         body: JSON.stringify({ word: editForm.kanji.trim(), withMeaning: true }),
       });
       const json = await res.json();
+      const habis = bacaKuotaHabis(res, json);
+      if (habis) { setJatahHabis(habis); return; }
       setEditForm(f => ({
         ...f,
         reading: json.reading ?? f.reading,
@@ -368,6 +376,9 @@ export default function Kamus() {
           body: JSON.stringify({ word: w.kanji }),
         });
         const json = await res.json();
+        /* Jatah habis di tengah jalan → berhenti, sisanya gak usah dicoba. */
+        const habis = bacaKuotaHabis(res, json);
+        if (habis) { setJatahHabis(habis); break; }
         if (json.reading) {
           await supabase.from("saved_words").update({ reading: json.reading }).eq("id", w.id);
           setWords(prev => prev.map(x => x.id === w.id ? { ...x, reading: json.reading } : x));
@@ -732,6 +743,8 @@ export default function Kamus() {
           onBackToPicker={() => setFlashMode("picker")}
         />
       )}
+
+      <JatahHabisDialog kuota={jatahHabis} onClose={() => setJatahHabis(null)} />
     </>
   );
 }

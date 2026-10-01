@@ -1,8 +1,11 @@
 "use client";
 
 import { useId, useEffect, useState } from "react";
+import Link from "next/link";
 import { Sparkles, Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { usePeringatan } from "@/lib/peringatan";
+import { useTandaHarian } from "@/lib/tanda-harian";
 
 interface UserBarProps {
   streakDays: number;
@@ -10,7 +13,6 @@ interface UserBarProps {
   xpTarget: number;
   avatarLetter: string;
   isPro?: boolean;
-  onBellClick?: () => void;
   onAvatarClick?: () => void;
 }
 
@@ -18,9 +20,18 @@ interface UserBarProps {
  * Top user bar — streak + XP + (tablet+) PRO chip + bell + avatar.
  * PRO chip and bell auto-hide on mobile (<768px) via globals.css.
  *
- * Pass user data via props — this component is intentionally stateless so each
- * page can wire it to whatever data source it already uses.
+ * Angka streak/XP dateng lewat props — komponen ini sengaja stateless biar tiap
+ * halaman nyambungin ke sumber yang udah dia punya. Isi loncengnya lain cerita:
+ * itu dari usePeringatan(), satu-satunya tempat aturan peringatan ditulis, biar
+ * lonceng dan banner Beranda gak beda isi.
  */
+
+/* Titik merah ilang begitu dibuka, dan balik lagi kalau ada peringatan BARU —
+   bukan sekadar "hari ini udah pernah buka". Versi sebelumnya nyimpen satu
+   penanda per hari, jadi streak yang mau putus jam 9 malam gak ngasih sinyal
+   apa-apa cuma gara-gara loncengnya sempat kebuka pagi-pagi. */
+const KUNCI_DIBACA = "sensei-notif-dibaca";
+
 export function UserBar({
   streakDays,
   xp,
@@ -30,55 +41,36 @@ export function UserBar({
   onAvatarClick,
 }: UserBarProps) {
   const flameGradientId = useId();
+  const { semua, loaded } = usePeringatan();
 
-  // Ambil foto profil + tanggal sesi terakhir (buat notif "streak hampir putus").
+  const { ids: dilihat, tandai } = useTandaHarian(KUNCI_DIBACA);
+
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [lastSessionDate, setLastSessionDate] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [readToday, setReadToday] = useState(true);
-
-  const today = new Date().toISOString().slice(0, 10);
-  const readKey = `sensei-notif-read-${today}`;
 
   useEffect(() => {
     let alive = true;
     (async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const [{ data: prof }, { data: sess }] = await Promise.all([
-        supabase.from("profiles").select("avatar_url").eq("id", user.id).single(),
-        supabase.from("sessions").select("created_at").eq("user_id", user.id)
-          .order("created_at", { ascending: false }).limit(1),
-      ]);
-      if (!alive) return;
-      if (prof?.avatar_url) setAvatarUrl(prof.avatar_url);
-      if (sess?.[0]) setLastSessionDate(sess[0].created_at.slice(0, 10));
-      setReadToday(typeof window !== "undefined" && !!localStorage.getItem(readKey));
+      if (!user || !alive) return;
+      const { data: prof } = await supabase
+        .from("profiles").select("avatar_url").eq("id", user.id).single();
+      if (alive && prof?.avatar_url) setAvatarUrl(prof.avatar_url);
     })();
     return () => { alive = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Notifikasi dari data NYATA — saat ini: streak hampir putus.
-  const studiedToday = lastSessionDate === today;
-  const notifs: { id: string; icon: string; title: string; desc: string }[] = [];
-  if (streakDays > 0 && !studiedToday) {
-    notifs.push({
-      id: "streak-danger",
-      icon: "🔥",
-      title: "Streak hampir putus!",
-      desc: `Kamu belum latihan hari ini. Streak ${streakDays} hari bakal putus tengah malam.`,
-    });
-  }
-  const showDot = notifs.length > 0 && !readToday;
+  /* Yang bikin titik nyala cuma yang perlu ditindaklanjuti. Perayaan streak
+     (tingkat "info") tetap masuk daftar, tapi gak narik perhatian. */
+  const perluDilihat = semua.filter(
+    p => p.tingkat !== "info" && !dilihat.includes(p.id)
+  );
+  const showDot = loaded && perluDilihat.length > 0;
 
   const openNotif = () => {
     setNotifOpen(o => !o);
-    if (!readToday) {
-      try { localStorage.setItem(readKey, "1"); } catch { /* ignore */ }
-      setReadToday(true);
-    }
+    if (perluDilihat.length > 0) tandai(semua.map(p => p.id));
   };
 
   return (
@@ -116,7 +108,7 @@ export function UserBar({
           <button
             type="button"
             className="icon-btn"
-            aria-label="Notifikasi"
+            aria-label={showDot ? `Notifikasi, ${perluDilihat.length} baru` : "Notifikasi"}
             onClick={openNotif}
           >
             <Bell size={16} />
@@ -127,15 +119,26 @@ export function UserBar({
               <div className="notif-backdrop" onClick={() => setNotifOpen(false)} />
               <div className="notif-pop" role="dialog" aria-label="Notifikasi">
                 <div className="notif-pop-head">Notifikasi</div>
-                {notifs.length === 0 ? (
-                  <div className="notif-empty">Belum ada notifikasi baru 🎉</div>
+                {semua.length === 0 ? (
+                  <div className="notif-empty">
+                    {loaded ? "Semua aman — gak ada yang perlu dikejar 🎉" : "Sebentar…"}
+                  </div>
                 ) : (
-                  notifs.map(n => (
-                    <div key={n.id} className="notif-item">
-                      <span className="notif-ic">{n.icon}</span>
+                  semua.map(n => (
+                    <div key={n.id} className={`notif-item ${n.tingkat}`}>
+                      <span className="notif-ic" aria-hidden>{n.ikon}</span>
                       <div className="notif-body">
-                        <div className="notif-t">{n.title}</div>
-                        <div className="notif-d">{n.desc}</div>
+                        <div className="notif-t">{n.judul}</div>
+                        <div className="notif-d">{n.pesan}</div>
+                        {n.aksi && (
+                          <Link
+                            href={n.aksi.href}
+                            className="notif-aksi"
+                            onClick={() => setNotifOpen(false)}
+                          >
+                            {n.aksi.label} →
+                          </Link>
+                        )}
                       </div>
                     </div>
                   ))

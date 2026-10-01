@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { pakaiKuota, pesanKuota } from "@/lib/kuota";
+import { pakaiKuota, responsKuota } from "@/lib/kuota";
 import { filterSoal, type RawSoal } from "@/lib/soal-validate";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -137,10 +137,7 @@ export async function POST(req: NextRequest) {
      manggil Claude sebelum tau yang manggil siapa dan masih punya jatah. */
   const kuota = await pakaiKuota("tugas-generate");
   if (!kuota.ok) {
-    return NextResponse.json(
-      { error: pesanKuota(kuota) },
-      { status: kuota.sebab === "anon" ? 401 : 429 }
-    );
+    return responsKuota("tugas-generate", kuota);
   }
 
   try {

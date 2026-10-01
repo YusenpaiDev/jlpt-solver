@@ -15,6 +15,7 @@
 -- boleh nulis kolom yang memang ditulis app —
 --   username, avatar_url, target_level  → pengaturan & onboarding
 --   xp                                  → latihan / choukai
+--   renewal_reminders_enabled           → /langganan/berhenti (langganan.sql)
 --
 -- Gak kena dampak (jalan sebagai pemilik DB, security definer):
 --   handle_new_user()  → bikin profil user baru
@@ -28,8 +29,19 @@
 
 revoke insert, update, delete on public.profiles from anon, authenticated;
 grant update (username, avatar_url, target_level, xp) on public.profiles to authenticated;
+-- Kolomnya dibikin langganan.sql. Di-grant di sini juga supaya ngulang file
+-- ini gak diam-diam matiin toggle pengingat. Dibungkus cek biar file ini tetap
+-- jalan di DB yang belum dapat langganan.sql.
+do $$ begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'profiles'
+               and column_name = 'renewal_reminders_enabled') then
+    grant update (renewal_reminders_enabled) on public.profiles to authenticated;
+  end if;
+end $$;
 
--- Cek: harusnya cuma 4 baris — avatar_url, target_level, username, xp.
+-- Cek: harusnya 4 baris — avatar_url, target_level, username, xp
+-- (5 kalau langganan.sql udah jalan: + renewal_reminders_enabled).
 select column_name
 from information_schema.column_privileges
 where table_schema = 'public' and table_name = 'profiles'
