@@ -223,7 +223,6 @@ function Diproses({ data, kini, orderId, berhenti, memeriksa, onPeriksa }: {
       <hr className="py-hr" />
       <div className="py-as"><span className="c">✓</span><span><b>Jangan bayar lagi.</b> Pesanan ini sudah tercatat. Bayar dua kali bikin dananya harus dikembalikan manual, dan itu jauh lebih lama.</span></div>
       <div className="py-as"><span className="c">✓</span><span><b>Tidak perlu menunggu di sini.</b> Tutup saja dan lanjut belajar — Pro menyala sendiri begitu konfirmasi masuk.</span></div>
-      <div className="py-as"><span className="c">✓</span><span><b>Kami kabari lewat email</b> saat Pro sudah aktif.</span></div>
       <hr className="py-hr" />
       {data && (
         <>

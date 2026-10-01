@@ -2,7 +2,7 @@
 
 import { useId, useEffect, useState } from "react";
 import Link from "next/link";
-import { Sparkles, Bell } from "lucide-react";
+import { Sparkles, Bell, Settings, CreditCard } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { usePeringatan } from "@/lib/peringatan";
 import { useTandaHarian } from "@/lib/tanda-harian";
@@ -41,6 +41,8 @@ export function UserBar({
   onAvatarClick,
 }: UserBarProps) {
   const flameGradientId = useId();
+  const accountMenuId = useId();
+  const [accountOpen, setAccountOpen] = useState(false);
   const { semua, loaded } = usePeringatan();
 
   const { ids: dilihat, tandai } = useTandaHarian(KUNCI_DIBACA);
@@ -147,16 +149,53 @@ export function UserBar({
             </>
           )}
         </div>
-        <button
-          type="button"
-          className="avatar"
-          aria-label="Akun"
-          onClick={onAvatarClick}
+        <div
+          className="notif-wrap"
+          onBlur={event => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setAccountOpen(false);
+          }}
+          onKeyDown={event => {
+            if (event.key === "Escape") {
+              setAccountOpen(false);
+              event.currentTarget.querySelector<HTMLButtonElement>(".avatar")?.focus();
+            }
+          }}
         >
-          {avatarUrl
-            ? <img src={avatarUrl} alt="Foto profil" className="avatar-img" />
-            : avatarLetter}
-        </button>
+          <button
+            type="button"
+            className="avatar"
+            aria-label="Akun"
+            aria-expanded={accountOpen}
+            aria-controls={accountMenuId}
+            onClick={() => {
+              setAccountOpen(open => !open);
+              setNotifOpen(false);
+              onAvatarClick?.();
+            }}
+          >
+            {avatarUrl
+              ? <img src={avatarUrl} alt="Foto profil" className="avatar-img" />
+              : avatarLetter}
+          </button>
+          {accountOpen && (
+            <>
+              <div className="notif-backdrop" onClick={() => setAccountOpen(false)} />
+              <nav
+                id={accountMenuId}
+                className="notif-pop"
+                aria-label="Menu akun"
+                style={{ width: 220, padding: 6 }}
+              >
+                <Link href="/pengaturan" className="nav-item" onClick={() => setAccountOpen(false)}>
+                  <Settings size={18} aria-hidden /> Pengaturan
+                </Link>
+                <Link href="/langganan" className="nav-item" onClick={() => setAccountOpen(false)}>
+                  <CreditCard size={18} aria-hidden /> Langganan
+                </Link>
+              </nav>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

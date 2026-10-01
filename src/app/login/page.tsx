@@ -352,6 +352,24 @@ function PasswordStrength({ level }: { level: number }) {
 function VisualPanel() {
   return (
     <section className="lg-visual">
+      <style jsx global>{`
+        @media (min-width: 1101px) and (max-width: 1400px) and (max-height: 900px) {
+          .lg-visual .lg-kanji-stage {
+            position: relative;
+            top: auto;
+            left: auto;
+            transform: none;
+            width: 100%;
+            height: 200px;
+            aspect-ratio: auto;
+            flex-shrink: 0;
+            margin-bottom: 32px;
+          }
+          .lg-visual .lg-kanji-glyph {
+            font-size: 180px;
+          }
+        }
+      `}</style>
       <div className="lg-visual-bg" />
 
       <div className="lg-kanji-stage">
@@ -412,7 +430,7 @@ function VisualPanel() {
           </li>
           <li>
             <span className="lvb-icon amber"><Shield size={11} strokeWidth={1.6} /></span>
-            14 hari free trial, cancel kapan saja
+            Bayar sekali per periode, tanpa tagihan otomatis
           </li>
         </ul>
 
