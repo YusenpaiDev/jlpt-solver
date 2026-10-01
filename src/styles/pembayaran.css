@@ -1,0 +1,308 @@
+/* ============================================================
+   Pembayaran & langganan — dari mock "Pembayaran Final.html" (mobile 390px)
+   dan "Pembayaran Desktop.html" (1280px). Handoff: HANDOFF-pembayaran.md.
+
+   Semua kelas diawali `py-` dan token-nya dikurung di `.py` — file ini
+   global (diimport dari komponen), jadi jangan sampai bocor ke halaman lain.
+   Token = palet mock; bukan warna baru, cuma nama lokal.
+   ============================================================ */
+
+.py {
+  --py-line: rgba(255, 255, 255, 0.07);
+  --py-line-2: rgba(255, 255, 255, 0.13);
+  --py-text: #F2EFEA;
+  --py-muted: rgba(242, 239, 234, 0.68);
+  --py-dim: rgba(242, 239, 234, 0.42);
+  --py-accent: #DD4124;
+  --py-accent-h: #E55A3F;
+  --py-link: #E8704F;
+  --py-seal: #C8341C;
+  --py-gold: #C9A227;
+  --py-ok: #8FCB52;
+  --py-warn: #D4A04A;
+  --py-bad: #E0566F;
+  color: var(--py-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.py a { color: var(--py-link); text-decoration: none; }
+.py a:hover, .py a:focus-visible { color: var(--py-accent-h); }
+.py input, .py textarea, .py select { font-size: 16px; }
+
+@keyframes py-spin { to { transform: rotate(360deg); } }
+@keyframes py-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+@keyframes py-fill { from { width: 0; } }
+@keyframes py-stamp {
+  0% { opacity: 0; transform: scale(1.5) rotate(-14deg); }
+  55% { opacity: 1; transform: scale(.94) rotate(-7deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-7deg); }
+}
+@keyframes py-pop { from { opacity: 0; transform: scale(.97) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes py-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes py-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── tipografi dasar ── */
+.py h2.py-h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.35; margin: 0; }
+.py h3.py-h3 { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+.py-lead { font-size: 13.5px; color: var(--py-muted); line-height: 1.62; margin: 9px 0 0; }
+.py-lead b { color: var(--py-text); font-weight: 600; }
+.py-hr { height: 1px; background: var(--py-line); margin: 20px 0; border: 0; }
+.py-hr.tight { margin: 15px 0; }
+.py-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--py-dim); margin-bottom: 12px; }
+.py-foot { font-size: 11.5px; color: var(--py-dim); line-height: 1.62; margin: 18px 0 0; }
+.py-foot b { color: var(--py-muted); font-weight: 600; }
+.py-center { text-align: center; }
+
+/* ── baris status ── */
+.py-stat { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.py-stat.center { justify-content: center; }
+.py-d { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.py-d.ok { background: var(--py-ok); }
+.py-d.warn { background: var(--py-warn); animation: py-pulse 1.7s ease-in-out infinite; }
+.py-d.bad { background: var(--py-bad); }
+.py-d.go { background: var(--py-accent); animation: py-pulse 1.2s ease-in-out infinite; }
+.py-d.off { background: var(--py-dim); }
+.py-s-ok { color: var(--py-ok); }
+.py-s-warn { color: var(--py-warn); }
+.py-s-bad { color: var(--py-bad); }
+.py-s-go { color: var(--py-link); }
+.py-s-off { color: var(--py-dim); }
+
+/* ── kunci-nilai ── */
+.py-kv { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--py-line); font-size: 13px; }
+.py-kv:last-child { border-bottom: none; }
+.py-kv-k { color: var(--py-dim); white-space: nowrap; flex-shrink: 0; }
+.py-kv-v { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.py-kv-v.mono { font-family: var(--font-mono), ui-monospace, monospace; font-size: 12px; font-weight: 500; color: var(--py-muted); word-break: break-all; }
+.py-kv-v em { display: block; font-style: normal; font-size: 11px; color: var(--py-dim); font-weight: 400; margin-top: 2px; }
+.py-kv-v b.up { color: var(--py-ok); }
+.py-kv-v b.down { color: var(--py-dim); }
+
+/* ── meter Free vs Pro ── */
+.py-m { margin-bottom: 15px; }
+.py-m:last-child { margin-bottom: 0; }
+.py-m-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12.5px; margin-bottom: 7px; }
+.py-m-l { color: var(--py-muted); font-weight: 500; }
+.py-m-v { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 12px; }
+.py-m-t { height: 8px; border-radius: 5px; background: var(--surface-3); overflow: hidden; }
+.py-m-t i { display: block; height: 100%; border-radius: 5px; animation: py-fill 1s .25s cubic-bezier(.16, 1, .3, 1) both; }
+.py-f-ok { background: linear-gradient(90deg, #6FA83C, var(--py-ok)); }
+.py-f-warn { background: linear-gradient(90deg, #B8863A, var(--py-warn)); }
+.py-f-full { background: linear-gradient(90deg, var(--py-warn), var(--py-bad)); }
+.py-f-acc { background: linear-gradient(90deg, var(--py-accent), #F0937A); }
+.py-m-legend { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--py-dim); font-weight: 600; letter-spacing: .04em; margin-top: 5px; }
+.py-m-legend .sw { width: 9px; height: 9px; border-radius: 3px; }
+.py-m-legend .sw + span + .sw, .py-m-legend .sw.second { margin-left: 7px; }
+.py-gain { font-size: 11.5px; font-weight: 800; color: var(--py-ok); font-variant-numeric: tabular-nums; margin-left: 4px; }
+.py-usage2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 30px; }
+.py-usage2 > .py-m:last-child { margin-bottom: 0; }
+.py-nrow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 26px; margin-top: 14px; }
+
+/* ── segel — HANYA layar Pro aktif (極) & Lifetime (永) ── */
+.py-seal {
+  width: 88px; height: 88px; border-radius: 50%; border: 3px solid var(--py-seal);
+  display: grid; place-items: center; margin: 0 auto 4px;
+  font-family: var(--font-serif-jp), serif; font-size: 35px; font-weight: 700; color: var(--py-seal);
+  box-shadow: inset 0 0 0 1.5px rgba(200, 52, 28, .35);
+  animation: py-stamp .62s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.py-seal.gold {
+  border-color: var(--py-gold); color: var(--py-gold); box-shadow: inset 0 0 0 1.5px rgba(201, 162, 39, .35);
+  animation: none; transform: rotate(-7deg); width: 60px; height: 60px; border-width: 2px; font-size: 24px; margin: 0; flex-shrink: 0;
+}
+
+/* ── tombol ── */
+.py-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; padding: 0 20px;
+  border-radius: 12px; font-family: var(--font-sans); font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+  transition: background .16s, border-color .16s, color .16s; text-decoration: none; white-space: nowrap;
+}
+.py-btn:disabled { opacity: .55; cursor: default; }
+.py a.py-btn-p, .py-btn-p { background: var(--py-accent); color: #fff; }
+.py a.py-btn-p:hover, .py-btn-p:hover:not(:disabled), .py-btn-p:focus-visible { background: var(--py-accent-h); color: #fff; }
+.py a.py-btn-q, .py-btn-q { background: transparent; border: 1px solid var(--py-line-2); color: var(--py-muted); }
+.py a.py-btn-q:hover, .py-btn-q:hover:not(:disabled), .py-btn-q:focus-visible { border-color: rgba(221, 65, 36, 0.45); color: var(--py-link); }
+.py-btn-t {
+  background: none; border: none; color: var(--py-dim); font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+  min-height: 44px; width: 100%; cursor: pointer; padding: 0;
+}
+.py a.py-btn-t { display: flex; align-items: center; justify-content: center; color: var(--py-dim); }
+.py-btn-t:hover, .py-btn-t:focus-visible, .py a.py-btn-t:hover { color: var(--py-link); }
+.py-btn-t.left { justify-content: flex-start; text-align: left; }
+.py-acts { display: flex; flex-direction: column; gap: 9px; margin-top: 20px; }
+.py-galat { font-size: 12.5px; color: var(--py-bad); margin: 10px 0 0; }
+
+/* ── langkah (keadaan CEK) ── */
+.py-step { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 12px; align-items: start; padding: 11px 0; border-bottom: 1px solid var(--py-line); font-size: 13px; }
+.py-step:last-child { border-bottom: none; }
+.py-step .mk { font-size: 12px; font-weight: 800; line-height: 1.4; text-align: center; }
+.py-step .mk.ok { color: var(--py-ok); }
+.py-step .mk.wait { color: var(--py-dim); }
+.py-step em { display: block; font-style: normal; font-size: 11.5px; color: var(--py-dim); margin-top: 3px; line-height: 1.5; word-break: break-all; }
+.py-step.wait { color: var(--py-dim); }
+.py-spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(221, 65, 36, 0.2); border-top-color: var(--py-accent); animation: py-spin .8s linear infinite; margin: 1px auto 0; }
+
+/* ── jaminan (keadaan DIPROSES) ── */
+.py-as { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 11px; font-size: 13px; color: var(--py-muted); line-height: 1.58; margin-bottom: 12px; }
+.py-as:last-child { margin-bottom: 0; }
+.py-as .c { color: var(--py-ok); font-weight: 800; font-size: 12px; }
+.py-as b { color: var(--py-text); font-weight: 600; }
+
+/* ── sisa hari ── */
+.py-remain { font-size: 15px; line-height: 1.6; margin: 14px 0 0; }
+.py-remain .n { font-size: 30px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.py-remain em { font-style: normal; color: var(--py-dim); font-size: 13px; display: block; margin-top: 5px; }
+.py-ring { height: 8px; border-radius: 5px; background: var(--surface-3); overflow: hidden; margin-top: 14px; }
+.py-ring i { display: block; height: 100%; border-radius: 5px; animation: py-fill 1.1s .3s cubic-bezier(.16, 1, .3, 1) both; }
+.py-dline { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--py-dim); margin-top: 8px; font-variant-numeric: tabular-nums; }
+
+/* ── peringatan H-7 ── */
+.py-warn {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 0;
+  border-top: 1px solid rgba(212, 160, 74, 0.28); border-bottom: 1px solid rgba(212, 160, 74, 0.28);
+}
+.py-warn-t { font-size: 13px; font-weight: 600; }
+.py-warn-s { font-size: 11.5px; color: var(--py-muted); margin-top: 3px; line-height: 1.5; }
+.py-wbar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .08); overflow: hidden; margin-top: 9px; max-width: 420px; }
+.py-wbar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #B8863A, var(--py-warn)); animation: py-fill 1s .3s both; }
+.py-warn-x { background: none; border: none; color: var(--py-dim); font-size: 16px; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
+.py-warn-x:hover, .py-warn-x:focus-visible { color: var(--py-text); }
+.py-warn-cta { display: none; }
+.py a.py-warn-a { display: inline-flex; align-items: center; min-height: 44px; font-size: 12.5px; font-weight: 600; }
+
+/* ── riwayat transaksi ── */
+.py-tx { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--py-line); }
+.py-tx:last-of-type { border-bottom: none; }
+.py-tx-p { font-size: 13.5px; font-weight: 600; }
+.py-tx-m { font-size: 11.5px; color: var(--py-dim); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.py-tx-m .oid { font-family: var(--font-mono), ui-monospace, monospace; word-break: break-all; }
+.py-tx-a { font-size: 13.5px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.py-tx-s { font-size: 11px; font-weight: 700; margin-top: 4px; text-align: right; letter-spacing: .03em; }
+.py-kosong { font-size: 13px; color: var(--py-dim); padding: 6px 0; }
+
+/* ── catatan inline (chat) ── */
+.py-notice { border-top: 1px solid rgba(212, 160, 74, 0.3); padding-top: 15px; margin-top: 16px; }
+.py-notice-t { font-size: 13.5px; font-weight: 600; margin-top: 10px; }
+.py-notice-s { font-size: 12.5px; color: var(--py-muted); line-height: 1.6; margin: 7px 0 0; }
+.py-notice-s b { color: var(--py-text); font-weight: 600; }
+.py-notice-a { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.py-notice-a .py-btn { flex: 1; min-height: 44px; font-size: 13px; }
+
+/* ── lembar bawah / modal (aksi bertombol) ── */
+.py-mask {
+  position: fixed; inset: 0; z-index: 90; background: rgba(14, 11, 15, .62); backdrop-filter: blur(3px);
+  display: flex; align-items: flex-end; justify-content: center; animation: py-fade .2s ease both;
+}
+.py-sheet {
+  width: 100%; max-height: 92vh; overflow-y: auto; padding: 20px 22px calc(24px + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0; background: var(--surface); border: 1px solid var(--py-line-2); border-bottom: none;
+  animation: py-up .32s cubic-bezier(.16, 1, .3, 1) both;
+}
+.py-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--py-line-2); margin: 0 auto 16px; }
+
+/* ── toggle pengingat ── */
+.py-tg-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 15px 0; border-top: 1px solid var(--py-line); border-bottom: 1px solid var(--py-line); }
+.py-tg-t { font-size: 13.5px; font-weight: 600; }
+.py-tg-s { font-size: 11.5px; color: var(--py-muted); margin-top: 4px; line-height: 1.55; }
+.py-tg-s b { color: var(--py-text); }
+.py-tg {
+  width: 48px; height: 28px; border-radius: 99px; background: var(--surface-3); border: 1px solid var(--py-line-2);
+  position: relative; cursor: pointer; flex-shrink: 0; transition: .18s; padding: 0;
+}
+.py-tg::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--py-dim); transition: .18s; }
+.py-tg.on { background: rgba(221, 65, 36, .2); border-color: rgba(221, 65, 36, .5); }
+.py-tg.on::after { left: 23px; background: var(--py-accent); }
+.py-tg:disabled { opacity: .5; cursor: default; }
+.py-tg:focus-visible { outline: 2px solid var(--py-link); outline-offset: 2px; }
+.py-pp { font-size: 12.5px; color: var(--py-muted); line-height: 1.68; margin: 14px 0 0; }
+.py-pp + .py-pp { margin-top: 10px; }
+.py-pp b { color: var(--py-text); font-weight: 600; }
+
+/* ── halaman sukses: kuitansi sempit, tanpa nav rail ── */
+.py-receipt-page {
+  /* flex, bukan grid place-items: kolom grid auto ikut melebar seukuran isi
+     (nomor pesanan panjang) dan bikin layar HP meluber ke samping. */
+  min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 28px 22px 48px;
+}
+.py-receipt { width: 100%; max-width: 540px; min-width: 0; }
+.py-top { display: flex; align-items: center; gap: 12px; padding: 6px 0 16px; font-size: 13px; font-weight: 600; }
+.py a.py-top-bk { color: var(--py-dim); font-size: 18px; line-height: 1; }
+
+/* ── halaman langganan ── */
+.py-hd { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.py-hd h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin: 0; }
+.py-hd h1 .jp { font-family: var(--font-serif-jp), serif; font-size: 20px; margin-left: 9px; color: var(--py-seal); }
+.py-hd .sub { font-size: 12.5px; color: var(--py-dim); margin: 9px 0 0; }
+.py-hd-cta { display: none; }
+.py-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 30px; align-items: start; }
+.py-lt-head { display: flex; align-items: center; gap: 15px; }
+.py-lt-name { font-size: 15px; font-weight: 600; margin-top: 8px; }
+.py-crumb { font-size: 12.5px; color: var(--py-dim); margin: 0 0 9px; }
+.py a.py-crumb-a { color: var(--py-dim); }
+.py a.py-crumb-a:hover { color: var(--py-link); }
+
+@media (prefers-reduced-motion: reduce) {
+  .py *, .py *::before, .py *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+}
+
+/* ── desktop ── */
+@media (min-width: 900px) {
+  .py h2.py-h2 { font-size: 23px; letter-spacing: -0.025em; line-height: 1.32; }
+  .py-lead { font-size: 14px; margin-top: 10px; }
+  .py-hr { margin: 22px 0; }
+  .py-kv { font-size: 13.5px; }
+  .py-m-top { font-size: 13px; }
+  .py-m-v { font-size: 12.5px; }
+  .py-foot { font-size: 12px; }
+  .py-btn { width: auto; min-height: 44px; padding: 0 22px; border-radius: 11px; font-size: 13.5px; }
+  .py-btn-t { width: auto; padding: 0 4px; }
+  .py-acts { flex-direction: row; gap: 10px; margin-top: 22px; }
+  .py-acts .grow { flex: 1; }
+  .py-seal { width: 92px; height: 92px; font-size: 36px; }
+  .py-seal.gold { width: 62px; height: 62px; font-size: 25px; }
+  .py-receipt-page { padding: 44px 40px; }
+
+  .py-hd h1 { font-size: 28px; line-height: 1; }
+  .py-hd h1 .jp { font-size: 24px; }
+  .py-hd-cta { display: flex; }
+  .py-cols { grid-template-columns: minmax(0, 1fr) 372px; gap: 34px; }
+  .py-remain .n { font-size: 38px; letter-spacing: -0.035em; }
+  .py-usage2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .py-usage2 > .py-m.full { grid-column: 1 / -1; }
+  .py-nrow { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }
+  .py-nrow > .py-m { margin-bottom: 0; }
+
+  .py-warn { grid-template-columns: minmax(0, 1fr) auto auto; gap: 20px; padding: 15px 0; }
+  .py-warn-t { font-size: 14px; }
+  .py-warn-s { font-size: 12px; }
+  .py-warn-cta { display: flex; }
+  .py a.py-warn-a { display: none; }
+
+  .py-tx { padding: 13px 0; gap: 14px; }
+  .py-tx-p, .py-tx-a { font-size: 13px; }
+
+  .py-notice-t { font-size: 14.5px; }
+  .py-notice-s { font-size: 13px; }
+  .py-notice-a { justify-content: flex-start; }
+  .py-notice-a .py-btn { flex: 0 0 auto; }
+
+  /* jatah habis di desktop = modal tengah, bukan lembar bawah */
+  .py-mask { align-items: center; padding: 34px; }
+  .py-sheet {
+    max-width: 470px; border-radius: 18px; border-bottom: 1px solid var(--py-line-2); padding: 28px;
+    box-shadow: 0 44px 96px -24px rgba(0, 0, 0, .88); animation: py-pop .4s cubic-bezier(.16, 1, .3, 1) both;
+  }
+  .py-sheet .py-grip { display: none; }
+  .py-sheet .py-acts .py-btn { flex: 1; }
+
+  .py-tg-row { gap: 24px; padding: 17px 0; }
+  .py-tg-t { font-size: 14.5px; }
+  .py-tg-s { font-size: 12.5px; max-width: 520px; }
+  .py-pp { font-size: 13px; max-width: 640px; }
+}
+
+/* tautan "Perpanjang sekarang ›" di bawah peringatan (mobile) — bisa <a> atau <button> */
+.py .py-warn-a { display: inline-flex; align-items: center; min-height: 44px; font-size: 12.5px; font-weight: 600; color: var(--py-link); width: auto; }
+@media (min-width: 900px) { .py .py-warn-a { display: none; } }
+
+.py .py-btn:focus-visible, .py .py-btn-t:focus-visible, .py .py-warn-x:focus-visible { outline: 2px solid var(--py-link); outline-offset: 2px; }

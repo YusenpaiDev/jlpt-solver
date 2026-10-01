@@ -6,6 +6,7 @@ import {
   Home, BookOpen, Camera, ListTodo, BookA, NotebookPen, BarChart3,
   Settings, LogOut, Sparkles,
 } from "lucide-react";
+import { BATAS } from "@/lib/batas-paket";
 
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
@@ -63,13 +64,13 @@ export function NavRail() {
         </div>
         <div className="nav-upgrade-text">
           <div className="nav-upgrade-title">Upgrade ke Pro</div>
-          <div className="nav-upgrade-sub">Analisis unlimited</div>
+          <div className="nav-upgrade-sub">Chat AI {BATAS.chat.pro}× sehari</div>
         </div>
       </Link>
 
       <Link
         href="/pengaturan"
-        className={`nav-item${isActive("/pengaturan") ? " active" : ""}`}
+        className={`nav-item${isActive("/pengaturan") || isActive("/langganan") ? " active" : ""}`}
       >
         <Settings className="nav-item-icon" size={20} />
         <span className="nav-item-label">Pengaturan</span>

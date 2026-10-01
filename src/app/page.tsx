@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, PeringatanBanner } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
+import { PengingatPro } from "@/components/pembayaran/PengingatPro";
 import kotobaN1 from "@/data/kotoba/N1.json";
 import kotobaN2 from "@/data/kotoba/N2.json";
 import kotobaN3 from "@/data/kotoba/N3.json";
@@ -261,6 +262,10 @@ export default function Home() {
               <div className="bv-ava">{avatar ? <img src={avatar} alt={name} className="bv-ava-img" referrerPolicy="no-referrer" /> : name[0]}</div>
             </div>
           </div>
+
+          {/* Pro mau habis (H-7/H-3/H-1) — sendiri, bukan lewat lonceng: ini
+              soal akses, bukan kebiasaan belajar */}
+          <PengingatPro />
 
           {/* peringatan paling mendesak — sisanya di lonceng <UserBar> */}
           <PeringatanBanner />

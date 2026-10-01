@@ -1,4 +1,6 @@
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { BATAS, type Fitur, resetBerikutnya } from "@/lib/batas-paket";
 
 /**
  * Kuota harian fitur AI — dipanggil dari route handler, SEBELUM manggil Claude.
@@ -12,24 +14,10 @@ import { createClient } from "@/lib/supabase/server";
  * penghitungnya gak bisa di-reset dari browser.
  */
 
-/** Batas Free = janji di halaman harga. Batas Pro = rem biaya, bukan jualan. */
-/* Angka Pro DIPILIH DARI BIAYA, bukan dari rasa lega.
- *
- *   (analisis foto udah dicabut — route-nya dihapus, kuotanya ikut)
- *   furigana  Haiku, tapi max_tokens 4.000 dan sering dipanggil → diam-diam
- *             mahal kalau dibiarin di 500/hari.
- *   chat      max_tokens 280, paling murah per panggilan.
- *
- * Kalau salah satu angka di sini diubah, ubah juga daftar fitur & tabel
- * banding di src/app/premium/page.tsx — halaman itu nyebut angkanya terang
- * terangan, dan janji yang gak cocok sama kode itu yang bikin repot. */
-export const BATAS = {
-  chat:              { free: 5,  pro: 50  },
-  furigana:          { free: 20, pro: 100 },
-  "tugas-generate":  { free: 5,  pro: 30  },
-} as const;
-
-export type Fitur = keyof typeof BATAS;
+/* Angka batasnya tinggal di batas-paket.ts — file itu aman di-bundle ke
+   browser, jadi layar langganan & jatah habis baca dari tempat yang sama
+   dengan yang ditegakkan di sini. */
+export { BATAS, type Fitur } from "@/lib/batas-paket";
 
 export type HasilKuota =
   | { ok: true;  isPro: boolean; terpakai: number; batas: number }
@@ -41,7 +29,28 @@ export function pesanKuota(h: Extract<HasilKuota, { ok: false }>): string {
   if (h.sebab === "anon") return "Login dulu buat pakai fitur ini.";
   return h.isPro
     ? `Kamu udah pakai ${h.batas}× hari ini. Batas ini rem pengaman, bukan batas paket — ceritain ke kami kalau kamu beneran butuh lebih.`
-    : `Jatah harian kamu habis (${h.batas}× per hari di paket Free). Reset besok, atau upgrade ke Pro buat unlimited.`;
+    : `Jatah harian kamu habis (${h.batas}× per hari di paket Free). Reset besok 00:00 WIB, atau upgrade ke Pro buat jatah lebih besar.`;
+}
+
+/**
+ * Respons buat kuota yang ditolak. 429 bawa angka lengkap — layar jatah habis
+ * butuh `feature` (judul), `used`/`limit` (meter), `resetAt` (hitungan
+ * reset), dan `plan` (Pro yang tetap kena 429 gak ditawarin upgrade).
+ * Bentuknya dibaca bacaKuotaHabis() di src/lib/kuota-habis.ts.
+ */
+export function responsKuota(fitur: Fitur, h: Extract<HasilKuota, { ok: false }>) {
+  if (h.sebab === "anon") {
+    return NextResponse.json({ error: pesanKuota(h) }, { status: 401 });
+  }
+  return NextResponse.json({
+    error: "quota_exceeded",
+    message: pesanKuota(h),
+    feature: fitur,
+    used: h.terpakai,
+    limit: h.batas,
+    resetAt: resetBerikutnya(),
+    plan: h.isPro ? "pro" : "free",
+  }, { status: 429 });
 }
 
 export async function pakaiKuota(fitur: Fitur): Promise<HasilKuota> {
