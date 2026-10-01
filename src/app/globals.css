@@ -776,6 +776,51 @@ input, textarea, select { font-size: 16px; }
   box-shadow: 0 0 8px currentColor;
 }
 
+/* Bottom sheet stays in the browser top layer, above fixed navigation. */
+.bn-item { min-width: 44px; min-height: 44px; }
+.bn-sheet.glass-card {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--space-6));
+  margin: 0;
+  padding: var(--space-3) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  color: var(--text-primary);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.bn-sheet[open] { animation: bn-sheet-in var(--dur-medium) var(--ease-out-expo); }
+.bn-sheet::backdrop { background: var(--surface-overlay); }
+.bn-sheet-handle {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+}
+.bn-sheet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); }
+.bn-sheet-header h2 { font-size: var(--text-md); font-weight: 600; }
+.bn-sheet-close {
+  display: grid; place-items: center;
+  width: 44px; height: 44px;
+  border: none; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-secondary);
+  cursor: pointer;
+}
+.bn-sheet-close:hover, .bn-sheet .nav-item:hover { background: var(--surface-2); color: var(--text-primary); }
+.bn-sheet .nav-item { min-height: 48px; }
+.bn-sheet .nav-item-label, .bn-sheet .nav-upgrade-text { opacity: 1; }
+.bn-sheet .nav-upgrade { min-height: 44px; }
+.bn-item:focus-visible, .bn-sheet :is(a, button):focus-visible {
+  outline: 2px solid var(--primary-hover);
+  outline-offset: -2px;
+}
+@keyframes bn-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .bn-sheet[open] { animation: none; } }
+@media (min-width: 768px) { .bn-sheet { display: none; } }
+
 /* ──── UserBar + supporting (streak pill, pro chip, icon-btn, avatar) ──── */
 .streak-pill {
   display: inline-flex; align-items: center; gap: 8px;
