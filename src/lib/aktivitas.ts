@@ -15,6 +15,14 @@ export type SumberAktivitas =
   | "kotoba"    // drill / flashcard kotoba
   | "bunpou";   // latihan bunpou
 
+/** Ditembakin ke window tiap ada aktivitas baru kecatat.
+ *
+ *  Dipakai usePeringatan() buat buang cache-nya dan ngambil ulang. Sengaja
+ *  lewat event, bukan import langsung: kalau file ini manggil peringatan.ts
+ *  sementara peringatan.ts butuh tanggalLokal() dari sini, impornya jadi
+ *  melingkar. Yang dengerin gak perlu dikenal sama yang nembak. */
+export const EVENT_AKTIVITAS = "sensei:aktivitas";
+
 /** Tanggal LOKAL (bukan UTC) dalam bentuk YYYY-MM-DD.
  *
  *  Ini inti bug lama: `new Date().toISOString()` itu UTC, jadi buat WIB (+7)
@@ -45,5 +53,11 @@ export async function catatAktivitas(sumber: SumberAktivitas): Promise<void> {
   if (error) {
     udah.delete(kunci); // dicoba lagi pas dia ngerjain hal berikutnya hari ini
     console.warn(`[aktivitas] gagal catat "${sumber}" (${tanggal}): ${error.message}`);
+    return;
   }
+
+  /* Cuma kalau beneran kecatat. Peringatan "streak bakal putus" harus ilang
+     detik itu juga — kalau nunggu reload, user yang barusan selesai latihan
+     masih diomelin belum latihan. */
+  window.dispatchEvent(new CustomEvent(EVENT_AKTIVITAS));
 }

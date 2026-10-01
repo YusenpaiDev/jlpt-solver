@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { AuroraBackground, NavRail, BottomNav } from "@/components/v2";
+import { AuroraBackground, NavRail, BottomNav, PeringatanBanner } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
 import kotobaN1 from "@/data/kotoba/N1.json";
 import kotobaN2 from "@/data/kotoba/N2.json";
@@ -261,6 +261,9 @@ export default function Home() {
               <div className="bv-ava">{avatar ? <img src={avatar} alt={name} className="bv-ava-img" referrerPolicy="no-referrer" /> : name[0]}</div>
             </div>
           </div>
+
+          {/* peringatan paling mendesak — sisanya di lonceng <UserBar> */}
+          <PeringatanBanner />
 
           {/* resume */}
           {resume && (
