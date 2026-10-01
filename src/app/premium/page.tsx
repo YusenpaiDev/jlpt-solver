@@ -343,7 +343,7 @@ export default function Premium() {
         <section className="pr-cta-footer glass-card">
           <div className="pr-cta-bg" />
           <div className="pr-cta-content">
-            <h2>Mulai 14 hari free trial.</h2>
+            <h2>Mulai Pro hari ini.</h2>
             <p>Cancel kapan saja. Tanpa kartu kredit kalau trial. Tanpa hidden cost.</p>
             <div className="pr-cta-row">
               <button

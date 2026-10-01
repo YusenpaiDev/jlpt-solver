@@ -412,7 +412,7 @@ function VisualPanel() {
           </li>
           <li>
             <span className="lvb-icon amber"><Shield size={11} strokeWidth={1.6} /></span>
-            14 hari free trial, cancel kapan saja
+            Bayar sekali per periode, tanpa tagihan otomatis
           </li>
         </ul>
 
