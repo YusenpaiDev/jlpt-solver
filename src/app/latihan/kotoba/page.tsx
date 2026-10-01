@@ -4,15 +4,23 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { catatAktivitas } from "@/lib/aktivitas";
-import kotobaN1 from "@/data/kotoba/N1.json";
-import kotobaN2 from "@/data/kotoba/N2.json";
-import kotobaN3 from "@/data/kotoba/N3.json";
-import kotobaN4 from "@/data/kotoba/N4.json";
-import kotobaN5 from "@/data/kotoba/N5.json";
+
 
 interface Word { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; }
 interface Deck { level: string; vocabulary: Word[]; }
-const DECKS: Record<string, Deck> = { N5: kotobaN5 as Deck, N4: kotobaN4 as Deck, N3: kotobaN3 as Deck, N2: kotobaN2 as Deck, N1: kotobaN1 as Deck };
+/* Deck di-load per level, bukan lima-limanya sekaligus.
+ *
+ * Sebelum ini kelima file di-import statis, jadi siapa pun yang buka drill —
+ * mau latihan N5 sekalipun — narik 2,3 MB kosakata semua level sebelum soal
+ * pertama muncul. Di kuota HP itu berasa. Halaman /materi/kotoba udah pakai
+ * cara ini dari dulu; ini cuma nyamain. */
+const LOADERS: Record<string, () => Promise<Deck>> = {
+  N5: () => import("@/data/kotoba/N5.json").then(m => m.default as Deck),
+  N4: () => import("@/data/kotoba/N4.json").then(m => m.default as Deck),
+  N3: () => import("@/data/kotoba/N3.json").then(m => m.default as Deck),
+  N2: () => import("@/data/kotoba/N2.json").then(m => m.default as Deck),
+  N1: () => import("@/data/kotoba/N1.json").then(m => m.default as Deck),
+};
 
 type Prog = { benar: number; salah: number };
 type State = "known" | "seen" | "wrong" | "new";
@@ -101,7 +109,6 @@ function KotobaPlayer() {
   const level = (params.get("level") || "N2").toUpperCase();
   const group = params.get("group");
   const count = Math.min(20, Math.max(1, Number(params.get("count")) || 10));
-  const deck = DECKS[level] ?? DECKS.N2;
 
   const [qs, setQs] = useState<KQ[] | null>(null);
   const [idx, setIdx] = useState(0);
@@ -118,20 +125,31 @@ function KotobaPlayer() {
   const [sessId, setSessId] = useState<string | null>(null);
 
   useEffect(() => {
+    let batal = false;
     async function init() {
+      /* Deck dan progres ditarik barengan — deck gak butuh nunggu jaringan
+         Supabase, dan progres gak butuh nunggu deck ke-parse. */
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const [deck, { data: { user } }] = await Promise.all([
+        (LOADERS[level] ?? LOADERS.N2)(),
+        supabase.auth.getUser(),
+      ]);
+      if (batal) return;
+
       let progres = new Map<string, Prog>();
       if (user) {
         const { data } = await supabase.from("kotoba_progress").select("word, benar, salah").eq("user_id", user.id);
         if (data) progres = new Map(data.map(r => [r.word, { benar: r.benar ?? 0, salah: r.salah ?? 0 }]));
       }
+      if (batal) return;
+
       let pool = deck.vocabulary;
       if (group) pool = pool.filter(w => w.group === group);
       setQs(buildQuestions(pool, deck.vocabulary, progres, count));
     }
     init();
-  }, [level, group, count, deck]);
+    return () => { batal = true; };
+  }, [level, group, count]);
 
   const q = qs && !done ? qs[idx] : null;
   const pick = useCallback((n: number) => { if (locked || !q || n >= q.opts.length) return; setSel(n); }, [locked, q]);

@@ -15,9 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 /** Batas Free = janji di halaman harga. Batas Pro = rem biaya, bukan jualan. */
 /* Angka Pro DIPILIH DARI BIAYA, bukan dari rasa lega.
  *
- *   analisis  Sonnet 4.6 + gambar, max_tokens 64.000 → ~$0.20 sekali panggil.
- *             Ini 60% biaya kamu. 50/hari = ~$300/bulan buat SATU pelanggan
- *             yang bayar ~$8. Ditahan paling ketat.
+ *   (analisis foto udah dicabut — route-nya dihapus, kuotanya ikut)
  *   furigana  Haiku, tapi max_tokens 4.000 dan sering dipanggil → diam-diam
  *             mahal kalau dibiarin di 500/hari.
  *   chat      max_tokens 280, paling murah per panggilan.
@@ -27,7 +25,6 @@ import { createClient } from "@/lib/supabase/server";
  * terangan, dan janji yang gak cocok sama kode itu yang bikin repot. */
 export const BATAS = {
   chat:              { free: 5,  pro: 50  },
-  analisis:          { free: 2,  pro: 10  },
   furigana:          { free: 20, pro: 100 },
   "tugas-generate":  { free: 5,  pro: 30  },
 } as const;

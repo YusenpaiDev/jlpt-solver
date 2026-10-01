@@ -77,7 +77,8 @@ export async function POST(req: NextRequest) {
     }
 
     /* Midtrans ngirim ulang notifikasi yang sama sampai dibalas 200. Tanpa
-       gerbang ini, satu pembayaran bisa nambah masa berlaku berkali-kali. */
+       gerbang ini, satu pembayaran bisa nambah masa berlaku berkali-kali.
+       Ini cuma jalan pintas — penjaga yang sebenarnya klaim atomik di bawah. */
     if (tx.status === "lunas") {
       return NextResponse.json({ received: true, catatan: "sudah diproses" });
     }
@@ -91,9 +92,12 @@ export async function POST(req: NextRequest) {
         transaction_status === "expire" ? "kadaluarsa"
         : ["deny", "cancel", "failure"].includes(transaction_status) ? "gagal"
         : "pending";
+      /* neq lunas: notifikasi telat (mis. `pending` yang nyampe sesudah
+         `settlement`) gak boleh nurunin transaksi yang udah lunas. */
       await sb.from("transaksi")
         .update({ status, midtrans: body, diperbarui: new Date().toISOString() })
-        .eq("order_id", order_id);
+        .eq("order_id", order_id)
+        .neq("status", "lunas");
       return NextResponse.json({ received: true });
     }
 
@@ -113,20 +117,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    /* Klaim DULU, baru aktifkan. Pembayaran kartu ngirim `capture` lalu
+       `settlement` — dua-duanya sukses, dan kalau nyampe hampir barengan,
+       dua-duanya lolos gerbang `tx.status` di atas (sama-sama baca "pending").
+       Versi lama aktifkan dulu baru nandain lunas, jadi masa Pro nambah dua kali.
+       UPDATE bersyarat ini atomik: Postgres ngunci barisnya, yang kedua nunggu,
+       lalu nilai ulang `status <> 'lunas'` → 0 baris → mundur. */
+    const { data: klaim, error: eKlaim } = await sb.from("transaksi")
+      .update({ status: "lunas", midtrans: body, diperbarui: new Date().toISOString() })
+      .eq("order_id", order_id)
+      .neq("status", "lunas")
+      .select("order_id");
+    if (eKlaim) {
+      console.error("[webhook] gagal klaim transaksi:", eKlaim.message);
+      return NextResponse.json({ error: "Kesalahan server" }, { status: 500 });
+    }
+    if (!klaim?.length) {
+      return NextResponse.json({ received: true, catatan: "sudah diproses" });
+    }
+
     const { data: sampai, error: eAktif } = await sb.rpc("aktifkan_pro", {
       p_user_id: tx.user_id,
       p_bulan: paket.bulan,
     });
     if (eAktif) {
       /* JANGAN balas 200 — biar Midtrans coba lagi. Uangnya udah masuk;
-         yang gagal cuma aktivasinya, dan itu harus diulang. */
+         yang gagal cuma aktivasinya, dan itu harus diulang. Klaimnya dilepas
+         dulu, kalau nggak percobaan ulang ketahan "sudah diproses". */
       console.error("[webhook] gagal aktifkan Pro:", eAktif.message);
+      await sb.from("transaksi")
+        .update({ status: tx.status, diperbarui: new Date().toISOString() })
+        .eq("order_id", order_id);
       return NextResponse.json({ error: "Aktivasi gagal" }, { status: 500 });
     }
-
-    await sb.from("transaksi")
-      .update({ status: "lunas", midtrans: body, diperbarui: new Date().toISOString() })
-      .eq("order_id", order_id);
 
     console.log(
       `[webhook] Pro aktif buat ${tx.user_id} · ${paket.id} · ` +

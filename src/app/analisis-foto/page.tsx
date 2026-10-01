@@ -5,11 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { setSavedWordFavorite } from "@/lib/supabase/savedWords";
 import { AuroraBackground, NavRail, BottomNav, UserBar } from "@/components/v2";
-import KamusFlashCard from "@/components/KamusFlashCard";
 import {
-  Camera, Bell, Upload, ArrowUpRight,
-  CheckCircle2, Circle, Sparkles,
-  ChevronLeft, ChevronDown, RotateCcw, Clock,
+  Camera, Upload, Sparkles, ChevronDown, RotateCcw, Clock,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck, Star,
   BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
   Highlighter, Undo2, LogOut,
@@ -113,6 +110,8 @@ interface FileData {
 interface ChatMsg {
   role: "user" | "model";
   text: string;
+  /** Balasan ini bukan jawaban Sensei, tapi pemberitahuan jatah habis. */
+  kuotaHabis?: boolean;
 }
 
 /* Sometimes the AI bundles options ("1xxx 2xxx 3xxx 4xxx") into the question
@@ -193,595 +192,16 @@ function sanitizeQuestion(q: { question: string; options: string[] }): { questio
 /* Angka header. Dulu dipaku "24 / 78% / 5" — kelihatan meyakinkan padahal
    punya orang lain. Sekarang dari sesi user yang beneran udah dikerjain
    (yang ada skornya); yang belum dikerjain gak diitung biar akurasinya jujur. */
-interface RingkasUpload { dianalisis: number; akurasi: number | null; streak: number }
 
-function kartuUpload(r: RingkasUpload) {
-  return [
-    { label: "Soal dianalisis",   value: String(r.dianalisis), suffix: "",   color: "var(--text-secondary)", glow: "rgba(74,122,191,0.15)" },
-    { label: "Akurasi rata-rata", value: r.akurasi != null ? `${r.akurasi}%` : "—", suffix: "", color: "var(--success)", glow: "rgba(94,168,122,0.15)" },
-    { label: "Hari streak",       value: String(r.streak),     suffix: "🔥", color: "var(--primary)", glow: "rgba(224,123,74,0.15)" },
-  ];
-}
 
-const recentAnalysis = [
-  { kanji: "文法", label: "N2 文法問題 #14", date: "14 Apr", color: "var(--info)" },
-  { kanji: "読解", label: "N2 読解問題 #8",  date: "12 Apr", color: "var(--success)" },
-  { kanji: "語彙", label: "N2 語彙問題 #22", date: "10 Apr", color: "var(--n1)" },
-  { kanji: "文法", label: "N2 文法問題 #9",  date: "8 Apr",  color: "var(--primary)" },
-];
 
-const photoTips = [
-  { no: 1, text: "Foto dalam pencahayaan yang terang" },
-  { no: 2, text: "Pastikan teks terbaca jelas" },
-  { no: 3, text: "Satu soal per foto lebih akurat" },
-  { no: 4, text: "Hindari bayangan di atas teks" },
-];
 
 /* ─── Upload State ──────────────────────────────────────────── */
-function UploadView({ onUpload, onCamera, onOpenResult, error, ringkas }: { onUpload: () => void; onCamera: () => void; onOpenResult: () => void; error?: string | null; ringkas: RingkasUpload }) {
-  const hasHistory = recentAnalysis.length > 0;
-  return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5 md:py-7 pb-20 lg:pb-7 relative">
-
-      {/* Ambient glow blobs */}
-      <div className="pointer-events-none absolute top-0 left-1/3 w-[400px] h-[300px] opacity-[0.06] blur-[70px]"
-        style={{ background: "radial-gradient(circle,var(--info),transparent 70%)" }} />
-      <div className="pointer-events-none absolute top-10 right-0 w-[250px] h-[250px] opacity-[0.04] blur-[60px]"
-        style={{ background: "radial-gradient(circle,var(--n1),transparent 70%)" }} />
-
-      {/* Page title */}
-      <div className="mb-5 relative">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_var(--success)]" />
-          <span className="text-[10px] tracking-widest text-[var(--success)] font-semibold"
-            style={{ fontFamily: "var(--font-space)" }}>
-            AI ENGINE AKTIF · ANALISIS FOTO
-          </span>
-        </div>
-        {error && (
-          <div className="mb-4 flex items-start gap-3 px-4 py-3 rounded-2xl text-sm animate-fade-in"
-            style={{ background: "rgba(192,80,80,0.08)", border: "1px solid rgba(192,80,80,0.18)", backdropFilter: "blur(8px)" }}>
-            <span className="text-lg shrink-0">⚠️</span>
-            <div>
-              <p className="font-semibold text-red-300 mb-0.5" style={{ fontFamily: "var(--font-space)", fontSize: "11px" }}>ANALISIS GAGAL</p>
-              <p className="text-[var(--danger)] leading-relaxed">{error}</p>
-            </div>
-          </div>
-        )}
-        <h1 className="text-[2.4rem] font-extrabold leading-tight text-[var(--text-primary)]"
-          style={{ fontFamily: "var(--font-jakarta)" }}>
-          Upload Soalmu,
-          <br />
-          <span style={{
-            background: "linear-gradient(135deg,var(--text-primary) 0%,var(--text-secondary) 50%,var(--n1) 100%)",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}>
-            Sensei yang Jawab.
-          </span>
-        </h1>
-      </div>
-
-      {/* Stats — compact inline row with color accents */}
-      <div className="flex items-center gap-2 md:gap-3 mb-5 overflow-x-auto pb-1">
-        {kartuUpload(ringkas).map(({ label, value, suffix, color, glow }) => (
-          <div key={label} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl relative overflow-hidden"
-            style={{ background: "var(--surface)" }}>
-            <div className="absolute inset-0 opacity-60"
-              style={{ background: `radial-gradient(circle at left,${glow},transparent 80%)` }} />
-            <p className="relative text-lg font-extrabold leading-none" style={{ color, fontFamily: "var(--font-jakarta)" }}>
-              {value}{suffix && <span className="ml-1">{suffix}</span>}
-            </p>
-            <p className="relative text-[11px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Drop zone — tall focal point */}
-      <button
-        onClick={onUpload}
-        className="group w-full rounded-2xl flex flex-col items-center justify-center gap-4 transition-all hover:brightness-110 mb-5 relative overflow-hidden"
-        style={{
-          background: "var(--surface)",
-          border: "1.5px dashed rgba(94,168,122,0.35)",
-          minHeight: "172px",
-          boxShadow: "0 0 40px rgba(94,168,122,0.06) inset",
-        }}
-      >
-        {/* ambient glow */}
-        <div className="absolute inset-0 opacity-100"
-          style={{ background: "radial-gradient(ellipse at 50% 120%,rgba(94,168,122,0.07),transparent 65%)" }} />
-        {/* hover boost */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: "radial-gradient(circle at 50% 50%,rgba(94,168,122,0.09),transparent 70%)" }} />
-
-        <Upload className="relative size-8 text-[var(--success)] opacity-80" />
-
-        <div className="relative text-center">
-          <p className="font-bold text-[var(--text-primary)] mb-1" style={{ fontFamily: "var(--font-jakarta)" }}>
-            Seret & lepas foto soal JLPT di sini
-          </p>
-          <p className="text-xs text-[var(--text-tertiary)]">PNG, JPG, PDF, Word (.docx) · Maks. 10MB</p>
-        </div>
-
-        <div className="relative flex items-center gap-2">
-          <span className="text-[11px] px-5 py-1.5 rounded-full font-bold text-[var(--bg)]"
-            style={{ background: "linear-gradient(135deg,var(--text-primary),var(--text-secondary))", fontFamily: "var(--font-space)" }}>
-            PILIH FILE
-          </span>
-          <span onClick={e => { e.stopPropagation(); onCamera(); }}
-            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full font-medium text-[var(--text-secondary)] border cursor-pointer hover:text-[var(--text-primary)] hover:border-white/20 transition-colors"
-            style={{ borderColor: "rgba(187,198,226,0.12)", fontFamily: "var(--font-space)" }}>
-            <Camera className="size-3.5" /> KAMERA
-          </span>
-        </div>
-      </button>
-
-      {/* Bottom 2-col */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        {/* Riwayat analisis */}
-        <div className="rounded-2xl p-5" style={{ background: "var(--surface)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-bold text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
-              RIWAYAT ANALISIS TERBARU
-            </p>
-            <button className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-              style={{ fontFamily: "var(--font-space)" }}>
-              SEMUA <ArrowUpRight className="size-3" />
-            </button>
-          </div>
-          {hasHistory ? (
-            <div className="flex flex-col gap-2">
-              {recentAnalysis.map(({ kanji, label, date, color }) => (
-                <button key={label}
-                  onClick={onOpenResult}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all hover:brightness-110 group"
-                  style={{ background: "var(--surface-2)" }}>
-                  <div className="size-9 rounded-lg flex items-center justify-center text-sm font-black shrink-0"
-                    style={{ background: `${color}20`, color, fontFamily: "var(--font-jakarta)" }}>
-                    {kanji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-[var(--text-primary)] truncate"
-                      style={{ fontFamily: "var(--font-jakarta)" }}>{label}</p>
-                  </div>
-                  <span className="text-[10px] text-[var(--text-tertiary)] shrink-0 group-hover:text-[var(--text-primary)] transition-colors"
-                    style={{ fontFamily: "var(--font-space)" }}>{date}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 gap-3">
-              <div className="size-12 rounded-2xl flex items-center justify-center text-2xl"
-                style={{ background: "var(--surface-2)" }}>📭</div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] text-center"
-                style={{ fontFamily: "var(--font-jakarta)" }}>Belum ada soal yang dianalisis</p>
-              <p className="text-[11px] text-[var(--text-dim)] text-center">Upload foto pertamamu di atas!</p>
-            </div>
-          )}
-        </div>
-
-        {/* Kolom kanan: Tips + XP Progress */}
-        <div className="flex flex-col gap-4">
-
-          {/* Tips foto */}
-          <div className="rounded-2xl p-5" style={{ background: "var(--surface)" }}>
-            <p className="text-xs font-bold text-[var(--text-tertiary)] mb-3" style={{ fontFamily: "var(--font-space)" }}>
-              TIPS FOTO YANG BAGUS
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {photoTips.map(({ no, text }) => (
-                <div key={no} className="rounded-xl p-3 flex flex-col gap-2"
-                  style={{ background: "var(--surface-2)" }}>
-                  <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded mr-1.5 text-[10px] font-bold text-[var(--bg)] align-middle"
-                      style={{ background: "linear-gradient(135deg,var(--text-primary),var(--text-secondary))", fontFamily: "var(--font-space)", flexShrink: 0 }}>
-                      {no}
-                    </span>
-                    {text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* XP Progress N2 */}
-          <div className="rounded-2xl p-5 relative overflow-hidden flex-1"
-            style={{ background: "var(--surface)" }}>
-            <div className="absolute inset-0 opacity-15"
-              style={{ background: "radial-gradient(circle at top right,var(--info),transparent 65%)" }} />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs font-bold text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
-                  KUOTA ANALISIS
-                </p>
-                <span className="text-[9px] px-2 py-0.5 rounded-full font-bold"
-                  style={{ background: "var(--surface-3)", color: "var(--info)", fontFamily: "var(--font-space)" }}>
-                  PRO
-                </span>
-              </div>
-
-              <p className="text-3xl font-extrabold text-[var(--text-primary)] mt-2 mb-0.5"
-                style={{ fontFamily: "var(--font-jakarta)" }}>
-                Unlimited
-              </p>
-
-              <p className="text-[11px] text-[var(--text-secondary)]">Analisis foto sepuasnya — gak ada batas harian.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Setup State ───────────────────────────────────────────── */
-function SetupView({
-  onStart, onBack, files, onAddFile, onCamera, onRemoveFile,
-}: {
-  onStart: (level: Level, category: Category) => void;
-  onBack: () => void;
-  files: FileData[];
-  onAddFile: () => void;
-  onCamera: () => void;
-  onRemoveFile: (idx: number) => void;
-}) {
-  const [level,    setLevel]    = useState<Level | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
-
-  const levels: Level[]       = ["N1", "N2", "N3", "N4", "N5"];
-  const categories: { value: Category; label: string; sub: string }[] = [
-    { value: "文法", label: "文法", sub: "Tata Bahasa" },
-    { value: "語彙", label: "語彙", sub: "Kosakata" },
-    { value: "文字", label: "文字", sub: "Kanji" },
-    { value: "読解", label: "読解", sub: "Reading" },
-    { value: "ai",   label: "🤖",  sub: "AI deteksi" },
-  ];
-
-  const canStart = level !== null && category !== null && files.length > 0;
-
-  return (
-    <div className="flex-1 flex items-center justify-center px-8 py-10 relative">
-      {/* Ambient */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.05] blur-[80px]"
-        style={{ background: "radial-gradient(circle at 40% 40%,var(--info),transparent 60%)" }} />
-
-      <div className="relative w-full max-w-lg flex flex-col gap-6">
-
-        {/* Back */}
-        <button onClick={onBack}
-          className="flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors self-start"
-          style={{ fontFamily: "var(--font-space)" }}>
-          <ChevronLeft className="size-3.5" /> HAPUS SEMUA & ULANG
-        </button>
-
-        {/* Photos strip — multiple thumbnails + add button */}
-        <div className="p-4 rounded-2xl flex flex-col gap-3"
-          style={{ background: "var(--surface)", border: "1px solid rgba(255,255,255,0.05)" }}>
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>
-              FOTO SOAL
-            </p>
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-              style={{ background: "rgba(107,156,218,0.15)", color: "var(--text-secondary)", fontFamily: "var(--font-space)" }}>
-              {files.length} {files.some(f => f.mimeType.includes("wordprocessingml")) ? "bagian" : "foto"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {files.map((f, idx) => (
-              <div key={idx} className="relative shrink-0 group/thumb">
-                <div className="size-16 rounded-xl overflow-hidden flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg,var(--surface),var(--bg))" }}>
-                  {f.url
-                    ? <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
-                    : f.mimeType.includes("wordprocessingml")
-                      ? <span className="text-[10px] font-bold text-[var(--success)] text-center px-1">DOC</span>
-                      : <span className="text-[10px] font-bold text-[var(--text-secondary)] text-center px-1">PDF</span>
-                  }
-                </div>
-                <button
-                  onClick={() => onRemoveFile(idx)}
-                  className="absolute -top-1.5 -right-1.5 size-4.5 rounded-full flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity"
-                  style={{ background: "var(--danger)" }}>
-                  <X className="size-2.5 text-white" />
-                </button>
-                <span className="absolute bottom-0.5 left-0 right-0 text-center text-[8px] text-white/60 bg-black/40 rounded-b-xl px-1 truncate"
-                  style={{ fontFamily: "var(--font-space)" }}>
-                  {idx + 1}
-                </span>
-              </div>
-            ))}
-            {/* Add more button */}
-            <button
-              onClick={onAddFile}
-              className="size-16 rounded-xl shrink-0 flex flex-col items-center justify-center gap-1 transition-all hover:brightness-110"
-              style={{ background: "var(--surface-2)", border: "1.5px dashed rgba(107,156,218,0.3)" }}>
-              <span className="text-lg text-[var(--text-tertiary)]">+</span>
-              <span className="text-[8px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>TAMBAH</span>
-            </button>
-            {/* Camera button */}
-            <button
-              onClick={onCamera}
-              className="size-16 rounded-xl shrink-0 flex flex-col items-center justify-center gap-1 transition-all hover:brightness-110"
-              style={{ background: "var(--surface-2)", border: "1.5px dashed rgba(107,156,218,0.2)" }}>
-              <Camera className="size-5 text-[var(--text-tertiary)]" />
-              <span className="text-[8px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>KAMERA</span>
-            </button>
-          </div>
-          <p className="text-[11px] text-[var(--success)]" style={{ fontFamily: "var(--font-manrope)" }}>
-            <Check className="size-3 inline mr-1" />
-            {files.length === 1
-              ? `${files[0].name} berhasil diunggah`
-              : files.some(f => f.mimeType.includes("wordprocessingml"))
-                ? `Dokumen dibagi menjadi ${files.length} bagian — setiap bagian dianalisis terpisah`
-                : `${files.length} foto siap dianalisis bersama`}
-          </p>
-        </div>
-
-        {/* Level */}
-        <div>
-          <p className="text-xs font-bold text-[var(--text-primary)] mb-3"
-            style={{ fontFamily: "var(--font-space)" }}>
-            INI SOAL LEVEL BERAPA?
-          </p>
-          <div className="flex gap-2">
-            {levels.map(l => (
-              <button key={l} onClick={() => setLevel(l)}
-                className="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
-                style={level === l
-                  ? { background: "linear-gradient(135deg,var(--surface-2),var(--surface-3))", color: "var(--text-primary)", border: "1px solid rgba(107,156,218,0.4)" }
-                  : { background: "var(--surface)", color: "var(--text-tertiary)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                {l}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Category */}
-        <div>
-          <p className="text-xs font-bold text-[var(--text-primary)] mb-1"
-            style={{ fontFamily: "var(--font-space)" }}>
-            KATEGORI SOALNYA APA?
-          </p>
-          <p className="text-[11px] text-[var(--text-tertiary)] mb-3">
-            Kalau tidak tahu, pilih &ldquo;AI deteksi&rdquo; — Sensei yang akan tentukan sendiri.
-          </p>
-          <div className="flex gap-2">
-            {categories.map(({ value, label, sub }) => (
-              <button key={value} onClick={() => setCategory(value)}
-                className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl transition-all"
-                style={category === value
-                  ? { background: value === "ai" ? "rgba(166,123,212,0.15)" : "rgba(107,156,218,0.12)", color: value === "ai" ? "var(--n1)" : "var(--text-secondary)", border: `1px solid ${value === "ai" ? "rgba(166,123,212,0.4)" : "rgba(107,156,218,0.35)"}` }
-                  : { background: "var(--surface)", color: "var(--text-tertiary)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                <span className="text-base font-black"
-                  style={{ fontFamily: "var(--font-jakarta)" }}>{label}</span>
-                <span className="text-[9px]" style={{ fontFamily: "var(--font-space)" }}>{sub}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* CTA */}
-        <button
-          onClick={() => canStart && onStart(level!, category!)}
-          disabled={!canStart}
-          className="w-full py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
-          style={canStart
-            ? { background: "linear-gradient(135deg,var(--surface-2),var(--surface-3))", color: "var(--text-primary)", boxShadow: "0 0 20px rgba(74,122,191,0.25)" }
-            : { background: "var(--surface)", color: "var(--text-dim)", cursor: "not-allowed" }}>
-          <Sparkles className="size-4" />
-          {canStart
-            ? `Analisis Soal ${level} · ${category === "ai" ? "AI Deteksi Kategori" : category}`
-            : "Pilih level dan kategori dulu"}
-        </button>
-
-      </div>
-    </div>
-  );
-}
 
 /* ─── Analyzing State ───────────────────────────────────────── */
-const waitingMessages = [
-  { icon: "📖", text: "Nih sambil nunggu, ulang hafalan kosakata kamu yang ada di kiri! Itu kata-kata dari kamus kamu sendiri lho." },
-  { icon: "☕", text: "Santai dulu, ini emang butuh waktu. Soalnya lagi dibedah satu per satu sama Sensei." },
-  { icon: "📚", text: "Banyak soal = analisis makin panjang. Tapi hasilnya juga makin lengkap, janji!" },
-  { icon: "🎴", text: "Sambil nunggu, review hafalan kamu di kiri yuk — kata-kata itu dari kamus yang udah kamu kumpulin!" },
-  { icon: "🤖", text: "AI lagi nulis penjelasan detail tiap soal — ini yang bikin lama, tapi bermanfaat banget." },
-  { icon: "💪", text: "Sabar adalah kunci belajar JLPT. Latihan terus, pasti tembus! Sambil tunggu, hafal dulu." },
-  { icon: "🐢", text: "Pelan tapi pasti — persis kayak kamu belajar kanji. Manfaatin waktu ini buat review vocab!" },
-  { icon: "🎯", text: "Klik NEXT di kartu kiri buat ganti kata. Itu semua dari kamus kamu — gratis ulangan!" },
-];
 
-function AnalyzingView({ imageUrl, currentIdx = 1, total = 1, onCancel }: { imageUrl?: string; currentIdx?: number; total?: number; onCancel?: () => void }) {
-  const [stepsDone, setStepsDone] = useState(1);
-  const [elapsed,   setElapsed]   = useState(0);
-  const [msgIdx,    setMsgIdx]    = useState(0);
-
-  /* Animate steps finishing over time */
-  useEffect(() => {
-    const t  = setTimeout(() => setStepsDone(2), 4000);
-    const t2 = setTimeout(() => setStepsDone(3), 9000);
-    const t3 = setTimeout(() => setStepsDone(4), 14000);
-    return () => { clearTimeout(t); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
-
-  /* Timer: count up every second */
-  useEffect(() => {
-    const t = setInterval(() => setElapsed(s => s + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  /* Rotate patience message every 18 s */
-  useEffect(() => {
-    const t = setInterval(() => setMsgIdx(i => (i + 1) % waitingMessages.length), 18000);
-    return () => clearInterval(t);
-  }, []);
-
-  const steps = [
-    "Membaca teks soal...",
-    "Mendeteksi level JLPT...",
-    "Menyusun penjelasan detail...",
-    "Deteksi Multi-Soal...",
-  ];
-
-  const fakeProgress = [15, 35, 65, 90][Math.min(stepsDone, 3)];
-  const mm  = String(Math.floor(elapsed / 60)).padStart(2, "0");
-  const ss  = String(elapsed % 60).padStart(2, "0");
-  const msg = waitingMessages[msgIdx];
-
-  return (
-    <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto lg:overflow-hidden">
-
-      {/* ── Top/Left: image preview + flashcard ── */}
-      <div className="flex-1 flex flex-col items-center justify-start gap-5 p-4 md:p-8 relative overflow-hidden lg:overflow-visible">
-        {/* ambient */}
-        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] opacity-[0.04] blur-[80px]"
-          style={{ background: "radial-gradient(circle,var(--info),transparent 70%)" }} />
-
-        {/* Image preview — real uploaded photo */}
-        <div className="w-full max-w-[260px] aspect-[3/4] rounded-2xl relative overflow-hidden shrink-0"
-          style={{ background: "linear-gradient(135deg,var(--surface),var(--bg))" }}>
-          {imageUrl
-            ? <img src={imageUrl} alt="soal" className="w-full h-full object-cover" />
-            : (
-              <>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-7xl font-black text-white/5"
-                    style={{ fontFamily: "var(--font-jakarta)" }}>僕は</span>
-                </div>
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="absolute w-3/4 h-px mx-auto left-0 right-0"
-                    style={{ top: `${20 + i * 10}%`, background: "rgba(187,198,226,0.05)" }} />
-                ))}
-              </>
-            )
-          }
-          {/* scan line overlay */}
-          <div className="analyzing-scan-line" />
-        </div>
-
-        {/* ── Kamus Flashcard ── */}
-        <div className="w-full max-w-[340px]">
-          <KamusFlashCard />
-        </div>
-      </div>
-
-      {/* ── Bottom/Right: progress panel ── */}
-      <div className="w-full lg:w-[360px] shrink-0 flex flex-col justify-center gap-7 px-4 md:px-8 py-6 md:py-10 lg:border-l"
-        style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-
-        {/* heading */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_var(--success)]" />
-            <span className="text-[11px] text-[var(--success)] font-semibold"
-              style={{ fontFamily: "var(--font-space)" }}>AI ENGINE AKTIF</span>
-            {total > 1 && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                style={{ background: "rgba(107,156,218,0.15)", color: "var(--text-secondary)", fontFamily: "var(--font-space)" }}>
-                FOTO {currentIdx}/{total}
-              </span>
-            )}
-          </div>
-          <h2 className="text-[1.7rem] font-extrabold text-[var(--text-primary)] leading-tight"
-            style={{ fontFamily: "var(--font-jakarta)" }}>
-            {total > 1 ? `Foto ${currentIdx} dari ${total}` : "Sensei sedang"}
-            <br />
-            <span style={{
-              background: "linear-gradient(135deg,var(--text-primary),var(--text-secondary))",
-              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            }}>
-              menganalisis...
-            </span>
-          </h2>
-        </div>
-
-        {/* Timer + kata counter */}
-        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-          style={{ background: "var(--surface)" }}>
-          <div className="flex flex-col">
-            <span className="text-[10px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>WAKTU BERJALAN</span>
-            <span className="text-2xl font-black tabular-nums"
-              style={{ fontFamily: "var(--font-space)", color: elapsed > 60 ? "var(--primary)" : "var(--text-secondary)" }}>
-              {mm}:{ss}
-            </span>
-          </div>
-          <div className="ml-auto flex flex-col items-end">
-            <span className="text-[10px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-space)" }}>FOTO</span>
-            <span className="text-2xl font-black text-[var(--text-secondary)]"
-              style={{ fontFamily: "var(--font-space)" }}>
-              {currentIdx}/{total}
-            </span>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div>
-          <div className="flex justify-between text-[11px] mb-2"
-            style={{ fontFamily: "var(--font-space)" }}>
-            <span className="text-[var(--text-tertiary)]">Status Pemrosesan</span>
-            <span className="text-[var(--text-primary)] font-semibold">{Math.round(fakeProgress)}%</span>
-          </div>
-          <div className="h-1.5 rounded-full" style={{ background: "var(--surface-2)" }}>
-            <div className="h-1.5 rounded-full transition-all duration-1000"
-              style={{ width: `${fakeProgress}%`, background: "linear-gradient(90deg,var(--info),var(--text-primary))" }} />
-          </div>
-        </div>
-
-        {/* Steps */}
-        <div className="flex flex-col gap-3">
-          {steps.map((label, i) => {
-            const done = i < stepsDone;
-            const active = i === stepsDone;
-            return (
-              <div key={i} className="flex items-center gap-3">
-                {done
-                  ? <CheckCircle2 className="size-4 text-[var(--success)] shrink-0" />
-                  : active
-                    ? <Loader2 className="size-4 text-[var(--info)] shrink-0 animate-spin" />
-                    : <Circle className="size-4 text-[var(--text-dim)] shrink-0" />}
-                <span className={`text-sm ${done ? "text-[var(--text-primary)]" : active ? "text-[var(--text-secondary)]" : "text-[var(--text-tertiary)]"}`}
-                  style={{ fontFamily: "var(--font-manrope)" }}>
-                  {label}
-                </span>
-                {active && (
-                  <span className="ml-auto text-[10px] text-[var(--info)] animate-pulse"
-                    style={{ fontFamily: "var(--font-space)" }}>
-                    PROSES...
-                  </span>
-                )}
-              </div>
-            );
-          })}
-
-          {/* rotating patience message */}
-          <div className="mt-1 rounded-xl p-3 transition-all duration-500"
-            style={{ background: "var(--surface-2)", border: "1px solid rgba(107,156,218,0.08)" }}>
-            <p className="text-base mb-1">{msg.icon}</p>
-            <p className="text-[12px] text-[var(--text-primary)] leading-relaxed"
-              style={{ fontFamily: "var(--font-manrope)" }}>
-              {msg.text}
-            </p>
-            <div className="flex gap-1 mt-2.5">
-              {waitingMessages.map((_, i) => (
-                <div key={i} className="h-0.5 flex-1 rounded-full transition-all duration-300"
-                  style={{ background: i === msgIdx ? "var(--text-secondary)" : "rgba(255,255,255,0.06)" }} />
-              ))}
-            </div>
-          </div>
-
-          {onCancel && (
-            <button onClick={onCancel}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold transition-all hover:brightness-110"
-              style={{ background: "rgba(220,80,80,0.1)", color: "var(--danger)", border: "1px solid rgba(220,80,80,0.2)", fontFamily: "var(--font-space)" }}>
-              <X className="size-3.5" /> BATAL ANALISIS
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Result State ──────────────────────────────────────────── */
 /* Palet coret — sengaja tanpa oren (warna brand) biar gak ketuker.
@@ -1153,7 +573,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
   /* Re-photo: upload a new image, send to /api/analisis with the session's
      level/category, append returned questions to current session. */
-  const addPhotoRef = useRef<HTMLInputElement>(null);
   const [addingPhoto, setAddingPhoto] = useState(false);
 
   /* Ensure we know the session level/category — re-fetch lazily if state is empty
@@ -1254,12 +673,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     }
   };
 
-  const onAddPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    handleAddFromPhoto(file);
-    e.target.value = "";
-  };
 
   /* Copy text to clipboard, with toast confirmation */
   const copyToClipboard = async (text: string, label = "Tersalin!") => {
@@ -1837,7 +1250,17 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         }),
       });
       const json = await res.json();
-      setChatMsgs([...newMsgs, { role: "model", text: json.reply || "Maaf, gagal membalas." }]);
+
+      /* 429 = jatah harian habis, dan route-nya udah ngirim pesan yang enak
+         dibaca. Sebelumnya pesan itu dibuang dan diganti "gagal membalas",
+         jadi orang gak pernah tau kenapa — dia cuma mikir aplikasinya rusak. */
+      if (res.status === 429) {
+        setChatMsgs([...newMsgs, { role: "model", text: json.error, kuotaHabis: true }]);
+      } else if (!res.ok) {
+        setChatMsgs([...newMsgs, { role: "model", text: json.error || "Maaf, gagal membalas." }]);
+      } else {
+        setChatMsgs([...newMsgs, { role: "model", text: json.reply || "Maaf, gagal membalas." }]);
+      }
     } catch {
       setChatMsgs([...newMsgs, { role: "model", text: "Maaf, terjadi kesalahan. Coba lagi." }]);
     } finally {
@@ -1918,9 +1341,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 {timerOn ? "ON" : "OFF"}
               </button>
             </div>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={onReset}>
-              <Upload size={14} /> Upload Baru
-            </button>
             <button
               type="button"
               className="btn btn-sm af-exit-btn"
@@ -2338,13 +1758,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
         {/* ── Tambah soal v2: manual / dari file ── */}
         <div className="af-add-row">
-          <input
-            ref={addPhotoRef}
-            type="file"
-            accept="image/*,application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="hidden"
-            onChange={onAddPhotoChange}
-          />
           <button
             type="button"
             className="af-add-btn manual"
@@ -2352,17 +1765,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             disabled={addingPhoto}
           >
             <Plus size={14} strokeWidth={2.2} /> Tambah soal manual
-          </button>
-          <button
-            type="button"
-            className="af-add-btn from-file"
-            onClick={() => addPhotoRef.current?.click()}
-            disabled={addingPhoto}
-            title="Upload foto/PDF/Word — AI analisis & append ke sesi ini"
-          >
-            {addingPhoto
-              ? <><Loader2 size={14} className="animate-spin" /> Menganalisis...</>
-              : <><Upload size={14} strokeWidth={1.8} /> Tambah dari file</>}
           </button>
         </div>
         </div>
@@ -2463,8 +1865,13 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             ) : (
               <div className="sensei-msgs">
                 {chatMsgs.map((m, i) => (
-                  <div key={i} className={`sensei-msg ${m.role === "user" ? "user" : "bot"}`}>
+                  <div key={i} className={`sensei-msg ${m.role === "user" ? "user" : "bot"}${m.kuotaHabis ? " kuota" : ""}`}>
                     {m.text}
+                    {/* Ajakan upgrade cuma nempel di pesan jatah-habis, dan tanpa
+                        desakan — orangnya lagi belajar, bukan lagi belanja. */}
+                    {m.kuotaHabis && (
+                      <a href="/premium" className="sensei-kuota-link">Lihat paket Pro →</a>
+                    )}
                   </div>
                 ))}
                 {chatLoading && (
@@ -3132,109 +2539,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 }
 
 /* ─── Camera Modal (desktop webcam) ─────────────────────────── */
-function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void; onClose: () => void }) {
-  const videoRef  = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [camError, setCamError] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-          setReady(true);
-        }
-      } catch {
-        setCamError("Tidak bisa mengakses kamera. Periksa izin browser.");
-      }
-    }
-    startCamera();
-    return () => { streamRef.current?.getTracks().forEach(t => t.stop()); };
-  }, []);
-
-  const capture = () => {
-    const video  = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-    canvas.width  = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")?.drawImage(video, 0, 0);
-    canvas.toBlob(blob => {
-      if (!blob) return;
-      const file = new File([blob], `kamera-${Date.now()}.jpg`, { type: "image/jpeg" });
-      onCapture(file);
-      onClose();
-    }, "image/jpeg", 0.92);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
-      <div className="relative w-full max-w-md rounded-3xl overflow-hidden"
-        style={{ background: "rgba(8,16,36,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-2">
-            <Camera className="size-4 text-[var(--text-secondary)]" />
-            <span className="text-sm font-bold text-[var(--text-primary)]"
-              style={{ fontFamily: "var(--font-jakarta)" }}>Ambil Foto dengan Kamera</span>
-          </div>
-          <button onClick={onClose}
-            className="size-7 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors">
-            <X className="size-4 text-[var(--text-secondary)]" />
-          </button>
-        </div>
-
-        {/* Video / error */}
-        <div className="relative bg-black" style={{ aspectRatio: "4/3" }}>
-          {camError ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center">
-              <Camera className="size-10 text-[var(--text-tertiary)]" />
-              <p className="text-sm text-[var(--text-secondary)]" style={{ fontFamily: "var(--font-manrope)" }}>{camError}</p>
-            </div>
-          ) : (
-            <>
-              <video ref={videoRef} autoPlay playsInline muted
-                className="w-full h-full object-cover" />
-              {!ready && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="size-8 text-[var(--info)] animate-spin" />
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <canvas ref={canvasRef} className="hidden" />
-
-        {/* Footer */}
-        <div className="px-5 py-5 flex items-center justify-center gap-4">
-          <button onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-            style={{ background: "var(--surface-2)", fontFamily: "var(--font-space)" }}>
-            BATAL
-          </button>
-          <button onClick={capture} disabled={!ready || !!camError}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
-            style={{
-              background: ready && !camError ? "linear-gradient(135deg,var(--surface-2),var(--surface-3))" : "var(--surface-2)",
-              color: ready && !camError ? "var(--text-primary)" : "var(--text-tertiary)",
-              fontFamily: "var(--font-space)",
-            }}>
-            <Camera className="size-4" /> AMBIL FOTO
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Page ──────────────────────────────────────────────────── */
 export default function AnalisisFoto() {
@@ -3256,47 +2560,22 @@ export default function AnalisisFoto() {
   const [result,              setResult]              = useState<AIResult | null>(null);
   const [resultLevel,         setResultLevel]         = useState<Level | null>(null);
   const [resultCategory,      setResultCategory]      = useState<Category | null>(null);
-  const [apiError,            setApiError]            = useState<string | null>(null);
   const [chatMsgs,            setChatMsgs]            = useState<ChatMsg[]>([]);
   const [savedSessionId,      setSavedSessionId]      = useState<string | null>(null);
   const [loadingSession,      setLoadingSession]      = useState(false);
   const [isReviewMode,        setIsReviewMode]        = useState(false);
-  const [currentAnalyzingIdx, setCurrentAnalyzingIdx] = useState(0);
-  const abortRef       = useRef<AbortController | null>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const camInputRef    = useRef<HTMLInputElement>(null);
-  const [camModalOpen, setCamModalOpen] = useState(false);
-  const [userInitial, setUserInitial] = useState("Y");
+  /* Dari useUserStats — sumber yang sama dipakai halaman lain. Efek yang dulu
+     ngisi ini kebuang bareng kartu ringkasan upload; tanpa ini avatarnya bakal
+     nyangkut di "Y" buat semua orang. */
+  const userInitial = stats.initial;
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
      profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
      halaman nampilin angka beku yang sama. */
   const streak = stats.streak;
-  const [ringkas, setRingkas] = useState<RingkasUpload>({ dianalisis: 0, akurasi: null, streak: 0 });
 
   /* Load user info for v2 UserBar */
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [sesi] = await Promise.all([
-        supabase.from("sessions").select("total, score").eq("user_id", user.id),
-      ]);
-
-      // Cuma sesi yang udah ada skornya — sesi bank soal yang belum dikerjain
-      // kalau ikut diitung bikin akurasinya anjlok palsu.
-      const dikerjain = (sesi.data ?? []).filter(x => x.score != null && (x.total ?? 0) > 0);
-      const totalSoal = dikerjain.reduce((n, x) => n + (x.total ?? 0), 0);
-      const totalBenar = dikerjain.reduce((n, x) => n + (x.score ?? 0), 0);
-      setRingkas({
-        dianalisis: totalSoal,
-        akurasi: totalSoal > 0 ? Math.round((totalBenar / totalSoal) * 100) : null,
-        // Sumber yang sama kayak header — bukan profiles.streak yang beku.
-        streak: stats.streak,
-      });
-    })();
-  }, []);
 
   /* Split text at paragraph boundaries, max ~4000 chars per chunk */
   const chunkDocxText = (text: string, maxChars = 4000): string[] => {
@@ -3431,14 +2710,6 @@ export default function AnalisisFoto() {
   };
 
   /* Camera button: mobile → native camera, desktop → getUserMedia modal */
-  const handleCameraClick = () => {
-    const isMobile = /Mobi|Android|iPad|iPhone/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
-    if (isMobile) {
-      camInputRef.current?.click();
-    } else {
-      setCamModalOpen(true);
-    }
-  };
 
   /* Halaman ini sekarang CUMA player buat ngerjain soal (via ?session=<id>).
      Fitur upload/analisis-foto udah dibuang — tanpa session → balik ke Materi. */
@@ -3490,7 +2761,6 @@ export default function AnalisisFoto() {
      kejadian lagi, termasuk buat view yang ditambahin nanti. */
   const sedangMuat = fase === "cek" || fase === "alih" || loadingSession;
 
-  const handleUpload = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -3499,130 +2769,11 @@ export default function AnalisisFoto() {
     e.target.value = "";
   };
 
-  const handleCancel = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setStage("upload");
-    setApiError(null);
-  };
 
-  const handleStart = async (level: Level, category: Category) => {
-    if (files.length === 0) return;
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-    setStage("analyzing");
-    setApiError(null);
-    setCurrentAnalyzingIdx(1);
-    setResultLevel(level);
-    setResultCategory(category);
 
-    const allQuestions: AIQuestion[] = [];
-    const allVocab: VocabItem[] = [];
-    let mainTitle = "";
-
-    try {
-      for (let i = 0; i < files.length; i++) {
-        setCurrentAnalyzingIdx(i + 1);
-        const fd = files[i];
-        const res = await fetch("/api/analisis", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: fd.base64, mimeType: fd.mimeType, level, category, textContent: fd.textContent }),
-          signal: ctrl.signal,
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || "Analisis gagal");
-        const data: AIResult = json.data;
-        if (i === 0) mainTitle = data.title;
-        allQuestions.push(...data.questions.map(q => ({ ...q, ...sanitizeQuestion(q) })));
-        if (data.vocabulary) allVocab.push(...data.vocabulary);
-      }
-
-      // Deduplicate vocab by word
-      const uniqueVocab = Array.from(new Map(allVocab.map(v => [v.word, v])).values());
-
-      const combinedResult: AIResult = {
-        title: files.length > 1 ? `${mainTitle} (+${files.length - 1} foto)` : mainTitle,
-        vocabulary: uniqueVocab,
-        questions: allQuestions,
-      };
-
-      setResult(combinedResult);
-      setChatMsgs([]);
-      setStage("result");
-
-      // Save to Supabase (fire-and-forget)
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const categoryForDb = category === "ai" ? "AI" : category;
-          const { data: session } = await supabase
-            .from("sessions")
-            .insert({
-              user_id: user.id,
-              level,
-              category: categoryForDb,
-              title: combinedResult.title,
-              total: combinedResult.questions.length,
-              ai_result: combinedResult,
-            })
-            .select("id")
-            .single();
-
-          if (session) {
-            setSavedSessionId(session.id);
-            await supabase.from("questions").insert(
-              combinedResult.questions.map(q => ({
-                session_id: session.id,
-                user_id: user.id,
-                question: q.question,
-                options: q.options,
-                correct_ans: q.correct,
-                explanation: q.explanation,
-              }))
-            );
-          }
-
-          // Auto-save vocabulary dengan furigana ke saved_words
-          if (uniqueVocab.length > 0) {
-            await supabase.from("saved_words").upsert(
-              uniqueVocab.map(v => ({
-                user_id: user.id,
-                kanji: v.word,
-                reading: v.reading,
-                meaning: v.meaning,
-                example: v.example || null,
-                level: v.jlpt_level || null,
-              })),
-              { onConflict: "user_id,kanji", ignoreDuplicates: true }
-            );
-          }
-        }
-      } catch {
-        // saving failed silently
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return; // user cancelled
-      setApiError(err instanceof Error ? err.message : "Terjadi kesalahan");
-      setStage("upload");
-    } finally {
-      abortRef.current = null;
-    }
-  };
-
-  const handleReset = () => {
-    setStage("upload");
-    setFiles([]);
-    setResult(null);
-    setApiError(null);
-    setChatMsgs([]);
-    setSavedSessionId(null);
-    setIsReviewMode(false);
-    setCurrentAnalyzingIdx(0);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    window.history.replaceState({}, "", "/analisis-foto");
-  };
+  /* Dulu ini balik ke layar upload. Layar itu udah gak ada — halaman ini
+     murni player sesi — jadi "reset" artinya keluar ke daftar materi. */
+  const handleReset = () => { window.location.href = "/materi"; };
 
   return (
     <>
@@ -3647,14 +2798,6 @@ export default function AnalisisFoto() {
         onChange={handleFileChange}
       />
 
-      {/* Desktop camera modal */}
-      {camModalOpen && (
-        <CameraModal
-          onCapture={processFile}
-          onClose={() => setCamModalOpen(false)}
-        />
-      )}
-
       <main className="app-shell">
         <UserBar
           streakDays={streak}
@@ -3671,34 +2814,20 @@ export default function AnalisisFoto() {
           </div>
         ) : (
           <>
-        {stage === "upload" && (
-          <UploadView
-            ringkas={ringkas}
-            onUpload={handleUpload}
-            onCamera={handleCameraClick}
-            onOpenResult={() => setStage("result")}
-            error={apiError}
-          />
-        )}
-
-        {stage === "setup" && (
-          <SetupView
-            onStart={handleStart}
-            onBack={() => { setFiles([]); setStage("upload"); }}
-            files={files}
-            onAddFile={handleUpload}
-            onCamera={handleCameraClick}
-            onRemoveFile={(idx) => setFiles(prev => prev.filter((_, i) => i !== idx))}
-          />
-        )}
-
-        {stage === "analyzing" && (
-          <AnalyzingView
-            imageUrl={files[currentAnalyzingIdx - 1]?.url}
-            currentIdx={currentAnalyzingIdx}
-            total={files.length}
-            onCancel={handleCancel}
-          />
+        {/* Halaman ini sekarang MURNI player soal (dibuka lewat ?session=<id>,
+            lihat /latihan/[sessionId] yang nge-redirect ke sini). Cabang
+            upload/setup/analyzing dibuang bareng fitur Analisis Foto — yang
+            tersisa cuma dua keadaan: soalnya kebuka, atau sesinya gak kebaca. */}
+        {stage !== "result" && (
+          <div className="af-analyzing">
+            <p className="af-analyzing-title">Sesi ini nggak bisa dibuka.</p>
+            <p className="af-gagal-sub">
+              Mungkin sudah dihapus, atau link-nya nggak lengkap.
+            </p>
+            <a href="/materi" className="btn btn-primary" style={{ marginTop: 14 }}>
+              Balik ke Materi
+            </a>
+          </div>
         )}
 
         {stage === "result" && result && (
