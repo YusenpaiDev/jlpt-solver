@@ -45,3 +45,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# script copy soal per akun — isinya email asli, repo ini public
+/supabase/COPY-SOAL-KE-*.sql
