@@ -6,7 +6,7 @@ import {
   Home, BookOpen, ListTodo, BookA, NotebookPen, BarChart3,
   Settings, LogOut, Sparkles,
 } from "lucide-react";
-import { useUserStats } from "@/lib/use-user-stats";
+import { useIsPro } from "@/lib/use-is-pro";
 
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
@@ -27,7 +27,7 @@ const NAV_ITEMS = [
  */
 export function NavRail() {
   const pathname = usePathname();
-  const { isPro } = useUserStats();
+  const isPro = useIsPro();
   const isActive = (href: string) => href === "/" ? pathname === "/" : pathname?.startsWith(href);
 
   return (
@@ -59,7 +59,7 @@ export function NavRail() {
 
       <div className="nav-spacer" />
 
-      {!isPro && (
+      {isPro === false && (
         <Link className="nav-upgrade" href="/premium">
           <div className="nav-upgrade-icon">
             <Sparkles size={16} fill="white" stroke="white" strokeWidth={1.2} />

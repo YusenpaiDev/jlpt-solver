@@ -7,7 +7,7 @@ import {
   Home, BookOpen, ListTodo, BookA, Menu, NotebookPen, BarChart3,
   Settings, Sparkles, X,
 } from "lucide-react";
-import { useUserStats } from "@/lib/use-user-stats";
+import { useIsPro } from "@/lib/use-is-pro";
 
 const BOTTOM_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
@@ -29,7 +29,7 @@ export function BottomNav() {
 }
 
 function MobileNav({ pathname }: { pathname: string }) {
-  const { isPro } = useUserStats();
+  const isPro = useIsPro();
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -174,7 +174,7 @@ function MobileNav({ pathname }: { pathname: string }) {
               </Link>
             );
           })}
-          {!isPro && (
+          {isPro === false && (
             <Link className="nav-upgrade" href="/premium" onClick={() => setOpen(false)} aria-current={isActive("/premium") ? "page" : undefined}>
               <div className="nav-upgrade-icon">
                 <Sparkles size={16} fill="currentColor" strokeWidth={1.2} aria-hidden="true" />
