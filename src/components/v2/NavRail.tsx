@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, BookOpen, Camera, ListTodo, BookA, NotebookPen, BarChart3,
+  Home, BookOpen, ListTodo, BookA, NotebookPen, BarChart3,
   Settings, LogOut, Sparkles,
 } from "lucide-react";
+import { useIsPro } from "@/lib/use-is-pro";
 
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
  */
 export function NavRail() {
   const pathname = usePathname();
+  const isPro = useIsPro();
   const isActive = (href: string) => href === "/" ? pathname === "/" : pathname?.startsWith(href);
 
   return (
@@ -57,15 +59,17 @@ export function NavRail() {
 
       <div className="nav-spacer" />
 
-      <Link className="nav-upgrade" href="/premium">
-        <div className="nav-upgrade-icon">
-          <Sparkles size={16} fill="white" stroke="white" strokeWidth={1.2} />
-        </div>
-        <div className="nav-upgrade-text">
-          <div className="nav-upgrade-title">Upgrade ke Pro</div>
-          <div className="nav-upgrade-sub">Analisis unlimited</div>
-        </div>
-      </Link>
+      {isPro === false && (
+        <Link className="nav-upgrade" href="/premium">
+          <div className="nav-upgrade-icon">
+            <Sparkles size={16} fill="white" stroke="white" strokeWidth={1.2} />
+          </div>
+          <div className="nav-upgrade-text">
+            <div className="nav-upgrade-title">Upgrade ke Pro</div>
+            <div className="nav-upgrade-sub">Jatah harian lebih lega</div>
+          </div>
+        </Link>
+      )}
 
       <Link
         href="/pengaturan"
