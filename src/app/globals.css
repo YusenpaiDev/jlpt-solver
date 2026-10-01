@@ -7128,13 +7128,18 @@ input, textarea, select { font-size: 16px; }
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
   padding: 16px;
   gap: 16px;
   color: var(--text-primary);
   font-family: var(--font-sans);
 }
+/* Panel ngisi kolomnya penuh. Dulu dikunci max-width 580px + margin-left:auto,
+   jadi di layar lebar panelnya nempel ke tengah dan separuh kiri layar kosong.
+   Yang dibatasi sekarang cuma lebar FORM-nya (--lg-form-w), biar input gak
+   melar sepanjang 900px. */
 .lg-form-pane {
+  --lg-form-w: 460px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -7145,9 +7150,7 @@ input, textarea, select { font-size: 16px; }
   border-radius: var(--radius-xl);
   border: 1px solid var(--edge-soft);
   overflow-y: auto;
-  max-width: 580px;
   width: 100%;
-  margin-left: auto;
 }
 .lg-brand {
   display: inline-flex; align-items: center; gap: 10px;
@@ -7182,6 +7185,8 @@ input, textarea, select { font-size: 16px; }
   gap: 2px;
   margin-bottom: 28px;
   width: max-content;
+  /* rata kiri dengan blok form yang ditengahin di bawahnya */
+  margin-left: max(0px, calc((100% - var(--lg-form-w)) / 2));
 }
 .lg-tab {
   padding: 9px 22px;
@@ -7209,7 +7214,7 @@ input, textarea, select { font-size: 16px; }
   background: rgba(107, 142, 63, 0.18);
   color: var(--accent-emerald);
 }
-.lg-form-wrap { flex: 1; }
+.lg-form-wrap { flex: 1; width: 100%; max-width: var(--lg-form-w); margin-inline: auto; }
 .lg-title {
   font-family: var(--font-sans);
   font-size: 32px; font-weight: 600;
