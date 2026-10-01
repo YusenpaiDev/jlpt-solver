@@ -6,6 +6,7 @@ import {
   Home, BookOpen, ListTodo, BookA, NotebookPen, BarChart3,
   Settings, LogOut, Sparkles,
 } from "lucide-react";
+import { BATAS } from "@/lib/batas-paket";
 import { useIsPro } from "@/lib/use-is-pro";
 
 const NAV_ITEMS = [
@@ -66,14 +67,14 @@ export function NavRail() {
           </div>
           <div className="nav-upgrade-text">
             <div className="nav-upgrade-title">Upgrade ke Pro</div>
-            <div className="nav-upgrade-sub">Jatah harian lebih lega</div>
+            <div className="nav-upgrade-sub">Chat AI {BATAS.chat.pro}× sehari</div>
           </div>
         </Link>
       )}
 
       <Link
         href="/pengaturan"
-        className={`nav-item${isActive("/pengaturan") ? " active" : ""}`}
+        className={`nav-item${isActive("/pengaturan") || isActive("/langganan") ? " active" : ""}`}
       >
         <Settings className="nav-item-icon" size={20} />
         <span className="nav-item-label">Pengaturan</span>

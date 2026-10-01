@@ -918,6 +918,91 @@ input, textarea, select { font-size: 16px; }
 .notif-body { min-width: 0; }
 .notif-t { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
 .notif-d { font-size: 12px; line-height: 1.5; color: var(--text-tertiary); }
+
+/* ── Peringatan belajar ────────────────────────────────────────────────────
+   Tiga tingkat: genting (streak mau putus, ujian H-3, mandek seminggu) →
+   ingat → info. Warnanya diset sekali di sini sebagai token, dipakai bareng
+   sama banner Beranda dan item lonceng — biar urgensi yang sama gak pernah
+   keluar dua warna beda di dua tempat. Aturan mana yang tingkat apa ada di
+   src/lib/peringatan.ts. */
+.peringatan-banner, .notif-item {
+  --pg-warna: rgba(255, 255, 255, 0.34);
+  --pg-bg:    rgba(255, 255, 255, 0.035);
+  --pg-aksi:  var(--primary-hover);
+}
+.peringatan-banner.genting, .notif-item.genting {
+  --pg-warna: #E8798C;
+  --pg-bg:    rgba(164, 36, 59, 0.14);
+  --pg-aksi:  #E8798C;
+}
+.peringatan-banner.ingat, .notif-item.ingat {
+  --pg-warna: #E8C57E;
+  --pg-bg:    rgba(212, 160, 74, 0.11);
+  --pg-aksi:  #E8C57E;
+}
+
+/* Banner: satu baris di atas Beranda, bisa ditutup. */
+.peringatan-banner {
+  display: flex; align-items: center; gap: 13px;
+  padding: 13px 14px 13px 16px;
+  margin-bottom: 18px;
+  background: var(--pg-bg);
+  border: 1px solid var(--edge-soft);
+  border-left: 3px solid var(--pg-warna);
+  border-radius: var(--radius-md);
+  animation: pb-masuk 260ms cubic-bezier(.2, .8, .3, 1);
+}
+/* Yang genting dikasih lampu bawah biar kebaca beda dari kejauhan — sengaja
+   cahaya diam, bukan kedip: peringatan yang goyang terus malah dihindarin. */
+.peringatan-banner.genting { box-shadow: 0 12px 34px -18px rgba(164, 36, 59, 0.85); }
+@keyframes pb-masuk { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .peringatan-banner { animation: none; } }
+
+.pb-ic { font-size: 19px; line-height: 1; flex-shrink: 0; }
+.pb-teks { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.pb-judul { font-size: 13.5px; font-weight: 650; color: var(--text-primary); letter-spacing: -0.01em; }
+.pb-pesan { font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+
+.pb-aksi {
+  flex-shrink: 0; white-space: nowrap;
+  padding: 8px 15px; border-radius: 99px;
+  font-size: 12px; font-weight: 700; text-decoration: none;
+  color: var(--pg-aksi);
+  background: color-mix(in srgb, var(--pg-aksi) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pg-aksi) 34%, transparent);
+  transition: background .16s, transform .16s;
+}
+.pb-aksi:hover {
+  background: color-mix(in srgb, var(--pg-aksi) 24%, transparent);
+  transform: translateY(-1px);
+}
+.pb-tutup {
+  flex-shrink: 0; display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-tertiary); transition: .16s;
+}
+.pb-tutup:hover { background: rgba(255, 255, 255, 0.07); color: var(--text-primary); }
+
+@media (max-width: 640px) {
+  .peringatan-banner { position: relative; flex-wrap: wrap; row-gap: 12px; padding-right: 40px; }
+  /* flex-basis 100% maksa tombolnya turun ke baris sendiri, ikon + teks tetap
+     sebaris di atasnya. Tombol tutup dikeluarin dari alur biar gak ikut turun. */
+  .pb-aksi { flex: 1 1 100%; text-align: center; padding: 10px 15px; }
+  .pb-tutup { position: absolute; top: 9px; right: 8px; }
+}
+
+/* Item lonceng: garis tingkat di kiri + tombol aksi. */
+.notif-item.genting, .notif-item.ingat {
+  background: var(--pg-bg);
+  box-shadow: inset 3px 0 0 var(--pg-warna);
+}
+.notif-aksi {
+  display: inline-block; margin-top: 7px;
+  font-size: 11.5px; font-weight: 700; text-decoration: none;
+  color: var(--pg-aksi);
+}
+.notif-aksi:hover { text-decoration: underline; }
 .af-userbar {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px;
@@ -7088,13 +7173,18 @@ input, textarea, select { font-size: 16px; }
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
   padding: 16px;
   gap: 16px;
   color: var(--text-primary);
   font-family: var(--font-sans);
 }
+/* Panel ngisi kolomnya penuh. Dulu dikunci max-width 580px + margin-left:auto,
+   jadi di layar lebar panelnya nempel ke tengah dan separuh kiri layar kosong.
+   Yang dibatasi sekarang cuma lebar FORM-nya (--lg-form-w), biar input gak
+   melar sepanjang 900px. */
 .lg-form-pane {
+  --lg-form-w: 460px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -7105,9 +7195,7 @@ input, textarea, select { font-size: 16px; }
   border-radius: var(--radius-xl);
   border: 1px solid var(--edge-soft);
   overflow-y: auto;
-  max-width: 580px;
   width: 100%;
-  margin-left: auto;
 }
 .lg-brand {
   display: inline-flex; align-items: center; gap: 10px;
@@ -7142,6 +7230,8 @@ input, textarea, select { font-size: 16px; }
   gap: 2px;
   margin-bottom: 28px;
   width: max-content;
+  /* rata kiri dengan blok form yang ditengahin di bawahnya */
+  margin-left: max(0px, calc((100% - var(--lg-form-w)) / 2));
 }
 .lg-tab {
   padding: 9px 22px;
@@ -7169,7 +7259,7 @@ input, textarea, select { font-size: 16px; }
   background: rgba(107, 142, 63, 0.18);
   color: var(--accent-emerald);
 }
-.lg-form-wrap { flex: 1; }
+.lg-form-wrap { flex: 1; width: 100%; max-width: var(--lg-form-w); margin-inline: auto; }
 .lg-title {
   font-family: var(--font-sans);
   font-size: 32px; font-weight: 600;

@@ -23,3 +23,4 @@ export { NavRail } from "./NavRail";
 export { BottomNav } from "./BottomNav";
 export { UserBar } from "./UserBar";
 export { Breadcrumb } from "./Breadcrumb";
+export { PeringatanBanner } from "./PeringatanBanner";

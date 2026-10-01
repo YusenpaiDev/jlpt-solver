@@ -2,26 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Check, X, Sparkles, Star } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import { PAKET, type PaketId } from "@/lib/paket";
-
-/* ─── Midtrans Snap types ─────────────────────────────────────── */
-declare global {
-  interface Window {
-    snap?: {
-      pay: (token: string, options?: {
-        onSuccess?: (result: unknown) => void;
-        onPending?: (result: unknown) => void;
-        onError?: (result: unknown) => void;
-        onClose?: () => void;
-      }) => void;
-    };
-  }
-}
+import { useBayar } from "@/lib/bayar";
 
 type Cycle = "monthly" | "yearly";
 type PlanColor = "slate" | "iris" | "gold";
@@ -139,9 +125,7 @@ const FAQ = [
 const fmt = (n: number) => "Rp " + n.toLocaleString("id-ID");
 
 export default function Premium() {
-  const router = useRouter();
   const [cycle, setCycle] = useState<Cycle>("monthly");
-  const [paying, setPaying] = useState<string | null>(null);
   const [userInitial, setUserInitial] = useState("Y");
   const stats = useUserStats();
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
@@ -165,8 +149,6 @@ export default function Premium() {
     load();
   }, []);
 
-  const [galat, setGalat] = useState<string | null>(null);
-
   /* Kartu di halaman ini pakai id "pro"/"lifetime" + toggle bulanan/tahunan,
      sedangkan yang dijual sebenarnya tiga paket. Dipetakan di satu tempat
      supaya harga di layar dan harga yang ditagih gak bisa beda. */
@@ -175,52 +157,13 @@ export default function Premium() {
     : planId === "pro" ? (cycle === "yearly" ? "pro-ujian" : "pro-bulanan")
     : null;
 
-  /* Snap.js dimuat pas dibutuhin, bukan di setiap kunjungan — kebanyakan orang
-     buka halaman ini cuma buat lihat harga. */
-  const muatSnap = (clientKey: string, produksi: boolean) =>
-    new Promise<void>((selesai, gagal) => {
-      if (window.snap) return selesai();
-      const el = document.createElement("script");
-      el.src = produksi
-        ? "https://app.midtrans.com/snap/snap.js"
-        : "https://app.sandbox.midtrans.com/snap/snap.js";
-      el.setAttribute("data-client-key", clientKey);
-      el.onload = () => selesai();
-      el.onerror = () => gagal(new Error("Gagal memuat pembayaran"));
-      document.body.appendChild(el);
-    });
+  const { bayar, paying: payingPaket, galat } = useBayar();
+  /* Kartu nandain "lagi diproses" pakai id kartunya, bukan id paket. */
+  const paying = payingPaket === "lifetime" ? "lifetime" : payingPaket ? "pro" : null;
 
-  const handlePay = async (planId: string) => {
+  const handlePay = (planId: string) => {
     const paketId = paketDari(planId);
-    if (!paketId) return;
-
-    setGalat(null);
-    setPaying(planId);
-    try {
-      const res = await fetch("/api/payment/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paketId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Gagal memulai pembayaran.");
-
-      await muatSnap(data.client_key, data.produksi);
-      if (!window.snap) throw new Error("Pembayaran gak bisa dibuka. Coba lagi.");
-
-      window.snap.pay(data.token, {
-        /* Aktivasi Pro TIDAK dikerjain di sini — callback ini jalan di browser
-           dan gampang dipalsukan. Yang mengaktifkan cuma webhook dari Midtrans
-           ke server. Ini murni buat mindahin halaman. */
-        onSuccess: () => router.push(`/premium/sukses?order_id=${data.order_id}`),
-        onPending: () => router.push(`/premium/sukses?order_id=${data.order_id}&pending=1`),
-        onError: () => { setGalat("Pembayaran gagal. Coba lagi ya."); setPaying(null); },
-        onClose: () => setPaying(null),
-      });
-    } catch (e) {
-      setGalat(e instanceof Error ? e.message : "Ada yang salah. Coba lagi.");
-      setPaying(null);
-    }
+    if (paketId) bayar(paketId);
   };
 
   return (

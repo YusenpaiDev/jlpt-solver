@@ -9,6 +9,7 @@ import {
   User, Zap, Wand2, Bell, CreditCard, Shield, Trash2, ChevronRight, Camera, Check, Sparkles, X, Clock3,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import { BATAS, KOSAKATA_FREE } from "@/lib/batas-paket";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -23,21 +24,6 @@ const SECTIONS = [
 ] as const;
 
 type SectionId = typeof SECTIONS[number]["id"];
-
-interface TxRow { order_id: string; paket_id: string; jumlah: number; status: string; dibuat: string }
-
-const NAMA_PAKET: Record<string, string> = {
-  "pro-bulanan": "Pro — Bulanan",
-  "pro-ujian":   "Pro — Paket Ujian (6 bulan)",
-  lifetime:      "Lifetime",
-};
-const LABEL_STATUS: Record<string, string> = {
-  pending:    "Menunggu",
-  lunas:      "Lunas",
-  gagal:      "Gagal",
-  kadaluarsa: "Kedaluwarsa",
-  refund:     "Dikembalikan",
-};
 
 export default function Pengaturan() {
   const [active, setActive] = useState<SectionId>("profile");
@@ -666,23 +652,6 @@ function NotifSection({
    transaksi. */
 function SubscriptionSection() {
   const stats = useUserStats();
-  const [riwayat, setRiwayat] = useState<TxRow[]>([]);
-  const [muatTx, setMuatTx] = useState(true);
-
-  useEffect(() => {
-    let batal = false;
-    (async () => {
-      const { data } = await createClient()
-        .from("transaksi")
-        .select("order_id, paket_id, jumlah, status, dibuat")
-        .order("dibuat", { ascending: false })
-        .limit(20);
-      if (batal) return;
-      setRiwayat((data ?? []) as TxRow[]);
-      setMuatTx(false);
-    })();
-    return () => { batal = true; };
-  }, []);
 
   const sisaHari = stats.premiumUntil
     ? Math.ceil((new Date(stats.premiumUntil).getTime() - Date.now()) / 86_400_000)
@@ -710,12 +679,12 @@ function SubscriptionSection() {
           </div>
         </div>
 
-        {/* Angka di sini SAMA dengan src/lib/kuota.ts. Kalau salah satu diubah,
-            ubah dua-duanya — kalau enggak, halaman ini bohong. */}
+        {/* Angka dari src/lib/batas-paket.ts — sumber yang sama dengan yang
+            ditegakkan server. */}
         <div className="pg-sub-meta">
-          <div><span>Chat Sensei</span><strong>{stats.isPro ? "50" : "5"} / hari</strong></div>
-          <div><span>Furigana</span><strong>{stats.isPro ? "100" : "20"} / hari</strong></div>
-          <div><span>Kotoba disimpan</span><strong>{stats.isPro ? "Tanpa batas" : "50 maks"}</strong></div>
+          <div><span>Chat Sensei</span><strong>{stats.isPro ? BATAS.chat.pro : BATAS.chat.free} / hari</strong></div>
+          <div><span>Furigana</span><strong>{stats.isPro ? BATAS.furigana.pro : BATAS.furigana.free} / hari</strong></div>
+          <div><span>Kotoba disimpan</span><strong>{stats.isPro ? "Tanpa batas" : `${KOSAKATA_FREE} maks`}</strong></div>
         </div>
 
         {!stats.isLifetime && stats.isPro && sisaHari != null && (
@@ -750,31 +719,20 @@ function SubscriptionSection() {
         )}
       </div>
 
-      {/* ── Riwayat pembayaran ── */}
-      <div className="glass-card pg-card" style={{ marginTop: 16 }}>
-        <h3 className="pg-card-title">Riwayat pembayaran</h3>
-        {muatTx ? (
-          <p className="pg-sub-kosong">Memuat…</p>
-        ) : riwayat.length === 0 ? (
-          <p className="pg-sub-kosong">Belum ada transaksi.</p>
-        ) : (
-          <div className="pg-tx-list">
-            {riwayat.map(t => (
-              <div key={t.order_id} className="pg-tx-row">
-                <div>
-                  <strong>{NAMA_PAKET[t.paket_id] ?? t.paket_id}</strong>
-                  <span>{new Date(t.dibuat).toLocaleDateString("id-ID",
-                    { day: "numeric", month: "short", year: "numeric" })}</span>
-                </div>
-                <div className="pg-tx-kanan">
-                  <span className="pg-tx-jumlah">Rp {t.jumlah.toLocaleString("id-ID")}</span>
-                  <span className={`pg-tx-status s-${t.status}`}>{LABEL_STATUS[t.status] ?? t.status}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Riwayat transaksi, pemakaian hari ini, dan pengingat perpanjangan
+          tinggal di /langganan — satu tempat, biar nomor pesanan (yang
+          dibutuhin waktu hubungi support) gak dipajang di dua halaman beda. */}
+      <Link href="/langganan" className="glass-card pg-card"
+        style={{ marginTop: 16, display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 16, color: "inherit", textDecoration: "none" }}>
+        <div>
+          <h3 className="pg-card-title">Status &amp; riwayat pembayaran</h3>
+          <p className="pg-sub-kosong" style={{ margin: 0 }}>
+            Sisa masa berlaku, pemakaian hari ini, nomor pesanan, dan pengingat perpanjangan.
+          </p>
+        </div>
+        <ChevronRight size={18} />
+      </Link>
     </>
   );
 }
