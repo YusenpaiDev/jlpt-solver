@@ -652,9 +652,10 @@ function NotifSection({
    transaksi. */
 function SubscriptionSection() {
   const stats = useUserStats();
+  const [openedAt] = useState(() => Date.now());
 
   const sisaHari = stats.premiumUntil
-    ? Math.ceil((new Date(stats.premiumUntil).getTime() - Date.now()) / 86_400_000)
+    ? Math.ceil((new Date(stats.premiumUntil).getTime() - openedAt) / 86_400_000)
     : null;
 
   const namaPlan = stats.isLifetime ? "Sensei Lifetime" : stats.isPro ? "Sensei Pro" : "Sensei Free";
