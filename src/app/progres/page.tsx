@@ -234,7 +234,7 @@ function Progres() {
                         const answered = s.stats?.answered ?? 0;
                         const pct = Math.round(((s.score ?? 0) / (s.total || 1)) * 100);
                         const tn = inProg ? "" : tone(pct);
-                        const href = t === "choukai" ? `/choukai/${s.id}` : `/analisis-foto?session=${s.id}`;
+                        const href = t === "choukai" ? `/choukai/${s.id}` : `/latihan/${s.id}`;
                         return (
                           <Link key={s.id} href={href} className={`pr-sess ${tn}`}>
                             <div className={`pr-sess-ic ${meta.ic}`}>{meta.icon}</div>

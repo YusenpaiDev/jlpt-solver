@@ -526,7 +526,7 @@ function SetupView({
                 const tone = scoreTone(r.score, r.total);
                 return (
                   <li key={r.id}>
-                    <Link href={`/analisis-foto?session=${r.id}`} className="recent-item">
+                    <Link href={`/latihan/${r.id}`} className="recent-item">
                       <span className={`lv-tag-mini lv-${r.level.toLowerCase()}`}>{r.level}</span>
                       <div className="recent-meta">
                         <div className="recent-title">
@@ -821,7 +821,7 @@ function RiwayatDrawer({
                 const tone = scoreTone(r.score, r.total);
                 return (
                   <li key={r.id}>
-                    <Link href={`/analisis-foto?session=${r.id}`} className="drawer-item">
+                    <Link href={`/latihan/${r.id}`} className="drawer-item">
                       <span className={`lv-tag-mini lv-${r.level.toLowerCase()}`}>{r.level}</span>
                       <div className="drawer-meta">
                         <div className="drawer-item-title">
