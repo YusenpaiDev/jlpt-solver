@@ -383,7 +383,7 @@ export default function Home() {
                     : sessions.map(s => {
                       const st = riwStyle(s); const pct = scorePct(s);
                       return (
-                        <Link key={s.id} href={s.section === "choukai" ? `/choukai/${s.id}` : `/analisis-foto?session=${s.id}`} className="riw-i">
+                        <Link key={s.id} href={s.section === "choukai" ? `/choukai/${s.id}` : `/latihan/${s.id}`} className="riw-i">
                           <span className="riw-g" style={{ background: st.bg, borderColor: st.bd, color: st.fg }}>{st.g}</span>
                           <div className="riw-m"><div className="riw-t">{s.title}</div><div className="riw-s">{relativeTime(s.created_at)} · {s.total} soal</div></div>
                           {pct != null && <span className={`riw-sc ${pct >= 80 ? "sc-g" : "sc-m"}`}>{pct}%</span>}

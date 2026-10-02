@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
  */
 
 export type SumberAktivitas =
-  | "soal"      // jawab soal di /latihan atau /analisis-foto
+  | "soal"      // jawab soal di /latihan/[sessionId]
   | "choukai"   // jawab soal 聴解
   | "kotoba"    // drill / flashcard kotoba
   | "bunpou";   // latihan bunpou

@@ -18,7 +18,7 @@ const LEVEL_URUT = ["N5", "N4", "N3", "N2", "N1"];
 type Period = 7 | 30 | 90 | 0; // 0 = all-time
 
 /* Ringkasan kompak per-sesi yang disimpan di ai_result.stats sama
-   analisis-foto pas jawaban ke-save (perCat: {kategori: {a:answered, c:correct}}).
+   player latihan pas jawaban ke-save (perCat: {kategori: {a:answered, c:correct}}).
    Statistik cukup fetch ini (ringan ±KB), gak perlu narik ai_result full. */
 interface SessionStats {
   answered: number;

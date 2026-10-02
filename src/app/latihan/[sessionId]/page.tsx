@@ -1,8 +1,2532 @@
-import { redirect } from "next/navigation";
+"use client";
 
-// URL bersih buat player latihan. Player-nya masih di /analisis-foto (via
-// ?session=), jadi route ini nge-forward ke situ. Lihat handoff §5.
-export default async function Latihan({ params }: { params: Promise<{ sessionId: string }> }) {
-  const { sessionId } = await params;
-  redirect(`/analisis-foto?session=${sessionId}`);
+import { use, useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { setSavedWordFavorite } from "@/lib/supabase/savedWords";
+import { AuroraBackground, NavRail, BottomNav, UserBar } from "@/components/v2";
+import {
+  Sparkles, ChevronDown, RotateCcw, Clock,
+  X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck, Star,
+  BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
+  Highlighter, Undo2, LogOut,
+} from "lucide-react";
+import { useUserStats } from "@/lib/use-user-stats";
+import { catatAktivitas } from "@/lib/aktivitas";
+import { JatahHabisInline, JatahHabisDialog } from "@/components/pembayaran/JatahHabis";
+import { bacaKuotaHabis, sisaWaktuReset, type KuotaHabis } from "@/lib/kuota-habis";
+
+/* ─── Types ─────────────────────────────────────────────────── */
+interface AIQuestion {
+  question: string;
+  options: string[];
+  correct: string;
+  explanation: string;
+  why_wrong?: string;
+  grammar_points?: { jp: string; reading?: string; id: string }[];
+  tip?: string;
+  category?: "文法" | "語彙" | "文字" | "読解";
+  passage?: string | null;
+  needs_review?: boolean;
+  target?: string; // kata yang digarisbawahi (soal 文字/語彙) — biar jelas yg ditanya
+}
+interface VocabItem {
+  word: string;
+  reading: string;
+  meaning: string;
+  example?: string;
+  jlpt_level?: string;
+}
+/* Coretan stabilo freehand. Koordinat dinormalisasi ke lebar canvas
+   (x & y dibagi cssWidth) biar skala-nya seragam & ikut responsif. `w`
+   juga normalized. `c` = warna rgba. */
+interface HiStroke {
+  c: string;
+  w: number;
+  pts: number[]; // flattened [x0,y0,x1,y1,...]
+  t?: number;    // timestamp commit — buat undo global (urutan antar-kartu)
+}
+interface UserProgress {
+  answers: Record<number, string>;
+  revealed: number[];
+  xp_claimed?: boolean;
+  highlights?: Record<string, HiStroke[]>; // keyed by passage key, e.g. "p-3"
+}
+/* Ringkasan kompak buat halaman Statistik — disimpan di ai_result.stats
+   tiap save, biar Statistik bisa fetch ringan (gak narik ai_result full).
+   perCat keyed kategori asli soal: {文法:{a:answered,c:correct}, ...} */
+interface SessionStats {
+  answered: number;
+  correct: number;
+  perCat: Record<string, { a: number; c: number }>;
+}
+interface AIResult {
+  title: string;
+  vocabulary?: VocabItem[];
+  questions: AIQuestion[];
+  user_progress?: UserProgress;
+  stats?: SessionStats;
+}
+
+/* Bucket kategori per-soal ke 5 kategori JLPT (聴解-* → 聴解). */
+function catBucket(c?: string | null): string | null {
+  if (!c) return null;
+  if (c.startsWith("聴解")) return "聴解";
+  if (c === "文法" || c === "語彙" || c === "読解" || c === "文字") return c;
+  return null;
+}
+/* Hitung ringkasan stats dari jawaban + soal yang udah ke-reveal. */
+function computeStats(
+  questions: AIQuestion[],
+  answers: Record<number, string>,
+  revealed: number[] | Set<number>,
+): SessionStats {
+  const revSet = revealed instanceof Set ? revealed : new Set(revealed);
+  const perCat: Record<string, { a: number; c: number }> = {};
+  let answered = 0, correct = 0;
+  questions.forEach((q, qi) => {
+    if (!revSet.has(qi)) return;
+    answered++;
+    const ok = !!answers[qi] && answers[qi] === q.correct;
+    if (ok) correct++;
+    const cat = catBucket(q.category);
+    if (cat) {
+      const b = perCat[cat] ?? (perCat[cat] = { a: 0, c: 0 });
+      b.a++;
+      if (ok) b.c++;
+    }
+  });
+  return { answered, correct, perCat };
+}
+interface ChatMsg {
+  role: "user" | "model";
+  text: string;
+  /** Versi lama (masih ada di sesi tersimpan): pemberitahuan jatah habis berupa teks. */
+  kuotaHabis?: boolean;
+  /** Jatah chat habis — dirender jadi catatan inline, bukan gelembung Sensei. */
+  kuota?: KuotaHabis;
+  /** User pilih "Tunggu besok" → catatannya diringkas jadi satu baris. */
+  kuotaRingkas?: boolean;
+}
+
+/* Sometimes the AI bundles options ("1xxx 2xxx 3xxx 4xxx") into the question
+   text — usually for 読解 where the option lines sit directly under the prompt.
+   Detect that pattern at the tail of `question` and split it out.
+
+   Returns null if no clean 4-option pattern is found. */
+function splitInlineOptions(question: string): { question: string; options: string[] } | null {
+  const text = question.replace(/\r\n?/g, "\n");
+  const normDigit = (c: string) => ({
+    "１": "1", "２": "2", "３": "3", "４": "4",
+    "①": "1", "②": "2", "③": "3", "④": "4",
+  } as Record<string,string>)[c] ?? c;
+
+  // A marker is a digit 1/2/3/4 (half-width, full-width, or circled ①-④) at
+  // line-start OR preceded by whitespace (incl. full-width). Half/full-width
+  // must not be followed by another digit (so "12" isn't a match); circled
+  // digits are inherently single-glyph.
+  const markerRe = /(?:^|[\s　])([1-4１-４])(?![\d０-９])|(?:^|[\s　])([①-④])/g;
+  const hits: { digitIdx: number; digit: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = markerRe.exec(text))) {
+    const digit = m[1] ?? m[2];
+    hits.push({ digitIdx: m.index + m[0].length - 1, digit: normDigit(digit) });
+  }
+  if (hits.length < 4) return null;
+
+  // Look for a trailing 1→2→3→4 run (search from the last possible start).
+  for (let i = hits.length - 4; i >= 0; i--) {
+    const run = hits.slice(i, i + 4);
+    if (run[0].digit !== "1" || run[1].digit !== "2" || run[2].digit !== "3" || run[3].digit !== "4") continue;
+
+    let qEnd = run[0].digitIdx;
+    while (qEnd > 0 && /[\s　]/.test(text[qEnd - 1])) qEnd--;
+    const newQuestion = text.slice(0, qEnd).replace(/[\s　]+$/u, "");
+    if (newQuestion.trim().length === 0) return null;
+
+    const opts: string[] = [];
+    for (let k = 0; k < 4; k++) {
+      const start = run[k].digitIdx + 1;
+      const end = k < 3 ? run[k + 1].digitIdx : text.length;
+      const body = text.slice(start, end).replace(/^[．.、:：\s　]+/u, "").replace(/[\s　]+$/u, "");
+      if (body.length === 0) return null;
+      opts.push(`${k + 1}. ${body}`);
+    }
+    return { question: newQuestion, options: opts };
+  }
+  return null;
+}
+
+/* Lightweight equality for "are these two option strings basically the same":
+   strip the leading number/punctuation and compare normalized text. */
+function sameOptionBody(a: string, b: string): boolean {
+  const strip = (s: string) => s.replace(/^[1-4１-４][．.、:：\s　]*/u, "").replace(/[\s　]+/gu, "").trim();
+  return strip(a) === strip(b) && strip(a).length > 0;
+}
+
+/* When the AI returns the inline pattern AND also populates options separately,
+   the options usually match. In that case strip the duplicate from question
+   silently. Otherwise leave question alone (user can hit the manual split
+   button if they want). */
+function sanitizeQuestion(q: { question: string; options: string[] }): { question: string; options: string[] } {
+  const split = splitInlineOptions(q.question);
+  if (!split) return q;
+  const optsClean = q.options.filter(o => o && o.trim().length > 0);
+  // Auto-strip only when existing options array looks like the inline ones.
+  if (optsClean.length === 4 && split.options.every((s, i) => sameOptionBody(s, optsClean[i]))) {
+    return { question: split.question, options: q.options };
+  }
+  // Or when options array is empty/short — pull options from the question.
+  if (optsClean.length < 4) {
+    return { question: split.question, options: split.options };
+  }
+  return q;
+}
+
+
+/* Palet coret — sengaja tanpa oren (warna brand) biar gak ketuker.
+   Gaya pensil: tipis & cukup pekat, jadi enak buat garis-bawah / lingkarin. */
+const STABILO_COLORS = [
+  { key: "kuning", rgba: "rgba(253, 224, 71, 0.88)" },
+  { key: "hijau",  rgba: "rgba(52, 211, 153, 0.88)" },
+  { key: "pink",   rgba: "rgba(244, 114, 182, 0.88)" },
+  { key: "biru",   rgba: "rgba(96, 165, 250, 0.88)" },
+];
+const STABILO_PX = 4; // tebal coretan (px logical, sebelum dinormalisasi) — tipis kayak pensil
+
+/* Overlay canvas buat coret-coret stabilo freehand di atas teks bacaan.
+   Strokes disimpan ternormalisasi (lihat HiStroke) jadi tetap nyangkut
+   walau card di-resize / responsive. */
+function StabiloLayer({
+  strokes, active, color, onCommit,
+}: {
+  strokes: HiStroke[];
+  active: boolean;
+  color: string;
+  onCommit: (s: HiStroke) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing   = useRef(false);
+  const cur       = useRef<number[]>([]);
+  const cssSize   = useRef({ w: 0, h: 0 });
+  // Mirror props ke ref biar callback ResizeObserver (yang dibuat sekali pas
+  // mount) selalu baca data terbaru, bukan closure stale.
+  const strokesRef = useRef(strokes); strokesRef.current = strokes;
+  const colorRef   = useRef(color);   colorRef.current   = color;
+
+  const drawOne = (ctx: CanvasRenderingContext2D, s: HiStroke, cssW: number) => {
+    const p = s.pts;
+    if (p.length < 2) return;
+    ctx.strokeStyle = s.c;
+    ctx.lineWidth   = Math.max(2, s.w * cssW);
+    ctx.lineCap     = "round";
+    ctx.lineJoin    = "round";
+    if (p.length === 2) {
+      // tap tunggal → titik bulat
+      ctx.beginPath();
+      ctx.arc(p[0] * cssW, p[1] * cssW, ctx.lineWidth / 2, 0, Math.PI * 2);
+      ctx.fillStyle = s.c;
+      ctx.fill();
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(p[0] * cssW, p[1] * cssW);
+    for (let i = 2; i < p.length; i += 2) ctx.lineTo(p[i] * cssW, p[i + 1] * cssW);
+    ctx.stroke();
+  };
+
+  const redraw = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const { w: cssW } = cssSize.current;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    ctx.scale(dpr, dpr);
+    for (const s of strokesRef.current) drawOne(ctx, s, cssW);
+    if (cur.current.length) drawOne(ctx, { c: colorRef.current, w: STABILO_PX / cssW, pts: cur.current }, cssW);
+  };
+
+  // Sinkronkan ukuran backing-store canvas ke ukuran tampil + redraw.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const sync = () => {
+      const r = parent.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const dpr = window.devicePixelRatio || 1;
+      cssSize.current = { w: r.width, h: r.height };
+      canvas.width  = Math.round(r.width * dpr);
+      canvas.height = Math.round(r.height * dpr);
+      redraw();
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(parent);
+    return () => ro.disconnect();
+    }, []);
+
+  // Redraw tiap strokes/warna berubah.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { redraw(); }, [strokes, color]);
+
+  const pt = (e: React.PointerEvent) => {
+    const canvas = canvasRef.current!;
+    const r = canvas.getBoundingClientRect();
+    const w = r.width || 1;
+    return [(e.clientX - r.left) / w, (e.clientY - r.top) / w];
+  };
+
+  const onDown = (e: React.PointerEvent) => {
+    if (!active) return;
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    drawing.current = true;
+    cur.current = pt(e);
+    redraw();
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (!active || !drawing.current) return;
+    const [x, y] = pt(e);
+    cur.current.push(x, y);
+    redraw();
+  };
+  const onUp = () => {
+    if (!drawing.current) return;
+    drawing.current = false;
+    const pts = cur.current;
+    cur.current = [];
+    if (pts.length >= 2) onCommit({ c: color, w: STABILO_PX / (cssSize.current.w || 1), pts, t: Date.now() });
+    redraw();
+  };
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`stabilo-canvas${active ? " active" : ""}`}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerLeave={onUp}
+      onPointerCancel={onUp}
+    />
+  );
+}
+
+function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview }: {
+  onReset: () => void;
+  result: AIResult;
+  setResult: React.Dispatch<React.SetStateAction<AIResult | null>>;
+  chatMsgs: ChatMsg[];
+  setChatMsgs: React.Dispatch<React.SetStateAction<ChatMsg[]>>;
+  isSaved: boolean;
+  sessionId: string | null;
+  isReview?: boolean;
+}) {
+  const [answers,      setAnswers]      = useState<Record<number, string>>(
+    () => result.user_progress?.answers ?? {}
+  );
+  const [revealed,     setRevealed]     = useState<Set<number>>(
+    () => new Set(result.user_progress?.revealed ?? [])
+  );
+
+  /* Exit confirmation — kalau user udah jawab/reveal minimal 1 soal,
+     intercept browser exit + in-app navigation buat konfirmasi keluar.
+     In-app: pakai modal custom (bukan window.confirm jelek). Browser
+     close/refresh: native beforeunload (gak bisa dibikin custom). */
+  const router = useRouter();
+  // Snapshot progress pas masuk sesi — buat opsi "keluar tanpa simpan".
+  const initialProgressRef = useRef<UserProgress | undefined>(result.user_progress);
+  const [exitTo,   setExitTo]   = useState<string | null>(null);
+  /* Furigana kena 429 → lembar bawah / modal jatah habis. */
+  const [jatahHabis, setJatahHabis] = useState<KuotaHabis | null>(null);
+  const [exitBusy, setExitBusy] = useState<"save" | "discard" | null>(null);
+  const hasProgress = revealed.size > 0 || Object.keys(answers).length > 0;
+  useEffect(() => {
+    if (!hasProgress) return;
+
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    // In-app NavRail / Link click interceptor → tahan navigasi, munculin modal.
+    const onDocClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement | null)?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!link) return;
+      const href = link.getAttribute("href") || "";
+      if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("mailto:")) return;
+      const currentPath = window.location.pathname + window.location.search;
+      if (href === currentPath || href === window.location.pathname) return;
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return; // ctrl/cmd-click = tab baru, biarin
+
+      e.preventDefault();
+      e.stopPropagation();
+      setExitTo(href);
+    };
+    document.addEventListener("click", onDocClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("click", onDocClick, true);
+    };
+  }, [hasProgress]);
+
+  /* Skor dari sebuah progress (null kalau belum semua kejawab). */
+  const scoreFromProgress = (p?: UserProgress): number | null => {
+    const tot = result.questions.length;
+    const rev = p?.revealed ?? [];
+    const ans = p?.answers ?? {};
+    if (tot === 0 || rev.length !== tot) return null; // belum komplit → skor disembunyiin
+    return result.questions.filter((q, qi) => rev.includes(qi) && ans[qi] && ans[qi] === q.correct).length;
+  };
+
+  /* Tulis `progress` ke DB lalu navigasi client-side (gak micu beforeunload).
+     mode "save" = pakai progress sekarang; "discard" = balikin snapshot awal.
+     Flush manual penting krn auto-save di-debounce 600ms (bisa belum ke-flush). */
+  const leaveWith = async (progress: UserProgress | undefined, mode: "save" | "discard") => {
+    const dest = exitTo;
+    if (sessionId && !isReview) {
+      setExitBusy(mode);
+      try {
+        const nextResult: AIResult = {
+          ...result,
+          user_progress: progress,
+          stats: computeStats(result.questions, progress?.answers ?? {}, progress?.revealed ?? []),
+        };
+        const supabase = createClient();
+        await supabase
+          .from("sessions")
+          .update({ ai_result: nextResult, score: scoreFromProgress(progress) })
+          .eq("id", sessionId);
+      } catch { /* tetap lanjut keluar walau gagal */ }
+      setExitBusy(null);
+    }
+    setExitTo(null);
+    if (dest) router.push(dest);
+  };
+  const confirmExit = () => leaveWith(
+    { answers, revealed: Array.from(revealed), xp_claimed: scoreSaved, highlights },
+    "save",
+  );
+  const discardExit = () => leaveWith(initialProgressRef.current, "discard");
+  const [catFilter,    setCatFilter]    = useState<string>("全部");
+  const [reviewOnly,   setReviewOnly]   = useState(false);
+  const [editIdx,      setEditIdx]      = useState<number | null>(null);
+  const [editDraft,    setEditDraft]    = useState<AIQuestion | null>(null);
+  const [editSaving,   setEditSaving]   = useState(false);
+  const [savingFlagIdx, setSavingFlagIdx] = useState<number | null>(null);
+  const [expandedPassages, setExpandedPassages] = useState<Set<number>>(new Set());
+  const [furiganaMarked,   setFuriganaMarked]   = useState<Record<string, string>>({});
+  const [showFurigana,     setShowFurigana]     = useState<Set<string>>(new Set());
+  const [furiganaLoading,  setFuriganaLoading]  = useState<Set<string>>(new Set());
+  /* Coret/stabilo: satu mode global — kalau nyala, semua kartu (bacaan +
+     tiap soal) bisa dicoret. Coretan disimpan per-area di `highlights`,
+     key-nya "p-<qi>" buat bacaan & "c-<qi>" buat kartu soal. */
+  const [highlights,   setHighlights]   = useState<Record<string, HiStroke[]>>(
+    () => result.user_progress?.highlights ?? {}
+  );
+  const [drawMode,     setDrawMode]      = useState(false);
+  const [stabiloColor, setStabiloColor]  = useState<string>(STABILO_COLORS[0].rgba);
+  const hasAnyStroke = Object.values(highlights).some(a => a.length > 0);
+  const commitStroke = (key: string, s: HiStroke) =>
+    setHighlights(h => ({ ...h, [key]: [...(h[key] ?? []), s] }));
+  // Undo global: buang coretan dgn timestamp terbaru di seluruh kartu.
+  const undoLastStroke = () => setHighlights(h => {
+    let bestKey: string | null = null, bestIdx = -1, bestT = -Infinity;
+    for (const [k, arr] of Object.entries(h)) {
+      for (let i = 0; i < arr.length; i++) {
+        const t = arr[i].t ?? 0;
+        if (t >= bestT) { bestT = t; bestKey = k; bestIdx = i; }
+      }
+    }
+    if (bestKey === null) return h;
+    const arr = h[bestKey].slice();
+    arr.splice(bestIdx, 1);
+    return { ...h, [bestKey]: arr };
+  });
+  const [chatInput,    setChatInput]    = useState("");
+  const [chatLoading,  setChatLoading]  = useState(false);
+  const [elapsed,      setElapsed]      = useState(0);
+  const [timerOn,      setTimerOn]      = useState(true);
+  const [savedWords,   setSavedWords]   = useState<Set<string>>(new Set());
+  const [savingWord,   setSavingWord]   = useState<string | null>(null);
+  const [toast,        setToast]        = useState<{ text: string; ok: boolean } | null>(null);
+  const [scoreSaved,   setScoreSaved]   = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false); // popup skor pas selesai
+  const [konfirmReset, setKonfirmReset] = useState(false); // modal sebelum jawaban dihapus
+  const [resetting,    setResetting]    = useState(false);
+  const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
+  const [savingNote,   setSavingNote]   = useState<number | null>(null);
+  const [rightTab,     setRightTab]     = useState<"chat"|"kamus"|"catatan">("chat");
+  const [kamusWords,   setKamusWords]   = useState<{id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean}[]>([]);
+  const [flashKamusId, setFlashKamusId] = useState<string | null>(null);
+  const [kamusQuery,   setKamusQuery]   = useState("");
+  const [kamusLoaded,  setKamusLoaded]  = useState(false);
+  const [catatanList,  setCatatanList]  = useState<{id:string;judul:string;isi:string;updated_at:string}[]>([]);
+  const [catatanLoaded,setCatatanLoaded]= useState(false);
+  const [expandedNote, setExpandedNote] = useState<string|null>(null);
+  const [newNoteOpen,  setNewNoteOpen]  = useState(false);
+  const [newNoteText,  setNewNoteText]  = useState("");
+  const [savingNewNote,setSavingNewNote]= useState(false);
+  const [addKanji,     setAddKanji]     = useState("");
+  const [addReading,   setAddReading]   = useState("");
+  const [addMeaning,   setAddMeaning]   = useState("");
+  const [generating,   setGenerating]   = useState(false);
+  const [savingNew,    setSavingNew]    = useState(false);
+
+  /* ── Persist & edit helpers (Phase 1) ── */
+  const persistResultJsonb = async (next: AIResult) => {
+    if (!sessionId) return;
+    const supabase = createClient();
+    await supabase.from("sessions").update({ ai_result: next }).eq("id", sessionId);
+  };
+
+  const updateQuestionAt = (qi: number, patch: Partial<AIQuestion>) => {
+    const next: AIResult = {
+      ...result,
+      questions: result.questions.map((q, i) => (i === qi ? { ...q, ...patch } : q)),
+    };
+    setResult(next);
+    // Fire-and-forget persistence; UI already updated optimistically.
+    persistResultJsonb(next).catch(() => { /* swallow */ });
+  };
+
+  const toggleReviewFlag = async (qi: number) => {
+    if (savingFlagIdx !== null) return;
+    setSavingFlagIdx(qi);
+    try {
+      const flipped = !result.questions[qi].needs_review;
+      updateQuestionAt(qi, { needs_review: flipped });
+    } finally {
+      setSavingFlagIdx(null);
+    }
+  };
+
+  const openEdit = (qi: number) => {
+    setEditIdx(qi);
+    setEditDraft({ ...result.questions[qi] });
+  };
+
+  const closeEdit = () => {
+    setEditIdx(null);
+    setEditDraft(null);
+  };
+
+  const saveEdit = async () => {
+    if (editIdx === null || !editDraft || editSaving) return;
+    setEditSaving(true);
+    try {
+      const isNew = editIdx >= result.questions.length;
+      const next: AIResult = {
+        ...result,
+        questions: isNew
+          ? [...result.questions, editDraft]
+          : result.questions.map((q, i) => (i === editIdx ? editDraft : q)),
+      };
+      setResult(next);
+      persistResultJsonb(next).catch(() => { /* swallow */ });
+      closeEdit();
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  /* Open the modal with a blank draft → manual-add new question */
+  const openAddManual = () => {
+    setEditIdx(result.questions.length);
+    setEditDraft({
+      question: "",
+      options: ["1. ", "2. ", "3. ", "4. "],
+      correct: "1",
+      explanation: "",
+      why_wrong: "",
+      tip: "",
+      category: "文法",
+    });
+  };
+
+  /* Copy text to clipboard, with toast confirmation */
+  const copyToClipboard = async (text: string, label = "Tersalin!") => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast({ text: label, ok: true });
+      setTimeout(() => setToast(null), 1500);
+    } catch {
+      setToast({ text: "Gagal menyalin", ok: false });
+      setTimeout(() => setToast(null), 1500);
+    }
+  };
+
+  /* Toggle furigana for all 4 options of a question at once */
+  const toggleAllOptions = async (qi: number, opts: string[]) => {
+    const keys = opts.map((_, oi) => `o-${qi}-${oi}`);
+    const allShowing = keys.every(k => showFurigana.has(k));
+    if (allShowing) {
+      setShowFurigana(s => {
+        const n = new Set(s);
+        keys.forEach(k => n.delete(k));
+        return n;
+      });
+    } else {
+      // Toggle each option that's not already showing (in parallel).
+      await Promise.all(
+        opts.map((opt, oi) => {
+          const k = `o-${qi}-${oi}`;
+          if (!showFurigana.has(k)) return toggleFurigana(k, opt.slice(2).trim());
+          return Promise.resolve();
+        }),
+      );
+    }
+  };
+
+  /* Delete a question from the session (with confirm) */
+  const deleteQuestion = async (qi: number) => {
+    if (!confirm(`Hapus soal #${qi + 1}? Aksi ini permanen.`)) return;
+    const next: AIResult = {
+      ...result,
+      questions: result.questions.filter((_, i) => i !== qi),
+    };
+    setResult(next);
+    persistResultJsonb(next).catch(() => { /* swallow */ });
+    setToast({ text: "Soal dihapus", ok: true });
+    setTimeout(() => setToast(null), 1500);
+  };
+
+  const generateWordInfo = async () => {
+    if (!addKanji.trim() || generating) return;
+    setGenerating(true);
+    setAddReading(""); setAddMeaning("");
+    try {
+      const res = await fetch("/api/furigana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: addKanji.trim(), withMeaning: true }),
+      });
+      const json = await res.json();
+      const habis = bacaKuotaHabis(res, json);
+      if (habis) { setJatahHabis(habis); return; }
+      setAddReading(json.reading ?? "");
+      setAddMeaning(json.meaning ?? "");
+    } catch { /* ignore */ }
+    finally { setGenerating(false); }
+  };
+
+  /* Toggle furigana for any Japanese text; fetches & caches on first show.
+     `key` lets callers namespace e.g. "p-0" (passage 0) vs "q-0" (question 0). */
+  const toggleFurigana = async (key: string, text: string) => {
+    if (showFurigana.has(key)) {
+      setShowFurigana(s => { const n = new Set(s); n.delete(key); return n; });
+      return;
+    }
+    if (furiganaMarked[key]) {
+      setShowFurigana(s => new Set(s).add(key));
+      return;
+    }
+    setFuriganaLoading(s => new Set(s).add(key));
+    try {
+      const res = await fetch("/api/furigana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passage: text }),
+      });
+      const json = await res.json();
+      const habis = bacaKuotaHabis(res, json);
+      if (habis) { setJatahHabis(habis); return; }
+      if (json.marked) {
+        setFuriganaMarked(m => ({ ...m, [key]: json.marked }));
+        setShowFurigana(s => new Set(s).add(key));
+      }
+    } catch { /* ignore */ }
+    finally {
+      setFuriganaLoading(s => { const n = new Set(s); n.delete(key); return n; });
+    }
+  };
+
+  /* Render a passage string with optional [[KANJI|FURIGANA]] markup as <ruby> tags */
+  const renderPassage = (text: string) => {
+    const parts: React.ReactNode[] = [];
+    const regex = /\[\[([^|\]]+)\|([^\]]+)\]\]/g;
+    let last = 0, m: RegExpExecArray | null, key = 0;
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) parts.push(<span key={key++}>{text.slice(last, m.index)}</span>);
+      parts.push(
+        <ruby key={key++} style={{ rubyAlign: "center" }}>
+          {m[1]}
+          <rt style={{ color: "var(--info)", fontSize: "0.55em", fontWeight: 500, letterSpacing: 0 }}>{m[2]}</rt>
+        </ruby>
+      );
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) parts.push(<span key={key++}>{text.slice(last)}</span>);
+    return parts;
+  };
+
+  const saveNewWord = async () => {
+    if (!addKanji.trim() || !addMeaning.trim() || savingNew) return;
+    setSavingNew(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { showToast("Login dulu", false); return; }
+      // Upsert biar duplicate gak skip, malah refresh entry-nya + naik ke atas
+      // (created_at di-bump). Graceful: cobain include `favorite` di select,
+      // kalau kolom belum di-migrate, fallback ke select tanpa favorite.
+      const kanji = addKanji.trim();
+      const upsertBase = {
+        user_id: user.id,
+        kanji,
+        reading: addReading.trim() || null,
+        meaning: addMeaning.trim(),
+        created_at: new Date().toISOString(),
+      };
+      let data: {id:string;kanji:string;reading:string|null;meaning:string;favorite?:boolean|null} | null = null;
+      const primary = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
+        .select("id, kanji, reading, meaning, favorite").single();
+      if (primary.error && /(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(primary.error.message)) {
+        const fb = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
+          .select("id, kanji, reading, meaning").single();
+        if (fb.error) throw fb.error;
+        data = fb.data;
+      } else if (primary.error) {
+        throw primary.error;
+      } else {
+        data = primary.data;
+      }
+      if (data) {
+        const fresh = { ...data, favorite: data.favorite ?? false };
+        setKamusWords(prev => [fresh, ...prev.filter(w => w.id !== fresh.id)]);
+        triggerKamusFlash(fresh.id);
+      }
+      setSavedWords(s => new Set([...s, kanji]));
+      setAddKanji(""); setAddReading(""); setAddMeaning("");
+      showToast(`${kanji} disimpan ke Kamus ✓`, true);
+    } catch (err) {
+      showToast(`Gagal: ${err instanceof Error ? err.message : (err as {message?:string})?.message ?? JSON.stringify(err)}`, false);
+    } finally { setSavingNew(false); }
+  };
+
+  const addNewNote = async () => {
+    if (!newNoteText.trim() || savingNewNote) return;
+    setSavingNewNote(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { showToast("Login dulu", false); return; }
+      const { data, error } = await supabase.from("catatan").insert({
+        user_id: user.id,
+        judul: newNoteText.trim().split("\n")[0].slice(0, 60) || "Catatan",
+        isi: newNoteText.trim(),
+        source: result.title,
+      }).select("id, judul, isi, updated_at").single();
+      if (error) throw error;
+      setCatatanList(prev => [data as {id:string;judul:string;isi:string;updated_at:string}, ...prev]);
+      setNewNoteText("");
+      setNewNoteOpen(false);
+      showToast("Catatan disimpan ✓", true);
+    } catch (err) {
+      showToast(`Gagal: ${err instanceof Error ? err.message : (err as {message?:string})?.message ?? JSON.stringify(err)}`, false);
+    } finally { setSavingNewNote(false); }
+  };
+
+  useEffect(() => {
+    if (rightTab !== "catatan" || catatanLoaded) return;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("catatan")
+        .select("id, judul, isi, updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+      setCatatanList((data ?? []) as {id:string;judul:string;isi:string;updated_at:string}[]);
+      setCatatanLoaded(true);
+    })();
+  }, [rightTab, catatanLoaded]);
+
+  useEffect(() => {
+    if (rightTab !== "kamus" || kamusLoaded) return;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // Graceful: kolom `favorite` mungkin belum di-migrate di project lama
+      // Paginasi (Supabase cap 1000/query) — ambil SEMUA kotoba.
+      const fetchAllKamus = async (cols: string) => {
+        const all: Record<string, unknown>[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await supabase
+            .from("saved_words").select(cols)
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .range(from, from + 999);
+          if (error) return { data: all, error };
+          all.push(...((data ?? []) as unknown as Record<string, unknown>[]));
+          if ((data?.length ?? 0) < 1000) break;
+        }
+        return { data: all, error: null as { message: string } | null };
+      };
+      const primary = await fetchAllKamus("id, kanji, reading, meaning, favorite");
+      if (primary.error && /(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(primary.error.message)) {
+        const fb = await fetchAllKamus("id, kanji, reading, meaning");
+        setKamusWords(fb.data.map(w => ({ ...w, favorite: false })) as unknown as typeof kamusWords);
+      } else {
+        setKamusWords(primary.data.map(w => ({ ...w, favorite: w.favorite ?? false })) as unknown as typeof kamusWords);
+      }
+      setKamusLoaded(true);
+    })();
+  }, [rightTab, kamusLoaded]);
+
+  /* Auto-save: tiap user jawab/reveal, debounce 600ms, persist user_progress.
+     SKOR cuma ditulis pas semua soal kejawab (selesai) — selama in-progress
+     score = null biar Riwayat nampilin "sedang dikerjain", bukan skor partial. */
+  useEffect(() => {
+    if (!sessionId || isReview) return;
+    const hasHl = Object.values(highlights).some(arr => arr.length > 0);
+    if (revealed.size === 0 && Object.keys(answers).length === 0 && !hasHl) return;
+
+    const handle = setTimeout(async () => {
+      try {
+        const total = result.questions.length;
+        const isComplete = total > 0 && revealed.size === total;
+        const correctCount = result.questions.filter((q, qi) => {
+          if (!revealed.has(qi)) return false;
+          const userAns = answers[qi];
+          return userAns && userAns === q.correct;
+        }).length;
+
+        const nextProgress: UserProgress = {
+          answers,
+          revealed: Array.from(revealed),
+          xp_claimed: scoreSaved,
+          highlights,
+        };
+        const nextResult: AIResult = {
+          ...result,
+          user_progress: nextProgress,
+          stats: computeStats(result.questions, answers, revealed),
+        };
+
+        const supabase = createClient();
+        await supabase
+          .from("sessions")
+          .update({ ai_result: nextResult, score: isComplete ? correctCount : null })
+          .eq("id", sessionId);
+      } catch {
+        // silent — UI tetap responsif walau save gagal
+      }
+    }, 600);
+
+    return () => clearTimeout(handle);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, revealed, highlights, sessionId, isReview]);
+
+  /* XP gain — sekali aja per sesi, pas semua soal ke-reveal. xp_claimed
+     dipersist di ai_result.user_progress biar refresh gak double-award. */
+  useEffect(() => {
+    const total = result.questions.length;
+    if (revealed.size < total || scoreSaved || !sessionId || isReview) return;
+    if (result.user_progress?.xp_claimed) {
+      setScoreSaved(true);
+      return;
+    }
+
+    async function awardXp() {
+      const correctCount = result.questions.filter((q, qi) => {
+        const userAns = answers[qi];
+        return userAns && userAns === q.correct;
+      }).length;
+      const xpGain = correctCount * 10 + 5;
+
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from("profiles").select("xp").eq("id", user.id).single();
+        const currentXp = profile?.xp ?? 0;
+
+        await supabase.from("profiles")
+          .update({ xp: currentXp + xpGain })
+          .eq("id", user.id);
+
+        setScoreSaved(true);
+        setToast({ text: `+${xpGain} XP — ${correctCount}/${total} benar`, ok: true });
+        setTimeout(() => setToast(null), 3000);
+      } catch {
+        // silent
+      }
+    }
+
+    awardXp();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealed.size, scoreSaved, sessionId, isReview]);
+
+  /* Deteksi "baru selesai" (rising edge) → munculin popup skor sekali.
+     prevRevealed di-init ke nilai saat mount, jadi sesi yang DIBUKA dalam
+     keadaan udah komplit gak langsung popup (cuma pas user nyelesaiin live). */
+  const prevRevealed = useRef(revealed.size);
+  useEffect(() => {
+    const total = result.questions.length;
+    const nowComplete = total > 0 && revealed.size === total;
+    const wasComplete = total > 0 && prevRevealed.current === total;
+    if (nowComplete && !wasComplete) setShowCompletion(true);
+    prevRevealed.current = revealed.size;
+  }, [revealed.size, result.questions.length]);
+
+  /* Skor final + reset */
+  const total       = result.questions.length;
+  const isComplete  = total > 0 && revealed.size === total;
+  const correctTotal = result.questions.filter((q, qi) => answers[qi] && answers[qi] === q.correct).length;
+
+  /* Ulang dari awal — clear jawaban & pembahasan, soal yang sama dikerjain
+     ulang. XP gak dibalikin & gak dobel (xp_claimed tetap true). Coretan
+     stabilo dibiarin (catatan, bukan jawaban). */
+  const resetSession = async () => {
+    setKonfirmReset(false);
+    setResetting(true);
+    try {
+      setAnswers({});
+      setRevealed(new Set());
+      prevRevealed.current = 0;
+      setShowCompletion(false);
+      if (sessionId && !isReview) {
+        const nextProgress: UserProgress = {
+          answers: {},
+          revealed: [],
+          xp_claimed: true, // udah pernah dapet XP, jangan award lagi
+          highlights,
+        };
+        const nextResult: AIResult = {
+          ...result,
+          user_progress: nextProgress,
+          stats: { answered: 0, correct: 0, perCat: {} },
+        };
+        setResult(nextResult);
+        const supabase = createClient();
+        await supabase
+          .from("sessions")
+          .update({ ai_result: nextResult, score: null })
+          .eq("id", sessionId);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  /* Timer — hanya jalan saat timerOn = true */
+  useEffect(() => {
+    if (!timerOn) return;
+    const t = setInterval(() => setElapsed(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [timerOn]);
+
+  const saveNoteToCatatan = async (qi: number, q: AIResult["questions"][number]) => {
+    if (savedNotes.has(qi) || savingNote === qi) return;
+    setSavingNote(qi);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { showToast("Login dulu", false); return; }
+      const judul = q.question.slice(0, 60);
+      const isi = `❓ ${q.question}\n\n✅ Jawaban: Pilihan ${q.correct}\n\n💡 ${q.explanation}${q.why_wrong ? `\n\n❌ ${q.why_wrong}` : ""}${q.tip ? `\n\n🎯 ${q.tip}` : ""}`;
+      const { error } = await supabase.from("catatan").insert({
+        user_id: user.id,
+        judul,
+        isi,
+        source: result.title,
+      });
+      if (error) throw error;
+      setSavedNotes(prev => new Set([...prev, qi]));
+      setCatatanList(prev => [{ id: `temp-${Date.now()}-${qi}`, judul, isi, updated_at: new Date().toISOString() }, ...prev]);
+      showToast("Disimpan ke Catatan ✓", true);
+    } catch (err) {
+      showToast(`Gagal: ${err instanceof Error ? err.message : (err as {message?:string})?.message ?? JSON.stringify(err)}`, false);
+    } finally { setSavingNote(null); }
+  };
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  /* Highlight blanks like （　）（　　）in question text */
+  const renderQuestion = (text: string, accent: string, target?: string) => {
+    const parts = text.split(/(（[　\u3000 ]+）|\( *\))/g);
+    return parts.map((part, i) => {
+      if (/^（[　\u3000 ]+）$/.test(part) || /^\( *\)$/.test(part)) {
+        return (
+          <span key={i}
+            className="inline-block mx-1 px-4 py-0.5 rounded-lg font-black align-baseline"
+            style={{
+              color: accent,
+              background: `${accent}18`,
+              border: `1.5px solid ${accent}`,
+              borderBottom: `3px solid ${accent}`,
+              minWidth: "3.5rem",
+              textAlign: "center",
+              letterSpacing: "0.1em",
+            }}>
+            ＿＿
+          </span>
+        );
+      }
+      // Garisbawahi kata target (soal 文字/語彙) — occurrence pertama di part ini.
+      if (target && part.includes(target)) {
+        const idx = part.indexOf(target);
+        return (
+          <span key={i}>
+            {part.slice(0, idx)}
+            <span style={{ borderBottom: `2px solid ${accent}`, fontWeight: 700, paddingBottom: 1 }}>{target}</span>
+            {part.slice(idx + target.length)}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  const showToast = (text: string, ok: boolean) => {
+    setToast({ text, ok });
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const saveWord = async (jp: string, meaning: string) => {
+    if (savedWords.has(jp) || savingWord === jp) return;
+    setSavingWord(jp);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { showToast("Login dulu untuk simpan kata", false); return; }
+      let reading: string | null = null;
+      try {
+        const r = await fetch("/api/furigana", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word: jp }),
+        });
+        const rj = await r.json();
+        if (rj.reading) reading = rj.reading;
+      } catch { /* furigana optional */ }
+
+      // Upsert: kalau duplicate (user lupa udah simpan dari soal lain), refresh
+      // entry-nya + naik ke atas. Graceful: fallback select tanpa favorite
+      // kalau kolom belum di-migrate.
+      const upsertBase = { user_id: user.id, kanji: jp, reading, meaning, created_at: new Date().toISOString() };
+      let inserted: {id:string;kanji:string;reading:string|null;meaning:string;favorite?:boolean|null} | null = null;
+      const primary = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
+        .select("id, kanji, reading, meaning, favorite").single();
+      if (primary.error && /(column .*favorite.* does not exist|could not find the .favorite. column)/i.test(primary.error.message)) {
+        const fb = await supabase.from("saved_words").upsert(upsertBase, { onConflict: "user_id,kanji" })
+          .select("id, kanji, reading, meaning").single();
+        if (fb.error) throw fb.error;
+        inserted = fb.data;
+      } else if (primary.error) {
+        throw primary.error;
+      } else {
+        inserted = primary.data;
+      }
+      setSavedWords(s => new Set([...s, jp]));
+      if (inserted) {
+        const fresh = { ...inserted, favorite: inserted.favorite ?? false };
+        setKamusWords(prev => [fresh, ...prev.filter(w => w.id !== fresh.id)]);
+        triggerKamusFlash(fresh.id);
+      }
+      showToast(`${jp} ditambahkan ke Kamus ✓`, true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast(`Gagal: ${msg}`, false);
+    } finally {
+      setSavingWord(null);
+    }
+  };
+
+  const pick = (qi: number, id: string) => {
+    if (revealed.has(qi)) return;
+    setAnswers(a => ({ ...a, [qi]: id }));
+    catatAktivitas("soal");
+  };
+  const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
+
+  /* Trigger flash halo amber di baris kotoba — biar user notice entry-nya
+     baru/refresh. Auto-clear 1.3s setelah animation selesai. */
+  const triggerKamusFlash = (id: string) => {
+    setFlashKamusId(id);
+    setTimeout(() => setFlashKamusId(prev => prev === id ? null : prev), 1800);
+  };
+
+  /* Delete kotoba dari sidebar — nyambung ke saved_words yang sama dengan
+     /kamus. Confirm dulu biar gak ke-pencet gak sengaja. */
+  const deleteKamusWord = async (id: string, kanji: string) => {
+    if (!confirm(`Hapus "${kanji}" dari kamus?`)) return;
+    const prev = kamusWords;
+    setKamusWords(p => p.filter(w => w.id !== id));
+    setSavedWords(s => {
+      const next = new Set(s);
+      next.delete(kanji);
+      return next;
+    });
+    try {
+      const { error } = await createClient().from("saved_words").delete().eq("id", id);
+      if (error) throw error;
+      showToast(`${kanji} dihapus dari kamus`, true);
+    } catch (err) {
+      setKamusWords(prev);
+      console.error("Delete word error:", err);
+      const msg = err instanceof Error
+        ? err.message
+        : (err as {message?: string})?.message ?? JSON.stringify(err);
+      showToast(`Gagal hapus: ${msg}`, false);
+    }
+  };
+
+  /* Toggle favorite di kamus sidebar — nyambung ke saved_words.favorite
+     yang dipakai /kamus page. Klik bintang = same effect as star di /kamus. */
+  const toggleKamusFavorite = async (id: string) => {
+    const w = kamusWords.find(x => x.id === id);
+    if (!w) return;
+    const next = !w.favorite;
+    setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: next } : x));
+
+    // Helper tahan sesi-basi: refresh + retry sekali sebelum nyerah.
+    const res = await setSavedWordFavorite(id, next);
+    if (res.ok) return;
+
+    // Gagal → revert + pesan yang tepat.
+    setKamusWords(prev => prev.map(x => x.id === id ? { ...x, favorite: !next } : x));
+    console.error("Toggle favorite gagal:", res);
+    if (res.reason === "auth") {
+      showToast("Sesi login habis — login ulang biar favoritnya kesimpen.", false);
+    } else if (res.reason === "missing-column") {
+      showToast("Fitur favorit butuh migrasi DB. Buka Supabase SQL Editor, lalu jalanin: alter table saved_words add column favorite boolean default false;", false);
+    } else {
+      showToast(`Gagal toggle: ${res.message}`, false);
+    }
+  };
+
+  /* Composer dimatiin selama jatah chat masih habis (sampai resetAt). */
+  const chatHabis = chatMsgs.findLast(m => m.kuota)?.kuota;
+  const chatMasihHabis = chatHabis && new Date(chatHabis.resetAt).getTime() > Date.now() ? chatHabis : null;
+
+  const sendChat = async () => {
+    if (!chatInput.trim() || chatLoading || chatMasihHabis) return;
+    const msg = chatInput.trim();
+    setChatInput("");
+    const newMsgs: ChatMsg[] = [...chatMsgs, { role: "user", text: msg }];
+    setChatMsgs(newMsgs);
+    setChatLoading(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: msg,
+          context: result,
+          history: chatMsgs.map(m => ({ role: m.role, text: m.text })),
+        }),
+      });
+      const json = await res.json();
+
+      /* 429 = jatah harian habis, dan route-nya udah ngirim pesan yang enak
+         dibaca. Sebelumnya pesan itu dibuang dan diganti "gagal membalas",
+         jadi orang gak pernah tau kenapa — dia cuma mikir aplikasinya rusak. */
+      const habis = bacaKuotaHabis(res, json);
+      if (habis) {
+        setChatMsgs([...newMsgs, { role: "model", text: habis.message, kuota: habis }]);
+      } else if (res.status === 429) {
+        setChatMsgs([...newMsgs, { role: "model", text: json.message ?? json.error, kuotaHabis: true }]);
+      } else if (!res.ok) {
+        setChatMsgs([...newMsgs, { role: "model", text: json.error || "Maaf, gagal membalas." }]);
+      } else {
+        setChatMsgs([...newMsgs, { role: "model", text: json.reply || "Maaf, gagal membalas." }]);
+      }
+    } catch {
+      setChatMsgs([...newMsgs, { role: "model", text: "Maaf, terjadi kesalahan. Coba lagi." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  return (
+    <div className="af-grid" style={{ position: "relative" }}>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`af-toast ${toast.ok ? "ok" : "bad"}`}>
+          {toast.ok ? <BookmarkCheck className="size-4 shrink-0" /> : <X className="size-4 shrink-0" />}
+          {toast.text}
+        </div>
+      )}
+
+      {/* ── Left: All Questions ── */}
+      <main className="af-main">
+
+        {/* Topbar v2 */}
+        <header className="af-topbar">
+          <div className="af-title-block">
+            <h1 className="af-title">
+              <span className="af-title-jp">{result.title}</span>
+            </h1>
+            <div className="af-meta-row">
+              <span className="meta-chip">
+                <span className="meta-num">{result.questions.length}</span> soal
+              </span>
+              {revealed.size > 0 && (
+                <span className="meta-chip">
+                  <span className="meta-dot" style={{ background: "var(--accent-emerald)" }} />
+                  <span className="meta-num">{revealed.size}</span> dijawab
+                </span>
+              )}
+              {isSaved && (
+                <a href="/riwayat-soal" className="meta-chip status-saved">
+                  <Check className="size-3" />
+                  Tersimpan otomatis · <span className="meta-link">Lihat riwayat →</span>
+                </a>
+              )}
+              {!isSaved && (
+                <span className="meta-chip">
+                  <Loader2 className="size-3 animate-spin" /> Menyimpan...
+                </span>
+              )}
+              {/* Reset cuma ditawarin kalau emang ada yang bisa direset. Sebelum
+                  ini pintunya cuma di popup "Selesai!", jadi mustahil dijangkau
+                  sampai semua soal kejawab. */}
+              {hasProgress && !isReview && (
+                <button
+                  type="button"
+                  className="meta-chip meta-chip-btn"
+                  onClick={() => setKonfirmReset(true)}
+                  disabled={resetting}
+                >
+                  {resetting
+                    ? <Loader2 className="size-3 animate-spin" />
+                    : <RotateCcw size={12} strokeWidth={2} />}
+                  Ulang dari awal
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="af-actions">
+            <div className="af-timer">
+              <Clock size={13} strokeWidth={2} />
+              <span className="af-timer-val">{timerOn ? formatTime(elapsed) : "—:——"}</span>
+              <button
+                type="button"
+                onClick={() => setTimerOn(v => !v)}
+                className={`af-timer-status${timerOn ? "" : " off"}`}
+                style={{ cursor: "pointer", border: "none" }}
+              >
+                {timerOn ? "ON" : "OFF"}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm af-exit-btn"
+              onClick={() => (hasProgress ? setExitTo("/riwayat-soal") : router.push("/riwayat-soal"))}
+              title="Keluar dari sesi (progress tetap tersimpan)"
+            >
+              <LogOut size={14} strokeWidth={1.9} /> Keluar
+            </button>
+          </div>
+        </header>
+
+        {/* Category + review filters v2 */}
+        {(() => {
+          const cats = ["全部", ...Array.from(new Set(result.questions.map(q => q.category).filter(Boolean)))];
+          const reviewCount = result.questions.filter(q => q.needs_review).length;
+          const hasCatFilter = cats.length > 2;
+          if (!hasCatFilter && reviewCount === 0) return null;
+          return (
+            <div className="af-filter-row">
+              {hasCatFilter && cats.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`af-filter-chip${catFilter === c ? " on" : ""}`}
+                  onClick={() => setCatFilter(c!)}
+                >
+                  {c} {c !== "全部" && `(${result.questions.filter(q => q.category === c).length})`}
+                </button>
+              ))}
+              {reviewCount > 0 && (
+                <button
+                  type="button"
+                  className={`af-filter-chip review${reviewOnly ? " on" : ""}`}
+                  onClick={() => setReviewOnly(v => !v)}
+                >
+                  <Flag size={12} strokeWidth={1.8} />
+                  {reviewOnly ? "Tampilkan semua" : `Perlu review (${reviewCount})`}
+                </button>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Questions list */}
+        <div className="flex flex-col gap-5 md:gap-6 px-4 md:px-8 py-5 md:py-6">
+          {(() => {
+            let lastPassageText = "";
+            let passageCardIdx = -1;
+            return result.questions.map((q, qi) => {
+              if (catFilter !== "全部" && q.category && q.category !== catFilter) return null;
+              if (reviewOnly && !q.needs_review) return null;
+              const isRevealed = revealed.has(qi);
+              const userAns = answers[qi];
+              const accentColors = ["var(--info)","var(--n1)","var(--success)","var(--warning)","var(--n1)","var(--info)","var(--info)","var(--info)"];
+              const accent = accentColors[qi % accentColors.length];
+
+              // New passage encountered → show passage card before this question
+              const showPassageCard = !!(q.passage && q.passage !== lastPassageText);
+              if (showPassageCard && q.passage) {
+                lastPassageText = q.passage;
+                passageCardIdx = qi;
+              }
+              const isPassageCollapsed = expandedPassages.has(passageCardIdx);
+
+              return (
+                <div key={qi} className="flex flex-col gap-4">
+
+                  {/* ── Standalone passage card ── */}
+                  {showPassageCard && q.passage && (() => {
+                    const pKey = `p-${qi}`;
+                    const furiOn = showFurigana.has(pKey);
+                    const furiLoading = furiganaLoading.has(pKey);
+                    return (
+                      <section className="glass-card af-reading">
+                        <div className="reading-head">
+                          <h3 className="reading-title">
+                            <BookOpen size={14} strokeWidth={1.8} style={{ color: "var(--accent-emerald)" }} />
+                            Teks Bacaan · 読解
+                          </h3>
+                          <div className="reading-actions">
+                            <button
+                              type="button"
+                              onClick={() => toggleFurigana(pKey, q.passage!)}
+                              disabled={furiLoading}
+                              className={`toggle-chip${furiOn ? " on" : ""}`}
+                            >
+                              {furiLoading
+                                ? <Loader2 size={11} className="animate-spin" />
+                                : <span className="toggle-jp">ふ</span>}
+                              {furiLoading ? "Memuat..." : "Furigana"}
+                              {furiOn && !furiLoading && <Check size={11} strokeWidth={2.4} />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedPassages(s => { const n = new Set(s); if (n.has(qi)) n.delete(qi); else n.add(qi); return n; })}
+                              className="toggle-chip"
+                            >
+                              {isPassageCollapsed ? "Tampilkan ▼" : "Sembunyikan ▲"}
+                            </button>
+                          </div>
+                        </div>
+                        {!isPassageCollapsed && (
+                          <div className={`reading-body${drawMode ? " stabilo-active" : ""}`}>
+                            <p>
+                              {furiOn && furiganaMarked[pKey]
+                                ? renderPassage(furiganaMarked[pKey])
+                                : q.passage}
+                            </p>
+                            <StabiloLayer
+                              strokes={highlights[pKey] ?? []}
+                              active={drawMode}
+                              color={stabiloColor}
+                              onCommit={(s) => commitStroke(pKey, s)}
+                            />
+                          </div>
+                        )}
+                      </section>
+                    );
+                  })()}
+
+                  {/* ── Question card v2 ── */}
+                  <article className="glass-card qc-v2">
+                    <div className="qc-v2-head">
+                      <span className="qc-v2-num">{qi + 1}</span>
+                      {q.category && (
+                        <span className="qc-v2-cat-tag">{q.category}</span>
+                      )}
+                      {(() => {
+                        const qKey = `q-${qi}`;
+                        const on = showFurigana.has(qKey);
+                        const loading = furiganaLoading.has(qKey);
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => toggleFurigana(qKey, q.question)}
+                            disabled={loading}
+                            className={`qc-furi-toggle${on ? " on" : ""}`}
+                            title="Toggle furigana di soal"
+                          >
+                            {loading
+                              ? <Loader2 className="size-2.5 animate-spin" />
+                              : <span className="furi-jp">ふ</span>}
+                            SOAL
+                            {on && !loading && <Check size={10} strokeWidth={2.4} />}
+                          </button>
+                        );
+                      })()}
+                      {(() => {
+                        const optKeys = q.options.map((_, oi) => `o-${qi}-${oi}`);
+                        const allOn = optKeys.every(k => showFurigana.has(k));
+                        const anyLoading = optKeys.some(k => furiganaLoading.has(k));
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => toggleAllOptions(qi, q.options)}
+                            disabled={anyLoading}
+                            className={`qc-furi-toggle furi-opsi${allOn ? " on" : ""}`}
+                            title="Toggle furigana di semua pilihan"
+                          >
+                            {anyLoading
+                              ? <Loader2 className="size-2.5 animate-spin" />
+                              : <span className="furi-jp">ふ</span>}
+                            OPSI
+                            {allOn && !anyLoading && <Check size={10} strokeWidth={2.4} />}
+                          </button>
+                        );
+                      })()}
+                      <div className="qc-v2-actions">
+                        <button
+                          type="button"
+                          onClick={() => toggleReviewFlag(qi)}
+                          disabled={savingFlagIdx === qi}
+                          title={q.needs_review ? "Lepas tanda review" : "Tandai perlu review"}
+                          className={`qc-act review${q.needs_review ? " on" : ""}`}
+                        >
+                          <Flag size={12} strokeWidth={1.8} /> REVIEW
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(qi)}
+                          title="Edit soal manual"
+                          className="qc-act edit"
+                        >
+                          <Pencil size={12} strokeWidth={1.8} /> EDIT
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteQuestion(qi)}
+                          title="Hapus soal"
+                          className="qc-act delete"
+                        >
+                          <Trash2 size={12} strokeWidth={1.8} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const qKey = `q-${qi}`;
+                      const useFuri = showFurigana.has(qKey) && furiganaMarked[qKey];
+                      return (
+                        <p className="qc-v2-prompt font-jp-sans">
+                          {useFuri
+                            ? renderPassage(furiganaMarked[qKey])
+                            : renderQuestion(q.question, accent, q.target)}
+                        </p>
+                      );
+                    })()}
+
+                    <div className="qc-v2-options">
+                      {q.options.map((opt, oi) => {
+                        const id = opt.charAt(0);
+                        const isSelected = userAns === id;
+                        const isCorrect = id === q.correct;
+                        const optText = opt.slice(2).trim();
+                        const opKey = `o-${qi}-${oi}`;
+                        const useFuri = showFurigana.has(opKey) && furiganaMarked[opKey];
+
+                        let cls = "";
+                        if (isRevealed) {
+                          if (isCorrect) cls = "correct";
+                          else if (isSelected) cls = "wrong";
+                          else cls = "dim";
+                        } else if (isSelected) cls = "picked";
+
+                        return (
+                          <div
+                            key={opt}
+                            role="button"
+                            tabIndex={0}
+                            className={`qc-v2-option ${cls}`}
+                            onClick={() => { if (!isRevealed) pick(qi, id); }}
+                            onKeyDown={(e) => {
+                              if ((e.key === "Enter" || e.key === " ") && !isRevealed) {
+                                e.preventDefault();
+                                pick(qi, id);
+                              }
+                            }}
+                          >
+                            <span className="qc-v2-bullet">{id}</span>
+                            <span className="qc-v2-opt-text font-jp-sans">
+                              {useFuri ? renderPassage(furiganaMarked[opKey]) : optText}
+                            </span>
+                            {isRevealed && isCorrect && (
+                              <svg
+                                width={16} height={16} viewBox="0 0 24 24" fill="none"
+                                stroke="var(--accent-emerald)" strokeWidth={2.4}
+                                strokeLinecap="round" strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <polyline className="qc-check-draw" points="20 6 9 17 4 12" />
+                              </svg>
+                            )}
+                            {isRevealed && isSelected && !isCorrect && (
+                              <X size={16} strokeWidth={2.4} style={{ color: "var(--accent-rose)" }} />
+                            )}
+                            <span
+                              className="qc-opt-copy"
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(optText, `Opsi ${id} tersalin`); }}
+                              role="button"
+                              tabIndex={-1}
+                              title="Salin teks opsi"
+                            >
+                              <Copy size={12} />
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {!isRevealed && (
+                      <>
+                        <div className="qc-v2-hint">
+                          <span className="qc-hint-emoji">💪</span>
+                          Pilih jawaban dulu sebelum lihat pembahasan
+                        </div>
+                        <button
+                          type="button"
+                          className="qc-reveal-btn"
+                          onClick={() => reveal(qi)}
+                          disabled={!userAns}
+                        >
+                          <span className="reveal-emoji">🔥</span>
+                          <span>LIHAT JAWABAN &amp; PEMBAHASAN</span>
+                          <ChevronDown size={14} strokeWidth={2.4} />
+                        </button>
+                      </>
+                    )}
+
+                    {isRevealed && (() => {
+                      const correctOpt = q.options.find(o => o.startsWith(q.correct));
+                      const correctText = correctOpt?.slice(2).trim() ?? "";
+                      const correctIdx = q.options.findIndex(o => o.startsWith(q.correct));
+                      const correctOpKey = `o-${qi}-${correctIdx}`;
+                      const useFuri = showFurigana.has(correctOpKey) && furiganaMarked[correctOpKey];
+                      const isUserCorrect = userAns === q.correct;
+                      return (
+                        <section className="qc-pembahasan">
+                          <div className="pb-result-badge">
+                            <span className={`prb-icon ${isUserCorrect ? "good" : "bad"}`}>
+                              {isUserCorrect
+                                ? <Check size={14} strokeWidth={2.6} />
+                                : <X size={14} strokeWidth={2.6} />}
+                            </span>
+                            <div className="prb-text">
+                              <strong>
+                                {isUserCorrect
+                                  ? "Mantap, kamu benar!"
+                                  : `Coba lagi — yang benar nomor ${q.correct}`}
+                              </strong>
+                              <span>
+                                Jawaban: <em>Pilihan {q.correct} — {useFuri ? renderPassage(furiganaMarked[correctOpKey]) : correctText}</em>
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(`Pilihan ${q.correct} — ${correctText}`, "Jawaban tersalin")}
+                              title="Salin jawaban"
+                              className="qc-opt-copy"
+                              style={{ opacity: 1 }}
+                            >
+                              <Copy size={12} />
+                            </button>
+                          </div>
+
+                          <div className="qc-pb-section pb-good">
+                            <div className="qc-pb-head">
+                              <Sparkles size={13} strokeWidth={1.8} fill="currentColor" /> KENAPA BENAR
+                            </div>
+                            <p className="qc-pb-body">{q.explanation}</p>
+                          </div>
+
+                          {q.why_wrong && (
+                            <div className="qc-pb-section pb-bad">
+                              <div className="qc-pb-head">
+                                <X size={13} strokeWidth={2} /> PILIHAN LAIN SALAH
+                              </div>
+                              <p className="qc-pb-body">{q.why_wrong}</p>
+                            </div>
+                          )}
+
+                          {q.grammar_points && q.grammar_points.length > 0 && (
+                            <div className="qc-pb-section pb-info">
+                              <div className="qc-pb-head">
+                                <BookOpen size={12} strokeWidth={1.8} /> POIN GRAMMAR / KOSAKATA
+                              </div>
+                              <div className="qc-pb-grammar">
+                                {q.grammar_points.map((gp, i) => {
+                                  const isSavedWord = savedWords.has(gp.jp);
+                                  const isSavingThis = savingWord === gp.jp;
+                                  return (
+                                    <div key={i} className="qc-pb-grammar-row">
+                                      <span className="qc-pb-grammar-jp">{gp.jp}</span>
+                                      {gp.reading && <span className="qc-pb-grammar-reading">{gp.reading}</span>}
+                                      <span className="qc-pb-grammar-meaning">{gp.id}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => saveWord(gp.jp, gp.id)}
+                                        disabled={isSavedWord || isSavingThis}
+                                        className="dh-icon-btn"
+                                        style={{ width: 26, height: 26 }}
+                                        title={isSavedWord ? "Sudah di Kamus" : "Simpan ke Kamus"}
+                                      >
+                                        {isSavingThis
+                                          ? <Loader2 className="size-3 animate-spin" />
+                                          : isSavedWord
+                                            ? <BookmarkCheck size={12} style={{ color: "var(--accent-emerald)" }} />
+                                            : <BookmarkPlus size={12} />}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {q.tip && (
+                            <div className="qc-pb-section pb-tips">
+                              <div className="qc-pb-head">
+                                <Sparkles size={12} strokeWidth={1} fill="currentColor" /> TIPS UJIAN
+                              </div>
+                              <p className="qc-pb-body">{q.tip}</p>
+                            </div>
+                          )}
+
+                          <div className="qc-pb-footer">
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => saveNoteToCatatan(qi, q)}
+                              disabled={savedNotes.has(qi) || savingNote === qi}
+                            >
+                              {savingNote === qi
+                                ? <Loader2 className="size-3 animate-spin" />
+                                : savedNotes.has(qi)
+                                  ? <Check size={12} />
+                                  : <BookmarkPlus size={12} />}
+                              {savedNotes.has(qi) ? "Tersimpan di Catatan" : savingNote === qi ? "Menyimpan..." : "Simpan ke Catatan"}
+                            </button>
+                          </div>
+                        </section>
+                      );
+                    })()}
+                    {/* Overlay coret — nutupin seluruh kartu soal pas draw mode */}
+                    <StabiloLayer
+                      strokes={highlights[`c-${qi}`] ?? []}
+                      active={drawMode}
+                      color={stabiloColor}
+                      onCommit={(s) => commitStroke(`c-${qi}`, s)}
+                    />
+                  </article>
+              </div>
+            );
+          });
+        })()}
+
+        {/* Tambah soal manual */}
+        <div className="af-add-row">
+          <button
+            type="button"
+            className="af-add-btn manual"
+            onClick={openAddManual}
+          >
+            <Plus size={14} strokeWidth={2.2} /> Tambah soal manual
+          </button>
+        </div>
+        </div>
+
+        {/* Kosakata sesi tersimpan, termasuk sesi impor lama. */}
+        {result.vocabulary && result.vocabulary.length > 0 && (
+          <section className="af-vocab-section">
+            <div className="af-vocab-head">
+              <span>Kosakata sesi</span>
+              <span className="meta-chip" style={{ padding: "2px 8px", fontSize: 10.5 }}>
+                {result.vocabulary.length} kata
+              </span>
+              <span style={{ fontSize: 10.5, color: "var(--text-muted)", letterSpacing: 0 }}>
+                — tersimpan otomatis ke Kamus
+              </span>
+            </div>
+            <div className="af-vocab-grid">
+              {result.vocabulary.map((v, i) => (
+                <article key={i} className="af-vocab-card">
+                  {v.jlpt_level && <span className="af-vocab-level">{v.jlpt_level}</span>}
+                  {v.reading && <span className="af-vocab-reading">{v.reading}</span>}
+                  <span className="af-vocab-word">{v.word}</span>
+                  <p className="af-vocab-meaning" style={{ margin: 0 }}>{v.meaning}</p>
+                  {v.example && (
+                    <p className="af-vocab-example" style={{ margin: 0 }}>{v.example}</p>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 10, color: "var(--accent-emerald)" }}>
+                    <BookmarkCheck size={11} strokeWidth={1.8} />
+                    <span style={{ letterSpacing: "0.08em", fontWeight: 600 }}>Tersimpan</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="h-8" />
+      </main>
+
+      {/* ── Right: Sensei / Kamus / Catatan sidebar (v2 markup) ── */}
+      <aside className="af-side hidden lg:flex">
+        <div className="glass-card side-tabs">
+          <button
+            type="button"
+            className={`side-tab${rightTab === "chat" ? " on" : ""}`}
+            onClick={() => setRightTab("chat")}
+          >
+            <MessageCircle size={13} strokeWidth={1.8} fill={rightTab === "chat" ? "currentColor" : "none"} />
+            SENSEI
+          </button>
+          <button
+            type="button"
+            className={`side-tab${rightTab === "kamus" ? " on" : ""}`}
+            onClick={() => setRightTab("kamus")}
+          >
+            <BookOpen size={13} strokeWidth={1.8} />
+            KAMUS
+          </button>
+          <button
+            type="button"
+            className={`side-tab${rightTab === "catatan" ? " on" : ""}`}
+            onClick={() => setRightTab("catatan")}
+          >
+            <NotebookPen size={13} strokeWidth={1.8} />
+            CATATAN
+            {catatanList.length > 0 && <span className="side-tab-badge">{catatanList.length}</span>}
+          </button>
+        </div>
+
+        {/* ── Tab: Sensei chat ── */}
+        {rightTab === "chat" && (
+          <div className="glass-card side-card sensei-card">
+            <div className="sensei-intro">
+              <div className="sensei-avatar">先</div>
+              <div>
+                <div className="sensei-name">Sensei AI</div>
+                <div className="sensei-status">Online · siap bantu</div>
+              </div>
+            </div>
+
+            {chatMsgs.length === 0 ? (
+              <div className="sensei-suggest">
+                {[
+                  "Kenapa jawaban ini benar?",
+                  "Kasih contoh kalimat lain",
+                  "Jelasin grammar-nya lebih detail",
+                ].map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="suggest-pill"
+                    onClick={() => setChatInput(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="sensei-msgs">
+                {chatMsgs.map((m, i) => m.kuota ? (
+                  /* Catatan inline, bukan modal: jawaban sebelumnya tetap
+                     kebaca dan tempat orangnya gak hilang. */
+                  m.kuotaRingkas
+                    ? <div key={i} className="sensei-msg bot kuota">Chat habis — reset {sisaWaktuReset(m.kuota.resetAt)}.</div>
+                    : <JatahHabisInline key={i} kuota={m.kuota} sempit
+                        onTunggu={() => setChatMsgs(chatMsgs.map((x, j) => j === i ? { ...x, kuotaRingkas: true } : x))} />
+                ) : (
+                  <div key={i} className={`sensei-msg ${m.role === "user" ? "user" : "bot"}${m.kuotaHabis ? " kuota" : ""}`}>
+                    {m.text}
+                    {/* Ajakan upgrade cuma nempel di pesan jatah-habis, dan tanpa
+                        desakan — orangnya lagi belajar, bukan lagi belanja. */}
+                    {m.kuotaHabis && (
+                      <a href="/premium" className="sensei-kuota-link">Lihat paket Pro →</a>
+                    )}
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="sensei-msg bot">
+                    <Loader2 size={12} className="animate-spin" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="sensei-input">
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
+                placeholder={chatMasihHabis ? `Chat habis — reset ${sisaWaktuReset(chatMasihHabis.resetAt)}` : "Tanya tentang soal ini..."}
+                disabled={!!chatMasihHabis}
+              />
+              <button
+                type="button"
+                className="sensei-send"
+                onClick={sendChat}
+                disabled={!chatInput.trim() || chatLoading || !!chatMasihHabis}
+                aria-label="Kirim"
+              >
+                <Send size={13} strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab: Kamus ── */}
+        {rightTab === "kamus" && (
+          <div className="glass-card side-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "var(--surface-1)", border: "1px solid var(--edge-soft)" }}>
+              <Search size={13} strokeWidth={1.6} style={{ color: "var(--text-tertiary)" }} />
+              <input
+                value={kamusQuery}
+                onChange={e => setKamusQuery(e.target.value)}
+                placeholder="Cari kata..."
+                style={{
+                  flex: 1, background: "transparent", border: "none", outline: "none",
+                  color: "var(--text-primary)", fontSize: 12.5, fontFamily: "var(--font-sans)",
+                }}
+              />
+              {kamusQuery && (
+                <button
+                  type="button"
+                  onClick={() => setKamusQuery("")}
+                  style={{ background: "transparent", border: "none", color: "var(--text-tertiary)", cursor: "pointer" }}
+                  aria-label="Hapus"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Add word form */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", gap: 6, minWidth: 0 }}>
+                <input
+                  value={addKanji}
+                  onChange={e => setAddKanji(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && generateWordInfo()}
+                  placeholder="Ketik kata/kanji..."
+                  className="font-jp-sans"
+                  style={{
+                    flex: 1, minWidth: 0, padding: "8px 12px", borderRadius: 10,
+                    background: "var(--surface-1)", border: "1px solid var(--edge-default)",
+                    color: "var(--text-primary)", fontSize: 14, outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={generateWordInfo}
+                  disabled={!addKanji.trim() || generating}
+                  className="btn btn-magic btn-sm"
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  {generating ? "" : "Auto"}
+                </button>
+              </div>
+              {(addReading || addMeaning) && (
+                <>
+                  <input
+                    value={addReading}
+                    onChange={e => setAddReading(e.target.value)}
+                    placeholder="Cara baca (hiragana)"
+                    style={{
+                      padding: "8px 12px", borderRadius: 8,
+                      background: "rgba(139, 90, 140, 0.08)", border: "1px solid rgba(139, 90, 140, 0.2)",
+                      color: "var(--n1)", fontSize: 12.5, outline: "none",
+                      fontFamily: "var(--font-sans-jp)",
+                    }}
+                  />
+                  <input
+                    value={addMeaning}
+                    onChange={e => setAddMeaning(e.target.value)}
+                    placeholder="Arti"
+                    style={{
+                      padding: "8px 12px", borderRadius: 8,
+                      background: "var(--surface-1)", border: "1px solid var(--edge-soft)",
+                      color: "var(--text-primary)", fontSize: 12.5, outline: "none",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={saveNewWord}
+                    disabled={!addMeaning.trim() || savingNew}
+                    style={{ justifyContent: "center" }}
+                  >
+                    {savingNew ? <Loader2 size={12} className="animate-spin" /> : <BookmarkPlus size={12} />}
+                    Simpan ke Kamus
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Word list */}
+            <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+              {!kamusLoaded ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+                  <Loader2 size={16} className="animate-spin" style={{ color: "var(--text-tertiary)" }} />
+                </div>
+              ) : kamusWords.length === 0 ? (
+                <p style={{ fontSize: 11.5, color: "var(--text-tertiary)", textAlign: "center", padding: "16px 0", margin: 0 }}>
+                  Kamus kosong. Simpan kata dari soal dulu.
+                </p>
+              ) : (
+                kamusWords
+                  .filter(w => {
+                    const q = kamusQuery.toLowerCase();
+                    return !q || w.kanji.includes(kamusQuery) || (w.reading ?? "").includes(kamusQuery) || w.meaning.toLowerCase().includes(q);
+                  })
+                  .map(w => (
+                    <div
+                      key={w.id}
+                      className={`kamus-row${flashKamusId === w.id ? " kamus-row-flash" : ""}`}
+                      style={{
+                        padding: "8px 10px", borderRadius: 8,
+                        background: "var(--surface-1)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span className="font-jp-sans" style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.5 }}>{w.kanji}</span>
+                        {w.reading && (
+                          <span className="font-jp-sans" style={{ fontSize: 10.5, color: "var(--text-tertiary)", lineHeight: 1.5 }}>{w.reading}</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); toggleKamusFavorite(w.id); }}
+                          aria-label={w.favorite ? "Hapus dari favorit" : "Tandai favorit"}
+                          title={w.favorite ? "Favorit ✓" : "Tandai favorit"}
+                          style={{
+                            marginLeft: "auto", flexShrink: 0,
+                            width: 22, height: 22, borderRadius: 6,
+                            display: "grid", placeItems: "center",
+                            background: "transparent", border: "none", cursor: "pointer",
+                            color: w.favorite ? "var(--accent-amber)" : "var(--text-tertiary)",
+                            transition: "color .14s, transform .14s",
+                          }}
+                        >
+                          <Star size={13} strokeWidth={1.8} fill={w.favorite ? "currentColor" : "none"} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); deleteKamusWord(w.id, w.kanji); }}
+                          aria-label={`Hapus ${w.kanji} dari kamus`}
+                          title="Hapus dari kamus"
+                          style={{
+                            flexShrink: 0,
+                            width: 22, height: 22, borderRadius: 6,
+                            display: "grid", placeItems: "center",
+                            background: "transparent", border: "none", cursor: "pointer",
+                            color: "var(--text-tertiary)",
+                            transition: "color .14s",
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = "var(--accent-rose)"}
+                          onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-tertiary)"}
+                        >
+                          <Trash2 size={12} strokeWidth={1.8} />
+                        </button>
+                      </div>
+                      <p style={{ fontSize: 11.5, color: "var(--text-secondary)", margin: "2px 0 0", lineHeight: 1.4 }}>{w.meaning.split(";")[0]}</p>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab: Catatan ── */}
+        {rightTab === "catatan" && (
+          <div className="glass-card side-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottom: "1px solid var(--edge-soft)" }}>
+              <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text-tertiary)" }}>
+                {catatanList.length} catatan
+              </span>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => { setNewNoteOpen(o => !o); setNewNoteText(""); }}
+              >
+                <Plus size={11} strokeWidth={2.4} /> Baru
+              </button>
+            </div>
+
+            {newNoteOpen && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 10, borderRadius: 10, background: "rgba(107, 142, 63, 0.06)", border: "1px solid rgba(107, 142, 63, 0.2)" }}>
+                <textarea
+                  autoFocus
+                  value={newNoteText}
+                  onChange={e => setNewNoteText(e.target.value)}
+                  placeholder="Tulis catatanmu..."
+                  rows={4}
+                  style={{
+                    padding: "8px 10px", borderRadius: 8,
+                    background: "var(--surface-1)", border: "1px solid var(--edge-soft)",
+                    color: "var(--text-primary)", fontSize: 12.5, outline: "none",
+                    resize: "vertical", lineHeight: 1.5,
+                    fontFamily: "var(--font-sans)",
+                  }}
+                />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => { setNewNoteOpen(false); setNewNoteText(""); }}
+                    style={{ flex: 1, justifyContent: "center" }}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={addNewNote}
+                    disabled={!newNoteText.trim() || savingNewNote}
+                    style={{ flex: 1, justifyContent: "center" }}
+                  >
+                    {savingNewNote ? <Loader2 size={12} className="animate-spin" /> : "Simpan"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+              {!catatanLoaded ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+                  <Loader2 size={16} className="animate-spin" style={{ color: "var(--text-tertiary)" }} />
+                </div>
+              ) : catatanList.length === 0 ? (
+                <p style={{ fontSize: 11.5, color: "var(--text-tertiary)", textAlign: "center", padding: "16px 0", margin: 0 }}>
+                  Belum ada catatan. Klik &ldquo;Simpan ke Catatan&rdquo; di soal.
+                </p>
+              ) : catatanList.map(c => {
+                const isExpanded = expandedNote === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      borderRadius: 8,
+                      background: isExpanded ? "var(--surface-2)" : "var(--surface-1)",
+                      border: "1px solid var(--edge-soft)",
+                      overflow: "hidden",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedNote(isExpanded ? null : c.id)}
+                      style={{
+                        width: "100%", padding: "10px 12px",
+                        display: "flex", alignItems: "flex-start", gap: 10,
+                        background: "transparent", border: "none",
+                        textAlign: "left", cursor: "pointer",
+                        color: "inherit", fontFamily: "var(--font-sans)",
+                      }}
+                    >
+                      <NotebookPen size={14} strokeWidth={1.6} style={{ color: "var(--accent-emerald)", marginTop: 2, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.5 }}>
+                          {c.judul || "Catatan"}
+                        </p>
+                        <p style={{ fontSize: 10.5, color: "var(--text-tertiary)", margin: "2px 0 0", lineHeight: 1.5 }}>
+                          {new Date(c.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{isExpanded ? "▲" : "▼"}</span>
+                    </button>
+                    {isExpanded && (
+                      <div style={{ padding: "0 12px 12px" }}>
+                        <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 }}>
+                          {c.isi}
+                        </p>
+                        <a
+                          href="/catatan"
+                          style={{ marginTop: 8, display: "inline-block", fontSize: 10.5, color: "var(--accent-emerald)", fontWeight: 500 }}
+                        >
+                          Buka di Catatan →
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </aside>
+
+
+      {/* ─── Edit Modal per Soal (v2) ─── */}
+      {editIdx !== null && editDraft && (
+        <>
+          <div className="af-modal-overlay" onClick={() => !editSaving && closeEdit()} />
+          <div className="af-modal" role="dialog">
+            <header className="af-modal-head">
+              <div className="af-modal-head-left">
+                <div className="af-modal-head-icon">
+                  <Pencil size={16} strokeWidth={1.8} />
+                </div>
+                <div>
+                  <h2 className="af-modal-title">
+                    {editIdx >= result.questions.length ? "Tambah Soal Manual" : `Edit Soal #${editIdx + 1}`}
+                  </h2>
+                  <p className="af-modal-sub">
+                    {editIdx >= result.questions.length
+                      ? "Ketik soal + opsi + jawaban + penjelasan dari nol"
+                      : "Perbaiki field manual kalau AI kurang akurat"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={closeEdit}
+                disabled={editSaving}
+                aria-label="Tutup"
+              >
+                <X size={14} />
+              </button>
+            </header>
+
+            <div className="af-modal-body">
+              <button
+                type="button"
+                className={`af-modal-flag-row${editDraft.needs_review ? " on" : ""}`}
+                onClick={() => setEditDraft(d => d ? { ...d, needs_review: !d.needs_review } : d)}
+              >
+                <span className={`af-mfr-check${editDraft.needs_review ? " on" : ""}`}>
+                  {editDraft.needs_review && <Check size={10} strokeWidth={3} style={{ color: "var(--bg)" }} />}
+                </span>
+                <Flag size={13} strokeWidth={1.8} />
+                TANDAI PERLU REVIEW
+              </button>
+
+              <div className="af-modal-field">
+                <div className="af-mf-head">
+                  <label>SOAL (teks pertanyaan)</label>
+                  {(() => {
+                    const canSplit = !!splitInlineOptions(editDraft.question);
+                    return (
+                      <button
+                        type="button"
+                        className={`af-mf-action${canSplit ? " on" : ""}`}
+                        disabled={!canSplit}
+                        onClick={() => {
+                          const split = splitInlineOptions(editDraft.question);
+                          if (!split) return;
+                          setEditDraft(d => d ? { ...d, question: split.question, options: split.options } : d);
+                          setToast({ text: "Opsi dipisahkan dari soal", ok: true });
+                          setTimeout(() => setToast(null), 1800);
+                        }}
+                        title={canSplit
+                          ? "Deteksi pola 1…2…3…4… di teks soal lalu pindahkan ke field opsi"
+                          : "Tidak ada pola opsi yang terdeteksi di teks soal"}
+                      >
+                        PISAHKAN OPSI
+                      </button>
+                    );
+                  })()}
+                </div>
+                <textarea
+                  className="af-modal-textarea font-jp-sans"
+                  rows={3}
+                  value={editDraft.question}
+                  onChange={e => setEditDraft(d => d ? { ...d, question: e.target.value } : d)}
+                />
+              </div>
+
+              <div className="af-modal-field">
+                <label>PILIHAN JAWABAN</label>
+                <p className="af-mf-hint">
+                  Klik nomor di kiri buat tandai jawaban benar (sekarang:{" "}
+                  <strong style={{ color: "var(--accent-emerald)" }}>{editDraft.correct}</strong>)
+                </p>
+                <div className="af-modal-opt-list">
+                  {editDraft.options.map((opt, oi) => (
+                    <div key={oi} className="af-modal-opt-row">
+                      <button
+                        type="button"
+                        className={`af-modal-opt-num${editDraft.correct === String(oi + 1) ? " correct" : ""}`}
+                        onClick={() => setEditDraft(d => d ? { ...d, correct: String(oi + 1) } : d)}
+                        title="Tandai jawaban benar"
+                      >
+                        {editDraft.correct === String(oi + 1)
+                          ? <Check size={11} strokeWidth={3} />
+                          : oi + 1}
+                      </button>
+                      <input
+                        className="af-modal-input font-jp-sans"
+                        value={opt}
+                        onChange={e => setEditDraft(d => {
+                          if (!d) return d;
+                          const next = [...d.options];
+                          next[oi] = e.target.value;
+                          return { ...d, options: next };
+                        })}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="af-modal-field">
+                <label>PENJELASAN</label>
+                <textarea
+                  className="af-modal-textarea"
+                  rows={4}
+                  value={editDraft.explanation}
+                  onChange={e => setEditDraft(d => d ? { ...d, explanation: e.target.value } : d)}
+                />
+              </div>
+
+              <div className="af-modal-field">
+                <label>KENAPA PILIHAN LAIN SALAH</label>
+                <textarea
+                  className="af-modal-textarea"
+                  rows={3}
+                  value={editDraft.why_wrong ?? ""}
+                  onChange={e => setEditDraft(d => d ? { ...d, why_wrong: e.target.value } : d)}
+                />
+              </div>
+
+              <div className="af-modal-field">
+                <label>TIPS UJIAN</label>
+                <textarea
+                  className="af-modal-textarea"
+                  rows={2}
+                  value={editDraft.tip ?? ""}
+                  onChange={e => setEditDraft(d => d ? { ...d, tip: e.target.value } : d)}
+                />
+              </div>
+
+              <div className="af-modal-field">
+                <label>KATEGORI</label>
+                <div className="af-modal-cat-row">
+                  {(["文法", "語彙", "文字", "読解"] as const).map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`af-modal-cat-chip font-jp-sans${editDraft.category === c ? " on" : ""}`}
+                      onClick={() => setEditDraft(d => d ? { ...d, category: c } : d)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <footer className="af-modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={closeEdit}
+                disabled={editSaving}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={saveEdit}
+                disabled={editSaving || !editDraft.question.trim() || !editDraft.explanation.trim()}
+              >
+                {editSaving
+                  ? <><Loader2 className="size-4 animate-spin" /> Menyimpan...</>
+                  : <><Save size={13} strokeWidth={2.4} /> SIMPAN</>}
+              </button>
+            </footer>
+          </div>
+        </>
+      )}
+
+      {/* ── Modal konfirmasi keluar (ganti window.confirm bawaan) ── */}
+      {exitTo && (
+        <>
+          <div className="af-modal-overlay" onClick={() => !exitBusy && setExitTo(null)} />
+          <div className="af-modal af-exit" role="dialog" aria-modal="true">
+            <div className="af-exit-icon"><Save size={22} strokeWidth={1.8} /></div>
+            <h2 className="af-exit-title">Keluar dari sesi?</h2>
+            <p className="af-exit-sub">
+              Simpan dulu progressnya, atau keluar tanpa nyimpen perubahan barusan.
+            </p>
+            <div className="af-exit-actions">
+              <button
+                type="button"
+                className="btn btn-primary af-exit-save"
+                onClick={confirmExit}
+                disabled={!!exitBusy}
+              >
+                {exitBusy === "save"
+                  ? <Loader2 className="size-4 animate-spin" />
+                  : <Check size={15} strokeWidth={2.4} />}
+                Simpan & keluar
+              </button>
+              <button
+                type="button"
+                className="af-exit-discard"
+                onClick={discardExit}
+                disabled={!!exitBusy}
+              >
+                {exitBusy === "discard"
+                  ? <Loader2 className="size-3.5 animate-spin" />
+                  : <RotateCcw size={13} strokeWidth={2} />}
+                Keluar tanpa simpan
+              </button>
+            </div>
+            <button
+              type="button"
+              className="af-exit-cancel"
+              onClick={() => setExitTo(null)}
+              disabled={!!exitBusy}
+            >
+              Batal, lanjut belajar
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── Konfirmasi sebelum jawaban dihapus ── */}
+      {konfirmReset && (
+        <>
+          <div className="af-modal-overlay" onClick={() => setKonfirmReset(false)} />
+          <div className="af-modal af-complete" role="dialog" aria-modal="true">
+            <div className="af-complete-emoji">↺</div>
+            <h2 className="af-complete-title">Ulang dari awal?</h2>
+            <p className="af-complete-sub">
+              {Object.keys(answers).length} jawaban kamu di sesi ini bakal dihapus dan soalnya balik kosong.
+              Nggak bisa dibatalin. XP yang udah kamu dapet tetap aman, dan coretan stabilo
+              nggak ikut kehapus.
+            </p>
+            <div className="af-complete-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setKonfirmReset(false)}
+                disabled={resetting}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={resetSession}
+                disabled={resetting}
+              >
+                {resetting
+                  ? <Loader2 className="size-4 animate-spin" />
+                  : <RotateCcw size={14} strokeWidth={2} />}
+                Ya, hapus jawaban
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Popup skor: muncul sekali pas semua soal kejawab ── */}
+      {showCompletion && isComplete && (
+        <>
+          <div className="af-modal-overlay" onClick={() => setShowCompletion(false)} />
+          <div className="af-modal af-complete" role="dialog" aria-modal="true">
+            <div className="af-complete-emoji">🎉</div>
+            <h2 className="af-complete-title">Selesai!</h2>
+            <p className="af-complete-sub">Semua {total} soal udah kamu jawab.</p>
+            <div className="af-complete-score">
+              <strong>{correctTotal}</strong>
+              <span>/ {total}</span>
+            </div>
+            <div className="af-complete-pct">
+              {Math.round((correctTotal / total) * 100)}% benar
+            </div>
+            <div className="af-complete-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => { setShowCompletion(false); setKonfirmReset(true); }}
+                disabled={resetting}
+              >
+                <RotateCcw size={14} strokeWidth={2} />
+                Ulang dari awal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowCompletion(false)}
+              >
+                <Check size={14} strokeWidth={2.4} /> Mantap, tutup
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Floating dock: mode coret/pensil global (bacaan + tiap soal) ── */}
+      <div className={`stabilo-dock${drawMode ? " open" : ""}`}>
+        {drawMode && (
+          <div className="stabilo-dock-tools">
+            {STABILO_COLORS.map(c => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => setStabiloColor(c.rgba)}
+                className={`stabilo-swatch${stabiloColor === c.rgba ? " on" : ""}`}
+                style={{ background: c.rgba }}
+                title={c.key}
+              />
+            ))}
+            <span className="stabilo-dock-sep" />
+            <button
+              type="button"
+              onClick={undoLastStroke}
+              disabled={!hasAnyStroke}
+              className="stabilo-tool"
+              title="Undo coretan terakhir"
+            >
+              <Undo2 size={13} strokeWidth={1.8} /> Undo
+            </button>
+            <button
+              type="button"
+              onClick={() => setHighlights({})}
+              disabled={!hasAnyStroke}
+              className="stabilo-tool"
+              title="Hapus semua coretan"
+            >
+              <Trash2 size={13} strokeWidth={1.8} /> Hapus
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setDrawMode(v => !v)}
+          className={`stabilo-fab${drawMode ? " on" : ""}`}
+          title={drawMode ? "Selesai coret" : "Mode coret — corat-coret di soal & bacaan"}
+        >
+          {drawMode ? <Check size={16} strokeWidth={2.4} /> : <Highlighter size={16} strokeWidth={1.8} />}
+          {drawMode ? "Selesai" : "Coret"}
+        </button>
+      </div>
+
+      <JatahHabisDialog kuota={jatahHabis} onClose={() => setJatahHabis(null)} />
+    </div>
+  );
+}
+
+export default function Latihan({ params }: { params: Promise<{ sessionId: string }> }) {
+  const { sessionId } = use(params);
+  return <SessionPlayer key={sessionId} sessionId={sessionId} />;
+}
+
+function SessionPlayer({ sessionId }: { sessionId: string }) {
+  const stats = useUserStats();
+  const [result, setResult] = useState<AIResult | null>(null);
+  const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([]);
+  const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+  const [isReviewMode, setIsReviewMode] = useState(false);
+
+  const loadSession = async (id: string) => {
+    setLoadingSession(true);
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("sessions")
+        .select("ai_result, level, category, score")
+        .eq("id", id)
+        .single();
+      if (data?.ai_result) {
+        // Retroactively clean sessions saved before the inline-options fix
+        // shipped — strip options from `question` field if they look duplicated.
+        const raw = data.ai_result as AIResult;
+        const cleaned: AIResult = {
+          ...raw,
+          questions: (raw.questions ?? []).map(q => ({ ...q, ...sanitizeQuestion(q) })),
+        };
+        setResult(cleaned);
+        setSavedSessionId(id);
+        setChatMsgs([]);
+        // Review cuma kalau sesi UDAH selesai (ada skor). Sesi baru/partial =
+        // bisa dikerjain & progres/skor/XP-nya kesimpen. Dulu ini selalu true,
+        // jadi tiap soal yang dibuka read-only → gak pernah kecatat.
+        setIsReviewMode((data.score as number | null) != null);
+      }
+    } catch {
+      // Tampilkan keadaan sesi tidak bisa dibuka jika pemuatan gagal.
+    } finally {
+      setLoadingSession(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSession(sessionId);
+  }, [sessionId]);
+
+  const handleReset = () => { window.location.href = "/materi"; };
+
+  return (
+    <>
+      <AuroraBackground />
+      <NavRail />
+      <BottomNav />
+      <main className="app-shell">
+        <UserBar
+          streakDays={stats.streak}
+          xp={stats.xp}
+          xpTarget={stats.xpTarget}
+          avatarLetter={stats.initial}
+          isPro={stats.isPro}
+        />
+        {loadingSession ? (
+          <div className="af-analyzing">
+            <div className="af-analyzing-spinner" />
+            <p className="af-analyzing-title">Memuat sesi...</p>
+          </div>
+        ) : result ? (
+          <ResultView
+            result={result}
+            setResult={setResult}
+            chatMsgs={chatMsgs}
+            setChatMsgs={setChatMsgs}
+            onReset={handleReset}
+            isSaved={!!savedSessionId}
+            sessionId={savedSessionId}
+            isReview={isReviewMode}
+          />
+        ) : (
+          <div className="af-analyzing">
+            <p className="af-analyzing-title">Sesi ini nggak bisa dibuka.</p>
+            <p className="af-gagal-sub">
+              Mungkin sudah dihapus, atau link-nya nggak lengkap.
+            </p>
+            <a href="/materi" className="btn btn-primary" style={{ marginTop: 14 }}>
+              Balik ke Materi
+            </a>
+          </div>
+        )}
+      </main>
+    </>
+  );
 }
