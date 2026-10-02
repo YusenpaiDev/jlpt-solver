@@ -12,6 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local design references, extracted source material, and nested checkouts.
+    "pembaruan UI/**",
+    "design latihan kilat bunpou/**",
+    "kotoba latihan kilat design/**",
+    "revisi bunpou design/**",
+    "honix design brief/**",
+    "ekstrak/**",
+    "drive-download-*/**",
+    "materi/**",
+    "**/.worktrees/**",
+    "**/worktrees/**",
   ]),
 ]);
 
