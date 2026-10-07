@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AuroraBackground } from "@/components/v2";
 import { Meter } from "@/components/pembayaran/Meter";
+import { HonixPy } from "@/components/pembayaran/HonixPy";
 import { BATAS } from "@/lib/batas-paket";
 import { rupiah } from "@/lib/paket";
 import { namaPendek, durasiPaket, tglPanjang, tglPendek, jam } from "@/lib/langganan";
@@ -139,6 +140,7 @@ function Cek({ data, orderId }: { data: Status | null; orderId: string | null })
   const oid = data?.order_id ?? orderId;
   return (
     <>
+      <HonixPy pose="tunggu" hp={104} desktop={112} className="py-hx-solo" />
       <div className="py-stat py-s-go"><span className="py-d go" />MEMERIKSA</div>
       <h2 className="py-h2" style={{ marginTop: 14 }}>Sebentar, kami pastikan pembayaranmu sampai</h2>
       <p className="py-lead">
@@ -163,7 +165,10 @@ function Aktif({ data }: { data: Status }) {
   const lifetime = data.paket_id === "lifetime" || data.is_lifetime;
   return (
     <>
-      <div className="py-seal" aria-hidden>極</div>
+      <div className="py-hx-wrap">
+        <HonixPy pose="senang" hp={132} desktop={150} />
+        <div className="py-seal" aria-hidden>極</div>
+      </div>
       <div className="py-stat py-s-ok center" style={{ marginTop: 14 }}><span className="py-d ok" />PRO AKTIF</div>
       <h2 className="py-h2 py-center" style={{ marginTop: 12 }}>Akunmu sudah terbuka</h2>
       <p className="py-lead py-center">
@@ -209,6 +214,8 @@ function Diproses({ data, kini, orderId, berhenti, memeriksa, onPeriksa }: {
 
   return (
     <>
+      {/* Pose baca, bukan senang — jangan kesan Pro udah aktif. */}
+      <HonixPy pose="baca" hp={104} desktop={112} className="py-hx-solo" />
       <div className="py-stat py-s-warn"><span className="py-d warn" />MENUNGGU KONFIRMASI BANK</div>
       <h2 className="py-h2" style={{ marginTop: 14 }}>Pembayaranmu sudah kami terima</h2>
       <p className="py-lead">

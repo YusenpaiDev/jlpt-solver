@@ -4,6 +4,11 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { catatAktivitas } from "@/lib/aktivitas";
+import { useUserStats } from "@/lib/use-user-stats";
+import { useHonixReaksi } from "@/lib/use-honix-reaksi";
+import { putarHonix } from "@/lib/honix-sfx";
+import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
+import { HonixReaction } from "@/components/honix/HonixReaction";
 
 
 interface Word { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; }
@@ -122,6 +127,10 @@ function KotobaPlayer() {
   const [log, setLog] = useState<{ word: string; correct: boolean; note: string; streak: number }[]>([]);
   const [starred, setStarred] = useState(false);
   const [done, setDone] = useState(false);
+  /* Popup Honix pas set selesai — ditutup = ringkasan di bawahnya kelihatan. */
+  const [popupSelesai, setPopupSelesai] = useState(false);
+  const stats = useUserStats();
+  const { reaksi, catat, tutup: tutupReaksi } = useHonixReaksi(qs?.length ?? 0);
   const [sessId, setSessId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -157,6 +166,8 @@ function KotobaPlayer() {
     if (locked || sel === null || !q) return;
     setLocked(true);
     const correct = sel === q.ans;
+    putarHonix(correct ? "ting" : "salah");
+    catat(correct, idx);
     setResults(r => [...r, correct]);
     if (correct) { setOk(o => o + 1); setStreak(s => s + 1); setXp(x => x + 8); } else { setWrong(w => w + 1); setStreak(0); setXp(x => x + 2); }
     setLog(l => {
@@ -183,8 +194,11 @@ function KotobaPlayer() {
         else { const { data } = await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 語彙", title: `Drill Kotoba ${level}`, total: answered, score: correctCount, ai_result }).select("id").single(); if (data) setSessId(data.id); }
       } catch { /* nyusul */ }
     })();
-  }, [locked, sel, q, results.length, ok, sessId, level]);
-  const next = useCallback(() => { if (!qs) return; if (idx + 1 >= qs.length) { setDone(true); return; } setIdx(i => i + 1); setSel(null); setLocked(false); setStarred(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, [qs, idx]);
+  }, [locked, sel, q, results.length, ok, sessId, level, catat, idx]);
+  const next = useCallback(() => { if (!qs) return; tutupReaksi(); if (idx + 1 >= qs.length) { setDone(true); setPopupSelesai(true); return; } setIdx(i => i + 1); setSel(null); setLocked(false); setStarred(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, [qs, idx, tutupReaksi]);
+  /* `sesi` bikin URL selalu baru → Page nge-key player pakai query string,
+     jadi sesi baru = state bersih (lihat KotobaKeyed). */
+  const mulaiSesi = useCallback((query: string) => { router.push(`/latihan/kotoba?${query}&sesi=${Date.now()}`); }, [router]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (done) return; if (["1", "2", "3", "4"].includes(e.key)) pick(+e.key - 1); if (e.key === "Enter") { locked ? next() : submit(); } if (e.key === "Escape") router.push("/materi/kotoba"); };
@@ -202,8 +216,22 @@ function KotobaPlayer() {
     const lastByW = new Map<string, { word: string; correct: boolean; streak: number }>();
     log.forEach(r => lastByW.set(r.word, r));
     const mastered = [...lastByW.values()].filter(r => r.correct && r.streak >= 3);
+    const ulangiSesi = () => mulaiSesi(`level=${level}&count=${Math.max(5, wrongWords.length)}`);
+    const sesiLagi = () => mulaiSesi(`level=${level}`);
     return (
       <div className="latihan-kilat">
+        {popupSelesai && (
+          <HonixFinishDialog
+            skor={ok} total={qs.length} kategori="語彙" xp={xp} streak={stats.streak}
+            ekstra={wrongWords.length
+              ? { nilai: wrongWords.length, label: "kata perlu diulang" }
+              : { nilai: mastered.length, label: "kata dikuasai" }}
+            onCobaLagi={() => { setPopupSelesai(false); if (wrongWords.length) ulangiSesi(); else sesiLagi(); }}
+            onLanjut={() => { setPopupSelesai(false); sesiLagi(); }}
+            onPembahasan={() => setPopupSelesai(false)}
+            onTutup={() => setPopupSelesai(false)}
+          />
+        )}
         <div className="sum on">
           <div className="sum-hero"><div className="sum-jp">お疲れ様</div><h1 className="sum-h">{wrongWords.length ? "Latihan kilat selesai" : "Semua benar 🎉"}</h1><p className="sum-p">{qs.length} kata · Kotoba {level}</p></div>
           <div className="sum-stats">
@@ -223,7 +251,7 @@ function KotobaPlayer() {
             </div>
           </div>
           <div className="sum-act">
-            {wrongWords.length > 0 ? <button className="btn btn-p" onClick={() => router.push(`/latihan/kotoba?level=${level}&count=${Math.max(5, wrongWords.length)}`)}>⚡ Ulangi sesi</button> : <button className="btn btn-p" onClick={() => router.push(`/latihan/kotoba?level=${level}`)}>⚡ Sesi lagi</button>}
+            {wrongWords.length > 0 ? <button className="btn btn-p" onClick={ulangiSesi}>⚡ Ulangi sesi</button> : <button className="btn btn-p" onClick={sesiLagi}>⚡ Sesi lagi</button>}
             <button className="btn btn-g" onClick={() => router.push("/materi/kotoba")}>Kembali ke Kotoba</button>
           </div>
         </div>
@@ -280,7 +308,7 @@ function KotobaPlayer() {
                   {sel === q.ans ? <span dangerouslySetInnerHTML={{ __html: q.cue }} /> : <>Kamu pilih kata lain. Jawabannya <span className="pk-ok">{q.word}</span> — {q.correctMeaning} ({q.read}).</>}
                 </div>
                 {q.exJp && <div className="ex"><span className="lbl2">Contoh kalimat</span>{q.exHl && q.exJp.includes(q.exHl) ? <>{q.exJp.split(q.exHl)[0]}<span className="hl">{q.exHl}</span>{q.exJp.split(q.exHl).slice(1).join(q.exHl)}</> : q.exJp}{q.exTr && <span className="tr">{q.exTr}</span>}</div>}
-                <div className="fb-act"><button className="btn btn-p" onClick={next}>{idx + 1 >= qs.length ? "Lihat hasil →" : "Lanjut →"}</button><button className={`btn-star${starred ? " on" : ""}`} onClick={() => setStarred(s => !s)}>{starred ? "★ Ditandai" : "☆ Tandai kata ini"}</button></div>
+                <div className="fb-act"><button className="btn btn-p" onClick={next}>{idx + 1 >= qs.length ? "Lihat hasil →" : "Lanjut →"}</button><button className={`btn-star${starred ? " on" : ""}`} onClick={() => setStarred(s => !s)}>{starred ? "★ Ditandai" : "☆ Tandai kata ini"}</button>{reaksi && <HonixReaction key={reaksi.id} kind={reaksi.kind} beruntun={reaksi.beruntun} onSelesai={tutupReaksi} />}</div>
               </div>
             </div>
           )}
@@ -294,6 +322,12 @@ function KotobaPlayer() {
   );
 }
 
+/* Di-key pakai query string: ganti sesi (lihat mulaiSesi) = player di-mount ulang. */
+function KotobaKeyed() {
+  const params = useSearchParams();
+  return <KotobaPlayer key={params.toString()} />;
+}
+
 export default function Page() {
-  return <Suspense fallback={<div className="lk-load">Memuat…</div>}><KotobaPlayer /></Suspense>;
+  return <Suspense fallback={<div className="lk-load">Memuat…</div>}><KotobaKeyed /></Suspense>;
 }

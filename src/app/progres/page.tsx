@@ -1,5 +1,7 @@
 "use client";
 
+import { HonixEmpty } from "@/components/honix/HonixEmpty";
+
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -193,15 +195,10 @@ function Progres() {
         {tab === "stat" ? (
           <StatistikView embedded />
         ) : isEmpty ? (
-          <div className="glass-card pr-empty">
-            <History size={22} strokeWidth={1.6} />
-            <div className="pr-empty-t">Belum ada sesi latihan</div>
-            <p className="pr-empty-s">Kerjain set di Bank Soal atau latihan kilat — sesi yang udah dikerjain muncul di sini.</p>
-            <div className="pr-empty-cta">
-              <Link href="/materi#bank-soal" className="btn btn-primary">Buka Bank Soal</Link>
-              <Link href="/lembar-tugas" className="btn btn-secondary">Lembar Tugas</Link>
-            </div>
-          </div>
+          <HonixEmpty momen="kosongRiwayat"
+            body="Setelah kamu selesai satu set soal, skor dan pembahasannya muncul di sini."
+            cta={<Link href="/latihan/kilat" className="hx-btn hx-btn-p">Mulai Latihan Kilat</Link>}
+          />
         ) : (
           <>
             <div className="pr-filters">

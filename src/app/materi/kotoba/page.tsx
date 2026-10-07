@@ -1,5 +1,7 @@
 "use client";
 
+import { HonixEmpty } from "@/components/honix/HonixEmpty";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -88,6 +90,7 @@ export default function KotobaDeck() {
      halaman nampilin angka beku yang sama. */
   const streak = stats.streak;
   const [userInitial, setUserInitial] = useState("Y");
+  const [favsLoading, setFavsLoading] = useState(true);
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [progres, setProgres] = useState<Map<string, Progres>>(new Map());
   const [busy, setBusy] = useState<string | null>(null);
@@ -137,7 +140,7 @@ export default function KotobaDeck() {
         }])));
       }
     }
-    load();
+    void load().finally(() => setFavsLoading(false));
   }, []);
 
   const summary = useMemo(() => {
@@ -332,7 +335,13 @@ export default function KotobaDeck() {
                   </div>
                 );
               })}
-              {groups.length === 0 && <p className="kv-empty">Nggak ada kata yang cocok.</p>}
+              {groups.length === 0 && (
+                statusF === "fav" && favsLoading ? <p className="kv-empty">Memuat favorit…</p> :
+                statusF === "fav" && favs.size === 0 ? (
+                  <HonixEmpty momen="kosongFavorit" body="Tekan ☆ di samping kata yang mau kamu ulang."
+                    cta={<button type="button" className="hx-btn hx-btn-p" onClick={() => setStatusF("all")}>Lihat semua kata</button>} />
+                ) : <p className="kv-empty">Nggak ada kata yang cocok.</p>
+              )}
             </div>
 
             <aside className="kv-side">

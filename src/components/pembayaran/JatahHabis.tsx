@@ -6,7 +6,9 @@ import Link from "next/link";
 import { BATAS, KOSAKATA_FREE, NAMA_FITUR, type Fitur } from "@/lib/batas-paket";
 import { PAKET, rupiah } from "@/lib/paket";
 import { sisaWaktuReset, type KuotaHabis } from "@/lib/kuota-habis";
+import { useTandaHarian } from "@/lib/tanda-harian";
 import { Meter } from "./Meter";
+import { HonixPy } from "./HonixPy";
 
 /**
  * Jatah harian habis — dua bentuk, per konteks (HANDOFF-pembayaran §5):
@@ -17,6 +19,10 @@ import { Meter } from "./Meter";
  *
  * Tombol tolak ("Tunggu besok") sejajar besarnya sama tombol bayar — bukan ×
  * kecil di pojok. Kalau yang kena 429 udah Pro, gak ada tawaran upgrade.
+ *
+ * Hōnix tidur di kiri judul, tanpa animasi (HANDOFF-pembayaran "Maskot").
+ * Dialog muncul SEKALI per fitur per hari (HANDOFF-honix §4) — 429
+ * berikutnya di hari yang sama cukup pil kecil.
  */
 
 const GRATIS_TETAP =
@@ -76,8 +82,13 @@ export function JatahHabisInline({ kuota, onTunggu, sempit = false }: {
   }
   return (
     <div className="py py-notice" role="status">
-      <div className="py-stat py-s-warn"><span className="py-d warn" />JATAH HARI INI HABIS</div>
-      <div className="py-notice-t">{nama} sudah {kuota.used} dari {kuota.limit} hari ini</div>
+      <div className="py-hx-row">
+        <HonixPy pose="tidur" hp={56} desktop={64} diam />
+        <div>
+          <div className="py-stat py-s-warn"><span className="py-d warn" />JATAH HARI INI HABIS</div>
+          <div className="py-notice-t" style={{ marginTop: 7 }}>{nama} sudah {kuota.used} dari {kuota.limit} hari ini</div>
+        </div>
+      </div>
       <p className="py-notice-s">
         Reset besok <b>00:00 WIB</b> — sekitar {sisaWaktuReset(kuota.resetAt)}. Bank soal ujian, latihan dengar, dan materi <b>tetap terbuka</b>.
       </p>
@@ -90,18 +101,35 @@ export function JatahHabisInline({ kuota, onTunggu, sempit = false }: {
   );
 }
 
+/* Pemanggil ngirim onClose sebagai arrow baru tiap render. Disimpan di ref
+   biar efek fokus / timer gak ke-reset tiap parent render. */
+function useCallbackTerbaru(f: () => void) {
+  const ref = useRef(f);
+  useEffect(() => { ref.current = f; });
+  return ref;
+}
+
 export function JatahHabisDialog({ kuota, onClose }: { kuota: KuotaHabis | null; onClose: () => void }) {
+  const { ids: sudahHariIni, tandai } = useTandaHarian("honix-jatah-v1");
+  if (!kuota) return null;
+  return sudahHariIni.includes(kuota.feature)
+    ? <JatahHabisPil key={kuota.feature} kuota={kuota} onClose={onClose} />
+    : <JatahHabisSheet key={kuota.feature} kuota={kuota}
+        onClose={() => { tandai(kuota.feature); onClose(); }} />;
+}
+
+function JatahHabisSheet({ kuota, onClose }: { kuota: KuotaHabis; onClose: () => void }) {
   const tolakRef = useRef<HTMLButtonElement>(null);
+  const tutupRef = useCallbackTerbaru(onClose);
 
   useEffect(() => {
-    if (!kuota) return;
+    const pemicu = document.activeElement as HTMLElement | null;
     tolakRef.current?.focus();
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") tutupRef.current(); };
     window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [kuota, onClose]);
+    return () => { window.removeEventListener("keydown", esc); pemicu?.focus?.(); };
+  }, [tutupRef]);
 
-  if (!kuota) return null;
   const nama = NAMA_FITUR[kuota.feature];
   const pro = kuota.plan === "pro";
 
@@ -110,13 +138,18 @@ export function JatahHabisDialog({ kuota, onClose }: { kuota: KuotaHabis | null;
       <div className="py-sheet" role="dialog" aria-modal="true" aria-labelledby="py-jh-judul"
         onClick={e => e.stopPropagation()}>
         <div className="py-grip" />
-        <div className="py-stat py-s-warn"><span className="py-d warn" />
-          {pro ? "BATAS HARIAN TERCAPAI" : "JATAH HARI INI HABIS"}
+        <div className="py-hx-row">
+          <HonixPy pose="tidur" hp={64} desktop={76} diam />
+          <div>
+            <div className="py-stat py-s-warn"><span className="py-d warn" />
+              {pro ? "BATAS HARIAN TERCAPAI" : "JATAH HARI INI HABIS"}
+            </div>
+            <h3 id="py-jh-judul" className="py-h3" style={{ marginTop: 9 }}>
+              {nama} sudah {kuota.used} dari {kuota.limit}
+            </h3>
+            <p className="py-lead" style={{ marginTop: 4 }}>Reset besok <b>00:00 WIB</b> — sekitar {sisaWaktuReset(kuota.resetAt)}.</p>
+          </div>
         </div>
-        <h3 id="py-jh-judul" className="py-h3" style={{ marginTop: 12 }}>
-          {nama} sudah {kuota.used} dari {kuota.limit}
-        </h3>
-        <p className="py-lead">Reset besok <b>00:00 WIB</b> — sekitar {sisaWaktuReset(kuota.resetAt)}.</p>
 
         {pro ? (
           <>
@@ -143,6 +176,24 @@ export function JatahHabisDialog({ kuota, onClose }: { kuota: KuotaHabis | null;
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Versi kecil — 429 kedua dst. di hari yang sama (mock 5a ".comp").
+ *  Gak modal, gak ngambil fokus, hilang sendiri 4 detik. */
+function JatahHabisPil({ kuota, onClose }: { kuota: KuotaHabis; onClose: () => void }) {
+  const tutupRef = useCallbackTerbaru(onClose);
+  useEffect(() => {
+    const t = setTimeout(() => tutupRef.current(), 4000);
+    return () => clearTimeout(t);
+  }, [tutupRef]);
+  return (
+    <div className="py py-comp-wrap" role="status">
+      <button type="button" className="py-comp" onClick={onClose}>
+        {NAMA_FITUR[kuota.feature]} habis — reset {sisaWaktuReset(kuota.resetAt)}
+        <span className="s" aria-hidden="true">×</span>
+      </button>
     </div>
   );
 }

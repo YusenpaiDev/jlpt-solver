@@ -1,5 +1,9 @@
 "use client";
 
+import { Honix } from "@/components/honix/Honix";
+import { useHonix } from "@/lib/use-honix";
+import { tesSuaraHonix } from "@/lib/honix-sfx";
+
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,6 +21,7 @@ const SECTIONS = [
   { id: "profile",  label: "Profil",         Icon: User },
   { id: "target",   label: "Target Belajar", Icon: Zap },
   { id: "ai",       label: "Preferensi AI",  Icon: Wand2 },
+  { id: "honix",    label: "Honix",          Icon: Sparkles },
   { id: "notif",    label: "Notifikasi",     Icon: Bell },
   { id: "sub",      label: "Langganan",      Icon: CreditCard },
   { id: "privacy",  label: "Privasi & Data", Icon: Shield },
@@ -267,6 +272,7 @@ export default function Pengaturan() {
                 push={notifPush} setPush={setNotifPush}
               />
             )}
+            {active === "honix" && <HonixSection />}
             {active === "sub" && <SubscriptionSection />}
             {active === "privacy" && (
               <PrivacySection
@@ -652,9 +658,10 @@ function NotifSection({
    transaksi. */
 function SubscriptionSection() {
   const stats = useUserStats();
+  const [openedAt] = useState(() => Date.now());
 
   const sisaHari = stats.premiumUntil
-    ? Math.ceil((new Date(stats.premiumUntil).getTime() - Date.now()) / 86_400_000)
+    ? Math.ceil((new Date(stats.premiumUntil).getTime() - openedAt) / 86_400_000)
     : null;
 
   const namaPlan = stats.isLifetime ? "Sensei Lifetime" : stats.isPro ? "Sensei Pro" : "Sensei Free";
@@ -791,5 +798,35 @@ function DangerSection() {
         <button type="button" className="btn danger-btn btn-sm">Hapus akun</button>
       </div>
     </Card>
+  );
+}
+
+function HonixSection() {
+  const { setelan, ubah, kurangiGerak, motionOS } = useHonix();
+  const gerakan = setelan.gerakan ?? (motionOS ? "kurangi" : "normal");
+  return (
+    <section className={`hx hx-set-card${kurangiGerak ? " hx-rm" : ""}`} aria-labelledby="hx-settings-title">
+      <header className="hx-set-head">
+        <div className="hx-ava"><Honix pose="kepala" size={58} idle="none" alt="" /></div>
+        <div><h3 id="hx-settings-title">Honix</h3><span>Maskot yang nemenin kamu belajar</span></div>
+      </header>
+      <div className="hx-row">
+        <div><div className="hx-row-t" id="hx-suara">Suara Honix</div><p className="hx-row-s" id="hx-suara-sub">“Ting” saat benar, chime saat naik level, cicitan kecil saat Honix muncul.</p></div>
+        <button type="button" className="hx-tg-target" role="switch" aria-checked={setelan.suara} aria-labelledby="hx-suara" aria-describedby="hx-suara-sub" onClick={() => ubah({ suara: !setelan.suara })}><span className={`hx-tg${setelan.suara ? " hx-on" : ""}`} /></button>
+      </div>
+      <div className="hx-row">
+        <div><div className="hx-row-t" id="hx-reaksi">Reaksi saat latihan</div><p className="hx-row-s" id="hx-reaksi-sub">Honix kecil muncul saat benar atau salah beruntun.</p></div>
+        <div className="hx-seg" role="group" aria-labelledby="hx-reaksi" aria-describedby="hx-reaksi-sub">
+          {(["normal", "jarang", "mati"] as const).map((v, i) => <button type="button" key={v} className={setelan.reaksi === v ? "hx-on" : ""} aria-pressed={setelan.reaksi === v} onClick={() => ubah({ reaksi: v })}>{["Normal", "Jarang", "Mati"][i]}</button>)}
+        </div>
+      </div>
+      <div className="hx-row">
+        <div><div className="hx-row-t" id="hx-gerakan">Gerakan Honix</div><p className="hx-row-s" id="hx-gerakan-sub">“Kurangi” mematikan animasi terbang, percikan api, dan confetti.</p></div>
+        <div className="hx-seg" role="group" aria-labelledby="hx-gerakan" aria-describedby="hx-gerakan-sub">
+          {(["normal", "kurangi"] as const).map((v, i) => <button type="button" key={v} className={gerakan === v ? "hx-on" : ""} aria-pressed={gerakan === v} onClick={() => ubah({ gerakan: v })}>{["Normal", "Kurangi"][i]}</button>)}
+        </div>
+      </div>
+      <div className="hx-row"><div className="hx-row-t">Tes suara</div><button type="button" className="hx-btn hx-btn-g" onClick={tesSuaraHonix}>▶ Putar</button></div>
+    </section>
   );
 }
