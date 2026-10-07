@@ -1,5 +1,7 @@
 "use client";
 
+import { HonixEmpty } from "@/components/honix/HonixEmpty";
+
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
@@ -302,11 +304,14 @@ export default function CatatanPage() {
               <div style={{ display: "flex", justifyContent: "center", padding: 32 }}>
                 <Loader2 size={20} className="animate-spin" style={{ color: "var(--text-tertiary)" }} />
               </div>
+            ) : catatan.length === 0 ? (
+              <HonixEmpty momen="kosongCatatan"
+                body="Tekan “Simpan ke catatan” di pembahasan soal, nanti tersimpan di sini."
+                cta={<button type="button" className="hx-btn hx-btn-p" onClick={handleNew}><Plus size={14} strokeWidth={2.2} /> Catatan Baru</button>}
+              />
             ) : filtered.length === 0 ? (
               <div style={{ padding: 32, textAlign: "center", color: "var(--text-tertiary)", fontSize: 12.5 }}>
-                {catatan.length === 0
-                  ? "Belum ada catatan. Klik 'Catatan Baru' buat mulai nulis."
-                  : "Tidak ada catatan cocok dengan pencarian."}
+                Tidak ada catatan cocok dengan pencarian.
               </div>
             ) : (
               <ul className="ct-note-list">

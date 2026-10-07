@@ -14,6 +14,7 @@ import {
 import { useUserStats } from "@/lib/use-user-stats";
 import { catatAktivitas } from "@/lib/aktivitas";
 import { JatahHabisInline, JatahHabisDialog } from "@/components/pembayaran/JatahHabis";
+import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { bacaKuotaHabis, sisaWaktuReset, type KuotaHabis } from "@/lib/kuota-habis";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -343,7 +344,7 @@ function StabiloLayer({
   );
 }
 
-function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview, sessionLevel, sessionCategory }: {
+function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview, sessionLevel, sessionCategory, streak }: {
   onReset: () => void;
   result: AIResult;
   setResult: React.Dispatch<React.SetStateAction<AIResult | null>>;
@@ -354,6 +355,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   isReview?: boolean;
   sessionLevel?: Level | null;
   sessionCategory?: Category | null;
+  /** Buat kotak "hari streak" di popup selesai. */
+  streak: number;
 }) {
   const [answers,      setAnswers]      = useState<Record<number, string>>(
     () => result.user_progress?.answers ?? {}
@@ -2479,41 +2482,18 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         </>
       )}
 
-      {/* ── Popup skor: muncul sekali pas semua soal kejawab ── */}
+      {/* ── Popup Honix: muncul sekali pas semua soal kejawab ── */}
       {showCompletion && isComplete && (
-        <>
-          <div className="af-modal-overlay" onClick={() => setShowCompletion(false)} />
-          <div className="af-modal af-complete" role="dialog" aria-modal="true">
-            <div className="af-complete-emoji">🎉</div>
-            <h2 className="af-complete-title">Selesai!</h2>
-            <p className="af-complete-sub">Semua {total} soal udah kamu jawab.</p>
-            <div className="af-complete-score">
-              <strong>{correctTotal}</strong>
-              <span>/ {total}</span>
-            </div>
-            <div className="af-complete-pct">
-              {Math.round((correctTotal / total) * 100)}% benar
-            </div>
-            <div className="af-complete-actions">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => { setShowCompletion(false); setKonfirmReset(true); }}
-                disabled={resetting}
-              >
-                <RotateCcw size={14} strokeWidth={2} />
-                Ulang dari awal
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setShowCompletion(false)}
-              >
-                <Check size={14} strokeWidth={2.4} /> Mantap, tutup
-              </button>
-            </div>
-          </div>
-        </>
+        <HonixFinishDialog
+          skor={correctTotal} total={total}
+          kategori={sessionCategory && sessionCategory !== "ai" ? sessionCategory : undefined}
+          xp={correctTotal * 10 + 5} streak={streak}
+          ekstra={{ nilai: total - correctTotal, label: "soal perlu dicek" }}
+          onCobaLagi={() => { setShowCompletion(false); setKonfirmReset(true); }}
+          onLanjut={() => { setShowCompletion(false); router.push("/materi"); }}
+          onPembahasan={() => setShowCompletion(false)}
+          onTutup={() => setShowCompletion(false)}
+        />
       )}
 
       {/* ── Floating dock: mode coret/pensil global (bacaan + tiap soal) ── */}
@@ -2871,6 +2851,7 @@ export default function AnalisisFoto() {
             isReview={isReviewMode}
             sessionLevel={resultLevel}
             sessionCategory={resultCategory}
+            streak={stats.streak}
           />
         )}
           </>

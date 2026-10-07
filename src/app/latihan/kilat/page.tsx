@@ -3,6 +3,11 @@
 import { Suspense, useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useUserStats } from "@/lib/use-user-stats";
+import { useHonixReaksi } from "@/lib/use-honix-reaksi";
+import { putarHonix } from "@/lib/honix-sfx";
+import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
+import { HonixReaction } from "@/components/honix/HonixReaction";
 
 
 interface Ex { jp: string; highlight: string; id: string; }
@@ -108,6 +113,10 @@ function KilatPlayer() {
   const [log, setLog] = useState<{ gm: string; correct: boolean; note: string; streak: number }[]>([]);
   const [starred, setStarred] = useState(false);
   const [done, setDone] = useState(false);
+  /* Popup Honix pas set selesai — ditutup = ringkasan di bawahnya kelihatan. */
+  const [popupSelesai, setPopupSelesai] = useState(false);
+  const stats = useUserStats();
+  const { reaksi, catat, tutup: tutupReaksi } = useHonixReaksi(qs?.length ?? 0);
   const [sessId, setSessId] = useState<string | null>(null);
   /* Deck jadi state karena dipakai juga di render (tombol "drill pola yang
      salah"), bukan cuma di dalam effect. */
@@ -180,6 +189,8 @@ function KilatPlayer() {
     if (locked || sel === null || !q) return;
     setLocked(true);
     const correct = sel === q.ans;
+    putarHonix(correct ? "ting" : "salah");
+    catat(correct, idx);
     setResults(r => [...r, correct]);
     if (correct) { setOk(o => o + 1); setStreak(s => s + 1); setXp(x => x + 8); }
     else { setWrong(w => w + 1); setStreak(0); setXp(x => x + 2); }
@@ -193,14 +204,21 @@ function KilatPlayer() {
         : `Kamu pilih ${q.opts[sel].gm} — ${q.opts[sel].d.toLowerCase()}`;
       return [...l, { gm: q.opts[q.ans].gm, correct, note, streak: s }];
     });
-  }, [locked, sel, q, recordOne, saveSession, results.length, ok]);
+  }, [locked, sel, q, recordOne, saveSession, results.length, ok, catat, idx]);
 
   const next = useCallback(() => {
     if (!qs) return;
-    if (idx + 1 >= qs.length) { setDone(true); return; }
-    setIdx(i => i + 1); setSel(null); setLocked(false); setStarred(false);
+    if (idx + 1 >= qs.length) { setDone(true); setPopupSelesai(true); tutupReaksi(); return; }
+    setIdx(i => i + 1); setSel(null); setLocked(false); setStarred(false); tutupReaksi();
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [qs, idx]);
+  }, [qs, idx, tutupReaksi]);
+
+  /* `sesi` cuma pembeda biar URL-nya selalu baru — Page nge-key player pakai
+     query string, jadi sesi baru = state bersih. Tanpa ini "Sesi lagi" dari
+     ?level=N2 ke ?level=N2 gak ngapa-ngapain. */
+  const mulaiSesi = useCallback((query: string) => {
+    router.push(`/latihan/kilat?${query}&sesi=${Date.now()}`);
+  }, [router]);
 
   // keyboard
   useEffect(() => {
@@ -230,8 +248,22 @@ function KilatPlayer() {
     const lastByGm = new Map<string, { gm: string; correct: boolean; streak: number }>();
     log.forEach(r => lastByGm.set(r.gm, r));
     const mastered = [...lastByGm.values()].filter(r => r.correct && r.streak >= 3);
+    const drillSalah = () => { const it = deck?.patterns.find(p => p.pattern === wrongPats[0]); mulaiSesi(`level=${level}${it ? `&item=${it.id}` : ""}&count=${Math.max(5, wrongPats.length)}`); };
+    const sesiLagi = () => mulaiSesi(`level=${level}`);
     return (
       <div className="latihan-kilat">
+        {popupSelesai && (
+          <HonixFinishDialog
+            skor={ok} total={qs.length} kategori="文法" xp={xp} streak={stats.streak}
+            ekstra={wrongPats.length
+              ? { nilai: wrongPats.length, label: "pola perlu diulang" }
+              : { nilai: mastered.length, label: "pola dikuasai" }}
+            onCobaLagi={() => { setPopupSelesai(false); if (wrongPats.length) drillSalah(); else sesiLagi(); }}
+            onLanjut={() => { setPopupSelesai(false); sesiLagi(); }}
+            onPembahasan={() => setPopupSelesai(false)}
+            onTutup={() => setPopupSelesai(false)}
+          />
+        )}
         <div className="sum on">
           <div className="sum-hero">
             <div className="sum-jp">お疲れ様</div>
@@ -276,8 +308,8 @@ function KilatPlayer() {
           </div>
           <div className="sum-act">
             {wrongPats.length > 0
-              ? <button className="btn btn-p" onClick={() => { const it = deck?.patterns.find(p => p.pattern === wrongPats[0]); router.push(`/latihan/kilat?level=${level}${it ? `&item=${it.id}` : ""}&count=${Math.max(5, wrongPats.length)}`); }}>⚡ Drill {wrongPats.length} pola yang salah</button>
-              : <button className="btn btn-p" onClick={() => router.push(`/latihan/kilat?level=${level}`)}>⚡ Sesi lagi</button>}
+              ? <button className="btn btn-p" onClick={drillSalah}>⚡ Drill {wrongPats.length} pola yang salah</button>
+              : <button className="btn btn-p" onClick={sesiLagi}>⚡ Sesi lagi</button>}
             <button className="btn btn-g" onClick={() => router.push("/materi/bunpou")}>Kembali ke Bunpou</button>
           </div>
         </div>
@@ -367,6 +399,7 @@ function KilatPlayer() {
                 <div className="fb-act">
                   <button className="btn btn-p" onClick={next}>{idx + 1 >= qs.length ? "Lihat hasil →" : "Lanjut →"}</button>
                   <button className={`btn-star${starred ? " on" : ""}`} onClick={() => setStarred(s => !s)}>{starred ? "★ Ditandai" : "☆ Tandai pola ini"}</button>
+                  {reaksi && <HonixReaction key={reaksi.id} kind={reaksi.kind} beruntun={reaksi.beruntun} onSelesai={tutupReaksi} />}
                 </div>
               </div>
             </div>
@@ -390,6 +423,12 @@ function KilatPlayer() {
   );
 }
 
+/* Di-key pakai query string: ganti sesi (lihat mulaiSesi) = player di-mount ulang. */
+function KilatKeyed() {
+  const params = useSearchParams();
+  return <KilatPlayer key={params.toString()} />;
+}
+
 export default function Page() {
-  return <Suspense fallback={<div className="lk-load">Memuat…</div>}><KilatPlayer /></Suspense>;
+  return <Suspense fallback={<div className="lk-load">Memuat…</div>}><KilatKeyed /></Suspense>;
 }

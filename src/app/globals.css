@@ -9101,6 +9101,13 @@ html { scrollbar-gutter: stable; }
 .latihan-kilat .mini-d { font-size:10.5px; color:var(--dim); margin-top:4px; line-height:1.5; }
 .latihan-kilat .mini-tag { font-size:8px; font-weight:800; letter-spacing:.06em; padding:2px 5px; border-radius:4px; background:rgba(255,255,255,0.07); color:var(--dim); }
 .latihan-kilat .fb-act { display:flex; align-items:center; gap:9px; margin-top:15px; }
+/* Reaksi cepat Honix di baris tombol feedback (HANDOFF-honix §4): desktop di
+   kanan, HP baris sendiri tepat di atas tombol. */
+.latihan-kilat .fb-act > .hx-rx { margin-left:auto; }
+@media (max-width: 767px) {
+  .latihan-kilat .fb-act:has(> .hx-rx) { flex-wrap:wrap; }
+  .latihan-kilat .fb-act > .hx-rx { order:-1; flex-basis:100%; margin-left:0; }
+}
 .latihan-kilat .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:12px 22px; border-radius:99px; font-family:var(--sans); font-size:12.5px; font-weight:700; cursor:pointer; border:none; transition:.16s; white-space:nowrap; }
 .latihan-kilat .btn-p { background:var(--primary); color:#fff; box-shadow:0 8px 22px -8px rgba(221,65,36,0.7); }
 .latihan-kilat .btn-p:hover { background:var(--primary-h); transform:translateY(-1px); }

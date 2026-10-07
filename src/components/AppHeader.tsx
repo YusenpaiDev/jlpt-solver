@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, ReactNode } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Bell, Sparkles } from "lucide-react";
 
@@ -50,7 +51,7 @@ export default function AppHeader({ activeHref = "/", rightSlot }: AppHeaderProp
 
       {/* ── Left: Logo + Nav ── */}
       <div className="flex items-center gap-5 md:gap-8">
-        <a href="/" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
           <div className="relative size-7 flex items-center justify-center">
             <div className="absolute inset-0 rounded-lg opacity-60 blur-sm"
               style={{ background: "linear-gradient(135deg,#4a7abf,#8b5abf)" }} />
@@ -65,13 +66,13 @@ export default function AppHeader({ activeHref = "/", rightSlot }: AppHeaderProp
             <span className="text-[9px] font-bold tracking-widest"
               style={{ fontFamily: "var(--font-space)", color: "#4a7abf" }}>JLPT · AI</span>
           </div>
-        </a>
+        </Link>
 
         <nav className="hidden md:flex items-center gap-1">
           {NAV.map(item => {
             const active = item.href === activeHref;
             return (
-              <a key={item.href} href={item.href}
+              <Link key={item.href} href={item.href}
                 className="relative px-3 py-1.5 text-[13px] rounded-lg transition-all"
                 style={active
                   ? { color: "#d7e2ff", fontWeight: 600, background: "rgba(107,156,218,0.1)" }
@@ -81,7 +82,7 @@ export default function AppHeader({ activeHref = "/", rightSlot }: AppHeaderProp
                   <span className="absolute bottom-0.5 left-3 right-3 h-px rounded-full"
                     style={{ background: "linear-gradient(90deg,#4a7abf,#8b5abf)" }} />
                 )}
-              </a>
+              </Link>
             );
           })}
         </nav>
@@ -89,7 +90,7 @@ export default function AppHeader({ activeHref = "/", rightSlot }: AppHeaderProp
 
       {/* ── Right: PRO + Bell + extra slot + Avatar ── */}
       <div className="flex items-center gap-2">
-        <a href="/premium"
+        <Link href="/premium"
           className="hidden sm:flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full font-bold transition-all hover:brightness-110"
           style={{
             background: "linear-gradient(135deg,rgba(74,122,191,0.15),rgba(139,90,191,0.15))",
@@ -99,7 +100,7 @@ export default function AppHeader({ activeHref = "/", rightSlot }: AppHeaderProp
           }}>
           <Sparkles className="size-3 text-[#6b9cda]" />
           PRO
-        </a>
+        </Link>
 
         <button className="relative size-8 flex items-center justify-center rounded-lg transition-colors hover:bg-white/5">
           <Bell className="size-4 text-[#6a7a9a]" />
@@ -108,7 +109,7 @@ export default function AppHeader({ activeHref = "/", rightSlot }: AppHeaderProp
 
         {rightSlot}
 
-        <a href="/pengaturan" className="relative group">
+        <Link href="/pengaturan" className="relative group">
           <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-sm"
             style={{ background: "linear-gradient(135deg,#4a7abf,#8b5abf)" }} />
           {avatarUrl
@@ -120,7 +121,7 @@ export default function AppHeader({ activeHref = "/", rightSlot }: AppHeaderProp
                 {userInitial}
               </div>
           }
-        </a>
+        </Link>
       </div>
     </header>
   );
