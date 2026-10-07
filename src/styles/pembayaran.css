@@ -306,3 +306,31 @@
 @media (min-width: 900px) { .py .py-warn-a { display: none; } }
 
 .py .py-btn:focus-visible, .py .py-btn-t:focus-visible, .py .py-warn-x:focus-visible { outline: 2px solid var(--py-link); outline-offset: 2px; }
+
+/* Jatah habis versi kecil — 429 kedua dst. di hari yang sama (mock 5a ".comp").
+   Melayang di bawah, gak modal; hilang sendiri 4 detik. */
+.py-comp-wrap { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 1000; animation: py-pop var(--dur-medium) var(--ease-out-expo) both; }
+.py-comp { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 8px 8px 16px; border-radius: 12px; border: 1px solid var(--py-line-2); background: #1A1620; color: var(--py-muted); font: inherit; font-size: 12.5px; cursor: pointer; box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .7); white-space: nowrap; }
+.py-comp .s { margin-left: 6px; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--py-line); display: grid; place-items: center; font-size: 12px; }
+@media (max-width: 767px) { .py-comp-wrap { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+
+/* ── Hōnix (HANDOFF-pembayaran "Maskot Hōnix") ──
+   Polos: drop-shadow + melayang 5px (HP) / 6px (desktop), 3.6 detik.
+   Ukuran per layar lewat --py-hx-m / --py-hx-d dari <HonixPy>. */
+@keyframes py-hxfloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes py-hxfloat-d { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.py-hx { display: block; width: var(--py-hx-m); height: var(--py-hx-m); object-fit: contain; filter: drop-shadow(0 12px 26px rgba(255, 106, 0, .32)); animation: py-hxfloat 3.6s ease-in-out infinite; user-select: none; }
+.py-hx.diam { animation: none; }
+.py-hx-solo { margin-bottom: 8px; }
+.py-hx-wrap { position: relative; width: 132px; margin: 4px auto 2px; }
+.py-hx-wrap .py-seal { position: absolute; right: -22px; bottom: 0; width: 52px; height: 52px; font-size: 21px; border-width: 2px; margin: 0; background: rgba(14, 11, 15, .7); }
+.py-hx-row { display: flex; align-items: center; gap: 14px; }
+.py-hx-row .py-hx { flex-shrink: 0; }
+@media (min-width: 900px) {
+  .py-hx { width: var(--py-hx-d); height: var(--py-hx-d); filter: drop-shadow(0 14px 30px rgba(255, 106, 0, .32)); animation-name: py-hxfloat-d; }
+  .py-hx-solo { margin-bottom: 10px; }
+  .py-hx-wrap { width: 150px; margin: 0 auto 4px; }
+  .py-hx-wrap .py-seal { right: -26px; bottom: 2px; width: 58px; height: 58px; font-size: 23px; }
+  .py-hx-row { gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .py-hx { animation: none; } }

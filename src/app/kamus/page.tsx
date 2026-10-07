@@ -1,5 +1,7 @@
 "use client";
 
+import { HonixEmpty } from "@/components/honix/HonixEmpty";
+
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { setSavedWordFavorite } from "@/lib/supabase/savedWords";
@@ -888,6 +890,11 @@ function WordList({
         {loading ? (
           <li style={{ padding: "32px", textAlign: "center", color: "var(--text-tertiary)" }}>
             <Loader2 className="animate-spin" size={20} />
+          </li>
+        ) : favOnly && favCount === 0 ? (
+          <li>
+            <HonixEmpty momen="kosongFavorit" body="Tekan ☆ di samping kata yang mau kamu ulang."
+              cta={<button type="button" className="hx-btn hx-btn-p" onClick={() => setFavOnly(false)}>Lihat semua kata</button>} />
           </li>
         ) : words.length === 0 ? (
           <li style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-tertiary)", fontSize: 12.5 }}>

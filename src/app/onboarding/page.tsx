@@ -1,5 +1,10 @@
 "use client";
 
+import { Honix } from "@/components/honix/Honix";
+import { useHonix } from "@/lib/use-honix";
+import { pilihPesan } from "@/lib/honix-pesan";
+import { putarHonix } from "@/lib/honix-sfx";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -128,6 +133,7 @@ export default function Onboarding() {
           {/* STEP 0 — Welcome */}
           {step === 0 && (
             <section className="ob-step">
+              <HonixWelcome />
               <div className="ob-wart">
                 <div className="ob-wmark">解</div>
                 <div><div className="ob-wname">JLPT <span>Solver</span></div><div className="ob-wtag">日本語能力試験 · AI study buddy</div></div>
@@ -224,6 +230,37 @@ export default function Onboarding() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function HonixWelcome() {
+  const [pesan] = useState(() => pilihPesan("onboard"));
+  const [jumlah, setJumlah] = useState(0);
+  const { kurangiGerak } = useHonix();
+  useEffect(() => {
+    if (kurangiGerak) return;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const delay = setTimeout(() => {
+      putarHonix("chirp");
+      let huruf = 1;
+      setJumlah(huruf);
+      interval = setInterval(() => {
+        huruf += 1;
+        setJumlah(huruf);
+        if (huruf >= pesan.length) clearInterval(interval);
+      }, 32);
+    }, 650);
+    return () => { clearTimeout(delay); clearInterval(interval); };
+  }, [pesan, kurangiGerak]);
+  return (
+    <div className={`hx hx-ob${kurangiGerak ? " hx-rm" : ""}`}>
+      {/* Pesan diacak per render server/klien → aria-label bisa beda pas hydrate. */}
+      <div className="hx-ob-bub" aria-label={pesan} suppressHydrationWarning>
+        <span aria-hidden="true" suppressHydrationWarning>{kurangiGerak ? pesan : pesan.slice(0, jumlah)}</span>
+        <span className="hx-cur" aria-hidden="true" />
+      </div>
+      <Honix pose="baca" size={210} sizeHp={170} entry="in-pop" alt="" />
     </div>
   );
 }
