@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { BATAS } from "@/lib/batas-paket";
 import { useIsPro } from "@/lib/use-is-pro";
+import { HonixTurHost } from "@/components/honix/HonixTurHost";
 
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
@@ -51,6 +52,7 @@ export function NavRail() {
             href={href}
             className={`nav-item${active ? " active" : ""}`}
             aria-current={active ? "page" : undefined}
+            data-tur={href === "/" ? "beranda" : href.slice(1)}
           >
             <Icon className="nav-item-icon" size={20} strokeWidth={active ? 1.8 : 1.6} />
             <span className="nav-item-label">{label}</span>
@@ -75,6 +77,7 @@ export function NavRail() {
       <Link
         href="/pengaturan"
         className={`nav-item${isActive("/pengaturan") || isActive("/langganan") ? " active" : ""}`}
+        data-tur="pengaturan"
       >
         <Settings className="nav-item-icon" size={20} />
         <span className="nav-item-label">Pengaturan</span>
@@ -84,6 +87,9 @@ export function NavRail() {
         <LogOut className="nav-item-icon" size={20} />
         <span className="nav-item-label">Keluar</span>
       </Link>
+
+      {/* Tur cara pakai — render lewat portal, jadi ikut jalan di HP walau rail-nya disembunyiin. */}
+      <HonixTurHost />
     </nav>
   );
 }

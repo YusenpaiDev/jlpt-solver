@@ -97,6 +97,7 @@ function MobileNav({ pathname }: { pathname: string }) {
                 href={href}
                 className={`bn-item${active ? " active" : ""}`}
                 aria-current={active ? "page" : undefined}
+                data-tur={href === "/" ? "beranda" : href.slice(1)}
               >
                 <Icon strokeWidth={active ? 2 : 1.6} aria-hidden="true" />
                 <span className="bn-item-label">{label}</span>
@@ -111,6 +112,7 @@ function MobileNav({ pathname }: { pathname: string }) {
             aria-haspopup="dialog"
             aria-expanded={open}
             aria-controls={dialogId}
+            data-tur="lainnya"
             onClick={() => setOpen(true)}
           >
             <Menu strokeWidth={moreActive || open ? 2 : 1.6} aria-hidden="true" />
