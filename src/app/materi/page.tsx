@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
-import { Lock } from "lucide-react";
+import { HonixEmpty } from "@/components/honix/HonixEmpty";
 import kotobaData from "@/data/kotoba-n2.json";
 import { useUserStats } from "@/lib/use-user-stats";
 
@@ -53,6 +53,7 @@ const DEFAULT_SHOWN = 5;
 
 export default function MateriHub() {
   const [exams, setExams] = useState<Exam[]>([]);
+  const [muat, setMuat] = useState<"loading" | "ready" | "error">("loading");
   /* Progres materi belajar — dihitung dari data, bukan dipatok. Yang diukur
      "ditandai/disimpan", bukan "dikuasai": itu yang beneran kelacak. */
   const [bunpou, setBunpou] = useState({ total: 0, ditandai: 0 });
@@ -76,7 +77,7 @@ export default function MateriHub() {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setMuat("error"); return; }
       const [ex, bp, sw] = await Promise.all([
         supabase.from("sessions")
           .select("id, level, title, total, score, created_at, ai_result->section, ai_result->ready")
@@ -86,7 +87,9 @@ export default function MateriHub() {
         supabase.from("bunpou_patterns").select("favorite").eq("user_id", user.id),
         supabase.from("saved_words").select("kanji").eq("user_id", user.id).eq("favorite", true),
       ]);
+      if (ex.error) { setMuat("error"); return; }
       setExams((ex.data ?? []) as Exam[]);
+      setMuat("ready");
 
       const pola = bp.data ?? [];
       setBunpou({ total: pola.length, ditandai: pola.filter(r => r.favorite).length });
@@ -96,7 +99,7 @@ export default function MateriHub() {
       const bintang = new Set((sw.data ?? []).map(r => r.kanji));
       setKotobaTersimpan(KOTOBA_WORDS.filter(w => bintang.has(w)).length);
     }
-    load();
+    load().catch(() => setMuat("error"));
   }, []);
 
   const perLevel = useMemo(() => {
@@ -114,10 +117,6 @@ export default function MateriHub() {
   const lv: Lv = level
     ?? (levelsPresent.includes(stats.targetLevel) ? stats.targetLevel : levelsPresent[0])
     ?? stats.targetLevel;
-
-  /* Gembok itu ajakan upgrade buat level yang materinya belum ada di akun dia —
-     bukan penghalang buat materi yang udah jadi miliknya. */
-  const locked = !stats.isPro && (perLevel[lv]?.length ?? 0) === 0;
 
   /* group per tanggal → {hisho, choukai} */
   const groups = useMemo<Group[]>(() => {
@@ -184,7 +183,7 @@ export default function MateriHub() {
           </div>
 
           {/* NEXT hero */}
-          {next && !locked && (
+          {next && (
             <div className="m3-next">
               <div>
                 <div className="eyebrow"><span className="d" />Berikutnya buat kamu</div>
@@ -205,7 +204,7 @@ export default function MateriHub() {
           <div className="m3-bar">
             {levelsPresent.map(lvItem => (
               <button key={lvItem} className={`fchip${lv === lvItem ? " on" : ""}`} onClick={() => { setLevel(lvItem); setShowAll(false); }}>
-                {!stats.isPro && lvItem !== stats.targetLevel && <span className="lock">🔒</span>} {lvItem} <span className="c">{counts(lvItem)} ujian</span>
+                {lvItem} <span className="c">{counts(lvItem)} ujian</span>
               </button>
             ))}
             <span className="m3-div" />
@@ -215,16 +214,9 @@ export default function MateriHub() {
             <span className="bar-r">1 ujian = 筆記 + 聴解 · klik bagian buat mulai</span>
           </div>
 
-          {locked && (
-            <div className="m3-lock">
-              <Lock size={14} strokeWidth={2} /> Paket kamu: <b>{stats.targetLevel}</b>. Upgrade buat akses {lv} ({counts(lv)} ujian, 2010–2025) <Link href="/premium" className="cta">Upgrade →</Link>
-            </div>
-          )}
-
           {/* exam grid */}
           <div className="m3-exams">
-            {shown.map((g, i) => {
-              const teaser = locked && i >= 3;
+            {shown.map(g => {
               const parts = [g.hisho, g.choukai].filter(Boolean) as Exam[];
               const doneN = parts.filter(e => pctOf(e) != null).length;
               const total = parts.reduce((n, e) => n + e.total, 0);
@@ -233,16 +225,16 @@ export default function MateriHub() {
                 : g.choukai && pctOf(g.choukai) != null ? { t: `✓ 聴解 ${pctOf(g.choukai)}%`, c: "done" }
                 : null;
               return (
-                <div key={g.key} className={`exam card${teaser ? " teaser" : ""}`}>
+                <div key={g.key} className="exam card">
                   <span className="exam-glyph">験</span>
                   <div className="exam-top">
                     <span className="exam-t">{g.label}</span>
                     {badge && <span className={`exam-badge eb-${badge.c}`}>{badge.t}</span>}
                   </div>
-                  <div className="exam-s">Ujian {g.level} · <b>{total} soal</b>{teaser && " · 🔒 upgrade"}</div>
+                  <div className="exam-s">Ujian {g.level} · <b>{total} soal</b></div>
                   <div className="parts">
-                    <Part e={g.hisho} type="筆記" teaser={teaser} onOpen={openPart} />
-                    <Part e={g.choukai} type="聴解" teaser={teaser} onOpen={openPart} />
+                    <Part e={g.hisho} type="筆記" onOpen={openPart} />
+                    <Part e={g.choukai} type="聴解" onOpen={openPart} />
                   </div>
                 </div>
               );
@@ -256,7 +248,15 @@ export default function MateriHub() {
                 </div>
               </button>
             )}
-            {shown.length === 0 && <p className="m3-empty">Belum ada ujian di filter ini.</p>}
+            {muat === "loading" ? <p className="m3-empty" role="status">Memuat materi…</p>
+              : muat === "error" ? <div className="m3-empty" role="alert">Materi belum bisa dimuat. <button type="button" className="btn btn-g" onClick={() => window.location.reload()}>Coba lagi</button></div>
+              : exams.length === 0 ? (
+                <div className="hx-empty-wide">
+                  <HonixEmpty momen="kosongMateri"
+                    body="Set ujianmu akan muncul di sini. Sambil menunggu, kamu bisa belajar Bunpou dan Kotoba."
+                    cta={<Link href="/materi/bunpou" className="hx-btn hx-btn-p">Belajar Bunpou</Link>} />
+                </div>
+              ) : shown.length === 0 && <p className="m3-empty">Belum ada ujian di filter ini.</p>}
           </div>
 
           {/* Materi Belajar */}
@@ -310,7 +310,7 @@ export default function MateriHub() {
 }
 
 /* satu bagian ujian (筆記 / 聴解) di dalam kartu */
-function Part({ e, type, teaser, onOpen }: { e?: Exam; type: ExType; teaser: boolean; onOpen: (e?: Exam) => void }) {
+function Part({ e, type, onOpen }: { e?: Exam; type: ExType; onOpen: (e?: Exam) => void }) {
   const isCho = type === "聴解";
   if (!e) {
     return (
@@ -332,17 +332,18 @@ function Part({ e, type, teaser, onOpen }: { e?: Exam; type: ExType; teaser: boo
   }
   const pct = pctOf(e);
   const bad = pct != null && pct < 65;
-  const click = () => { if (!teaser) onOpen(e); };
+  const click = () => onOpen(e);
   return (
-    <div className="part" onClick={click} role="button" tabIndex={0}>
+    <div className="part" onClick={click} role="button" tabIndex={0}
+      onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); click(); } }}>
       <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
       <div className="part-m">
         <div className="part-t">{type} · {e.total} soal</div>
         <div className="part-s">{pct != null ? `Terakhir ${pct}% · ${relDate(e.created_at)}` : isCho ? "~50 menit · audio" : "belum dikerjain"}</div>
       </div>
       {pct != null
-        ? <><span className="part-score" style={bad ? { background: "rgba(212,160,74,0.15)", color: "var(--warning)" } : undefined}>{pct}%</span><span className="part-go">{teaser ? "🔒" : bad ? "↻ Ulangi" : "Review"}</span></>
-        : <span className="part-go">{teaser ? "🔒 Upgrade" : "Mulai →"}</span>}
+        ? <><span className="part-score" style={bad ? { background: "rgba(212,160,74,0.15)", color: "var(--warning)" } : undefined}>{pct}%</span><span className="part-go">{bad ? "↻ Ulangi" : "Review"}</span></>
+        : <span className="part-go">Mulai →</span>}
     </div>
   );
 }

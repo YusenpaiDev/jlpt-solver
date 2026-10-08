@@ -49,55 +49,13 @@ export const tglJam = (iso: string | Date) => `${tglPanjang(iso)}, ${jam(iso)} W
 export const sisaHari = (until: string | null, sekarang = Date.now()) =>
   until ? Math.ceil((new Date(until).getTime() - sekarang) / HARI) : null;
 
-/**
- * Tanggal hasil perpanjangan — persis aturan aktifkan_pro() di
- * pembayaran.sql: tambah dari sisa yang ada, bukan dari hari ini.
- */
-export function hasilPerpanjang(until: string | null, bulan: number, sekarang = new Date()): Date {
-  const mulai = until && new Date(until) > sekarang ? new Date(until) : new Date(sekarang);
-  const hasil = new Date(mulai);
-  hasil.setMonth(hasil.getMonth() + bulan);
-  return hasil;
-}
+export { hasilPerpanjang, ambangPeringatan, sudahDitutup, tutupPeringatan } from "@/lib/langganan-waktu";
 
 /** Hijau <60%, kuning 60–89%, merah ≥90%. */
 export const isiMeter = (pakai: number, batas: number) => {
   const p = batas > 0 ? pakai / batas : 0;
   return p >= 0.9 ? "py-f-full" : p >= 0.6 ? "py-f-warn" : "py-f-ok";
 };
-
-/* ── Peringatan H-7 / H-3 / H-1 ─────────────────────────────────
-   Ditutup = diem sampai ambang berikutnya, bukan selamanya. Kuncinya per
-   tanggal (`pro-warn-dismissed-<tanggal>`) dengan isi ambang waktu ditutup;
-   begitu sisa hari turun ke ambang baru, tutupan lama gak berlaku lagi. */
-export const ambangPeringatan = (sisa: number) => (sisa <= 1 ? 1 : sisa <= 3 ? 3 : 7);
-const PREFIX_TUTUP = "pro-warn-dismissed-";
-
-export function sudahDitutup(sisa: number): boolean {
-  try {
-    const ambang = String(ambangPeringatan(sisa));
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k?.startsWith(PREFIX_TUTUP) && localStorage.getItem(k) === ambang) return true;
-    }
-  } catch { /* storage diblok → tampilkan aja */ }
-  return false;
-}
-
-export function tutupPeringatan(sisa: number) {
-  try {
-    const hariIni = new Date().toLocaleDateString("en-CA", { timeZone: ZONA });
-    localStorage.setItem(PREFIX_TUTUP + hariIni, String(ambangPeringatan(sisa)));
-    /* Bersihin kunci lebih dari 10 hari — gak ada gunanya lagi. */
-    const batas = Date.now() - 10 * HARI;
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i);
-      if (k?.startsWith(PREFIX_TUTUP) && new Date(k.slice(PREFIX_TUTUP.length)).getTime() < batas) {
-        localStorage.removeItem(k);
-      }
-    }
-  } catch { /* abaikan */ }
-}
 
 /* ── Data langganan ─────────────────────────────────────────── */
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchProAccess } from "@/lib/access";
 import { tanggalLokal } from "@/lib/aktivitas";
+import { EVENT_XP_TERSIMPAN, XP_PER_LEVEL } from "@/lib/honix-level";
 
 /**
  * Satu sumber data buat header tiap halaman: streak, XP, level target, status PRO.
@@ -21,7 +22,7 @@ import { tanggalLokal } from "@/lib/aktivitas";
    literal & buang cabangnya kalau ekspresinya ada di modul yang sama. */
 const DEV_BYPASS = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "1";
 
-export const XP_PER_LEVEL = 1000;
+export { XP_PER_LEVEL } from "@/lib/honix-level";
 
 export type TargetLevel = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -140,7 +141,8 @@ export function useUserStats(): UserStats {
     }
 
     muat();
-    return () => { batal = true; };
+    window.addEventListener(EVENT_XP_TERSIMPAN, muat);
+    return () => { batal = true; window.removeEventListener(EVENT_XP_TERSIMPAN, muat); };
   }, []);
 
   return stats;

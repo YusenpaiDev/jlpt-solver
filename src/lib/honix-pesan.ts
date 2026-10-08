@@ -17,6 +17,8 @@ export const PESAN = {
   kosongRiwayat: ["Belum ada latihan di sini.", "Honix lagi baca-baca dulu.", "Riwayatmu masih kosong."],
   kosongCatatan: ["Belum ada catatan.", "Catatanmu masih bersih.", "Honix nunggu catatan pertamamu."],
   kosongFavorit: ["Belum ada kata favorit.", "Bintangnya masih kosong.", "Honix belum lihat favoritmu."],
+  kosongMateri: ["Belum ada set ujian di sini.", "Honix lagi siapin buku belajarnya.", "Mulai dari materi dulu, yuk."],
+  naikLevel: ["Apinya makin nyala. Lanjutkan!", "Belajarmu berbuah. Level baru!", "Selangkah lagi menuju targetmu."],
   onboard: ["Hai, aku Honix! Aku temen belajarmu.", "Hai! Aku Honix. Yuk bareng sampai lulus JLPT.", "Halo! Aku Honix, siap nemenin kamu belajar."],
 } as const;
 

@@ -93,6 +93,8 @@ export function JatahHabisInline({ kuota, onTunggu, sempit = false }: {
         Reset besok <b>00:00 WIB</b> — sekitar {sisaWaktuReset(kuota.resetAt)}. Bank soal ujian, latihan dengar, dan materi <b>tetap terbuka</b>.
       </p>
       <MeterBanding k={kuota} berdampingan={!sempit} />
+      <hr className="py-hr tight" />
+      <BarisLain fitur={kuota.feature} />
       <div className="py-notice-a">
         <Link href="/premium" className="py-btn py-btn-p">Lihat Pro</Link>
         <button type="button" className="py-btn py-btn-q" onClick={onTunggu}>Tunggu besok</button>
@@ -118,7 +120,7 @@ export function JatahHabisDialog({ kuota, onClose }: { kuota: KuotaHabis | null;
         onClose={() => { tandai(kuota.feature); onClose(); }} />;
 }
 
-function JatahHabisSheet({ kuota, onClose }: { kuota: KuotaHabis; onClose: () => void }) {
+export function JatahHabisSheet({ kuota, onClose }: { kuota: KuotaHabis; onClose: () => void }) {
   const tolakRef = useRef<HTMLButtonElement>(null);
   const tutupRef = useCallbackTerbaru(onClose);
 

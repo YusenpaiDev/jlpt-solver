@@ -67,6 +67,6 @@ export function putarHonix(cue: HonixCue, { paksa = false }: { paksa?: boolean }
 
 /** Urutan "Tes suara" di Pengaturan → Honix. */
 export function tesSuaraHonix() {
-  (["chirp", "ting", "salah", "chime", "fanfare"] as HonixCue[])
+  (["chirp", "ting", "salah", "chime", "fanfare", "soft"] as HonixCue[])
     .forEach((c, i) => setTimeout(() => putarHonix(c, { paksa: true }), i * 900));
 }
