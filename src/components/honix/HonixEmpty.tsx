@@ -6,7 +6,7 @@ import { useHonix } from "@/lib/use-honix";
 import { pilihPesan } from "@/lib/honix-pesan";
 
 export function HonixEmpty({ momen, title, body, cta }: {
-  momen: "kosongRiwayat" | "kosongCatatan" | "kosongFavorit";
+  momen: "kosongRiwayat" | "kosongCatatan" | "kosongFavorit" | "kosongMateri";
   title?: string;
   body: string;
   cta?: ReactNode;

@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import type { CSSProperties } from "react";
 import { honixSrc, type HonixPose } from "@/lib/honix-pose";
+import { useHonix } from "@/lib/use-honix";
 
 /**
  * Hōnix di layar pembayaran (HANDOFF-pembayaran "Maskot Hōnix"). Sengaja
@@ -20,9 +23,10 @@ export function HonixPy({ pose, hp, desktop, diam = false, className = "", style
   className?: string;
   style?: CSSProperties;
 }) {
+  const { kurangiGerak } = useHonix();
   return (
     <Image src={honixSrc(pose)} alt="" width={desktop} height={desktop}
-      className={`py-hx${diam ? " diam" : ""}${className ? ` ${className}` : ""}`}
+      className={`py-hx${diam || kurangiGerak ? " diam" : ""}${kurangiGerak ? " hx-rm" : ""}${className ? ` ${className}` : ""}`}
       style={{ "--py-hx-m": `${hp}px`, "--py-hx-d": `${desktop}px`, ...style } as CSSProperties} />
   );
 }

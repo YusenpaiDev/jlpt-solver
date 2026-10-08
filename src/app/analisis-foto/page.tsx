@@ -15,6 +15,8 @@ import { useUserStats } from "@/lib/use-user-stats";
 import { catatAktivitas } from "@/lib/aktivitas";
 import { JatahHabisInline, JatahHabisDialog } from "@/components/pembayaran/JatahHabis";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
+import { Honix } from "@/components/honix/Honix";
+import { laporkanXp } from "@/lib/honix-level";
 import { bacaKuotaHabis, sisaWaktuReset, type KuotaHabis } from "@/lib/kuota-habis";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -985,11 +987,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
         const { data: profile } = await supabase
           .from("profiles").select("xp").eq("id", user.id).single();
-        const currentXp = profile?.xp ?? 0;
+        if (!profile) return;
+        const currentXp = profile.xp ?? 0;
 
-        await supabase.from("profiles")
+        const { data: tersimpan } = await supabase.from("profiles")
           .update({ xp: currentXp + xpGain })
-          .eq("id", user.id);
+          .eq("id", user.id).select("xp").single();
+        if (!tersimpan) return;
+        laporkanXp({ userId: user.id, sebelum: currentXp, sesudah: tersimpan.xp });
 
         setScoreSaved(true);
         setToast({ text: `+${xpGain} XP — ${correctCount}/${total} benar`, ok: true });
@@ -1860,7 +1865,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         {rightTab === "chat" && (
           <div className="glass-card side-card sensei-card">
             <div className="sensei-intro">
-              <div className="sensei-avatar">先</div>
+              <Honix pose="tunjuk" size={64} sizeHp={52} idle="none" alt="" />
               <div>
                 <div className="sensei-name">Sensei AI</div>
                 <div className="sensei-status">Online · siap bantu</div>
@@ -2860,4 +2865,3 @@ export default function AnalisisFoto() {
     </>
   );
 }
-

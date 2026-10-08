@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Manrope, Noto_Serif_JP, Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { GeistSans } from "geist/font/sans";
+import { HonixLevelUp } from "@/components/honix/HonixLevelUp";
 import "./globals.css";
 
 // v1 fonts (existing pages still depend on these — keep until last v1 page migrates)
@@ -61,6 +62,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen app-canvas">
         {children}
+        <HonixLevelUp />
       </body>
     </html>
   );

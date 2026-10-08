@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useHonixReaksi } from "@/lib/use-honix-reaksi";
 import { putarHonix } from "@/lib/honix-sfx";
+import { laporkanXp } from "@/lib/honix-level";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
 
@@ -165,7 +166,10 @@ function KilatPlayer() {
       const { data } = await supabase.from("bunpou_progress").select("benar, salah").eq("user_id", user.id).eq("pattern", pattern).maybeSingle();
       await supabase.from("bunpou_progress").upsert({ user_id: user.id, pattern, benar: (data?.benar ?? 0) + (correct ? 1 : 0), salah: (data?.salah ?? 0) + (correct ? 0 : 1) }, { onConflict: "user_id,pattern" });
       const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
-      await supabase.from("profiles").update({ xp: (prof?.xp ?? 0) + (correct ? 8 : 2) }).eq("id", user.id);
+      if (!prof) return;
+      const { data: tersimpan } = await supabase.from("profiles")
+        .update({ xp: prof.xp + (correct ? 8 : 2) }).eq("id", user.id).select("xp").single();
+      if (tersimpan) laporkanXp({ userId: user.id, sebelum: prof.xp, sesudah: tersimpan.xp });
     } catch { /* nyusul */ }
   }, []);
 
