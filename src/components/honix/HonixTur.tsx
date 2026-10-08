@@ -30,10 +30,10 @@ function posisiBalon(t: Kotak, hp: boolean): CSSProperties {
   const lebar = Math.min(360, vw - TEPI * 2);
   const tengahX = t.left + t.width / 2;
   const left = Math.min(Math.max(tengahX - lebar / 2, TEPI), vw - lebar - TEPI);
-  if (hp || t.top > vh * 0.6) return { width: lebar, left, bottom: vh - t.top + CELAH };
-  if (t.left + t.width < vw / 3) {
-    return { width: lebar, left: t.left + t.width + CELAH, top: Math.min(Math.max(t.top + t.height / 2 - 90, TEPI), vh - 260) };
+  if (!hp && t.left + t.width < vw / 3) {
+    return { width: lebar, left: t.left + t.width + CELAH, top: Math.min(Math.max(t.top + t.height / 2 - 85, TEPI), vh - 200) };
   }
+  if (hp || t.top > vh * 0.6) return { width: lebar, left, bottom: vh - t.top + CELAH };
   return { width: lebar, left, top: t.top + t.height + CELAH };
 }
 
