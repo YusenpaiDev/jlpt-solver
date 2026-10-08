@@ -1,26 +1,28 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Manrope, Noto_Serif_JP, Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
+import { Noto_Serif_JP, Noto_Sans_JP } from "next/font/google";
 import localFont from "next/font/local";
 import { GeistSans } from "geist/font/sans";
 import { HonixLevelUp } from "@/components/honix/HonixLevelUp";
 import "./globals.css";
 
 // v1 fonts (existing pages still depend on these — keep until last v1 page migrates)
-const jakarta = Plus_Jakarta_Sans({
+/* Font latin di-host sendiri (file dari Google Fonts, subset latin, variabel).
+   Build Vercel berkali-kali gagal acak pas next/font/google ngunduh font
+   ("next/font/google queries have exactly one entry") — 8 Okt 2026 kena Space
+   Grotesk, lalu JetBrains Mono. File lokal = build gak bergantung jaringan.
+   Noto JP tetap dari Google: dipecah ratusan potongan unicode-range. */
+const jakarta = localFont({
+  src: "./fonts/PlusJakartaSans-latin.woff2",
   variable: "--font-jakarta",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: "400 800",
+  display: "swap",
 });
-const manrope = Manrope({
+const manrope = localFont({
+  src: "./fonts/Manrope-latin.woff2",
   variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
+  display: "swap",
 });
-/* Space Grotesk di-host sendiri (file dari Google Fonts, subset latin, variabel
-   400–700). Build production di Vercel gagal 8 Okt 2026 pas next/font/google
-   ngunduh font ini ("next/font/google queries have exactly one entry"),
-   padahal build lokal & preview sebelumnya lolos. File lokal = gak bergantung
-   jaringan pas build. */
 const spaceGrotesk = localFont({
   src: "./fonts/SpaceGrotesk-latin.woff2",
   variable: "--font-space",
@@ -39,10 +41,11 @@ const notoSansJp = Noto_Sans_JP({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
+  src: "./fonts/JetBrainsMono-latin.woff2",
   variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: "400 500",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
