@@ -2,16 +2,20 @@
 
 import { useId, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Sparkles, Bell, Settings, CreditCard } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { usePeringatan } from "@/lib/peringatan";
 import { useTandaHarian } from "@/lib/tanda-harian";
+import { honixSrc } from "@/lib/honix-pose";
 
 interface UserBarProps {
   streakDays: number;
   xp: number;
   xpTarget: number;
-  avatarLetter: string;
+  /** Gak dipakai lagi — avatar tanpa foto sekarang Honix. Dibiarin biar
+   *  pemanggil lama gak perlu diubah. */
+  avatarLetter?: string;
   isPro?: boolean;
   onAvatarClick?: () => void;
 }
@@ -36,7 +40,6 @@ export function UserBar({
   streakDays,
   xp,
   xpTarget,
-  avatarLetter,
   isPro = false,
   onAvatarClick,
 }: UserBarProps) {
@@ -163,7 +166,7 @@ export function UserBar({
         >
           <button
             type="button"
-            className="avatar"
+            className={`avatar${avatarUrl ? "" : " honix"}`}
             aria-label="Akun"
             aria-expanded={accountOpen}
             aria-controls={accountMenuId}
@@ -173,9 +176,10 @@ export function UserBar({
               onAvatarClick?.();
             }}
           >
+            {/* Belum punya foto → Honix pose kepala (HANDOFF-honix §4 "Avatar"). */}
             {avatarUrl
               ? <img src={avatarUrl} alt="Foto profil" className="avatar-img" />
-              : avatarLetter}
+              : <Image src={honixSrc("kepala")} alt="" width={46} height={46} className="avatar-hx" />}
           </button>
           {accountOpen && (
             <>
