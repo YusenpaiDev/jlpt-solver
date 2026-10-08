@@ -543,6 +543,7 @@ export default function Kamus() {
             favCount={words.filter(w => w.favorite).length}
             onToggleFavorite={toggleFavorite}
             onDelete={deleteWord}
+            onAdd={() => setAddOpen(true)}
           />
 
           {detail ? (
@@ -553,16 +554,6 @@ export default function Kamus() {
               onDelete={() => deleteWord(detail.id)}
               onToggleFavorite={() => toggleFavorite(detail.id)}
             />
-          ) : !loading && words.length === 0 ? (
-            <aside className="kk-detail">
-              <div className="glass-card detail-hero">
-                <div className="detail-hero-bg" />
-                <p style={{ position: "relative", color: "var(--text-tertiary)", fontSize: 13, padding: "40px 20px" }}>
-                  Belum ada kata. Tambah pertama lewat <strong style={{ color: "var(--accent-emerald)" }}>TAMBAH</strong>{" "}
-                  atau simpan langsung dari halaman materi.
-                </p>
-              </div>
-            </aside>
           ) : null}
         </div>
 
@@ -832,7 +823,7 @@ function FilterRail({
 
 function WordList({
   words, hiddenCount, onShowMore, selected, setSelected, query, setQuery, sort, setSort, loading, totalWords,
-  favOnly, setFavOnly, favCount, onToggleFavorite, onDelete,
+  favOnly, setFavOnly, favCount, onToggleFavorite, onDelete, onAdd,
 }: {
   words: SavedWord[];
   hiddenCount: number;
@@ -850,6 +841,7 @@ function WordList({
   favCount: number;
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
+  onAdd: () => void;
 }) {
   return (
     <section className="kk-list-section glass-card">
@@ -896,11 +888,14 @@ function WordList({
             <HonixEmpty momen="kosongFavorit" body="Tekan ☆ di samping kata yang mau kamu ulang."
               cta={<button type="button" className="hx-btn hx-btn-p" onClick={() => setFavOnly(false)}>Lihat semua kata</button>} />
           </li>
+        ) : totalWords === 0 ? (
+          <li>
+            <HonixEmpty momen="kosongKamus" body="Simpan kata dari halaman materi, atau tambah sendiri."
+              cta={<button type="button" className="hx-btn hx-btn-p" onClick={onAdd}>Tambah kata</button>} />
+          </li>
         ) : words.length === 0 ? (
           <li style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-tertiary)", fontSize: 12.5 }}>
-            {totalWords === 0
-              ? "Belum ada kata. Klik TAMBAH buat nyimpen kotoba pertamamu."
-              : "Tidak ada kata cocok dengan filter."}
+            Tidak ada kata cocok dengan filter.
           </li>
         ) : words.map(w => (
           <li

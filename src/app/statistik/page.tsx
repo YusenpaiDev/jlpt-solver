@@ -11,6 +11,7 @@ import {
 import { useUserStats } from "@/lib/use-user-stats";
 import kotobaIndex from "@/data/kotoba/index.json";
 import { tanggalLokal } from "@/lib/aktivitas";
+import { HonixEmpty } from "@/components/honix/HonixEmpty";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 /* Termudah → tersulit, sama kayak urutan chip di halaman Kotoba. */
@@ -378,6 +379,12 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
     return worst;
   }, [katAccuracy]);
 
+  /* Empty state Honix cuma kalau belum pernah latihan sama sekali — bukan
+     karena periode yang dipilih kosong. Data Kotoba ikut dihitung: kartunya
+     tetap berguna walau belum ada sesi. */
+  const belumAdaData = !loading && sessions.length === 0
+    && kotobaTotal.dikuasai + kotobaTotal.muncul + kotobaTotal.seringSalah === 0;
+
   const inner = (
     <>
       <header className="st-header">
@@ -405,6 +412,11 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
           </div>
         </header>
 
+        {belumAdaData ? (
+          <HonixEmpty momen="kosongStat"
+            body="Selesaikan satu set soal dulu. Akurasi, kategori terlemah, dan grafik harian muncul di sini."
+            cta={<Link href="/latihan/kilat" className="hx-btn hx-btn-p">Mulai Latihan Kilat</Link>} />
+        ) : (<>
         <div className="st-kpi-row">
           <KPICard
             label="Total Soal Dianalisis"
@@ -651,6 +663,7 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
             </div>
           </aside>
         </div>
+        </>)}
     </>
   );
 

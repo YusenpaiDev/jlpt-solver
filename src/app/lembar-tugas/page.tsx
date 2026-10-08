@@ -9,6 +9,7 @@ import {
   BookOpen, BookA, Zap, NotebookPen,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import { HonixEmpty } from "@/components/honix/HonixEmpty";
 
 type Difficulty = "mudah" | "sedang" | "sulit";
 type CategoryAll = "全" | "語彙" | "文法" | "文字" | "読解";
@@ -810,11 +811,11 @@ function RiwayatDrawer({
           </button>
         </div>
         <div className="drawer-body">
-          <p className="drawer-sub">{riwayat.length} sesi terakhir · Klik untuk buka review</p>
+          {riwayat.length > 0 && <p className="drawer-sub">{riwayat.length} sesi terakhir · Klik untuk buka review</p>}
           {riwayat.length === 0 ? (
-            <p style={{ fontSize: 12, color: "var(--text-tertiary)", textAlign: "center", padding: "32px 0" }}>
-              Belum ada sesi.
-            </p>
+            <HonixEmpty momen="kosongTugas"
+              body="Pilih materi dan jumlah soal, nanti lembar tugasnya tersimpan di sini."
+              cta={<button type="button" className="hx-btn hx-btn-p" onClick={onClose}>Buat lembar tugas</button>} />
           ) : (
             <ul className="drawer-list">
               {riwayat.map(r => {
