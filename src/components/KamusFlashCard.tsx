@@ -39,6 +39,7 @@ export default function KamusFlashCard() {
             .select("id, kanji, reading, meaning, level")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
             .range(from, from + 999);
           const batch = (data ?? []) as SavedWord[];
           ws.push(...batch);
