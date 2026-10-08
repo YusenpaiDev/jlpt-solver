@@ -891,6 +891,13 @@ input, textarea, select { font-size: 16px; }
   border-radius: 50%;
   display: block;
 }
+/* Avatar Honix (belum ada foto) — prototype honix.css: .ava 38px,
+   gambar 46px, object-fit contain, margin-top 8px. Dipakai juga di Beranda. */
+.avatar.honix, .beranda-v2 .bv-ava.honix { position: relative; background: #241E2A; border: 1px solid rgba(221,65,36,0.28); }
+/* Gambar 46px lebih gede dari lingkaran → place-items:center gak berlaku
+   (safe alignment), jadi diposisikan absolut. top = setara prototype
+   (center + margin-top 8px): 50% − (46+8)/2 + 8 = 50% − 19px. */
+.avatar-hx { position: absolute; left: 50%; top: calc(50% - 19px); transform: translateX(-50%); width: 46px; height: 46px; max-width: none; object-fit: contain; }
 
 /* Notifikasi dropdown (di UserBar) */
 .notif-wrap { position: relative; display: inline-flex; }
