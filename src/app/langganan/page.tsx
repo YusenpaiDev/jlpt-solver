@@ -46,6 +46,7 @@ export default function Langganan() {
       .from("transaksi")
       .select("order_id, paket_id, jumlah, status, dibuat, diperbarui")
       .order("dibuat", { ascending: false })
+      .order("order_id", { ascending: false })
       .range(dari, dari + PER_HALAMAN);
     return (data ?? []) as Tx[];
   };

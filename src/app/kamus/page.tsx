@@ -109,6 +109,9 @@ export default function Kamus() {
         setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
         // Ambil SEMUA kotoba — paginasi per 1000 (Supabase hard-cap 1000/query).
+        // Urutan wajib unik (created_at + id): import massal bikin ratusan baris
+        // ber-created_at sama, dan tanpa id urutannya acak antar halaman →
+        // kata dobel (React: "two children with the same key") + kata hilang.
         const fetchAllWords = async (cols: string): Promise<{ data: SavedWord[]; error: { message: string } | null }> => {
           const all: SavedWord[] = [];
           for (let from = 0; ; from += 1000) {
@@ -117,6 +120,7 @@ export default function Kamus() {
               .select(cols)
               .eq("user_id", user.id)
               .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
               .range(from, from + 999);
             if (error) return { data: all, error };
             const batch = (data ?? []) as unknown as SavedWord[];

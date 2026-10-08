@@ -901,6 +901,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             .from("saved_words").select(cols)
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
             .range(from, from + 999);
           if (error) return { data: all, error };
           all.push(...((data ?? []) as unknown as Record<string, unknown>[]));
