@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { rapikanTur, TUR_AWAL, type TurState } from "@/lib/honix-tur";
 
 /**
  * Pengaturan Honix (HANDOFF-honix §6). Satu store di level modul — semua
@@ -17,14 +18,20 @@ export interface HonixSetelan {
   reaksi: FrekReaksi;
   /** null = ikut prefers-reduced-motion perangkat. */
   gerakan: Gerakan | null;
+  /** Jadwal tur cara pakai (honix-tur.ts). */
+  tur: TurState;
 }
 
-export const SETELAN_AWAL: HonixSetelan = { suara: true, reaksi: "normal", gerakan: null };
+export const SETELAN_AWAL: HonixSetelan = { suara: true, reaksi: "normal", gerakan: null, tur: TUR_AWAL };
 
 const LS_KEY = "honix-setelan-v1";
 
 let setelan: HonixSetelan = SETELAN_AWAL;
 let sudahMulai = false;
+/* true setelah isi akun kebaca (atau pasti gak bisa: belum login / offline).
+   Tur nunggu ini — kalau nggak, perangkat kedua sempat muter tur dari cache
+   lokal yang masih kosong. */
+let siap = false;
 const pendengar = new Set<() => void>();
 
 function rapikan(x: unknown): Partial<HonixSetelan> {
@@ -34,6 +41,7 @@ function rapikan(x: unknown): Partial<HonixSetelan> {
   if (typeof o.suara === "boolean") hasil.suara = o.suara;
   if (o.reaksi === "normal" || o.reaksi === "jarang" || o.reaksi === "mati") hasil.reaksi = o.reaksi;
   if (o.gerakan === "normal" || o.gerakan === "kurangi" || o.gerakan === null) hasil.gerakan = o.gerakan;
+  if ("tur" in o) hasil.tur = rapikanTur(o.tur);
   return hasil;
 }
 
@@ -64,8 +72,8 @@ function mulai() {
       if (error || !data) return;
       setelan = { ...SETELAN_AWAL, ...rapikan(data.honix_settings) };
       simpanLokal();
-      kabari();
     } catch { /* offline — pakai lokal */ }
+    finally { siap = true; kabari(); }
   })();
 }
 
@@ -77,6 +85,8 @@ export function langganSetelan(f: () => void) {
 
 export function ambilSetelan(): HonixSetelan { return setelan; }
 export function ambilSetelanServer(): HonixSetelan { return SETELAN_AWAL; }
+export const ambilSiap = () => siap;
+export const ambilSiapServer = () => false;
 
 export function ubahSetelan(patch: Partial<HonixSetelan>) {
   setelan = { ...setelan, ...patch };
