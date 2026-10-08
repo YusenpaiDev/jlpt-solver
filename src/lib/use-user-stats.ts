@@ -16,12 +16,19 @@ import { tanggalLokal } from "@/lib/aktivitas";
  * apa adanya, bukan ditutupin angka karangan.
  */
 
+/* Mode dev tanpa login (lihat src/lib/dev-beranda.ts). Sengaja ditulis
+   langsung di file ini, bukan diimport: Next cuma bisa ganti env jadi
+   literal & buang cabangnya kalau ekspresinya ada di modul yang sama. */
+const DEV_BYPASS = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "1";
+
 export const XP_PER_LEVEL = 1000;
 
 export type TargetLevel = "N1" | "N2" | "N3" | "N4" | "N5";
 
 export interface UserStats {
   streak: number;
+  /** Streak terpanjang sepanjang masa (streak_saya().terpanjang). */
+  rekor: number;
   /** Nomor level, dihitung dari total XP. User baru = 1, bukan 8. */
   level: number;
   /** XP total sepanjang masa. */
@@ -45,6 +52,7 @@ export interface UserStats {
 
 const AWAL: UserStats = {
   streak: 0,
+  rekor: 0,
   level: 1,
   xpTotal: 0,
   xp: 0,
@@ -58,10 +66,17 @@ const AWAL: UserStats = {
   loaded: false,
 };
 
+/* Data contoh buat mode dev tanpa login (lihat src/lib/dev-beranda.ts). */
+const DEV_STATS: UserStats = {
+  ...AWAL, streak: 13, rekor: 23, level: 8, xpTotal: 7820, xp: 820, targetLevel: "N2",
+  examDate: "2026-12-06", initial: "Y", loaded: true,
+};
+
 export function useUserStats(): UserStats {
-  const [stats, setStats] = useState<UserStats>(AWAL);
+  const [stats, setStats] = useState<UserStats>(DEV_BYPASS ? DEV_STATS : AWAL);
 
   useEffect(() => {
+    if (DEV_BYPASS) return;
     let batal = false;
 
     async function muat() {
@@ -105,6 +120,7 @@ export function useUserStats(): UserStats {
 
       setStats({
         streak: streakBaris?.sekarang ?? 0,
+        rekor: streakBaris?.terpanjang ?? 0,
         // XP jalan terus lintas level; yang ditampilin sisa di level sekarang.
         level: Math.floor(xp / XP_PER_LEVEL) + 1,
         xpTotal: xp,
