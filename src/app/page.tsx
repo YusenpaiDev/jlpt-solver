@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { tanggalLokal } from "@/lib/aktivitas";
+import { honixSrc } from "@/lib/honix-pose";
+import { useHonix } from "@/lib/use-honix";
+import { putarHonix } from "@/lib/honix-sfx";
+import { Honix } from "@/components/honix/Honix";
+import { devBeranda, type BerandaMentah } from "@/lib/dev-beranda";
 import { AuroraBackground, NavRail, BottomNav, PeringatanBanner } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
 import { PengingatPro } from "@/components/pembayaran/PengingatPro";
@@ -101,6 +108,48 @@ const KANJI_POOL: KanjiHarian[] = KANJI_SRC
     };
   });
 
+/* Dek per level — buat "x / total kata" di kartu Kotoba. Kotoba udah keimport
+   (buat Kanji Hari Ini); Bunpou di-load per level biar gak narik 369 KB. */
+const DEK_KOTOBA: Record<string, KanjiVocab[]> = {
+  N1: (kotobaN1 as { vocabulary?: KanjiVocab[] }).vocabulary ?? [],
+  N2: (kotobaN2 as { vocabulary?: KanjiVocab[] }).vocabulary ?? [],
+  N3: (kotobaN3 as { vocabulary?: KanjiVocab[] }).vocabulary ?? [],
+  N4: (kotobaN4 as { vocabulary?: KanjiVocab[] }).vocabulary ?? [],
+  N5: (kotobaN5 as { vocabulary?: KanjiVocab[] }).vocabulary ?? [],
+};
+type DekBunpou = { patterns: { pattern: string }[] };
+const DEK_BUNPOU: Record<string, () => Promise<DekBunpou>> = {
+  N1: () => import("@/data/bunpou/N1.json").then(m => m.default as DekBunpou),
+  N2: () => import("@/data/bunpou/N2.json").then(m => m.default as DekBunpou),
+  N3: () => import("@/data/bunpou/N3.json").then(m => m.default as DekBunpou),
+  N4: () => import("@/data/bunpou/N4.json").then(m => m.default as DekBunpou),
+  N5: () => import("@/data/bunpou/N5.json").then(m => m.default as DekBunpou),
+};
+
+/* Kanji Sering Salah — diturunin dari salah per kata (kotoba_progress):
+   kata yang salahnya ≥ benarnya dipecah jadi huruf kanji, tiap kanji dapet
+   skor = jumlah salah katanya. Ambil 3 teratas. Data "ketuker sama kanji
+   apa" gak ada, jadi ini frekuensi, bukan pasangan mirip. */
+function kanjiSeringSalah(rows: { word: string; benar: number; salah: number }[]) {
+  const skor = new Map<string, number>();
+  for (const r of rows) {
+    if (r.salah < 1 || r.salah < r.benar) continue;
+    for (const k of new Set(r.word.match(/[\u4e00-\u9fbf]/g) ?? [])) skor.set(k, (skor.get(k) ?? 0) + r.salah);
+  }
+  const atas = [...skor.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  if (!atas.length) return null;
+  return { kanji: atas.map(([k]) => k), salah: atas.reduce((s, [, n]) => s + n, 0) };
+}
+
+/* Drill buat kategori terlemah di kartu Fokus. */
+const DRILL_KATEGORI: Record<string, (lv: string) => string> = {
+  "文法": lv => `/latihan/kilat?level=${lv}`,
+  "語彙": lv => `/latihan/kotoba?level=${lv}`,
+  "文字": lv => `/latihan/kotoba?level=${lv}`,
+  "聴解": () => "/choukai",
+  "読解": () => "/materi",
+};
+
 /* Render contoh kalimat + highlight kanji-nya (#E8704F). */
 function renderKjExample(example: string, highlight?: string) {
   if (!highlight || !example.includes(highlight)) return <>{example}</>;
@@ -114,6 +163,34 @@ function hariKe(d: Date) {
   return Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86_400_000);
 }
 
+/* ── Honix di Beranda (HANDOFF-honix §4 "Beranda", mock Beranda Honix Final) ── */
+
+/* Jejak bara di belakang Honix terbang. Nilainya tetap (dari mock), bukan
+   acak — halaman ini di-render server juga, nilai acak bikin hydration beda. */
+const BARA = [
+  [-129, 89, "#FF6A00", 1722, 821], [-126, 26, "#FFC24D", 1991, 1026], [-123, 37, "#FF8C25", 2022, 1205],
+  [-162, 59, "#FF6A00", 1701, 416], [-64, 37, "#FFC24D", 2203, 896], [-73, 61, "#FF8C25", 1929, 526],
+  [-90, 83, "#FF6A00", 1972, 1126], [-152, 67, "#FFC24D", 2148, 1749], [-137, 22, "#FF8C25", 2175, 1101],
+  [-144, 62, "#FF6A00", 1436, 1681], [-79, 88, "#FFC24D", 1867, 1737], [-136, 24, "#FF8C25", 1688, 313],
+] as const;
+
+const BANNER_STREAK = (n: number): ReactNode[] => [
+  <>Streak naik jadi <b>{n} hari</b>!</>,
+  <><b>{n} hari</b> berturut-turut. Hebat!</>,
+  <>Satu hari lagi, apinya makin besar. <b>{n} hari</b>!</>,
+];
+/* Penanda "banner streak naik udah tampil hari ini" — sekali per hari. */
+const LS_STREAK_NAIK = "honix-streak-naik";
+
+function labelJam(h: number) {
+  return h < 11 ? "Selamat pagi" : h < 15 ? "Selamat siang" : h < 18 ? "Selamat sore" : "Selamat malam";
+}
+
+/* Mode dev tanpa login (lihat src/lib/dev-beranda.ts). Sengaja ditulis
+   langsung di file ini, bukan diimport: Next cuma bisa ganti env jadi
+   literal & buang cabangnya kalau ekspresinya ada di modul yang sama. */
+const DEV_BYPASS = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "1";
+
 /* Sapaan spesial per orang 💕 (nama + pesan manis di Beranda). */
 const SPECIAL: Record<string, { name: string; note: string }> = {
   "azizatulaini70@gmail.com": {
@@ -121,6 +198,75 @@ const SPECIAL: Record<string, { name: string; note: string }> = {
     note: "がんばってね、アイちゃん 💕 — belajar bareng terus ya, kamu pasti bisa. いつも応援してるよ、ゆうちゃんより 🥰",
   },
 };
+
+/* Waktu di kartu Lanjutin, format mock: "kemarin 21:14" / "hari ini 08:02". */
+function waktuLanjut(iso: string): string {
+  const d = new Date(iso), kini = new Date();
+  const jamnya = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
+  const hari = Math.round((new Date(kini.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86_400_000);
+  return hari === 0 ? `hari ini ${jamnya}` : hari === 1 ? `kemarin ${jamnya}` : `${hari} hari lalu`;
+}
+
+/* Baris kecil di kartu Lanjutin (mock: "Berhenti di soal 42/75 kemarin 21:14
+   ▬▬ 56%"). Skor kalau sesinya udah kelar. */
+function ResumeSub({ s }: { s: Session }) {
+  const dijawab = Math.min(s.stats?.answered ?? 0, s.total);
+  const pct = scorePct(s);
+  if (s.score == null && dijawab > 0 && s.total > 0) {
+    const p = Math.round(dijawab / s.total * 100);
+    return (
+      <div className="res-s">
+        Berhenti di soal {dijawab}/{s.total} {waktuLanjut(s.created_at)}
+        <span className="res-bar"><i style={{ width: `${p}%` }} /></span>
+        {p}%
+      </div>
+    );
+  }
+  return <div className="res-s">{pct != null ? `Terakhir ${pct}%` : "Belum kamu kerjain"} · {waktuLanjut(s.created_at)}</div>;
+}
+
+/* Jenis sesi buat judul kartu Lanjutin (mock: "… — Bank Soal"). */
+function jenisSesi(s: Session): string {
+  if (s.section === "choukai") return "Choukai";
+  if (s.kind === "drill") return "Drill";
+  return "Bank Soal";
+}
+
+/* Data mentah Beranda dari Supabase. null = belum login. */
+async function ambilMentah(now: Date): Promise<BerandaMentah | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const seminggu = new Date(now.getTime() - 7 * 86_400_000).toISOString();
+
+  const [profileRes, sessionRes, kotobaRes, kotobaMingguRes, aktifRes, kpRes, bpRes] = await Promise.all([
+    supabase.from("profiles").select("avatar_url").eq("id", user.id).single(),
+    supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section,ai_result->stats,ai_result->kind")
+      .eq("user_id", user.id).order("created_at", { ascending: false }).limit(300),
+    supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", seminggu),
+    /* Hari aktif terakhir — sumber yang sama dengan streak_saya(). */
+    supabase.from("aktivitas_harian").select("tanggal").eq("user_id", user.id)
+      .order("tanggal", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("kotoba_progress").select("word, benar, salah").eq("user_id", user.id),
+    supabase.from("bunpou_progress").select("pattern, benar, salah").eq("user_id", user.id),
+  ]);
+
+  const first = (user.user_metadata?.full_name || user.email || "Yusuf").split(/[ @]/)[0];
+  return {
+    email: user.email ?? "",
+    nama: first,
+    // dari user_metadata dulu (Google OAuth), ditimpa profiles.avatar_url kalau ada
+    avatar: profileRes.data?.avatar_url ?? user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
+    sessions: (sessionRes.data ?? []) as Record<string, unknown>[],
+    kotobaTotal: kotobaRes.count ?? null,
+    kotobaMingguIni: kotobaMingguRes.count ?? null,
+    aktifTerakhir: (aktifRes.data?.tanggal as string | undefined) ?? null,
+    kotobaProgres: (kpRes.data ?? []) as BerandaMentah["kotobaProgres"],
+    bunpouProgres: ((bpRes.data ?? []) as { pattern: string; benar: number | null; salah: number | null }[])
+      .map(r => ({ pattern: r.pattern, benar: r.benar ?? 0, salah: r.salah ?? 0 })),
+  };
+}
 
 export default function Home() {
   const stats = useUserStats();
@@ -140,12 +286,30 @@ export default function Home() {
   const [meta, setMeta] = useState<{ date: string; days: number | null }>({ date: "", days: null });
   const [kanji, setKanji] = useState<KanjiHarian | null>(null);
 
+  /* Honix */
+  const { kurangiGerak } = useHonix();
+  const [jam, setJam] = useState("");
+  /* Indeks acak buat milih kalimat — diundi di effect (Math.random di render
+     bikin hydration beda), dipakai di useMemo bawah. */
+  const [acak, setAcak] = useState(0);
+  const [hariIni, setHariIni] = useState(0);
+  /* Sesi pertama hari ini udah beres & banner belum tampil hari ini. */
+  const [kandidatNaik, setKandidatNaik] = useState(false);
+  const [faseNaik, setFaseNaik] = useState<null | "naik" | "keluar" | "selesai">(null);
+  const [pesanBanner, setPesanBanner] = useState<ReactNode>(null);
+
   const examLabel = stats.examDate
     ? new Date(stats.examDate).toLocaleDateString("id-ID", { month: "short", year: "numeric" })
     : "Des 2026";
   const [focus, setFocus] = useState<Focus[]>([]);
   const [week, setWeek] = useState<WeekDay[]>([]);
   const [activeDays, setActiveDays] = useState(0);
+  /* Selisih buat teks kecil di kartu stat & aktivitas. null = gak cukup data. */
+  const [delta, setDelta] = useState<{ soalMinggu: number; akurasiBulan: number | null; kotobaMinggu: number | null; aktivitas: number | null }>(
+    { soalMinggu: 0, akurasiBulan: null, kotobaMinggu: null, aktivitas: null });
+  const [progKotoba, setProgKotoba] = useState<{ n: number; total: number } | null>(null);
+  const [progBunpou, setProgBunpou] = useState<{ n: number; total: number; salah: number } | null>(null);
+  const [kanjiSalah, setKanjiSalah] = useState<{ kanji: string[]; salah: number } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -157,32 +321,55 @@ export default function Home() {
       const exam = stats.examDate ? new Date(stats.examDate) : new Date(2026, 11, 6);
       const days = Math.max(0, Math.ceil((exam.getTime() - now.getTime()) / 86_400_000));
       setMeta({ date: dateStr, days });
+      setJam(labelJam(now.getHours()));
+      setAcak(Math.floor(Math.random() * 1000));
       if (KANJI_POOL.length) setKanji(KANJI_POOL[hariKe(now) % KANJI_POOL.length]);
 
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-      const special = SPECIAL[(user.email || "").toLowerCase()];
+      const lv = stats.targetLevel;
+      const dekKata = DEK_KOTOBA[lv] ?? DEK_KOTOBA.N2;
+      const dekPola = await (DEK_BUNPOU[lv] ?? DEK_BUNPOU.N2)().catch(() => ({ patterns: [] }) as DekBunpou);
+
+      /* Data mentah: Supabase, atau data contoh di mode dev tanpa login. */
+      let m: BerandaMentah | null;
+      if (DEV_BYPASS) {
+        const mode = new URLSearchParams(window.location.search).get("dev");
+        if (mode === "naik") { try { localStorage.removeItem(LS_STREAK_NAIK); } catch { /* */ } }
+        m = devBeranda(mode, { kata: dekKata.map(w => w.word ?? ""), pola: dekPola.patterns.map(p => p.pattern) });
+      } else {
+        m = await ambilMentah(now);
+      }
+      if (!m) { setLoading(false); return; }
+
+      const special = SPECIAL[m.email.toLowerCase()];
       if (special) { setName(special.name); setLoveNote(special.note); }
-      else {
-        const first = (user.user_metadata?.full_name || user.email || "Yusuf").split(/[ @]/)[0];
-        setName(first.charAt(0).toUpperCase() + first.slice(1));
-      }
-      // dari user_metadata dulu (Google OAuth), nanti ditimpa profiles.avatar_url kalau ada
-      setAvatar(user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null);
+      else setName(m.nama.charAt(0).toUpperCase() + m.nama.slice(1));
+      setAvatar(m.avatar);
 
-      const [profileRes, sessionRes, kotobaRes] = await Promise.all([
-        supabase.from("profiles").select("avatar_url").eq("id", user.id).single(),
-        supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section,ai_result->stats,ai_result->kind")
-          .eq("user_id", user.id).order("created_at", { ascending: false }).limit(300),
-        supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-      ]);
-      if (profileRes.data) {
-        if (profileRes.data.avatar_url) setAvatar(profileRes.data.avatar_url);
+      /* Sesi pertama hari ini → kandidat banner streak naik (sekali sehari). */
+      const terakhir = m.aktifTerakhir;
+      const hariIniStr = tanggalLokal(now);
+      if (terakhir) {
+        if (terakhir === hariIniStr) {
+          let sudah = false;
+          try { sudah = localStorage.getItem(LS_STREAK_NAIK) === hariIniStr; } catch { /* mode privat */ }
+          if (!sudah) setKandidatNaik(true);
+        }
       }
-      if (kotobaRes.count != null) setKotoba(kotobaRes.count);
+      setKotoba(m.kotobaTotal);
 
-      const sess = (sessionRes.data ?? []) as unknown as Session[];
+      /* Kartu shortcut: progres dek level target + kanji sering salah. */
+      const setKata = new Set(dekKata.map(w => w.word));
+      setProgKotoba({ n: m.kotobaProgres.filter(r => setKata.has(r.word) && r.benar + r.salah > 0).length, total: dekKata.length });
+      const setPola = new Set(dekPola.patterns.map(p => p.pattern));
+      const polaku = m.bunpouProgres.filter(r => setPola.has(r.pattern) && r.benar + r.salah > 0);
+      setProgBunpou({
+        n: polaku.length, total: dekPola.patterns.length,
+        // sama dengan status "wrong" di /materi/bunpou
+        salah: polaku.filter(r => r.salah >= 2 && r.salah > r.benar).length,
+      });
+      setKanjiSalah(kanjiSeringSalah(m.kotobaProgres));
+
+      const sess = m.sessions as unknown as Session[];
       const practiced = sess.filter(r => r.score != null && r.total);       // sesi yang udah dikerjain
       // Riwayat: sembunyiin import bank soal yang belum dikerjain (materi/riwayat split)
       const riwayat = sess.filter(r => !(r.kind === "materi" && r.score == null));
@@ -190,7 +377,17 @@ export default function Home() {
       setSessions(riwayat.slice(0, 4));
       setTotalSoal(sess.reduce((s, r) => s + (r.total ?? 0), 0)); // ukuran library soal (bank + analisis)
       setResume(riwayat.find(r => r.score == null) ?? riwayat[0] ?? sess[0] ?? null);
-      if (practiced.length > 0) setAvgScore(Math.round(practiced.reduce((s, r) => s + (r.score! / r.total), 0) / practiced.length * 100));
+      const rata = (xs: Session[]) => xs.length ? Math.round(xs.reduce((s, r) => s + (r.score! / r.total), 0) / xs.length * 100) : null;
+      if (practiced.length > 0) setAvgScore(rata(practiced));
+
+      /* Selisih: soal minggu ini, akurasi bulan ini vs bulan lalu. */
+      const seminggu = now.getTime() - 7 * 86_400_000;
+      const awalBulan = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const awalBulanLalu = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const t = (r: Session) => new Date(r.created_at).getTime();
+      const akBulanIni = rata(practiced.filter(r => t(r) >= awalBulan));
+      const akBulanLalu = rata(practiced.filter(r => t(r) >= awalBulanLalu && t(r) < awalBulan));
+      const soalMinggu = sess.filter(r => t(r) >= seminggu).reduce((s, r) => s + (r.total ?? 0), 0);
 
       /* Fokus per-kategori (all-time, dari ai_result.stats.perCat) */
       const catAgg: Record<string, { a: number; c: number }> = {};
@@ -213,6 +410,12 @@ export default function Home() {
         const d = new Date(s.created_at);
         perDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] = (perDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] ?? 0) + ans;
       }
+      /* Minggu lalu (7 hari sebelum jendela 7 hari ini) — buat "+N% vs lalu". */
+      let mingguLalu = 0;
+      for (let i = 13; i >= 7; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        mingguLalu += perDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] ?? 0;
+      }
       const wk: WeekDay[] = [];
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
@@ -222,7 +425,15 @@ export default function Home() {
       const maxV = Math.max(1, ...wk.map(w => w.v));
       wk.forEach(w => (w.h = w.v > 0 ? Math.max(8, Math.round((w.v / maxV) * 100)) : 0));
       setWeek(wk);
+      setHariIni(wk[wk.length - 1]?.v ?? 0);
       setActiveDays(wk.filter(w => w.v > 0).length);
+      const mingguIni = wk.reduce((s, w) => s + w.v, 0);
+      setDelta({
+        soalMinggu,
+        akurasiBulan: akBulanIni != null && akBulanLalu != null ? akBulanIni - akBulanLalu : null,
+        kotobaMinggu: m.kotobaMingguIni,
+        aktivitas: mingguLalu > 0 ? Math.round((mingguIni - mingguLalu) / mingguLalu * 100) : null,
+      });
 
       setLoading(false);
     }
@@ -230,7 +441,26 @@ export default function Home() {
   // stats.examDate dateng belakangan (profil dibaca async), jadi hitung mundurnya
   // wajib diitung ulang begitu kebaca — kalau dep-nya kosong, yang kepajang
   // selamanya tanggal ancar-ancar.
-  }, [stats.examDate]);
+  }, [stats.examDate, stats.targetLevel]);
+
+  /* Streak naik (sekali per hari): chip N-1 → N membesar, Honix lompat,
+     banner 3.2 detik, chime. Flag ditulis di sini (bukan di load) biar
+     StrictMode yang jalanin effect dua kali tetap nampilin animasinya. */
+  const streakNaik = kandidatNaik && stats.loaded && stats.streak >= 2;
+  useEffect(() => {
+    if (!streakNaik) return;
+    try { localStorage.setItem(LS_STREAK_NAIK, tanggalLokal()); } catch { /* mode privat */ }
+    const t1 = setTimeout(() => {
+      const daftar = BANNER_STREAK(stats.streak);
+      setPesanBanner(daftar[Math.floor(Math.random() * daftar.length)]);
+      setFaseNaik("naik");
+      putarHonix("chime");
+    }, 900);
+    const t2 = setTimeout(() => setFaseNaik("keluar"), 900 + 3200);
+    const t3 = setTimeout(() => setFaseNaik("selesai"), 900 + 3200 + 220);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [streakNaik, stats.streak]);
+  const streakTampil = streakNaik && faseNaik === null ? stats.streak - 1 : stats.streak;
 
   const resumeHref = resume ? (resume.section === "choukai" ? `/choukai/${resume.id}` : `/latihan/${resume.id}`) : "/materi";
   const dash = "—";
@@ -240,54 +470,92 @@ export default function Home() {
     return present.reduce((lo, f) => (f.pct! < lo.pct! ? f : lo));
   }, [focus]);
 
+  /* Kalimat Honix di hero. Angkanya dari data, bukan target karangan. */
+  const sapa = useMemo<ReactNode>(() => {
+    if (loveNote) return loveNote;
+    if (streakNaik) return "Sesi pertama hari ini beres. Streak aman 🔥";
+    const calon: ReactNode[] = [<>Honix udah siap. Kamu?</>];
+    if (hariIni > 0) calon.push(<>Hari ini udah <b>{hariIni} soal</b>. Lanjut, yuk!</>);
+    if (streak > 0) calon.push(<>Streak <b>{streak} hari</b>. Jangan sampai putus, ya!</>);
+    if (weakest) calon.push(<>Hari ini fokus <b>{weakest.jp}</b>, yuk.</>);
+    return calon[acak % calon.length];
+  }, [loveNote, streakNaik, hariIni, streak, weakest, acak]);
+
   return (
     <>
       <AuroraBackground />
       <NavRail />
       <BottomNav />
       <main className="app-shell">
-        <div className="beranda-v2">
-          {/* topbar */}
+        <div className={`beranda-v2${kurangiGerak ? " hx-rm" : ""}`}>
+          {/* Pro mau habis (H-7/H-3/H-1) — sendiri, bukan lewat lonceng: ini
+              soal akses, bukan kebiasaan belajar. Ditaruh di atas topbar:
+              Honix besar di hero menjorok ke atas, jadi topbar harus nempel
+              langsung di atas hero. */}
+          <PengingatPro />
+
+          {/* peringatan paling mendesak — sisanya di lonceng <UserBar> */}
+          <PeringatanBanner />
+
+          {/* topbar — sapaan "おかえり" pindah ke hero Honix */}
           <div className="bv-top">
             <div className="bv-greet">
-              <h1>おかえり, {name} <span className="jp">{loveNote ? "💕" : "頑張ろう!"}</span></h1>
-              {loveNote
-                ? <p className="bv-love">{loveNote}</p>
-                : <p>{meta.date}{meta.days != null && ` · JLPT ${stats.targetLevel} · ${meta.days} hari lagi menuju ujian`}</p>}
+              <p>{meta.date}{meta.days != null && <> · JLPT {stats.targetLevel} · <b>{meta.days} hari lagi</b> menuju ujian</>}</p>
             </div>
             <div className="bv-top-r">
-              <span className="bv-pill streak"><span className="fl">🔥</span> <b>{streak}</b> hari</span>
+              <span className={`bv-pill streak${faseNaik === "naik" && !kurangiGerak ? " bump" : ""}`}>
+                <span className="fl">🔥</span> <b>{loading ? dash : streakTampil}</b> hari
+              </span>
               <div className="bv-xp"><div className="bv-xp-top"><span>Level {stats.level}</span><b>{stats.xp} / {stats.xpTarget} XP</b></div><div className="bv-xp-bar"><i style={{ width: `${Math.round(stats.xp / stats.xpTarget * 100)}%` }} /></div></div>
               <span className="bv-lv">{stats.targetLevel}</span>
               <div className="bv-ava">{avatar ? <img src={avatar} alt={name} className="bv-ava-img" referrerPolicy="no-referrer" /> : name[0]}</div>
             </div>
           </div>
 
-          {/* Pro mau habis (H-7/H-3/H-1) — sendiri, bukan lewat lonceng: ini
-              soal akses, bukan kebiasaan belajar */}
-          <PengingatPro />
-
-          {/* peringatan paling mendesak — sisanya di lonceng <UserBar> */}
-          <PeringatanBanner />
-
-          {/* resume */}
-          {resume && (
-            <Link href={resumeHref} className="bv-resume">
-              <div className="res-ic">{resume.section === "choukai" ? "🎧" : "✍️"}</div>
-              <div className="res-m">
-                <div className="res-t">Lanjutin: <span className="jpt">{resume.title}</span></div>
-                <div className="res-s">{scorePct(resume) != null ? `Terakhir ${scorePct(resume)}%` : "Belum kamu kerjain"} · {relativeTime(resume.created_at)}</div>
+          {/* hero Honix */}
+          <section className={`bv-hero${!resume ? " kosong" : ""}${kurangiGerak ? " hx-rm" : ""}`}>
+            <div className="bv-hero-m">
+              <div className="bv-hero-eye">{jam}</div>
+              <h1>
+                おかえり, {name} <span className="jp">{loveNote ? "💕" : "頑張ろう!"}</span>
+              </h1>
+              <div className={`bv-hero-say${loveNote ? " love" : ""}`}>
+                <Image src={honixSrc("kepala")} alt="" width={30} height={30} />
+                <span>{sapa}</span>
               </div>
-              <span className="btn btn-p">▶ Lanjutin</span>
-            </Link>
-          )}
+
+              {resume && (
+                <Link href={resumeHref} className="bv-resume">
+                  <div className="res-ic">{resume.section === "choukai" ? "🎧" : "✍️"}</div>
+                  <div className="res-m">
+                    <div className="res-t">Lanjutin: <span className="jpt">{resume.title}</span> — {jenisSesi(resume)}</div>
+                    <ResumeSub s={resume} />
+                  </div>
+                  <span className="btn btn-p">▶ Lanjutin</span>
+                </Link>
+              )}
+            </div>
+
+            {/* Honix sakura — SELALU, persis mock (state default "Sapaan").
+                Diam: gak ada animasi masuk/idle, cuma bara yang gerak. */}
+            <div className="bv-hero-bird">
+              <div className="bv-trail" aria-hidden="true">
+                {BARA.map(([x, y, c, d, dl], i) => (
+                  <i key={i} style={{ "--x": `${x}px`, "--y": `${y}px`, "--c": c, "--d": `${d}ms`, "--dl": `${dl}ms` } as React.CSSProperties} />
+                ))}
+              </div>
+              <Honix pose="sakura" size={570} idle="none" preload />
+            </div>
+          </section>
 
           {/* stats */}
           <div className="bv-stats">
-            <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(221,65,36,0.14)" }}>📷</span>Soal Dianalisis</div><div className="stat-v">{loading ? dash : totalSoal}<span className="u">soal</span></div><div className="stat-d up">total kumulatif</div></div>
-            <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(107,142,63,0.16)" }}>🎯</span>Akurasi</div><div className="stat-v">{loading || avgScore == null ? dash : avgScore}<span className="u">%</span></div><div className="stat-d up">rata-rata sesi</div></div>
-            <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(212,160,74,0.15)" }}>🔥</span>Streak</div><div className="stat-v">{loading ? dash : streak}<span className="u">hari</span></div><div className="stat-d flat">terus jaga!</div></div>
-            <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(139,90,140,0.18)" }}>📖</span>Kotoba</div><div className="stat-v">{loading || kotoba == null ? dash : kotoba}<span className="u">kata</span></div><div className="stat-d up">di Kamus kamu</div></div>
+            <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(221,65,36,0.14)" }}>📷</span>Soal Dianalisis</div><div className="stat-v">{loading ? dash : totalSoal}<span className="u">soal</span></div><div className={`stat-d ${delta.soalMinggu > 0 ? "up" : "flat"}`}>{delta.soalMinggu > 0 ? `↑ +${delta.soalMinggu} minggu ini` : "+0 minggu ini"}</div></div>
+            <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(107,142,63,0.16)" }}>🎯</span>Akurasi</div><div className="stat-v">{loading || avgScore == null ? dash : avgScore}<span className="u">%</span></div>{delta.akurasiBulan != null
+              ? <div className={`stat-d ${delta.akurasiBulan > 0 ? "up" : "flat"}`}>{delta.akurasiBulan > 0 ? `↑ +${delta.akurasiBulan}` : delta.akurasiBulan < 0 ? `↓ −${-delta.akurasiBulan}` : "±0"}% bulan ini</div>
+              : <div className="stat-d flat">rata-rata sesi</div>}</div>
+            <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(212,160,74,0.15)" }}>🔥</span>Streak</div><div className="stat-v">{loading ? dash : streak}<span className="u">hari</span></div><div className="stat-d flat">Rekor: {stats.rekor} hari</div></div>
+            <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(139,90,140,0.18)" }}>📖</span>Kotoba</div><div className="stat-v">{loading || kotoba == null ? dash : kotoba}<span className="u">kata</span></div><div className={`stat-d ${delta.kotobaMinggu ? "up" : "flat"}`}>{delta.kotobaMinggu ? `↑ +${delta.kotobaMinggu} minggu ini` : "+0 minggu ini"}</div></div>
           </div>
 
           <div className="bv-grid">
@@ -322,7 +590,7 @@ export default function Home() {
                     <div className="q-opt"><span className="q-k">C</span>に</div>
                     <div className="q-opt"><span className="q-k">D</span>が</div>
                   </div>
-                  <div className="q-foot"><span>4 soal lagi · ~2 menit</span><Link href="/lembar-tugas" className="btn btn-p sm">▶ Mulai</Link></div>
+                  <div className="q-foot"><span>4 soal lagi · ~2 menit</span><Link href={`/latihan/kilat?level=${stats.targetLevel}`} className="btn btn-p sm">▶ Mulai</Link></div>
                 </div>
               </div>
 
@@ -339,16 +607,20 @@ export default function Home() {
                   ))}
                 </div>
                 {weakest ? (
-                  <div className="f-note">💡 <span><b>{weakest.jp} paling perlu digenjot ({weakest.pct}%)</b> — dari {weakest.n} soal yang kamu jawab.</span><Link href="/materi" className="btn btn-p sm">Latihan lagi →</Link></div>
+                  <div className="f-note"><Image className="hx-tip" src={honixSrc("tunjuk")} alt="" width={52} height={52} /><span><b>{weakest.jp} paling lemah ({weakest.pct}%)</b> — dari {weakest.n} soal yang kamu jawab.</span><Link href={(DRILL_KATEGORI[weakest.jp] ?? (() => "/materi"))(stats.targetLevel)} className="btn btn-p sm">Drill {weakest.ro} →</Link></div>
                 ) : (
-                  <div className="f-note">💡 <span>Belum ada data akurasi — <b>kerjain latihan/ujian</b> dulu biar kategori kamu keliatan.</span><Link href="/materi" className="btn btn-p sm">Mulai →</Link></div>
+                  <div className="f-note"><Image className="hx-tip" src={honixSrc("tunjuk")} alt="" width={52} height={52} /><span>Belum ada data akurasi — <b>kerjain latihan/ujian</b> dulu biar kategori kamu keliatan.</span><Link href="/materi" className="btn btn-p sm">Mulai →</Link></div>
                 )}
               </div>
 
-              {/* materi shortcuts */}
-              <div className="bv-materi2">
-                <Link href="/kamus" className="m-card card"><span className="m-glyph">語</span><div className="m-ic goi">📖</div><div className="m-m"><div className="m-t">Kamus Kotoba</div><div className="m-s">{kotoba != null ? `${kotoba} kata di Kamus kamu` : "Kamus kotoba pribadi"}</div></div></Link>
-                <Link href="/materi/bunpou" className="m-card card"><span className="m-glyph">文</span><div className="m-ic bun">📐</div><div className="m-m"><div className="m-t">Bunpou {stats.targetLevel}</div><div className="m-s">Pola grammar lengkap per level</div></div></Link>
+              {/* shortcut materi — 3 kartu; Kanji Sering Salah hilang kalau
+                  belum ada data salah (user baru) → grid jadi 2 kolom. */}
+              <div className={`bv-materi2${kanjiSalah ? " tiga" : ""}`}>
+                <Link href="/materi/kotoba" className="m-card card"><span className="m-glyph">語</span><div className="m-ic goi">📖</div><div className="m-m"><div className="m-t">Kotoba {stats.targetLevel}</div><div className="m-s">{progKotoba ? `${progKotoba.n.toLocaleString("id-ID")} / ${progKotoba.total.toLocaleString("id-ID")} kata ditemuin` : "Kosakata per level"}</div></div>{progKotoba && progKotoba.total > 0 && <div className="m-bar"><i style={{ width: `${Math.round(progKotoba.n / progKotoba.total * 100)}%` }} /></div>}</Link>
+                <Link href="/materi/bunpou" className="m-card card"><span className="m-glyph">文</span><div className="m-ic bun">📐</div><div className="m-m"><div className="m-t">Bunpou {stats.targetLevel}</div><div className="m-s">{progBunpou ? `${progBunpou.n} / ${progBunpou.total} pola${progBunpou.salah ? ` · ${progBunpou.salah} sering salah` : ""}` : "Pola grammar per level"}</div></div>{progBunpou && progBunpou.total > 0 && <div className="m-bar"><i style={{ width: `${Math.round(progBunpou.n / progBunpou.total * 100)}%` }} /></div>}</Link>
+                {kanjiSalah && (
+                  <Link href={`/latihan/kotoba?level=${stats.targetLevel}`} className="m-card m-warn card"><span className="m-glyph">{kanjiSalah.kanji[0]}</span><div className="m-ic kanji">⚡</div><div className="m-m"><div className="m-t">Kanji Sering Salah</div><div className="m-s"><b>{kanjiSalah.kanji.join(" · ")}</b> salah {kanjiSalah.salah}× · drill 2 menit</div></div></Link>
+                )}
               </div>
             </div>
 
@@ -366,10 +638,12 @@ export default function Home() {
               </div>
 
               <div className="bv-scard card">
-                <div className="s-h">Aktivitas 7 hari <span className="r">soal dijawab</span></div>
+                <div className="s-h">Aktivitas 7 hari {delta.aktivitas != null
+                  ? <span className={`r${delta.aktivitas < 0 ? " turun" : ""}`}>{delta.aktivitas >= 0 ? "+" : "−"}{Math.abs(delta.aktivitas)}% vs lalu</span>
+                  : <span className="r">soal dijawab</span>}</div>
                 <div className="wk">
                   {(week.length ? week : Array.from({ length: 7 }, (_, i) => ({ d: DAY_LETTER[i], h: 0, v: 0, now: i === 6 }))).map((c, i) => (
-                    <div className="wkc" key={i}><div className={`wkb${c.v === 0 ? " mut" : ""}${c.now ? " now" : ""}`} style={{ height: `${Math.max(c.h, 5)}%` }} title={`${c.v} soal`} /><span className={`wkl${c.now ? " now" : ""}`}>{c.d}</span></div>
+                    <div className="wkc" key={i}><div className={`wkb${c.v === 0 ? " mut" : ""}${c.now ? " now" : ""}`} style={{ height: `calc(${Math.max(c.h, 5)}% * 0.7)` }} title={`${c.v} soal`} /><span className={`wkl${c.now ? " now" : ""}`}>{c.d}</span></div>
                   ))}
                 </div>
                 <div className="wk-note">{activeDays > 0 ? <><b>{activeDays} dari 7 hari</b> aktif — streak {streak} hari 🔥 jaga hari ini!</> : <>Belum ada aktivitas minggu ini — <b>mulai hari ini</b> 💪</>}</div>
@@ -393,14 +667,17 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="bv-scard card insight">
-                <div className="s-h" style={{ color: "#E8704F" }}>Tips Belajar</div>
-                <p>Latihan rutin lebih nempel daripada nyicil banyak sekaligus. <b>Fokus 1 kategori</b> per sesi biar kebentuk.</p>
-                <Link href="/lembar-tugas" className="btn btn-p sm">▶ Mulai Latihan</Link>
-              </div>
             </aside>
           </div>
         </div>
+
+        {/* Banner streak naik — 3.2 detik, sekali per hari */}
+        {(faseNaik === "naik" || faseNaik === "keluar") && (
+          <div className={`bv-streak-banner${faseNaik === "keluar" ? " out" : ""}${kurangiGerak ? " rm" : ""}`} role="status">
+            <Image src={honixSrc("terbang")} alt="" width={34} height={34} />
+            <span>{pesanBanner}</span>
+          </div>
+        )}
       </main>
     </>
   );

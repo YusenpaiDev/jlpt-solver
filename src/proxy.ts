@@ -1,7 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/* Mode dev tanpa login (lihat src/lib/dev-beranda.ts). Sengaja ditulis
+   langsung di file ini, bukan diimport: Next cuma bisa ganti env jadi
+   literal & buang cabangnya kalau ekspresinya ada di modul yang sama. */
+const DEV_BYPASS = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "1";
+
 export async function proxy(request: NextRequest) {
+  // Mode dev tanpa login — false di production.
+  if (DEV_BYPASS) return NextResponse.next({ request });
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
