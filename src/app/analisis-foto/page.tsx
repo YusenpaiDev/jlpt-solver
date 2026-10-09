@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { setSavedWordFavorite } from "@/lib/supabase/savedWords";
 import { AuroraBackground, NavRail, BottomNav, UserBar } from "@/components/v2";
+import { HonixTurHalaman } from "@/components/honix/HonixTurHalaman";
+import { SeleksiAksi } from "@/components/latihan/SeleksiAksi";
+import { LANGKAH_BANKSOAL, mulaiTurHalaman } from "@/lib/honix-tur";
 import {
   Camera, Upload, Sparkles, ChevronDown, RotateCcw, Clock,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck, Star,
   BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
-  Highlighter, Undo2, LogOut,
+  Highlighter, Undo2, LogOut, HelpCircle,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import { catatAktivitas } from "@/lib/aktivitas";
@@ -497,6 +500,11 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
   const [savingNote,   setSavingNote]   = useState<number | null>(null);
   const [rightTab,     setRightTab]     = useState<"chat"|"kamus"|"catatan">("chat");
+  /* Pop-up blok teks: wadah yang diawasi + lembar Kamus versi HP (panel kanan
+     cuma ada ≥1024px). */
+  const mainRef      = useRef<HTMLElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+  const [kamusSheet,   setKamusSheet]   = useState(false);
   const [kamusWords,   setKamusWords]   = useState<{id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean}[]>([]);
   const [flashKamusId, setFlashKamusId] = useState<string | null>(null);
   const [kamusQuery,   setKamusQuery]   = useState("");
@@ -734,15 +742,18 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     setTimeout(() => setToast(null), 1500);
   };
 
-  const generateWordInfo = async () => {
-    if (!addKanji.trim() || generating) return;
+  /* `kata` dikirim langsung dari pop-up blok teks — state addKanji baru
+     keisi di render berikutnya. */
+  const generateWordInfo = async (kata?: string) => {
+    const word = (kata ?? addKanji).trim();
+    if (!word || generating) return;
     setGenerating(true);
     setAddReading(""); setAddMeaning("");
     try {
       const res = await fetch("/api/furigana", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word: addKanji.trim(), withMeaning: true }),
+        body: JSON.stringify({ word, withMeaning: true }),
       });
       const json = await res.json();
       const habis = bacaKuotaHabis(res, json);
@@ -1308,7 +1319,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       )}
 
       {/* ── Left: All Questions ── */}
-      <main className="af-main">
+      <main className="af-main" ref={mainRef}>
 
         {/* Topbar v2 */}
         <header className="af-topbar">
@@ -1356,7 +1367,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             </div>
           </div>
 
-          <div className="af-actions">
+          <div className="af-actions" data-tur="bs-sesi">
             <div className="af-timer">
               <Clock size={13} strokeWidth={2} />
               <span className="af-timer-val">{timerOn ? formatTime(elapsed) : "—:——"}</span>
@@ -1377,6 +1388,15 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             >
               <LogOut size={14} strokeWidth={1.9} /> Keluar
             </button>
+            <button
+              type="button"
+              className="btn btn-sm af-exit-btn"
+              onClick={() => mulaiTurHalaman("banksoal")}
+              aria-label="Cara pakai halaman ini"
+              title="Cara pakai halaman ini"
+            >
+              <HelpCircle size={14} strokeWidth={1.9} />
+            </button>
           </div>
         </header>
 
@@ -1387,7 +1407,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           const hasCatFilter = cats.length > 2;
           if (!hasCatFilter && reviewCount === 0) return null;
           return (
-            <div className="af-filter-row">
+            <div className="af-filter-row" data-tur="bs-filter">
               {hasCatFilter && cats.map(c => (
                 <button
                   key={c}
@@ -1417,7 +1437,11 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           {(() => {
             let lastPassageText = "";
             let passageCardIdx = -1;
+            /* Penanda tur cuma di kartu pertama yang kelihatan. */
+            const pertama = result.questions.findIndex(q =>
+              !(catFilter !== "全部" && q.category && q.category !== catFilter) && !(reviewOnly && !q.needs_review));
             return result.questions.map((q, qi) => {
+              const tur = (id: string) => (qi === pertama ? id : undefined);
               if (catFilter !== "全部" && q.category && q.category !== catFilter) return null;
               if (reviewOnly && !q.needs_review) return null;
               const isRevealed = revealed.has(qi);
@@ -1506,6 +1530,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                             onClick={() => toggleFurigana(qKey, q.question)}
                             disabled={loading}
                             className={`qc-furi-toggle${on ? " on" : ""}`}
+                            data-tur={tur("bs-furigana")}
                             title="Toggle furigana di soal"
                           >
                             {loading
@@ -1526,6 +1551,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                             onClick={() => toggleAllOptions(qi, q.options)}
                             disabled={anyLoading}
                             className={`qc-furi-toggle furi-opsi${allOn ? " on" : ""}`}
+                            data-tur={tur("bs-furigana")}
                             title="Toggle furigana di semua pilihan"
                           >
                             {anyLoading
@@ -1536,7 +1562,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                           </button>
                         );
                       })()}
-                      <div className="qc-v2-actions">
+                      <div className="qc-v2-actions" data-tur={tur("bs-aksi")}>
                         <button
                           type="button"
                           onClick={() => toggleReviewFlag(qi)}
@@ -1569,7 +1595,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                       const qKey = `q-${qi}`;
                       const useFuri = showFurigana.has(qKey) && furiganaMarked[qKey];
                       return (
-                        <p className="qc-v2-prompt font-jp-sans">
+                        <p className="qc-v2-prompt font-jp-sans" data-tur={tur("bs-teks")}>
                           {useFuri
                             ? renderPassage(furiganaMarked[qKey])
                             : renderQuestion(q.question, accent, q.target)}
@@ -1640,13 +1666,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
                     {!isRevealed && (
                       <>
-                        <div className="qc-v2-hint">
+                        <div className="qc-v2-hint" data-tur={tur("bs-jawaban")}>
                           <span className="qc-hint-emoji">💪</span>
                           Pilih jawaban dulu sebelum lihat pembahasan
                         </div>
                         <button
                           type="button"
                           className="qc-reveal-btn"
+                          data-tur={tur("bs-jawaban")}
                           onClick={() => reveal(qi)}
                           disabled={!userAns}
                         >
@@ -1838,6 +1865,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           <button
             type="button"
             className={`side-tab${rightTab === "chat" ? " on" : ""}`}
+            data-tur="bs-sensei"
             onClick={() => setRightTab("chat")}
           >
             <MessageCircle size={13} strokeWidth={1.8} fill={rightTab === "chat" ? "currentColor" : "none"} />
@@ -1846,6 +1874,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           <button
             type="button"
             className={`side-tab${rightTab === "kamus" ? " on" : ""}`}
+            data-tur="bs-kamus"
             onClick={() => setRightTab("kamus")}
           >
             <BookOpen size={13} strokeWidth={1.8} />
@@ -1854,6 +1883,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           <button
             type="button"
             className={`side-tab${rightTab === "catatan" ? " on" : ""}`}
+            data-tur="bs-catatan"
             onClick={() => setRightTab("catatan")}
           >
             <NotebookPen size={13} strokeWidth={1.8} />
@@ -1919,6 +1949,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
             <div className="sensei-input">
               <input
+                ref={chatInputRef}
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
@@ -1981,7 +2012,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 />
                 <button
                   type="button"
-                  onClick={generateWordInfo}
+                  onClick={() => generateWordInfo()}
                   disabled={!addKanji.trim() || generating}
                   className="btn btn-magic btn-sm"
                   style={{ whiteSpace: "nowrap" }}
@@ -2541,6 +2572,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           type="button"
           onClick={() => setDrawMode(v => !v)}
           className={`stabilo-fab${drawMode ? " on" : ""}`}
+          data-tur="bs-coret"
           title={drawMode ? "Selesai coret" : "Mode coret — corat-coret di soal & bacaan"}
         >
           {drawMode ? <Check size={16} strokeWidth={2.4} /> : <Highlighter size={16} strokeWidth={1.8} />}
@@ -2549,6 +2581,45 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       </div>
 
       <JatahHabisDialog kuota={jatahHabis} onClose={() => setJatahHabis(null)} />
+
+      <SeleksiAksi
+        wadah={mainRef}
+        nonaktif={drawMode}
+        onTanya={t => {
+          setRightTab("chat");
+          setChatInput(`「${t}」 — artinya apa & dipakai gimana di soal ini?`);
+          requestAnimationFrame(() => chatInputRef.current?.focus());
+        }}
+        onKamus={t => {
+          setAddKanji(t);
+          generateWordInfo(t);
+          if (window.matchMedia("(min-width: 1024px)").matches) setRightTab("kamus");
+          else setKamusSheet(true);
+        }}
+        onCatat={t => {
+          setRightTab("catatan");
+          setNewNoteOpen(true);
+          setNewNoteText(`「${t}」\n`);
+        }}
+      />
+      {kamusSheet && (
+        <div className="kamus-sheet-ov" onClick={() => setKamusSheet(false)}>
+          <div className="kamus-sheet" role="dialog" aria-modal="true" aria-label="Simpan ke Kamus" onClick={e => e.stopPropagation()}>
+            <h3>Simpan ke Kamus</h3>
+            <input value={addKanji} onChange={e => setAddKanji(e.target.value)} className="font-jp-sans" aria-label="Kata" />
+            <input value={addReading} onChange={e => setAddReading(e.target.value)} placeholder={generating ? "Nyari cara baca..." : "Cara baca (hiragana)"} aria-label="Cara baca" />
+            <input value={addMeaning} onChange={e => setAddMeaning(e.target.value)} placeholder={generating ? "Nyari arti..." : "Arti"} aria-label="Arti" />
+            <div className="kamus-sheet-aksi">
+              <button type="button" className="btn btn-ghost" onClick={() => setKamusSheet(false)}>Batal</button>
+              <button type="button" className="btn btn-primary" disabled={!addMeaning.trim() || savingNew}
+                onClick={async () => { await saveNewWord(); setKamusSheet(false); }}>
+                {savingNew ? <Loader2 size={14} className="animate-spin" /> : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <HonixTurHalaman id="banksoal" langkah={LANGKAH_BANKSOAL} />
     </div>
   );
 }

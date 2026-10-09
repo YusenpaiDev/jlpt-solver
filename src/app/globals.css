@@ -9409,3 +9409,31 @@ html:has(.beranda-v2), body:has(.beranda-v2) { overflow-x: clip; }
   text-decoration: none;
 }
 .sensei-kuota-link:hover { text-decoration: underline; }
+
+/* ── Pop-up blok teks di Bank Soal (SeleksiAksi) ── */
+.seleksi-aksi {
+  position: fixed; z-index: 1050; display: flex; gap: 2px; padding: 4px;
+  max-width: calc(100vw - 24px); overflow-x: auto;
+  transform: translate(-50%, -100%);
+  border-radius: var(--radius-md); background: var(--surface-3);
+  border: 1px solid var(--edge-strong); box-shadow: 0 14px 34px -10px rgba(0, 0, 0, .75);
+  animation: fade-in var(--dur-small) var(--ease-out-expo);
+}
+.seleksi-aksi.bawah { transform: translate(-50%, 0); }
+.seleksi-aksi button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px;
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: background var(--dur-micro), color var(--dur-micro);
+}
+.seleksi-aksi button:hover, .seleksi-aksi button:focus-visible { background: rgba(221, 65, 36, .14); color: var(--text-primary); outline: none; }
+.seleksi-aksi button svg { color: var(--primary); }
+@media (max-width: 767px) { .seleksi-aksi button { min-height: 44px; } }
+/* Lembar "Simpan ke Kamus" versi HP (panel Kamus cuma ada ≥1024px). */
+.kamus-sheet-ov { position: fixed; inset: 0; z-index: 1040; display: flex; align-items: flex-end; background: rgba(11, 10, 12, .6); animation: fade-in var(--dur-small); }
+.kamus-sheet { width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2); border-top: 1px solid var(--edge-strong); }
+.kamus-sheet h3 { font-size: 16px; font-weight: 700; }
+.kamus-sheet input { min-height: 44px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-1); border: 1px solid var(--edge-default); color: var(--text-primary); font-size: 16px; outline: none; }
+.kamus-sheet input:focus-visible { border-color: var(--primary); }
+.kamus-sheet-aksi { display: flex; gap: 8px; }
+.kamus-sheet-aksi .btn { flex: 1; min-height: 44px; justify-content: center; }
