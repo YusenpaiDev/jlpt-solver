@@ -1684,6 +1684,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                             )}
                             <span
                               className="qc-opt-copy"
+                              data-tur={oi === 0 ? tur("bs-salin") : undefined}
                               onClick={(e) => { e.stopPropagation(); copyToClipboard(optText, `Opsi ${id} tersalin`); }}
                               role="button"
                               tabIndex={-1}

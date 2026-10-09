@@ -98,6 +98,13 @@ export function HonixTur({ daftar, onSelesai, aksiAkhir }: {
     return () => { window.removeEventListener("resize", ukur); window.removeEventListener("scroll", ukur, true); };
   }, [langkah, target, kurangiGerak]);
 
+  /* Penanda di <body> — halaman bisa munculin elemen yang normalnya cuma
+     kelihatan pas hover (mis. ikon salin opsi) selama tur jalan. */
+  useEffect(() => {
+    document.body.classList.add("hx-tur-on");
+    return () => document.body.classList.remove("hx-tur-on");
+  }, []);
+
   /* Fokus pindah ke tombol utama tiap langkah; balik ke elemen semula pas tutup. */
   useEffect(() => { utamaRef.current?.focus({ preventScroll: true }); }, [i, langkah]);
   useEffect(() => {

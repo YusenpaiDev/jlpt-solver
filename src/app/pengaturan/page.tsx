@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import {
   User, Zap, Wand2, Bell, CreditCard, Shield, Trash2, ChevronRight, Camera, Check, Sparkles, X, Clock3,
+  GraduationCap,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import { BATAS, KOSAKATA_FREE } from "@/lib/batas-paket";
@@ -23,6 +24,7 @@ const SECTIONS = [
   { id: "target",   label: "Target Belajar", Icon: Zap },
   { id: "ai",       label: "Preferensi AI",  Icon: Wand2 },
   { id: "honix",    label: "Honix",          Icon: Sparkles },
+  { id: "tutorial", label: "Tutorial",       Icon: GraduationCap },
   { id: "notif",    label: "Notifikasi",     Icon: Bell },
   { id: "sub",      label: "Langganan",      Icon: CreditCard },
   { id: "privacy",  label: "Privasi & Data", Icon: Shield },
@@ -274,6 +276,7 @@ export default function Pengaturan() {
               />
             )}
             {active === "honix" && <HonixSection />}
+            {active === "tutorial" && <TutorialSection />}
             {active === "sub" && <SubscriptionSection />}
             {active === "privacy" && (
               <PrivacySection
@@ -828,12 +831,48 @@ function HonixSection() {
         </div>
       </div>
       <div className="hx-row"><div className="hx-row-t">Tes suara</div><button type="button" className="hx-btn hx-btn-g" onClick={tesSuaraHonix}>▶ Putar</button></div>
+    </section>
+  );
+}
+
+/* Semua tur cara pakai di satu tempat. Tur Bank Soal butuh halaman soalnya,
+   jadi tombolnya buka set soal terakhir dengan ?tur=banksoal. */
+function TutorialSection() {
+  const { setelan, ubah, kurangiGerak } = useHonix();
+  const [sesiTerakhir, setSesiTerakhir] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    async function ambil() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setSesiTerakhir(null); return; }
+      const { data } = await supabase.from("sessions").select("id")
+        .eq("user_id", user.id).order("created_at", { ascending: false }).limit(1);
+      setSesiTerakhir((data?.[0]?.id as string | undefined) ?? null);
+    }
+    ambil();
+  }, []);
+
+  return (
+    <section className={`hx hx-set-card${kurangiGerak ? " hx-rm" : ""}`} aria-labelledby="hx-tutorial-title">
+      <header className="hx-set-head">
+        <div className="hx-ava"><Honix pose="kepala" size={58} idle="none" alt="" /></div>
+        <div><h3 id="hx-tutorial-title">Tutorial</h3><span>Putar ulang tur cara pakai kapan aja</span></div>
+      </header>
       <div className="hx-row">
-        <div><div className="hx-row-t">Cara pakai Sensei JLPT</div><p className="hx-row-s">Honix ajak keliling menu, ±1 menit.</p></div>
-        <button type="button" className="hx-btn hx-btn-g" onClick={mulaiTur}>▶ Putar tur</button>
+        <div><div className="hx-row-t">Menu utama</div><p className="hx-row-s">Kenalan sama semua menu: Materi, Lembar Tugas, Kamus, Catatan, Progres. ±1 menit.</p></div>
+        <button type="button" className="hx-btn hx-btn-g" onClick={mulaiTur}>▶ Putar</button>
       </div>
       <div className="hx-row">
-        <div><div className="hx-row-t" id="hx-ingat">Ingatkan tiap bulan</div><p className="hx-row-s" id="hx-ingat-sub">Honix nawarin tur lagi sebulan sekali. Gak maksa.</p></div>
+        <div><div className="hx-row-t">Bank Soal 過去問</div><p className="hx-row-s">Furigana, review, blok teks ke Sensei/Kamus/Catatan, salin pilihan, coret, timer.</p></div>
+        {sesiTerakhir
+          ? <Link className="hx-btn hx-btn-g" href={`/analisis-foto?session=${sesiTerakhir}&tur=banksoal`}>▶ Putar</Link>
+          : sesiTerakhir === null
+            ? <Link className="hx-btn hx-btn-g" href="/materi">Buka Materi</Link>
+            : <span className="hx-btn hx-btn-g" aria-disabled="true">…</span>}
+      </div>
+      <div className="hx-row">
+        <div><div className="hx-row-t" id="hx-ingat">Ingatkan tiap bulan</div><p className="hx-row-s" id="hx-ingat-sub">Sebulan sekali Honix nawarin tur menu lagi lewat kotak kecil di pojok. Gak maksa.</p></div>
         <button type="button" className="hx-tg-target" role="switch" aria-checked={setelan.tur.ingatkan} aria-labelledby="hx-ingat" aria-describedby="hx-ingat-sub" onClick={() => ubah({ tur: { ...setelan.tur, ingatkan: !setelan.tur.ingatkan } })}><span className={`hx-tg${setelan.tur.ingatkan ? " hx-on" : ""}`} /></button>
       </div>
     </section>

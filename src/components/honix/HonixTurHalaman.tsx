@@ -11,7 +11,9 @@ import { dengarPemicuTur, keputusanTurHalaman, type LangkahTur } from "@/lib/hon
  */
 export function HonixTurHalaman({ id, langkah }: { id: string; langkah: LangkahTur[] }) {
   const { setelan, siap, ubah } = useHonix();
-  const [buka, setBuka] = useState(false);
+  /* ?tur=<id> = dibuka dari Pengaturan → Tutorial: langsung putar. */
+  const [buka, setBuka] = useState(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tur") === id);
   const [diputuskan, setDiputuskan] = useState(false);
 
   useEffect(() => dengarPemicuTur(p => { if (p === `halaman:${id}`) setBuka(true); }), [id]);
@@ -26,6 +28,8 @@ export function HonixTurHalaman({ id, langkah }: { id: string; langkah: LangkahT
   return (
     <HonixTur daftar={{ desktop: langkah }} onSelesai={() => {
       setBuka(false);
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("tur") === id) { url.searchParams.delete("tur"); history.replaceState(null, "", url); }
       ubah({ tur: { ...setelan.tur, halaman: { ...setelan.tur.halaman, [id]: new Date().toISOString() } } });
     }} />
   );

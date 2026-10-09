@@ -6083,6 +6083,8 @@ input, textarea, select { font-size: 16px; }
 .qc-opt-copy:hover { color: var(--accent-iris); border-color: var(--accent-iris); opacity: 1; }
 /* Layar sentuh gak punya hover → ikon salin dulu gak pernah kelihatan di HP. */
 @media (hover: none) { .qc-opt-copy { opacity: .6; width: 36px; height: 36px; } }
+/* Selama tur, ikon yang lagi disorot harus kelihatan (normalnya cuma pas hover). */
+.hx-tur-on .qc-opt-copy[data-tur] { opacity: 1; }
 
 .qc-v2-hint {
   margin: 0 22px 12px;
