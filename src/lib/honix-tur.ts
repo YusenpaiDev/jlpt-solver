@@ -90,6 +90,7 @@ export const LANGKAH_BANKSOAL: LangkahTur[] = [
   { target: "bs-aksi", pose: "tunjuk", judul: "REVIEW & EDIT", isi: "Tandai soal buat diulang nanti. EDIT kalau ada teks soal yang salah." },
   { target: "bs-teks", pose: "tunjuk", judul: "Blok teksnya", isi: "Blok kata atau kalimat → Tanya Sensei, Simpan ke Kamus, Catat, atau Salin." },
   { target: "bs-jawaban", pose: "baca", judul: "Jawaban & pembahasan", isi: "Pilih jawaban dulu, baru buka. Di pembahasan ada Simpan ke Kamus per kosakata dan Simpan ke Catatan." },
+  { target: "bs-panel-hp", pose: "tunjuk", judul: "Sensei, Kamus, Catatan", isi: "Ketuk tombol Sensei buat buka Sensei AI, Kamus, dan Catatan dari bawah layar." },
   { target: "bs-sensei", pose: "tunjuk", judul: "Sensei AI", isi: "Tanya apa aja soal ini — klik saran pertanyaan atau ketik sendiri." },
   { target: "bs-kamus", pose: "baca", judul: "Kamus", isi: "Ketik kata, cara baca & artinya dicariin otomatis, terus simpan." },
   { target: "bs-catatan", pose: "baca", judul: "Catatan", isi: "+ Baru buat catatan cepat. Catatan dari soal ngumpul di sini; buka semuanya di halaman Catatan." },

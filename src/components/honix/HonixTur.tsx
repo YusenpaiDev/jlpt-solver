@@ -12,11 +12,12 @@ const CELAH = 14;  // jarak balon ke lubang
 const TEPI = 12;   // balon gak boleh mepet tepi layar
 
 /** Elemen `data-tur` yang kelihatan — nav rail `display:none` di HP, bottom
-    nav di desktop, panel kanan Bank Soal di bawah 1024px. */
+    nav di desktop, lembar panel Bank Soal yang ketutup (`visibility:hidden`). */
 function cariTarget(nama: string): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>(`[data-tur="${nama}"]`)].filter(el => {
     const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0;
+    if (r.width === 0 || r.height === 0) return false;
+    return el.checkVisibility ? el.checkVisibility({ visibilityProperty: true }) : getComputedStyle(el).visibility !== "hidden";
   });
 }
 

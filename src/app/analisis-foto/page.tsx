@@ -500,11 +500,33 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
   const [savingNote,   setSavingNote]   = useState<number | null>(null);
   const [rightTab,     setRightTab]     = useState<"chat"|"kamus"|"catatan">("chat");
-  /* Pop-up blok teks: wadah yang diawasi + lembar Kamus versi HP (panel kanan
-     cuma ada ≥1024px). */
+  /* Pop-up blok teks diawasi di kolom soal. Di bawah 1024px panel kanan
+     (Sensei/Kamus/Catatan) yang sama jadi lembar bawah — `panelHp` = kebuka. */
   const mainRef      = useRef<HTMLElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
-  const [kamusSheet,   setKamusSheet]   = useState(false);
+  const [panelHp,      setPanelHp]      = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
+  /* Tarik pegangan lembar ke bawah buat nutup (ikut jari, lepas >70px = tutup). */
+  const tarik = useRef<number | null>(null);
+  const tarikMulai = (e: React.TouchEvent) => { tarik.current = e.touches[0].clientY; };
+  const tarikGeser = (e: React.TouchEvent) => {
+    if (tarik.current == null || !panelRef.current) return;
+    const dy = Math.max(0, e.touches[0].clientY - tarik.current);
+    panelRef.current.style.transition = "none";
+    panelRef.current.style.transform = `translateY(${dy}px)`;
+  };
+  const tarikLepas = (e: React.TouchEvent) => {
+    if (tarik.current == null || !panelRef.current) return;
+    const dy = e.changedTouches[0].clientY - tarik.current;
+    tarik.current = null;
+    panelRef.current.style.transition = "";
+    panelRef.current.style.transform = "";
+    if (dy > 70) setPanelHp(false);
+  };
+  const bukaPanel = (tab: "chat" | "kamus" | "catatan") => {
+    setRightTab(tab);
+    if (!window.matchMedia("(min-width: 1024px)").matches) setPanelHp(true);
+  };
   const [kamusWords,   setKamusWords]   = useState<{id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean}[]>([]);
   const [flashKamusId, setFlashKamusId] = useState<string | null>(null);
   const [kamusQuery,   setKamusQuery]   = useState("");
@@ -1072,6 +1094,16 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       setResetting(false);
     }
   };
+
+  /* Lembar panel di HP: kunci scroll halaman + Esc buat tutup. */
+  useEffect(() => {
+    if (!panelHp) return;
+    const lama = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setPanelHp(false); };
+    document.addEventListener("keydown", esc);
+    return () => { document.body.style.overflow = lama; document.removeEventListener("keydown", esc); };
+  }, [panelHp]);
 
   /* Timer — hanya jalan saat timerOn = true */
   useEffect(() => {
@@ -1860,7 +1892,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       </main>
 
       {/* ── Right: Sensei / Kamus / Catatan sidebar (v2 markup) ── */}
-      <aside className="af-side hidden lg:flex">
+      {panelHp && <div className="af-sheet-ov" onClick={() => setPanelHp(false)} aria-hidden="true" />}
+      <aside ref={panelRef} className={`af-side${panelHp ? " sheet-open" : ""}`} aria-label="Sensei, Kamus, Catatan">
+        <div className="af-sheet-head" onTouchStart={tarikMulai} onTouchMove={tarikGeser} onTouchEnd={tarikLepas}>
+          <span className="af-sheet-grip" aria-hidden="true" />
+          <button type="button" className="af-sheet-close" onClick={() => setPanelHp(false)} aria-label="Tutup panel">
+            <X size={18} strokeWidth={2} />
+          </button>
+        </div>
         <div className="glass-card side-tabs">
           <button
             type="button"
@@ -2570,6 +2609,15 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         )}
         <button
           type="button"
+          onClick={() => bukaPanel(rightTab)}
+          className="stabilo-fab panel-fab"
+          data-tur="bs-panel-hp"
+          aria-label="Buka Sensei, Kamus, Catatan"
+        >
+          <MessageCircle size={16} strokeWidth={1.8} /> Sensei
+        </button>
+        <button
+          type="button"
           onClick={() => setDrawMode(v => !v)}
           className={`stabilo-fab${drawMode ? " on" : ""}`}
           data-tur="bs-coret"
@@ -2586,39 +2634,21 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         wadah={mainRef}
         nonaktif={drawMode}
         onTanya={t => {
-          setRightTab("chat");
+          bukaPanel("chat");
           setChatInput(`「${t}」 — artinya apa & dipakai gimana di soal ini?`);
           requestAnimationFrame(() => chatInputRef.current?.focus());
         }}
         onKamus={t => {
           setAddKanji(t);
           generateWordInfo(t);
-          if (window.matchMedia("(min-width: 1024px)").matches) setRightTab("kamus");
-          else setKamusSheet(true);
+          bukaPanel("kamus");
         }}
         onCatat={t => {
-          setRightTab("catatan");
+          bukaPanel("catatan");
           setNewNoteOpen(true);
           setNewNoteText(`「${t}」\n`);
         }}
       />
-      {kamusSheet && (
-        <div className="kamus-sheet-ov" onClick={() => setKamusSheet(false)}>
-          <div className="kamus-sheet" role="dialog" aria-modal="true" aria-label="Simpan ke Kamus" onClick={e => e.stopPropagation()}>
-            <h3>Simpan ke Kamus</h3>
-            <input value={addKanji} onChange={e => setAddKanji(e.target.value)} className="font-jp-sans" aria-label="Kata" />
-            <input value={addReading} onChange={e => setAddReading(e.target.value)} placeholder={generating ? "Nyari cara baca..." : "Cara baca (hiragana)"} aria-label="Cara baca" />
-            <input value={addMeaning} onChange={e => setAddMeaning(e.target.value)} placeholder={generating ? "Nyari arti..." : "Arti"} aria-label="Arti" />
-            <div className="kamus-sheet-aksi">
-              <button type="button" className="btn btn-ghost" onClick={() => setKamusSheet(false)}>Batal</button>
-              <button type="button" className="btn btn-primary" disabled={!addMeaning.trim() || savingNew}
-                onClick={async () => { await saveNewWord(); setKamusSheet(false); }}>
-                {savingNew ? <Loader2 size={14} className="animate-spin" /> : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       <HonixTurHalaman id="banksoal" langkah={LANGKAH_BANKSOAL} />
     </div>
   );

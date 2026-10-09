@@ -7659,7 +7659,6 @@ input, textarea, select { font-size: 16px; }
   .kk-workspace { grid-template-columns: 200px minmax(0, 1fr) !important; }
   .kk-workspace > .kk-detail { display: none !important; }
   .af-grid { grid-template-columns: minmax(0, 1fr) 0 !important; gap: 0 !important; }
-  .af-grid .af-side { display: none !important; }
   .af-upload-wrap { grid-template-columns: 1fr !important; }
   .ct-workspace { grid-template-columns: 220px minmax(0, 1fr) !important; }
   .ct-workspace > .ct-editor { display: none !important; }
@@ -7926,7 +7925,6 @@ html { scrollbar-gutter: stable; }
   .af-timer { padding: 6px 10px; }
   .af-timer-val { font-size: 14px; }
   .af-grid { grid-template-columns: 1fr !important; gap: 0 !important; }
-  .af-grid .af-side { display: none !important; }
   .af-main { gap: 18px !important; }
   .qc-v2-head { flex-wrap: wrap; padding: 12px 14px; gap: 6px; }
   .qc-v2-actions { width: 100%; justify-content: flex-end; margin-left: 0; }
@@ -9429,11 +9427,29 @@ html:has(.beranda-v2), body:has(.beranda-v2) { overflow-x: clip; }
 .seleksi-aksi button:hover, .seleksi-aksi button:focus-visible { background: rgba(221, 65, 36, .14); color: var(--text-primary); outline: none; }
 .seleksi-aksi button svg { color: var(--primary); }
 @media (max-width: 767px) { .seleksi-aksi button { min-height: 44px; } }
-/* Lembar "Simpan ke Kamus" versi HP (panel Kamus cuma ada ≥1024px). */
-.kamus-sheet-ov { position: fixed; inset: 0; z-index: 1040; display: flex; align-items: flex-end; background: rgba(11, 10, 12, .6); animation: fade-in var(--dur-small); }
-.kamus-sheet { width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2); border-top: 1px solid var(--edge-strong); }
-.kamus-sheet h3 { font-size: 16px; font-weight: 700; }
-.kamus-sheet input { min-height: 44px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-1); border: 1px solid var(--edge-default); color: var(--text-primary); font-size: 16px; outline: none; }
-.kamus-sheet input:focus-visible { border-color: var(--primary); }
-.kamus-sheet-aksi { display: flex; gap: 8px; }
-.kamus-sheet-aksi .btn { flex: 1; min-height: 44px; justify-content: center; }
+/* Panel Sensei/Kamus/Catatan Bank Soal: di bawah 1024px panel yang sama jadi
+   lembar bawah. Cuma transform yang dianimasiin + tanpa blur kaca → ringan di HP. */
+.panel-fab, .af-sheet-head, .af-sheet-ov { display: none; }
+@media (max-width: 1023px) {
+  .panel-fab { display: inline-flex; }
+  .af-sheet-ov { display: block; position: fixed; inset: 0; z-index: 1029; background: rgba(11, 10, 12, .55); animation: fade-in var(--dur-small); }
+  .af-grid .af-side {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 1030;
+    height: 78dvh; min-height: 0; gap: 10px;
+    padding: 6px 12px calc(12px + env(safe-area-inset-bottom));
+    background: var(--surface-2); border-top: 1px solid var(--edge-strong);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -20px 50px rgba(0, 0, 0, .6);
+    transform: translateY(100%); visibility: hidden;
+    transition: transform var(--dur-medium) var(--ease-out-expo), visibility 0s linear var(--dur-medium);
+  }
+  .af-grid .af-side.sheet-open { transform: none; visibility: visible; transition: transform var(--dur-medium) var(--ease-out-expo); }
+  .af-grid .af-side .glass-card { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .af-sheet-head { display: flex; align-items: center; justify-content: center; position: relative; min-height: 32px; touch-action: none; }
+  .af-sheet-grip { width: 40px; height: 4px; border-radius: 99px; background: rgba(255, 255, 255, .22); }
+  .af-sheet-close { position: absolute; right: -4px; top: -6px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); cursor: pointer; }
+  .af-sheet-close:hover, .af-sheet-close:focus-visible { background: var(--surface-3); color: var(--text-primary); outline: none; }
+}
+@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
+  .af-grid .af-side, .af-grid .af-side.sheet-open { transition: none; }
+}
