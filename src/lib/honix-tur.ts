@@ -12,17 +12,24 @@ export interface TurState {
   terakhir: string | null;
   /** Tawaran bulanan nyala? */
   ingatkan: boolean;
+  /** Tur per halaman yang udah dilihat: id → ISO. */
+  halaman: Record<string, string>;
 }
 
-export const TUR_AWAL: TurState = { terakhir: null, ingatkan: true };
+export const TUR_AWAL: TurState = { terakhir: null, ingatkan: true, halaman: {} };
 export const HARI_TAWAR = 30;
 
 export function rapikanTur(x: unknown): TurState {
   if (!x || typeof x !== "object") return TUR_AWAL;
   const o = x as Record<string, unknown>;
+  const halaman: Record<string, string> = {};
+  if (o.halaman && typeof o.halaman === "object") {
+    for (const [k, v] of Object.entries(o.halaman)) if (typeof v === "string") halaman[k] = v;
+  }
   return {
     terakhir: typeof o.terakhir === "string" ? o.terakhir : null,
     ingatkan: typeof o.ingatkan === "boolean" ? o.ingatkan : true,
+    halaman,
   };
 }
 
@@ -32,6 +39,13 @@ export function keputusanTur(tur: TurState, kini: Date): "tur" | "tawar" | null 
   if (Number.isNaN(lalu)) return "tur";
   if (!tur.ingatkan) return null;
   return kini.getTime() - lalu >= HARI_TAWAR * 86_400_000 ? "tawar" : null;
+}
+
+/** Tur halaman muncul otomatis sekali — tapi baru setelah tur menu beres,
+    biar dua tur gak tabrakan di kunjungan pertama. */
+export function keputusanTurHalaman(tur: TurState, id: string): boolean {
+  if (!tur.terakhir || Number.isNaN(Date.parse(tur.terakhir))) return false;
+  return !tur.halaman[id];
 }
 
 export interface LangkahTur {
@@ -67,8 +81,25 @@ export const LANGKAH_HP: LangkahTur[] = [
   AKHIR,
 ];
 
-/* Pemicu manual (Pengaturan, pratinjau dev) → host yang lagi kepasang. */
-type Pemicu = "tur" | "tawar";
+/** Bank Soal (/analisis-foto). Target = `data-tur` di halaman itu; yang gak
+    kelihatan (panel kanan di bawah 1024px) dilewati otomatis. */
+export const LANGKAH_BANKSOAL: LangkahTur[] = [
+  { target: null, pose: "senang", judul: "Ruang latihan 過去問", isi: "Aku tunjukin alat-alatnya, ±1 menit." },
+  { target: "bs-filter", pose: "tunjuk", judul: "Saring per bagian", isi: "全部 buat semua soal. 文字, 語彙, 文法, 読解 buat fokus satu bagian." },
+  { target: "bs-furigana", pose: "baca", judul: "SOAL & OPSI", isi: "Nyalain furigana di teks soal, atau di keempat pilihan jawaban sekaligus." },
+  { target: "bs-aksi", pose: "tunjuk", judul: "REVIEW & EDIT", isi: "Tandai soal buat diulang nanti. EDIT kalau ada teks soal yang salah." },
+  { target: "bs-teks", pose: "tunjuk", judul: "Blok teksnya", isi: "Blok kata atau kalimat → Tanya Sensei, Simpan ke Kamus, Catat, atau Salin." },
+  { target: "bs-jawaban", pose: "baca", judul: "Jawaban & pembahasan", isi: "Pilih jawaban dulu, baru buka. Di pembahasan ada Simpan ke Kamus per kosakata dan Simpan ke Catatan." },
+  { target: "bs-sensei", pose: "tunjuk", judul: "Sensei AI", isi: "Tanya apa aja soal ini — klik saran pertanyaan atau ketik sendiri." },
+  { target: "bs-kamus", pose: "baca", judul: "Kamus", isi: "Ketik kata, cara baca & artinya dicariin otomatis, terus simpan." },
+  { target: "bs-catatan", pose: "baca", judul: "Catatan", isi: "+ Baru buat catatan cepat. Catatan dari soal ngumpul di sini; buka semuanya di halaman Catatan." },
+  { target: "bs-coret", pose: "tunjuk", judul: "Coret", isi: "Corat-coret di soal & bacaan, kayak di kertas ujian." },
+  { target: "bs-sesi", pose: "terbang", judul: "Timer & Keluar", isi: "Timer bisa dimatiin. Progres tersimpan otomatis — keluar kapan aja." },
+  { target: null, pose: "lulus", judul: "Selamat latihan!", isi: "Tur ini bisa diputar lagi lewat tombol ? di atas." },
+];
+
+/* Pemicu manual (Pengaturan, pratinjau dev, tombol ?) → host yang lagi kepasang. */
+type Pemicu = "tur" | "tawar" | `halaman:${string}`;
 const pendengar = new Set<(p: Pemicu) => void>();
 export function dengarPemicuTur(f: (p: Pemicu) => void) {
   pendengar.add(f);
@@ -76,3 +107,4 @@ export function dengarPemicuTur(f: (p: Pemicu) => void) {
 }
 export const mulaiTur = () => pendengar.forEach(f => f("tur"));
 export const tawarkanTur = () => pendengar.forEach(f => f("tawar"));
+export const mulaiTurHalaman = (id: string) => pendengar.forEach(f => f(`halaman:${id}`));

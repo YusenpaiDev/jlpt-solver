@@ -227,12 +227,12 @@
 .hx-tur-isi h3 { font-size:16px; font-weight:700; letter-spacing:-.01em; }
 .hx-tur-tengah .hx-tur-isi h3 { font-size:20px; }
 .hx-tur-isi p { margin-top:4px; font-size:13px; line-height:1.5; color:var(--hx-muted); text-wrap:pretty; }
-.hx-tur-kaki { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid var(--hx-line); }
+.hx-tur-kaki { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid var(--hx-line); }
 .hx-tur-titik { display:flex; gap:5px; }
 .hx-tur-titik span { width:6px; height:6px; border-radius:99px; background:var(--hx-line-2); transition:width var(--dur-small) var(--ease-out-expo), background var(--dur-small); }
 .hx-tur-titik .hx-lewat { background:rgba(221,65,36,.5); }
 .hx-tur-titik .hx-on { width:18px; background:var(--hx-primary); }
-.hx-tur-aksi { display:flex; align-items:center; gap:6px; }
+.hx-tur-aksi { display:flex; align-items:center; gap:6px; margin-left:auto; }
 .hx-tur-aksi .hx-btn { padding:10px 16px; }
 .hx-tur-aksi .hx-btn-link { color:var(--hx-dim); }
 .hx-tur-aksi .hx-btn-link:hover, .hx-tur-aksi .hx-btn-link:focus-visible { color:var(--hx-muted); }
@@ -248,6 +248,4 @@
 .hx-tawar.hx-rm { animation:none; }
 @media (max-width:767px) {
   .hx-tawar { right:12px; left:12px; width:auto; bottom:calc(76px + env(safe-area-inset-bottom)); }
-  .hx-tur-kaki { flex-wrap:wrap; }
-  .hx-tur-aksi { margin-left:auto; }
 }

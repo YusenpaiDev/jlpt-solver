@@ -2,32 +2,40 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import { Honix } from "./Honix";
 import { useHonix } from "@/lib/use-honix";
-import { LANGKAH_DESKTOP, LANGKAH_HP, type LangkahTur } from "@/lib/honix-tur";
+import type { LangkahTur } from "@/lib/honix-tur";
 
 const HP = "(max-width: 767px)";
 const JARAK = 6;   // lubang sorot lebih lebar dari ikonnya
 const CELAH = 14;  // jarak balon ke lubang
 const TEPI = 12;   // balon gak boleh mepet tepi layar
 
-/** Item nav yang kelihatan — nav rail `display:none` di HP, bottom nav di desktop. */
-function cariTarget(nama: string): HTMLElement | null {
-  for (const el of document.querySelectorAll<HTMLElement>(`[data-tur="${nama}"]`)) {
+/** Elemen `data-tur` yang kelihatan — nav rail `display:none` di HP, bottom
+    nav di desktop, panel kanan Bank Soal di bawah 1024px. */
+function cariTarget(nama: string): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>(`[data-tur="${nama}"]`)].filter(el => {
     const r = el.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) return el;
-  }
-  return null;
+    return r.width > 0 && r.height > 0;
+  });
 }
 
 type Kotak = { top: number; left: number; width: number; height: number };
+
+/** Satu sorotan bisa nyakup beberapa elemen (mis. SOAL + OPSI). */
+function gabung(els: HTMLElement[]): Kotak | null {
+  if (!els.length) return null;
+  const rs = els.map(el => el.getBoundingClientRect());
+  const top = Math.min(...rs.map(r => r.top)), left = Math.min(...rs.map(r => r.left));
+  const bawah = Math.max(...rs.map(r => r.bottom)), kanan = Math.max(...rs.map(r => r.right));
+  return { top: top - JARAK, left: left - JARAK, width: kanan - left + JARAK * 2, height: bawah - top + JARAK * 2 };
+}
 
 /* Balon di kanan target (nav rail kiri), di atas (bottom nav / target di
    bawah layar), atau di bawahnya. */
 function posisiBalon(t: Kotak, hp: boolean): CSSProperties {
   const vw = window.innerWidth, vh = window.innerHeight;
-  const lebar = Math.min(360, vw - TEPI * 2);
+  const lebar = Math.min(400, vw - TEPI * 2);
   const tengahX = t.left + t.width / 2;
   const left = Math.min(Math.max(tengahX - lebar / 2, TEPI), vw - lebar - TEPI);
   if (!hp && t.left + t.width < vw / 3) {
@@ -38,43 +46,59 @@ function posisiBalon(t: Kotak, hp: boolean): CSSProperties {
 }
 
 /**
- * Tur sorot menu navigasi (spec 2026-10-09-honix-tur-design). Layar
- * digelapin, satu ikon nav terang, Honix jelasin lewat balon. Langkah yang
- * targetnya gak ada di halaman ini dilewati.
+ * Tur sorot (spec 2026-10-09-honix-tur-design). Layar digelapin, satu bagian
+ * terang, Honix jelasin lewat balon. Dipakai tur menu (HonixTurHost) dan tur
+ * per halaman (HonixTurHalaman). Langkah yang targetnya gak kelihatan dilewati.
  */
-export function HonixTur({ onSelesai }: { onSelesai: () => void }) {
+export function HonixTur({ daftar, onSelesai, aksiAkhir }: {
+  daftar: { desktop: LangkahTur[]; hp?: LangkahTur[] };
+  onSelesai: () => void;
+  /** Tombol utama di langkah terakhir; tanpa ini cuma "Selesai". */
+  aksiAkhir?: { label: string; onClick: () => void };
+}) {
   const { kurangiGerak } = useHonix();
-  const router = useRouter();
   const idJudul = useId(), idIsi = useId();
   const [hp] = useState(() => window.matchMedia(HP).matches);
-  const [langkah] = useState<LangkahTur[]>(() =>
-    (hp ? LANGKAH_HP : LANGKAH_DESKTOP).filter(l => !l.target || cariTarget(l.target)));
+  /* Disaring setelah halaman nempel di DOM (frame berikutnya) — kalau tur
+     kebuka di render yang sama dengan isi halaman, targetnya belum ada. */
+  const [langkah, setLangkah] = useState<LangkahTur[] | null>(null);
   const [i, setI] = useState(0);
   const [kotak, setKotak] = useState<Kotak | null>(null);
   const balonRef = useRef<HTMLDivElement>(null);
   const utamaRef = useRef<HTMLButtonElement>(null);
 
-  const l = langkah[i];
-  const akhir = i === langkah.length - 1;
-  const maju = () => setI(n => Math.min(n + 1, langkah.length - 1));
-  const mundur = () => setI(n => Math.max(n - 1, 0));
+  useEffect(() => {
+    if (langkah) return; // sekali aja — biar urutan gak geser di tengah tur
+    const id = requestAnimationFrame(() => setLangkah(
+      ((hp && daftar.hp) || daftar.desktop).filter(l => !l.target || cariTarget(l.target).length > 0)));
+    return () => cancelAnimationFrame(id);
+  }, [langkah, hp, daftar]);
 
-  /* Ukur target tiap ganti langkah + ikut resize/scroll. */
+  const n = langkah?.length ?? 0;
+  const l = langkah?.[i];
+  const target = l?.target ?? null;
+  const akhir = i === n - 1;
+  const maju = () => setI(x => Math.min(x + 1, n - 1));
+  const mundur = () => setI(x => Math.max(x - 1, 0));
+
+  /* Ukur target tiap ganti langkah + ikut resize/scroll. Target di luar
+     layar (kartu soal) di-scroll ke tengah dulu. */
   useLayoutEffect(() => {
-    const ukur = () => {
-      const el = l.target ? cariTarget(l.target) : null;
-      if (!el) { setKotak(null); return; }
-      const r = el.getBoundingClientRect();
-      setKotak({ top: r.top - JARAK, left: r.left - JARAK, width: r.width + JARAK * 2, height: r.height + JARAK * 2 });
-    };
+    if (!langkah) return;
+    const ukur = () => setKotak(target ? gabung(cariTarget(target)) : null);
+    const els = target ? cariTarget(target) : [];
+    const k = gabung(els);
+    if (k && (k.top < 0 || k.top + k.height > window.innerHeight)) {
+      els[0].scrollIntoView({ block: "center", behavior: kurangiGerak ? "auto" : "smooth" });
+    }
     ukur();
     window.addEventListener("resize", ukur);
     window.addEventListener("scroll", ukur, true);
     return () => { window.removeEventListener("resize", ukur); window.removeEventListener("scroll", ukur, true); };
-  }, [l.target]);
+  }, [langkah, target, kurangiGerak]);
 
   /* Fokus pindah ke tombol utama tiap langkah; balik ke elemen semula pas tutup. */
-  useEffect(() => { utamaRef.current?.focus({ preventScroll: true }); }, [i]);
+  useEffect(() => { utamaRef.current?.focus({ preventScroll: true }); }, [i, langkah]);
   useEffect(() => {
     const semula = document.activeElement as HTMLElement | null;
     return () => { if (semula?.isConnected) semula.focus({ preventScroll: true }); };
@@ -97,6 +121,7 @@ export function HonixTur({ onSelesai }: { onSelesai: () => void }) {
     return () => document.removeEventListener("keydown", tombol);
   });
 
+  if (!langkah || !l) return null;
   const tengah = !kotak;
   const gayaBalon: CSSProperties | undefined = kotak ? posisiBalon(kotak, hp) : undefined;
 
@@ -122,11 +147,16 @@ export function HonixTur({ onSelesai }: { onSelesai: () => void }) {
             {langkah.map((_, n) => <span key={n} className={n === i ? "hx-on" : n < i ? "hx-lewat" : ""} />)}
           </div>
           <div className="hx-tur-aksi">
-            {akhir ? (
+            {akhir && aksiAkhir ? (
               <>
                 <button type="button" className="hx-btn hx-btn-g" onClick={onSelesai}>Nanti</button>
                 <button ref={utamaRef} type="button" className="hx-btn hx-btn-p"
-                  onClick={() => { onSelesai(); router.push("/latihan/kilat"); }}>Mulai latihan</button>
+                  onClick={() => { onSelesai(); aksiAkhir.onClick(); }}>{aksiAkhir.label}</button>
+              </>
+            ) : akhir ? (
+              <>
+                <button type="button" className="hx-btn hx-btn-g" onClick={mundur}>Kembali</button>
+                <button ref={utamaRef} type="button" className="hx-btn hx-btn-p" onClick={onSelesai}>Selesai</button>
               </>
             ) : (
               <>
