@@ -3,6 +3,7 @@
 import { Honix } from "@/components/honix/Honix";
 import { useHonix } from "@/lib/use-honix";
 import { tesSuaraHonix } from "@/lib/honix-sfx";
+import { mulaiTur } from "@/lib/honix-tur";
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -827,6 +828,14 @@ function HonixSection() {
         </div>
       </div>
       <div className="hx-row"><div className="hx-row-t">Tes suara</div><button type="button" className="hx-btn hx-btn-g" onClick={tesSuaraHonix}>▶ Putar</button></div>
+      <div className="hx-row">
+        <div><div className="hx-row-t">Cara pakai Sensei JLPT</div><p className="hx-row-s">Honix ajak keliling menu, ±1 menit.</p></div>
+        <button type="button" className="hx-btn hx-btn-g" onClick={mulaiTur}>▶ Putar tur</button>
+      </div>
+      <div className="hx-row">
+        <div><div className="hx-row-t" id="hx-ingat">Ingatkan tiap bulan</div><p className="hx-row-s" id="hx-ingat-sub">Honix nawarin tur lagi sebulan sekali. Gak maksa.</p></div>
+        <button type="button" className="hx-tg-target" role="switch" aria-checked={setelan.tur.ingatkan} aria-labelledby="hx-ingat" aria-describedby="hx-ingat-sub" onClick={() => ubah({ tur: { ...setelan.tur, ingatkan: !setelan.tur.ingatkan } })}><span className={`hx-tg${setelan.tur.ingatkan ? " hx-on" : ""}`} /></button>
+      </div>
     </section>
   );
 }

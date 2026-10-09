@@ -2,7 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import {
-  ambilSetelan, ambilSetelanServer, langganSetelan, ubahSetelan, type HonixSetelan,
+  ambilSetelan, ambilSetelanServer, ambilSiap, ambilSiapServer, langganSetelan, ubahSetelan,
+  type HonixSetelan,
 } from "@/lib/honix-setelan";
 
 const MQ = "(prefers-reduced-motion: reduce)";
@@ -24,13 +25,17 @@ export function useHonix(): {
   kurangiGerak: boolean;
   /** prefers-reduced-motion dari perangkat — buat label default di Pengaturan. */
   motionOS: boolean;
+  /** Isi akun udah kebaca (atau pasti gak bisa) — buat keputusan tur. */
+  siap: boolean;
 } {
   const setelan = useSyncExternalStore(langganSetelan, ambilSetelan, ambilSetelanServer);
+  const siap = useSyncExternalStore(langganSetelan, ambilSiap, ambilSiapServer);
   const motionOS = useSyncExternalStore(langganMotion, () => window.matchMedia(MQ).matches, () => false);
   return {
     setelan,
     ubah: ubahSetelan,
     kurangiGerak: motionOS || setelan.gerakan === "kurangi",
     motionOS,
+    siap,
   };
 }

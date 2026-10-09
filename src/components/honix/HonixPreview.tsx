@@ -12,6 +12,7 @@ import { useHonix } from "@/lib/use-honix";
 import { resetBerikutnya } from "@/lib/batas-paket";
 import { Cek, Aktif, Diproses, Gagal, type Status } from "@/components/pembayaran/StatusPembayaran";
 import { JatahHabisSheet, JatahHabisInline } from "@/components/pembayaran/JatahHabis";
+import { HonixTawarTur } from "./HonixTawarTur";
 import type { KuotaHabis } from "@/lib/kuota-habis";
 
 const DEMO_STATUS: Status = {
@@ -40,6 +41,7 @@ export function HonixPreview() {
           <option value="cek">Pembayaran · memeriksa</option><option value="aktif">Pembayaran · Pro aktif</option>
           <option value="diproses">Pembayaran · diproses</option><option value="gagal">Pembayaran · gagal</option>
           <option value="chat">Jatah chat habis</option><option value="chat-pro">Jatah Pro habis</option>
+          <option value="tawar-tur">Tawaran tur bulanan</option>
         </select></label>
         <button className="hx-btn hx-btn-g" onClick={() => laporkanXp({ userId: `preview-${++urutan.current}`, sebelum: 998, sesudah: 1006 })}>Naik level</button>
         {[10, 8, 6, 3].map(n => <button key={n} className="hx-btn hx-btn-g" onClick={() => setSkor(n)}>Hasil {n}/10</button>)}
@@ -50,6 +52,7 @@ export function HonixPreview() {
         <Link className="hx-btn hx-btn-g" href="/pengaturan">Pengaturan</Link>
       </div>
       <section className="hx-preview-stage">
+        {scene === "tawar-tur" && <HonixTawarTur onLihat={() => setScene("materi")} onNanti={() => setScene("materi")} />}
         {scene === "materi" && <HonixEmpty momen="kosongMateri"
           body="Set ujianmu akan muncul di sini. Sambil menunggu, kamu bisa belajar Bunpou dan Kotoba."
           cta={<Link href="/materi/bunpou" className="hx-btn hx-btn-p">Belajar Bunpou</Link>} />}

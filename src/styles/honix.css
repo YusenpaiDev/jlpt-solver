@@ -212,3 +212,42 @@
   .hx-row .hx-seg { min-width:0; }
   .hx-seg button { min-height:44px; min-width:44px; }
 }
+
+/* ── Tur cara pakai (HonixTur / HonixTawarTur) ── */
+.hx-tur { position:fixed; inset:0; z-index:1100; }
+.hx-tur-redup { position:absolute; inset:0; background:rgba(11,10,12,.8); animation:hx-fade var(--dur-small) both; }
+.hx-tur-lubang { position:absolute; border-radius:14px; pointer-events:none; box-shadow:0 0 0 200vmax rgba(11,10,12,.8), 0 0 0 2px var(--hx-primary), 0 0 28px 4px rgba(255,106,0,.45); transition:top var(--dur-medium) var(--ease-out-expo), left var(--dur-medium) var(--ease-out-expo), width var(--dur-medium) var(--ease-out-expo), height var(--dur-medium) var(--ease-out-expo); }
+.hx-tur-balon { position:absolute; padding:16px 16px 12px; border-radius:20px; background:var(--hx-surface-2); border:1px solid var(--hx-border-strong); box-shadow:0 24px 60px -16px rgba(0,0,0,.8), 0 0 40px -12px rgba(221,65,36,.35); animation:hx-tur-in var(--dur-medium) var(--ease-out-expo) both; }
+@keyframes hx-tur-in { from { opacity:0; transform:translateY(8px) scale(.98); } }
+.hx-tur-tengah { left:50%; top:50%; width:min(400px, calc(100vw - 24px)); transform:translate(-50%, -50%); padding:24px 22px 14px; text-align:center; animation-name:hx-tur-in-tengah; }
+@keyframes hx-tur-in-tengah { from { opacity:0; transform:translate(-50%, calc(-50% + 12px)) scale(.97); } }
+.hx-tur-isi { display:flex; gap:12px; align-items:center; }
+.hx-tur-isi .hx-box { flex-shrink:0; }
+.hx-tur-tengah .hx-tur-isi { flex-direction:column; gap:8px; }
+.hx-tur-isi h3 { font-size:16px; font-weight:700; letter-spacing:-.01em; }
+.hx-tur-tengah .hx-tur-isi h3 { font-size:20px; }
+.hx-tur-isi p { margin-top:4px; font-size:13px; line-height:1.5; color:var(--hx-muted); text-wrap:pretty; }
+.hx-tur-kaki { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid var(--hx-line); }
+.hx-tur-titik { display:flex; gap:5px; }
+.hx-tur-titik span { width:6px; height:6px; border-radius:99px; background:var(--hx-line-2); transition:width var(--dur-small) var(--ease-out-expo), background var(--dur-small); }
+.hx-tur-titik .hx-lewat { background:rgba(221,65,36,.5); }
+.hx-tur-titik .hx-on { width:18px; background:var(--hx-primary); }
+.hx-tur-aksi { display:flex; align-items:center; gap:6px; }
+.hx-tur-aksi .hx-btn { padding:10px 16px; }
+.hx-tur-aksi .hx-btn-link { color:var(--hx-dim); }
+.hx-tur-aksi .hx-btn-link:hover, .hx-tur-aksi .hx-btn-link:focus-visible { color:var(--hx-muted); }
+.hx-tur.hx-rm .hx-tur-lubang { transition:none; }
+.hx-tur.hx-rm .hx-tur-balon, .hx-tur.hx-rm .hx-tur-redup { animation:none; }
+
+.hx-tawar { position:fixed; z-index:980; right:24px; bottom:24px; display:flex; gap:12px; align-items:flex-start; width:min(340px, calc(100vw - 24px)); padding:14px 14px 10px; border-radius:20px; background:var(--hx-surface-2); border:1px solid var(--hx-border-strong); box-shadow:0 20px 50px -14px rgba(0,0,0,.75); animation:hx-tur-in var(--dur-medium) var(--ease-out-expo) both; }
+.hx-tawar .hx-box { flex-shrink:0; }
+.hx-tawar-t { font-size:15px; font-weight:700; }
+.hx-tawar-s { margin-top:2px; font-size:13px; color:var(--hx-muted); line-height:1.45; }
+.hx-tawar-aksi { display:flex; gap:6px; margin-top:8px; }
+.hx-tawar-aksi .hx-btn { padding:10px 14px; }
+.hx-tawar.hx-rm { animation:none; }
+@media (max-width:767px) {
+  .hx-tawar { right:12px; left:12px; width:auto; bottom:calc(76px + env(safe-area-inset-bottom)); }
+  .hx-tur-kaki { flex-wrap:wrap; }
+  .hx-tur-aksi { margin-left:auto; }
+}
