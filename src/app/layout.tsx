@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Noto_Serif_JP, Noto_Sans_JP } from "next/font/google";
 import localFont from "next/font/local";
 import { GeistSans } from "geist/font/sans";
 import { HonixLevelUp } from "@/components/honix/HonixLevelUp";
+import "./fonts/noto-jp.css";
 import "./globals.css";
 
 // v1 fonts (existing pages still depend on these — keep until last v1 page migrates)
 /* Font latin di-host sendiri (file dari Google Fonts, subset latin, variabel).
    Build Vercel berkali-kali gagal acak pas next/font/google ngunduh font
    ("next/font/google queries have exactly one entry") — 8 Okt 2026 kena Space
-   Grotesk, lalu JetBrains Mono. File lokal = build gak bergantung jaringan.
-   Noto JP tetap dari Google: dipecah ratusan potongan unicode-range. */
+   Grotesk, lalu JetBrains Mono, lalu Noto Serif JP (9 Okt). File lokal = build
+   gak bergantung jaringan. Noto JP di fonts/noto-jp.css (potongan unicode-range
+   di public/fonts/noto-jp) — variabel CSS-nya didefinisiin di situ. */
 const jakarta = localFont({
   src: "./fonts/PlusJakartaSans-latin.woff2",
   variable: "--font-jakarta",
@@ -31,16 +32,6 @@ const spaceGrotesk = localFont({
 });
 
 // v2 fonts (warm earthy redesign)
-const notoSerifJp = Noto_Serif_JP({
-  variable: "--font-serif-jp",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-const notoSansJp = Noto_Sans_JP({
-  variable: "--font-sans-jp",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
 const jetbrainsMono = localFont({
   src: "./fonts/JetBrainsMono-latin.woff2",
   variable: "--font-mono",
@@ -61,7 +52,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${jakarta.variable} ${manrope.variable} ${spaceGrotesk.variable} ${GeistSans.variable} ${notoSerifJp.variable} ${notoSansJp.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${manrope.variable} ${spaceGrotesk.variable} ${GeistSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-screen app-canvas">
         {children}
