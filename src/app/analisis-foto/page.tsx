@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { setSavedWordFavorite } from "@/lib/supabase/savedWords";
 import { AuroraBackground, NavRail, BottomNav, UserBar } from "@/components/v2";
+import { HonixTurHalaman } from "@/components/honix/HonixTurHalaman";
+import { SeleksiAksi } from "@/components/latihan/SeleksiAksi";
+import { LANGKAH_BANKSOAL, mulaiTurHalaman } from "@/lib/honix-tur";
 import {
   Camera, Upload, Sparkles, ChevronDown, RotateCcw, Clock,
   X, Check, Send, Loader2, BookmarkPlus, BookmarkCheck, Star,
   BookOpen, Search, MessageCircle, NotebookPen, Plus, Flag, Pencil, Save, Copy, Trash2,
-  Highlighter, Undo2, LogOut,
+  Highlighter, Undo2, LogOut, HelpCircle,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import { catatAktivitas } from "@/lib/aktivitas";
@@ -497,6 +500,33 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [savedNotes,   setSavedNotes]   = useState<Set<number>>(new Set());
   const [savingNote,   setSavingNote]   = useState<number | null>(null);
   const [rightTab,     setRightTab]     = useState<"chat"|"kamus"|"catatan">("chat");
+  /* Pop-up blok teks diawasi di kolom soal. Di bawah 1024px panel kanan
+     (Sensei/Kamus/Catatan) yang sama jadi lembar bawah — `panelHp` = kebuka. */
+  const mainRef      = useRef<HTMLElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+  const [panelHp,      setPanelHp]      = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
+  /* Tarik pegangan lembar ke bawah buat nutup (ikut jari, lepas >70px = tutup). */
+  const tarik = useRef<number | null>(null);
+  const tarikMulai = (e: React.TouchEvent) => { tarik.current = e.touches[0].clientY; };
+  const tarikGeser = (e: React.TouchEvent) => {
+    if (tarik.current == null || !panelRef.current) return;
+    const dy = Math.max(0, e.touches[0].clientY - tarik.current);
+    panelRef.current.style.transition = "none";
+    panelRef.current.style.transform = `translateY(${dy}px)`;
+  };
+  const tarikLepas = (e: React.TouchEvent) => {
+    if (tarik.current == null || !panelRef.current) return;
+    const dy = e.changedTouches[0].clientY - tarik.current;
+    tarik.current = null;
+    panelRef.current.style.transition = "";
+    panelRef.current.style.transform = "";
+    if (dy > 70) setPanelHp(false);
+  };
+  const bukaPanel = (tab: "chat" | "kamus" | "catatan") => {
+    setRightTab(tab);
+    if (!window.matchMedia("(min-width: 1024px)").matches) setPanelHp(true);
+  };
   const [kamusWords,   setKamusWords]   = useState<{id:string;kanji:string;reading:string|null;meaning:string;favorite:boolean}[]>([]);
   const [flashKamusId, setFlashKamusId] = useState<string | null>(null);
   const [kamusQuery,   setKamusQuery]   = useState("");
@@ -734,15 +764,18 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     setTimeout(() => setToast(null), 1500);
   };
 
-  const generateWordInfo = async () => {
-    if (!addKanji.trim() || generating) return;
+  /* `kata` dikirim langsung dari pop-up blok teks — state addKanji baru
+     keisi di render berikutnya. */
+  const generateWordInfo = async (kata?: string) => {
+    const word = (kata ?? addKanji).trim();
+    if (!word || generating) return;
     setGenerating(true);
     setAddReading(""); setAddMeaning("");
     try {
       const res = await fetch("/api/furigana", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word: addKanji.trim(), withMeaning: true }),
+        body: JSON.stringify({ word, withMeaning: true }),
       });
       const json = await res.json();
       const habis = bacaKuotaHabis(res, json);
@@ -1062,6 +1095,16 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     }
   };
 
+  /* Lembar panel di HP: kunci scroll halaman + Esc buat tutup. */
+  useEffect(() => {
+    if (!panelHp) return;
+    const lama = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setPanelHp(false); };
+    document.addEventListener("keydown", esc);
+    return () => { document.body.style.overflow = lama; document.removeEventListener("keydown", esc); };
+  }, [panelHp]);
+
   /* Timer — hanya jalan saat timerOn = true */
   useEffect(() => {
     if (!timerOn) return;
@@ -1308,7 +1351,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       )}
 
       {/* ── Left: All Questions ── */}
-      <main className="af-main">
+      <main className="af-main" ref={mainRef}>
 
         {/* Topbar v2 */}
         <header className="af-topbar">
@@ -1356,7 +1399,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             </div>
           </div>
 
-          <div className="af-actions">
+          <div className="af-actions" data-tur="bs-sesi">
             <div className="af-timer">
               <Clock size={13} strokeWidth={2} />
               <span className="af-timer-val">{timerOn ? formatTime(elapsed) : "—:——"}</span>
@@ -1377,6 +1420,15 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
             >
               <LogOut size={14} strokeWidth={1.9} /> Keluar
             </button>
+            <button
+              type="button"
+              className="btn btn-sm af-exit-btn"
+              onClick={() => mulaiTurHalaman("banksoal")}
+              aria-label="Cara pakai halaman ini"
+              title="Cara pakai halaman ini"
+            >
+              <HelpCircle size={14} strokeWidth={1.9} />
+            </button>
           </div>
         </header>
 
@@ -1387,7 +1439,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           const hasCatFilter = cats.length > 2;
           if (!hasCatFilter && reviewCount === 0) return null;
           return (
-            <div className="af-filter-row">
+            <div className="af-filter-row" data-tur="bs-filter">
               {hasCatFilter && cats.map(c => (
                 <button
                   key={c}
@@ -1417,7 +1469,11 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           {(() => {
             let lastPassageText = "";
             let passageCardIdx = -1;
+            /* Penanda tur cuma di kartu pertama yang kelihatan. */
+            const pertama = result.questions.findIndex(q =>
+              !(catFilter !== "全部" && q.category && q.category !== catFilter) && !(reviewOnly && !q.needs_review));
             return result.questions.map((q, qi) => {
+              const tur = (id: string) => (qi === pertama ? id : undefined);
               if (catFilter !== "全部" && q.category && q.category !== catFilter) return null;
               if (reviewOnly && !q.needs_review) return null;
               const isRevealed = revealed.has(qi);
@@ -1506,6 +1562,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                             onClick={() => toggleFurigana(qKey, q.question)}
                             disabled={loading}
                             className={`qc-furi-toggle${on ? " on" : ""}`}
+                            data-tur={tur("bs-furigana")}
                             title="Toggle furigana di soal"
                           >
                             {loading
@@ -1526,6 +1583,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                             onClick={() => toggleAllOptions(qi, q.options)}
                             disabled={anyLoading}
                             className={`qc-furi-toggle furi-opsi${allOn ? " on" : ""}`}
+                            data-tur={tur("bs-furigana")}
                             title="Toggle furigana di semua pilihan"
                           >
                             {anyLoading
@@ -1536,7 +1594,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                           </button>
                         );
                       })()}
-                      <div className="qc-v2-actions">
+                      <div className="qc-v2-actions" data-tur={tur("bs-aksi")}>
                         <button
                           type="button"
                           onClick={() => toggleReviewFlag(qi)}
@@ -1569,7 +1627,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                       const qKey = `q-${qi}`;
                       const useFuri = showFurigana.has(qKey) && furiganaMarked[qKey];
                       return (
-                        <p className="qc-v2-prompt font-jp-sans">
+                        <p className="qc-v2-prompt font-jp-sans" data-tur={tur("bs-teks")}>
                           {useFuri
                             ? renderPassage(furiganaMarked[qKey])
                             : renderQuestion(q.question, accent, q.target)}
@@ -1626,6 +1684,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                             )}
                             <span
                               className="qc-opt-copy"
+                              data-tur={oi === 0 ? tur("bs-salin") : undefined}
                               onClick={(e) => { e.stopPropagation(); copyToClipboard(optText, `Opsi ${id} tersalin`); }}
                               role="button"
                               tabIndex={-1}
@@ -1640,13 +1699,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
                     {!isRevealed && (
                       <>
-                        <div className="qc-v2-hint">
+                        <div className="qc-v2-hint" data-tur={tur("bs-jawaban")}>
                           <span className="qc-hint-emoji">💪</span>
                           Pilih jawaban dulu sebelum lihat pembahasan
                         </div>
                         <button
                           type="button"
                           className="qc-reveal-btn"
+                          data-tur={tur("bs-jawaban")}
                           onClick={() => reveal(qi)}
                           disabled={!userAns}
                         >
@@ -1833,11 +1893,19 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       </main>
 
       {/* ── Right: Sensei / Kamus / Catatan sidebar (v2 markup) ── */}
-      <aside className="af-side hidden lg:flex">
+      {panelHp && <div className="af-sheet-ov" onClick={() => setPanelHp(false)} aria-hidden="true" />}
+      <aside ref={panelRef} className={`af-side${panelHp ? " sheet-open" : ""}`} aria-label="Sensei, Kamus, Catatan">
+        <div className="af-sheet-head" onTouchStart={tarikMulai} onTouchMove={tarikGeser} onTouchEnd={tarikLepas}>
+          <span className="af-sheet-grip" aria-hidden="true" />
+          <button type="button" className="af-sheet-close" onClick={() => setPanelHp(false)} aria-label="Tutup panel">
+            <X size={18} strokeWidth={2} />
+          </button>
+        </div>
         <div className="glass-card side-tabs">
           <button
             type="button"
             className={`side-tab${rightTab === "chat" ? " on" : ""}`}
+            data-tur="bs-sensei"
             onClick={() => setRightTab("chat")}
           >
             <MessageCircle size={13} strokeWidth={1.8} fill={rightTab === "chat" ? "currentColor" : "none"} />
@@ -1846,6 +1914,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           <button
             type="button"
             className={`side-tab${rightTab === "kamus" ? " on" : ""}`}
+            data-tur="bs-kamus"
             onClick={() => setRightTab("kamus")}
           >
             <BookOpen size={13} strokeWidth={1.8} />
@@ -1854,6 +1923,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           <button
             type="button"
             className={`side-tab${rightTab === "catatan" ? " on" : ""}`}
+            data-tur="bs-catatan"
             onClick={() => setRightTab("catatan")}
           >
             <NotebookPen size={13} strokeWidth={1.8} />
@@ -1919,6 +1989,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
             <div className="sensei-input">
               <input
+                ref={chatInputRef}
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
@@ -1981,7 +2052,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 />
                 <button
                   type="button"
-                  onClick={generateWordInfo}
+                  onClick={() => generateWordInfo()}
                   disabled={!addKanji.trim() || generating}
                   className="btn btn-magic btn-sm"
                   style={{ whiteSpace: "nowrap" }}
@@ -2539,8 +2610,18 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         )}
         <button
           type="button"
+          onClick={() => bukaPanel(rightTab)}
+          className="stabilo-fab panel-fab"
+          data-tur="bs-panel-hp"
+          aria-label="Buka Sensei, Kamus, Catatan"
+        >
+          <MessageCircle size={16} strokeWidth={1.8} /> Sensei
+        </button>
+        <button
+          type="button"
           onClick={() => setDrawMode(v => !v)}
           className={`stabilo-fab${drawMode ? " on" : ""}`}
+          data-tur="bs-coret"
           title={drawMode ? "Selesai coret" : "Mode coret — corat-coret di soal & bacaan"}
         >
           {drawMode ? <Check size={16} strokeWidth={2.4} /> : <Highlighter size={16} strokeWidth={1.8} />}
@@ -2549,6 +2630,27 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
       </div>
 
       <JatahHabisDialog kuota={jatahHabis} onClose={() => setJatahHabis(null)} />
+
+      <SeleksiAksi
+        wadah={mainRef}
+        nonaktif={drawMode}
+        onTanya={t => {
+          bukaPanel("chat");
+          setChatInput(`「${t}」 — artinya apa & dipakai gimana di soal ini?`);
+          requestAnimationFrame(() => chatInputRef.current?.focus());
+        }}
+        onKamus={t => {
+          setAddKanji(t);
+          generateWordInfo(t);
+          bukaPanel("kamus");
+        }}
+        onCatat={t => {
+          bukaPanel("catatan");
+          setNewNoteOpen(true);
+          setNewNoteText(`「${t}」\n`);
+        }}
+      />
+      <HonixTurHalaman id="banksoal" langkah={LANGKAH_BANKSOAL} />
     </div>
   );
 }

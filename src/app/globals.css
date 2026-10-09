@@ -6081,6 +6081,10 @@ input, textarea, select { font-size: 16px; }
 }
 .qc-v2-option:hover .qc-opt-copy { opacity: 0.7; }
 .qc-opt-copy:hover { color: var(--accent-iris); border-color: var(--accent-iris); opacity: 1; }
+/* Layar sentuh gak punya hover → ikon salin dulu gak pernah kelihatan di HP. */
+@media (hover: none) { .qc-opt-copy { opacity: .6; width: 36px; height: 36px; } }
+/* Selama tur, ikon yang lagi disorot harus kelihatan (normalnya cuma pas hover). */
+.hx-tur-on .qc-opt-copy[data-tur] { opacity: 1; }
 
 .qc-v2-hint {
   margin: 0 22px 12px;
@@ -7659,7 +7663,6 @@ input, textarea, select { font-size: 16px; }
   .kk-workspace { grid-template-columns: 200px minmax(0, 1fr) !important; }
   .kk-workspace > .kk-detail { display: none !important; }
   .af-grid { grid-template-columns: minmax(0, 1fr) 0 !important; gap: 0 !important; }
-  .af-grid .af-side { display: none !important; }
   .af-upload-wrap { grid-template-columns: 1fr !important; }
   .ct-workspace { grid-template-columns: 220px minmax(0, 1fr) !important; }
   .ct-workspace > .ct-editor { display: none !important; }
@@ -7926,7 +7929,6 @@ html { scrollbar-gutter: stable; }
   .af-timer { padding: 6px 10px; }
   .af-timer-val { font-size: 14px; }
   .af-grid { grid-template-columns: 1fr !important; gap: 0 !important; }
-  .af-grid .af-side { display: none !important; }
   .af-main { gap: 18px !important; }
   .qc-v2-head { flex-wrap: wrap; padding: 12px 14px; gap: 6px; }
   .qc-v2-actions { width: 100%; justify-content: flex-end; margin-left: 0; }
@@ -9409,3 +9411,49 @@ html:has(.beranda-v2), body:has(.beranda-v2) { overflow-x: clip; }
   text-decoration: none;
 }
 .sensei-kuota-link:hover { text-decoration: underline; }
+
+/* ── Pop-up blok teks di Bank Soal (SeleksiAksi) ── */
+.seleksi-aksi {
+  position: fixed; z-index: 1050; display: flex; gap: 2px; padding: 4px;
+  max-width: calc(100vw - 24px); overflow-x: auto;
+  transform: translate(-50%, -100%);
+  border-radius: var(--radius-md); background: var(--surface-3);
+  border: 1px solid var(--edge-strong); box-shadow: 0 14px 34px -10px rgba(0, 0, 0, .75);
+  animation: fade-in var(--dur-small) var(--ease-out-expo);
+}
+.seleksi-aksi.bawah { transform: translate(-50%, 0); }
+.seleksi-aksi button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px;
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: background var(--dur-micro), color var(--dur-micro);
+}
+.seleksi-aksi button:hover, .seleksi-aksi button:focus-visible { background: rgba(221, 65, 36, .14); color: var(--text-primary); outline: none; }
+.seleksi-aksi button svg { color: var(--primary); }
+@media (max-width: 767px) { .seleksi-aksi button { min-height: 44px; } }
+/* Panel Sensei/Kamus/Catatan Bank Soal: di bawah 1024px panel yang sama jadi
+   lembar bawah. Cuma transform yang dianimasiin + tanpa blur kaca → ringan di HP. */
+.panel-fab, .af-sheet-head, .af-sheet-ov { display: none; }
+@media (max-width: 1023px) {
+  .panel-fab { display: inline-flex; }
+  .af-sheet-ov { display: block; position: fixed; inset: 0; z-index: 1029; background: rgba(11, 10, 12, .55); animation: fade-in var(--dur-small); }
+  .af-grid .af-side {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 1030;
+    height: 78dvh; min-height: 0; gap: 10px;
+    padding: 6px 12px calc(12px + env(safe-area-inset-bottom));
+    background: var(--surface-2); border-top: 1px solid var(--edge-strong);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -20px 50px rgba(0, 0, 0, .6);
+    transform: translateY(100%); visibility: hidden;
+    transition: transform var(--dur-medium) var(--ease-out-expo), visibility 0s linear var(--dur-medium);
+  }
+  .af-grid .af-side.sheet-open { transform: none; visibility: visible; transition: transform var(--dur-medium) var(--ease-out-expo); }
+  .af-grid .af-side .glass-card { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .af-sheet-head { display: flex; align-items: center; justify-content: center; position: relative; min-height: 32px; touch-action: none; }
+  .af-sheet-grip { width: 40px; height: 4px; border-radius: 99px; background: rgba(255, 255, 255, .22); }
+  .af-sheet-close { position: absolute; right: -4px; top: -6px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); cursor: pointer; }
+  .af-sheet-close:hover, .af-sheet-close:focus-visible { background: var(--surface-3); color: var(--text-primary); outline: none; }
+}
+@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
+  .af-grid .af-side, .af-grid .af-side.sheet-open { transition: none; }
+}

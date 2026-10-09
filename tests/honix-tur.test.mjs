@@ -30,8 +30,8 @@ test("rapikanTur cuma nerima bentuk yang valid", () => {
   assert.deepEqual(rapikanTur("x"), TUR_AWAL);
   assert.deepEqual(rapikanTur({ terakhir: 5, ingatkan: "ya" }), TUR_AWAL);
   assert.deepEqual(rapikanTur({ terakhir: "2026-10-01T00:00:00.000Z", ingatkan: false }),
-    { terakhir: "2026-10-01T00:00:00.000Z", ingatkan: false });
-  assert.deepEqual(rapikanTur({ ingatkan: false }), { terakhir: null, ingatkan: false });
+    { terakhir: "2026-10-01T00:00:00.000Z", ingatkan: false, halaman: {} });
+  assert.deepEqual(rapikanTur({ ingatkan: false }), { terakhir: null, ingatkan: false, halaman: {} });
 });
 
 test("langkah: diawali & diakhiri langkah tengah, HP gabung jadi Lainnya", () => {
@@ -42,4 +42,29 @@ test("langkah: diawali & diakhiri langkah tengah, HP gabung jadi Lainnya", () =>
   assert.ok(LANGKAH_HP.some(l => l.target === "lainnya"));
   assert.ok(!LANGKAH_HP.some(l => ["catatan", "progres", "pengaturan"].includes(l.target)));
   assert.equal(LANGKAH_DESKTOP.length, 9);
+});
+
+import { keputusanTurHalaman, LANGKAH_BANKSOAL } from "../src/lib/honix-tur.ts";
+
+test("tur halaman: nunggu tur menu selesai, terus sekali aja", () => {
+  assert.equal(keputusanTurHalaman(TUR_AWAL, "banksoal"), false);
+  assert.equal(keputusanTurHalaman({ ...TUR_AWAL, terakhir: "rusak" }, "banksoal"), false);
+  const habisTurMenu = { terakhir: hariLalu(1), ingatkan: true, halaman: {} };
+  assert.equal(keputusanTurHalaman(habisTurMenu, "banksoal"), true);
+  assert.equal(keputusanTurHalaman({ ...habisTurMenu, halaman: { banksoal: hariLalu(0) } }, "banksoal"), false);
+  assert.equal(keputusanTurHalaman({ ...habisTurMenu, halaman: { kamus: hariLalu(0) } }, "banksoal"), true);
+});
+
+test("rapikanTur: halaman cuma nyimpen string", () => {
+  assert.deepEqual(rapikanTur({ terakhir: null, ingatkan: true, halaman: { banksoal: "2026-10-09T00:00:00.000Z", x: 5 } }).halaman,
+    { banksoal: "2026-10-09T00:00:00.000Z" });
+  assert.deepEqual(rapikanTur({ halaman: "x" }).halaman, {});
+});
+
+test("langkah Bank Soal: diawali & diakhiri di tengah, target unik", () => {
+  assert.equal(LANGKAH_BANKSOAL[0].target, null);
+  assert.equal(LANGKAH_BANKSOAL.at(-1).target, null);
+  const target = LANGKAH_BANKSOAL.map(l => l.target).filter(Boolean);
+  assert.equal(new Set(target).size, target.length);
+  assert.ok(target.includes("bs-catatan") && target.includes("bs-teks"));
 });
