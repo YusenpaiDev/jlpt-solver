@@ -1,5 +1,9 @@
 "use client";
 
+import { loadSessionPages } from "@/lib/session-data";
+
+import { activityAt, hasPracticeDate, answeredCount, accuracyPercent, dailyActivity, recentPractice } from "@/lib/session-progress";
+
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -216,13 +220,13 @@ function ResumeSub({ s }: { s: Session }) {
     const p = Math.round(dijawab / s.total * 100);
     return (
       <div className="res-s">
-        Berhenti di soal {dijawab}/{s.total} {waktuLanjut(s.created_at)}
+        Berhenti di soal {dijawab}/{s.total} {hasPracticeDate(s) ? waktuLanjut(activityAt(s)) : ""}
         <span className="res-bar"><i style={{ width: `${p}%` }} /></span>
         {p}%
       </div>
     );
   }
-  return <div className="res-s">{pct != null ? `Terakhir ${pct}%` : "Belum kamu kerjain"} · {waktuLanjut(s.created_at)}</div>;
+  return <div className="res-s">{pct != null ? `Terakhir ${pct}%` : "Belum kamu kerjain"} · {hasPracticeDate(s) ? waktuLanjut(activityAt(s)) : ""}</div>;
 }
 
 /* Jenis sesi buat judul kartu Lanjutin (mock: "… — Bank Soal"). */
@@ -241,13 +245,13 @@ async function ambilMentah(now: Date): Promise<BerandaMentah | null> {
 
   const [profileRes, sessionRes, kotobaRes, kotobaMingguRes, aktifRes, kpRes, bpRes] = await Promise.all([
     supabase.from("profiles").select("avatar_url").eq("id", user.id).single(),
-    supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section,ai_result->stats,ai_result->kind")
-      .eq("user_id", user.id).order("created_at", { ascending: false }).limit(300),
+    loadSessionPages((from,to) => supabase.from("sessions").select("id,level,category,title,total,score,created_at,ai_result->section,ai_result->stats,ai_result->kind")
+      .eq("user_id", user.id).order("created_at", { ascending: false }).order("id").range(from,to)),
     supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", seminggu),
     /* Hari aktif terakhir — sumber yang sama dengan streak_saya(). */
-    supabase.from("aktivitas_harian").select("tanggal").eq("user_id", user.id)
-      .order("tanggal", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("aktivitas_harian").select("tanggal,jumlah").eq("user_id", user.id)
+      .order("tanggal", { ascending: false }).limit(14),
     supabase.from("kotoba_progress").select("word, benar, salah").eq("user_id", user.id),
     supabase.from("bunpou_progress").select("pattern, benar, salah").eq("user_id", user.id),
   ]);
@@ -259,9 +263,11 @@ async function ambilMentah(now: Date): Promise<BerandaMentah | null> {
     // dari user_metadata dulu (Google OAuth), ditimpa profiles.avatar_url kalau ada
     avatar: profileRes.data?.avatar_url ?? user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
     sessions: (sessionRes.data ?? []) as Record<string, unknown>[],
+    sessionError: Boolean(sessionRes.error),
     kotobaTotal: kotobaRes.count ?? null,
     kotobaMingguIni: kotobaMingguRes.count ?? null,
-    aktifTerakhir: (aktifRes.data?.tanggal as string | undefined) ?? null,
+    aktifTerakhir: aktifRes.data?.[0]?.tanggal ?? null,
+    aktivitasHarian: aktifRes.error ? null : aktifRes.data ?? [],
     kotobaProgres: (kpRes.data ?? []) as BerandaMentah["kotobaProgres"],
     bunpouProgres: ((bpRes.data ?? []) as { pattern: string; benar: number | null; salah: number | null }[])
       .map(r => ({ pattern: r.pattern, benar: r.benar ?? 0, salah: r.salah ?? 0 })),
@@ -279,6 +285,7 @@ export default function Home() {
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const [kotoba, setKotoba] = useState<number | null>(null);
   const [resume, setResume] = useState<Session | null>(null);
+  const [sessionError, setSessionError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("Yusuf");
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -369,22 +376,23 @@ export default function Home() {
       });
       setKanjiSalah(kanjiSeringSalah(m.kotobaProgres));
 
+      setSessionError(Boolean(m.sessionError));
       const sess = m.sessions as unknown as Session[];
-      const practiced = sess.filter(r => r.score != null && r.total);       // sesi yang udah dikerjain
+      const practiced = recentPractice(sess);       // sesi yang udah dikerjain
       // Riwayat: sembunyiin import bank soal yang belum dikerjain (materi/riwayat split)
-      const riwayat = sess.filter(r => !(r.kind === "materi" && r.score == null));
+      const riwayat = recentPractice(sess);
 
       setSessions(riwayat.slice(0, 4));
       setTotalSoal(sess.reduce((s, r) => s + (r.total ?? 0), 0)); // ukuran library soal (bank + analisis)
       setResume(riwayat.find(r => r.score == null) ?? riwayat[0] ?? sess[0] ?? null);
-      const rata = (xs: Session[]) => xs.length ? Math.round(xs.reduce((s, r) => s + (r.score! / r.total), 0) / xs.length * 100) : null;
-      if (practiced.length > 0) setAvgScore(rata(practiced));
+      const rata = accuracyPercent;
+      setAvgScore(rata(practiced));
 
       /* Selisih: soal minggu ini, akurasi bulan ini vs bulan lalu. */
       const seminggu = now.getTime() - 7 * 86_400_000;
       const awalBulan = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
       const awalBulanLalu = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
-      const t = (r: Session) => new Date(r.created_at).getTime();
+      const t = (r: Session) => hasPracticeDate(r) ? new Date(activityAt(r)).getTime() : NaN;
       const akBulanIni = rata(practiced.filter(r => t(r) >= awalBulan));
       const akBulanLalu = rata(practiced.filter(r => t(r) >= awalBulanLalu && t(r) < awalBulan));
       const soalMinggu = sess.filter(r => t(r) >= seminggu).reduce((s, r) => s + (r.total ?? 0), 0);
@@ -404,11 +412,9 @@ export default function Home() {
 
       /* Aktivitas 7 hari terakhir (soal dijawab per hari, dari stats.answered) */
       const perDay: Record<string, number> = {};
-      for (const s of sess) {
-        const ans = s.stats?.answered ?? 0;
-        if (!ans) continue;
-        const d = new Date(s.created_at);
-        perDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] = (perDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] ?? 0) + ans;
+      for (const [date,count] of Object.entries(dailyActivity(sess, m.aktivitasHarian ?? null))) {
+        const [y,month,day] = date.split("-").map(Number);
+        perDay[`${y}-${month-1}-${day}`] = count;
       }
       /* Minggu lalu (7 hari sebelum jendela 7 hari ini) — buat "+N% vs lalu". */
       let mingguLalu = 0;
@@ -475,7 +481,7 @@ export default function Home() {
     if (loveNote) return loveNote;
     if (streakNaik) return "Sesi pertama hari ini beres. Streak aman 🔥";
     const calon: ReactNode[] = [<>Honix udah siap. Kamu?</>];
-    if (hariIni > 0) calon.push(<>Hari ini udah <b>{hariIni} soal</b>. Lanjut, yuk!</>);
+    if (hariIni > 0) calon.push(<>Hari ini udah <b>{hariIni} aktivitas belajar</b>. Lanjut, yuk!</>);
     if (streak > 0) calon.push(<>Streak <b>{streak} hari</b>. Jangan sampai putus, ya!</>);
     if (weakest) calon.push(<>Hari ini fokus <b>{weakest.jp}</b>, yuk.</>);
     return calon[acak % calon.length];
@@ -553,7 +559,7 @@ export default function Home() {
             <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(221,65,36,0.14)" }}>📷</span>Soal Dianalisis</div><div className="stat-v">{loading ? dash : totalSoal}<span className="u">soal</span></div><div className={`stat-d ${delta.soalMinggu > 0 ? "up" : "flat"}`}>{delta.soalMinggu > 0 ? `↑ +${delta.soalMinggu} minggu ini` : "+0 minggu ini"}</div></div>
             <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(107,142,63,0.16)" }}>🎯</span>Akurasi</div><div className="stat-v">{loading || avgScore == null ? dash : avgScore}<span className="u">%</span></div>{delta.akurasiBulan != null
               ? <div className={`stat-d ${delta.akurasiBulan > 0 ? "up" : "flat"}`}>{delta.akurasiBulan > 0 ? `↑ +${delta.akurasiBulan}` : delta.akurasiBulan < 0 ? `↓ −${-delta.akurasiBulan}` : "±0"}% bulan ini</div>
-              : <div className="stat-d flat">rata-rata sesi</div>}</div>
+              : <div className="stat-d flat">jawaban benar / dijawab</div>}</div>
             <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(212,160,74,0.15)" }}>🔥</span>Streak</div><div className="stat-v">{loading ? dash : streak}<span className="u">hari</span></div><div className="stat-d flat">Rekor: {stats.rekor} hari</div></div>
             <div className="bv-stat card"><div className="stat-l"><span className="stat-ic" style={{ background: "rgba(139,90,140,0.18)" }}>📖</span>Kotoba</div><div className="stat-v">{loading || kotoba == null ? dash : kotoba}<span className="u">kata</span></div><div className={`stat-d ${delta.kotobaMinggu ? "up" : "flat"}`}>{delta.kotobaMinggu ? `↑ +${delta.kotobaMinggu} minggu ini` : "+0 minggu ini"}</div></div>
           </div>
@@ -640,10 +646,10 @@ export default function Home() {
               <div className="bv-scard card">
                 <div className="s-h">Aktivitas 7 hari {delta.aktivitas != null
                   ? <span className={`r${delta.aktivitas < 0 ? " turun" : ""}`}>{delta.aktivitas >= 0 ? "+" : "−"}{Math.abs(delta.aktivitas)}% vs lalu</span>
-                  : <span className="r">soal dijawab</span>}</div>
+                  : <span className="r">aktivitas belajar</span>}</div>
                 <div className="wk">
                   {(week.length ? week : Array.from({ length: 7 }, (_, i) => ({ d: DAY_LETTER[i], h: 0, v: 0, now: i === 6 }))).map((c, i) => (
-                    <div className="wkc" key={i}><div className={`wkb${c.v === 0 ? " mut" : ""}${c.now ? " now" : ""}`} style={{ height: `calc(${Math.max(c.h, 5)}% * 0.7)` }} title={`${c.v} soal`} /><span className={`wkl${c.now ? " now" : ""}`}>{c.d}</span></div>
+                    <div className="wkc" key={i}><div className={`wkb${c.v === 0 ? " mut" : ""}${c.now ? " now" : ""}`} style={{ height: `calc(${Math.max(c.h, 5)}% * 0.7)` }} title={`${c.v} aktivitas`} /><span className={`wkl${c.now ? " now" : ""}`}>{c.d}</span></div>
                   ))}
                 </div>
                 <div className="wk-note">{activeDays > 0 ? <><b>{activeDays} dari 7 hari</b> aktif — streak {streak} hari 🔥 jaga hari ini!</> : <>Belum ada aktivitas minggu ini — <b>mulai hari ini</b> 💪</>}</div>
@@ -653,13 +659,14 @@ export default function Home() {
                 <div className="s-h">Riwayat Terakhir <Link href="/progres?tab=log" className="s-all">Semua →</Link></div>
                 <div className="riw">
                   {loading ? <div className="riw-empty">memuat…</div>
+                    : sessionError ? <div className="riw-empty" role="alert">Riwayat belum bisa dimuat. Coba muat ulang.</div>
                     : sessions.length === 0 ? <div className="riw-empty">Belum ada sesi latihan</div>
                     : sessions.map(s => {
                       const st = riwStyle(s); const pct = scorePct(s);
                       return (
                         <Link key={s.id} href={s.section === "choukai" ? `/choukai/${s.id}` : `/analisis-foto?session=${s.id}`} className="riw-i">
                           <span className="riw-g" style={{ background: st.bg, borderColor: st.bd, color: st.fg }}>{st.g}</span>
-                          <div className="riw-m"><div className="riw-t">{s.title}</div><div className="riw-s">{relativeTime(s.created_at)} · {s.total} soal</div></div>
+                          <div className="riw-m"><div className="riw-t">{s.title}</div><div className="riw-s">{hasPracticeDate(s) ? relativeTime(activityAt(s)) : "Waktu latihan belum tercatat"} · {answeredCount(s)}/{s.total} soal dibahas{s.score == null ? " · sedang dikerjakan" : ""}</div></div>
                           {pct != null && <span className={`riw-sc ${pct >= 80 ? "sc-g" : "sc-m"}`}>{pct}%</span>}
                         </Link>
                       );

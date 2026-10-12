@@ -1,5 +1,7 @@
 "use client";
 
+import { assertProgressSaved } from "@/lib/save-progress";
+
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -66,6 +68,7 @@ interface UserProgress {
    tiap save, biar Statistik bisa fetch ringan (gak narik ai_result full).
    perCat keyed kategori asli soal: {文法:{a:answered,c:correct}, ...} */
 interface SessionStats {
+  last_practiced_at?: string;
   answered: number;
   correct: number;
   perCat: Record<string, { a: number; c: number }>;
@@ -380,6 +383,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [exitTo,   setExitTo]   = useState<string | null>(null);
   /* Furigana kena 429 → lembar bawah / modal jatah habis. */
   const [jatahHabis, setJatahHabis] = useState<KuotaHabis | null>(null);
+  const [progressSaveError, setProgressSaveError] = useState(false);
   const [exitBusy, setExitBusy] = useState<"save" | "discard" | null>(null);
   const hasProgress = revealed.size > 0 || Object.keys(answers).length > 0;
   useEffect(() => {
@@ -433,14 +437,20 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         const nextResult: AIResult = {
           ...result,
           user_progress: progress,
-          stats: computeStats(result.questions, progress?.answers ?? {}, progress?.revealed ?? []),
+          stats: { ...computeStats(result.questions, progress?.answers ?? {}, progress?.revealed ?? []), last_practiced_at: mode === "save" ? lastPracticeRef.current ?? result.stats?.last_practiced_at : result.stats?.last_practiced_at },
         };
         const supabase = createClient();
-        await supabase
+        const saved = await supabase
           .from("sessions")
           .update({ ai_result: nextResult, score: scoreFromProgress(progress) })
-          .eq("id", sessionId);
-      } catch { /* tetap lanjut keluar walau gagal */ }
+          .eq("id", sessionId).select("id").single();
+        assertProgressSaved(sessionId, saved);
+      } catch {
+        setProgressSaveError(true);
+        showToast("Progres belum tersimpan. Coba Simpan & keluar lagi.", false);
+        setExitBusy(null);
+        return;
+      }
       setExitBusy(null);
     }
     setExitTo(null);
@@ -503,6 +513,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   /* Pop-up blok teks diawasi di kolom soal. Di bawah 1024px panel kanan
      (Sensei/Kamus/Catatan) yang sama jadi lembar bawah — `panelHp` = kebuka. */
   const mainRef      = useRef<HTMLElement>(null);
+  const lastPracticeRef = useRef<string | undefined>(undefined);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const [panelHp,      setPanelHp]      = useState(false);
   const panelRef = useRef<HTMLElement>(null);
@@ -980,16 +991,18 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         const nextResult: AIResult = {
           ...result,
           user_progress: nextProgress,
-          stats: computeStats(result.questions, answers, revealed),
+          stats: { ...computeStats(result.questions, answers, revealed), last_practiced_at: lastPracticeRef.current ?? result.stats?.last_practiced_at },
         };
 
         const supabase = createClient();
-        await supabase
+        const saved = await supabase
           .from("sessions")
           .update({ ai_result: nextResult, score: isComplete ? correctCount : null })
-          .eq("id", sessionId);
+          .eq("id", sessionId).select("id").single();
+        assertProgressSaved(sessionId, saved);
+        setProgressSaveError(false);
       } catch {
-        // silent — UI tetap responsif walau save gagal
+        setProgressSaveError(true);
       }
     }, 600);
 
@@ -1235,10 +1248,15 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
   const pick = (qi: number, id: string) => {
     if (revealed.has(qi)) return;
+    lastPracticeRef.current = new Date().toISOString();
     setAnswers(a => ({ ...a, [qi]: id }));
     catatAktivitas("soal");
   };
-  const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
+  const reveal = (qi: number) => {
+    if (!revealed.has(qi)) catatAktivitas("soal");
+    lastPracticeRef.current = new Date().toISOString();
+    setRevealed(r => new Set([...r, qi]));
+  };
 
   /* Trigger flash halo amber di baris kotoba — biar user notice entry-nya
      baru/refresh. Auto-clear 1.3s setelah animation selesai. */
@@ -1372,7 +1390,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               {isSaved && (
                 <a href="/riwayat-soal" className="meta-chip status-saved">
                   <Check className="size-3" />
-                  Tersimpan otomatis · <span className="meta-link">Lihat riwayat →</span>
+                  {progressSaveError ? "Progres belum tersimpan — coba Simpan & keluar" : "Tersimpan otomatis"} · <span className="meta-link">Lihat riwayat →</span>
                 </a>
               )}
               {!isSaved && (
