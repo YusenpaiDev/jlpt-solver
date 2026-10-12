@@ -13,4 +13,6 @@ Verifikasi: unit regression mencakup 63/74 parsial, impor belum disentuh, sesi l
 
 Tidak ada jawaban pengguna atau tanggal historis yang ditimpa. Perubahan ini tidak mengubah paket langganan atau whitelist akun.
 
-Tambahan verifikasi: pembacaan sesi dipaginasi agar sesi lama tidak tersembunyi oleh impor baru; akurasi dibobotkan per jawaban; aktivitas harian menggunakan aturan yang sama di beranda dan progres. Build produksi lolos dan 11 tes regresi lulus.
+Tambahan verifikasi: pembacaan sesi dipaginasi agar sesi lama tidak tersembunyi oleh impor baru; akurasi dibobotkan per jawaban; aktivitas harian menggunakan aturan yang sama di beranda dan progres. Build produksi lolos dan 12 tes regresi lulus.
+
+Penulisan progres diserialkan dan debounce dibatalkan sebelum keluar/edit/reset. Edit dan tanda review menyertakan jawaban terbaru sehingga tidak mengembalikan snapshot lama. Kegagalan simpan ditampilkan dan membatalkan navigasi Simpan & keluar.
