@@ -387,7 +387,7 @@ export default function ChoukaiPlayer() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const stats = { answered, correct, perCat: { "聴解": { a: answered, c: correct } } };
+        const stats = { answered, correct, last_practiced_at: new Date().toISOString(), perCat: { "聴解": { a: answered, c: correct } } };
         const nextAi = { ...(session.ai_result ?? {}), stats, user_progress: { answers } };
         await supabase.from("sessions").update({ score: correct, ai_result: nextAi }).eq("id", sessionId);
         const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();

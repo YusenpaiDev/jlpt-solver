@@ -1,5 +1,9 @@
 "use client";
 
+import { loadSessionPages } from "@/lib/session-data";
+
+import { activityAt, hasPracticeDate, answeredCount, correctCount, dailyActivity, recentPractice } from "@/lib/session-progress";
+
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -9,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { History, BarChart3, RotateCcw } from "lucide-react";
 import { StatistikView } from "@/app/statistik/page";
+import { tanggalLokal } from "@/lib/aktivitas";
 import { useUserStats } from "@/lib/use-user-stats";
 
 type Tab = "log" | "stat";
@@ -30,7 +35,7 @@ interface Sess {
 const KAT_LABEL: Record<string, string> = { "文法": "Bunpou", "語彙": "Goi", "読解": "Dokkai", "聴解": "Choukai", "文字": "Moji" };
 const KAT_ORDER = ["文法", "語彙", "読解", "聴解", "文字"];
 
-const GROUP_ORDER = ["Hari ini", "Kemarin", "Minggu ini", "Lebih lama"] as const;
+const GROUP_ORDER = ["Hari ini", "Kemarin", "Minggu ini", "Lebih lama", "Waktu belum tercatat"] as const;
 type Group = typeof GROUP_ORDER[number];
 function dayGroup(iso: string): Group {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -75,6 +80,8 @@ function Progres() {
   const tab: Tab = searchParams.get("tab") === "log" ? "log" : "stat";
 
   const [sessions, setSessions] = useState<Sess[]>([]);
+  const [daily, setDaily] = useState<{ tanggal: string; jumlah: number }[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
      profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
@@ -90,13 +97,16 @@ function Progres() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [sessRes] = await Promise.all([
-        supabase.from("sessions")
+      const [sessRes, dailyRes] = await Promise.all([
+        loadSessionPages((from,to) => supabase.from("sessions")
           .select("id, level, category, title, total, score, created_at, ai_result->section, ai_result->kind, ai_result->stats")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false }).order("id").range(from,to)),
+        supabase.from("aktivitas_harian").select("tanggal,jumlah").eq("user_id", user.id).order("tanggal", { ascending: false }).limit(14),
       ]);
+      setLoadError(Boolean(sessRes.error));
       setSessions((sessRes.data ?? []) as Sess[]);
+      setDaily(dailyRes.error ? null : dailyRes.data ?? []);
       setLoading(false);
     }
     load();
@@ -104,23 +114,23 @@ function Progres() {
 
   const setTab = (t: Tab) => router.replace(`/progres?tab=${t}`, { scroll: false });
 
-  /* Sesi yang jadi "log latihan" = udah dikerjain (ada skor). Buat statistik/akurasi. */
-  const done = useMemo(() => sessions.filter(s => s.score != null && s.total > 0), [sessions]);
+  /* Semua sesi yang sudah dibahas, termasuk latihan yang belum selesai. */
+  const done = useMemo(() => recentPractice(sessions), [sessions]);
   /* Log timeline = selesai + sedang dikerjain (belum ada skor tapi udah dijawab sebagian). */
-  const logSessions = useMemo(() => sessions.filter(s => (s.score != null && (s.total ?? 0) > 0) || (s.score == null && (s.stats?.answered ?? 0) > 0)), [sessions]);
+  const logSessions = useMemo(() => recentPractice(sessions), [sessions]);
 
   /* Header pills */
-  const weekCount = done.filter(s => within(s.created_at, 7)).length;
+  const weekCount = done.filter(s => (hasPracticeDate(s) && within(activityAt(s), 7))).length;
   const acc7 = useMemo(() => {
     let a = 0, c = 0;
-    done.filter(s => within(s.created_at, 7)).forEach(s => { a += s.stats?.answered ?? 0; c += s.stats?.correct ?? 0; });
+    done.filter(s => (hasPracticeDate(s) && within(activityAt(s), 7))).forEach(s => { a += answeredCount(s); c += correctCount(s); });
     const cur = a > 0 ? Math.round((c / a) * 100) : null;
     let pa = 0, pc = 0;
-    done.filter(s => !within(s.created_at, 7) && within(s.created_at, 14)).forEach(s => { pa += s.stats?.answered ?? 0; pc += s.stats?.correct ?? 0; });
+    done.filter(s => !(hasPracticeDate(s) && within(activityAt(s), 7)) && (hasPracticeDate(s) && within(activityAt(s), 14))).forEach(s => { pa += answeredCount(s); pc += correctCount(s); });
     const prev = pa > 0 ? Math.round((pc / pa) * 100) : null;
     return { cur, delta: cur != null && prev != null ? cur - prev : null };
   }, [done]);
-  const totalSoal = done.reduce((n, s) => n + (s.total ?? 0), 0);
+  const totalSoal = done.reduce((n, s) => n + answeredCount(s), 0);
 
   /* Filter + group untuk timeline (Log). Termasuk sesi "sedang dikerjain"
      (belum ada skor tapi udah dijawab sebagian) — bukan cuma yang selesai. */
@@ -130,8 +140,8 @@ function Progres() {
   ), [logSessions, typeF, levelF]);
 
   const groups = useMemo(() => {
-    const g: Record<Group, Sess[]> = { "Hari ini": [], "Kemarin": [], "Minggu ini": [], "Lebih lama": [] };
-    filtered.forEach(s => g[dayGroup(s.created_at)].push(s));
+    const g: Record<Group, Sess[]> = { "Hari ini": [], "Kemarin": [], "Minggu ini": [], "Lebih lama": [], "Waktu belum tercatat": [] };
+    filtered.forEach(s => g[hasPracticeDate(s) ? dayGroup(activityAt(s)) : "Waktu belum tercatat"].push(s));
     return GROUP_ORDER.map(k => ({ label: k, items: g[k] })).filter(x => x.items.length > 0);
   }, [filtered]);
 
@@ -147,19 +157,20 @@ function Progres() {
     return KAT_ORDER.map(k => ({ jp: k, ro: KAT_LABEL[k], pct: bag[k]?.a ? Math.round((bag[k].c / bag[k].a) * 100) : null }));
   }, [done]);
 
-  /* Sidebar: aktivitas 7 hari (jumlah sesi per hari) */
+  /* Aktivitas harian memakai sumber yang sama dengan streak. */
   const week = useMemo(() => {
     const labels = ["M", "S", "S", "R", "K", "J", "S"];
     const out: { l: string; n: number; now: boolean }[] = [];
+    const activity = dailyActivity(done,daily);
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
-      const next = new Date(d); next.setDate(d.getDate() + 1);
-      const n = done.filter(s => { const t = new Date(s.created_at).getTime(); return t >= d.getTime() && t < next.getTime(); }).length;
+
+      const n = activity[tanggalLokal(d)] ?? 0;
       out.push({ l: labels[d.getDay()], n, now: i === 0 });
     }
     const max = Math.max(1, ...out.map(o => o.n));
     return out.map(o => ({ ...o, h: Math.round((o.n / max) * 100) }));
-  }, [done]);
+  }, [done, daily]);
   const activeDays = week.filter(w => w.n > 0).length;
   const weakest = useMemo(() => catAcc.filter(c => c.pct != null).sort((a, b) => a.pct! - b.pct!)[0], [catAcc]);
 
@@ -175,6 +186,7 @@ function Progres() {
       <main className="app-shell">
         <UserBar streakDays={streak} xp={stats.xp} xpTarget={stats.xpTarget} avatarLetter={userInitial} isPro={stats.isPro} />
 
+        {loadError && <p role="alert">Riwayat belum bisa dimuat. Coba muat ulang sebelum membaca statistik.</p>}
         <header className="pr-header">
           <div>
             <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Progres" }]} />
@@ -186,6 +198,8 @@ function Progres() {
             <div className="pr-pill"><div className="pr-pill-l">Total soal</div><div className="pr-pill-v">{totalSoal.toLocaleString("id-ID")}</div></div>
           </div>
         </header>
+
+        {logSessions.some(s => !hasPracticeDate(s)) && <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Latihan lama tetap masuk total dan akurasi keseluruhan. Waktu pengerjaannya belum tercatat, jadi belum bisa dimasukkan ke angka 7 hari.</p>}
 
         <div className="pr-tabs">
           <button type="button" className={`pr-tab${tab === "stat" ? " on" : ""}`} onClick={() => setTab("stat")}><BarChart3 size={14} strokeWidth={1.8} /> Statistik</button>
@@ -228,7 +242,7 @@ function Progres() {
                         const t = sessType(s);
                         const meta = TYPE_META[t];
                         const inProg = s.score == null;
-                        const answered = s.stats?.answered ?? 0;
+                        const answered = answeredCount(s);
                         const pct = Math.round(((s.score ?? 0) / (s.total || 1)) * 100);
                         const tn = inProg ? "" : tone(pct);
                         const href = t === "choukai" ? `/choukai/${s.id}` : `/analisis-foto?session=${s.id}`;
@@ -237,7 +251,7 @@ function Progres() {
                             <div className={`pr-sess-ic ${meta.ic}`}>{meta.icon}</div>
                             <div className="pr-sess-m">
                               <div className="pr-sess-t"><span className="pr-jpt">{shortTitle(s.title)}</span> <span className={`pr-typetag ${meta.tt}`}>{meta.tag}</span>{inProg && <span className="pr-typetag" style={{ background: "rgba(212,160,74,0.14)", color: "var(--warning)", borderColor: "rgba(212,160,74,0.4)" }}>sedang dikerjain</span>}</div>
-                              <div className="pr-sess-s">{timeStr(s.created_at)} <span className="pr-dot" /> {s.total} soal</div>
+                              <div className="pr-sess-s">{hasPracticeDate(s) ? timeStr(activityAt(s)) : "Waktu latihan belum tercatat"} <span className="pr-dot" /> {s.total} soal</div>
                             </div>
                             <div className="pr-sess-score">{inProg
                               ? <><div className="pr-ss-pct" style={{ color: "var(--warning)" }}>{answered}</div><div className="pr-ss-frac">dijawab / {s.total}</div></>

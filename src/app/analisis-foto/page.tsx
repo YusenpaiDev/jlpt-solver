@@ -1,5 +1,7 @@
 "use client";
 
+import { assertProgressSaved, createSaveQueue } from "@/lib/save-progress";
+
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -66,6 +68,7 @@ interface UserProgress {
    tiap save, biar Statistik bisa fetch ringan (gak narik ai_result full).
    perCat keyed kategori asli soal: {文法:{a:answered,c:correct}, ...} */
 interface SessionStats {
+  last_practiced_at?: string;
   answered: number;
   correct: number;
   perCat: Record<string, { a: number; c: number }>;
@@ -377,9 +380,14 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const router = useRouter();
   // Snapshot progress pas masuk sesi — buat opsi "keluar tanpa simpan".
   const initialProgressRef = useRef<UserProgress | undefined>(result.user_progress);
+  const initialPracticeAtRef = useRef(result.stats?.last_practiced_at);
+  const resultRef = useRef(result);
+  const saveQueue = useRef(createSaveQueue());
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [exitTo,   setExitTo]   = useState<string | null>(null);
   /* Furigana kena 429 → lembar bawah / modal jatah habis. */
   const [jatahHabis, setJatahHabis] = useState<KuotaHabis | null>(null);
+  const [progressSaveError, setProgressSaveError] = useState(false);
   const [exitBusy, setExitBusy] = useState<"save" | "discard" | null>(null);
   const hasProgress = revealed.size > 0 || Object.keys(answers).length > 0;
   useEffect(() => {
@@ -422,25 +430,41 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     return result.questions.filter((q, qi) => rev.includes(qi) && ans[qi] && ans[qi] === q.correct).length;
   };
 
+  const cancelPendingAutosave = () => {
+    if (autosaveTimer.current !== null) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = null;
+  };
+  const writeSnapshot = (next: AIResult, score: number | null) => {
+    if (!sessionId) return Promise.resolve();
+    resultRef.current = next;
+    return saveQueue.current(async () => {
+      const saved = await createClient().from("sessions")
+        .update({ ai_result: next, score }).eq("id", sessionId).select("id").single();
+      assertProgressSaved(sessionId, saved);
+    });
+  };
+
   /* Tulis `progress` ke DB lalu navigasi client-side (gak micu beforeunload).
      mode "save" = pakai progress sekarang; "discard" = balikin snapshot awal.
      Flush manual penting krn auto-save di-debounce 600ms (bisa belum ke-flush). */
   const leaveWith = async (progress: UserProgress | undefined, mode: "save" | "discard") => {
     const dest = exitTo;
+    cancelPendingAutosave();
     if (sessionId && !isReview) {
       setExitBusy(mode);
       try {
         const nextResult: AIResult = {
-          ...result,
+          ...resultRef.current,
           user_progress: progress,
-          stats: computeStats(result.questions, progress?.answers ?? {}, progress?.revealed ?? []),
+          stats: { ...computeStats(result.questions, progress?.answers ?? {}, progress?.revealed ?? []), last_practiced_at: mode === "save" ? lastPracticeRef.current ?? result.stats?.last_practiced_at : initialPracticeAtRef.current },
         };
-        const supabase = createClient();
-        await supabase
-          .from("sessions")
-          .update({ ai_result: nextResult, score: scoreFromProgress(progress) })
-          .eq("id", sessionId);
-      } catch { /* tetap lanjut keluar walau gagal */ }
+        await writeSnapshot(nextResult, scoreFromProgress(progress));
+      } catch {
+        setProgressSaveError(true);
+        showToast("Progres belum tersimpan. Coba Simpan & keluar lagi.", false);
+        setExitBusy(null);
+        return;
+      }
       setExitBusy(null);
     }
     setExitTo(null);
@@ -503,6 +527,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   /* Pop-up blok teks diawasi di kolom soal. Di bawah 1024px panel kanan
      (Sensei/Kamus/Catatan) yang sama jadi lembar bawah — `panelHp` = kebuka. */
   const mainRef      = useRef<HTMLElement>(null);
+  const lastPracticeRef = useRef<string | undefined>(undefined);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const [panelHp,      setPanelHp]      = useState(false);
   const panelRef = useRef<HTMLElement>(null);
@@ -546,8 +571,19 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   /* ── Persist & edit helpers (Phase 1) ── */
   const persistResultJsonb = async (next: AIResult) => {
     if (!sessionId) return;
-    const supabase = createClient();
-    await supabase.from("sessions").update({ ai_result: next }).eq("id", sessionId);
+    cancelPendingAutosave();
+    const progress: UserProgress = { answers, revealed: Array.from(revealed), xp_claimed: scoreSaved, highlights };
+    const snapshot: AIResult = {
+      ...next, user_progress: progress,
+      stats: { ...computeStats(next.questions, answers, revealed), last_practiced_at: lastPracticeRef.current ?? resultRef.current.stats?.last_practiced_at },
+    };
+    try {
+      const complete = next.questions.length > 0 && next.questions.every((_,i)=>revealed.has(i));
+      await writeSnapshot(snapshot, complete ? snapshot.stats!.correct : null);
+      setProgressSaveError(false);
+    } catch {
+      setProgressSaveError(true);
+    }
   };
 
   const updateQuestionAt = (qi: number, patch: Partial<AIQuestion>) => {
@@ -962,6 +998,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     if (revealed.size === 0 && Object.keys(answers).length === 0 && !hasHl) return;
 
     const handle = setTimeout(async () => {
+      autosaveTimer.current = null;
       try {
         const total = result.questions.length;
         const isComplete = total > 0 && revealed.size === total;
@@ -978,21 +1015,19 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           highlights,
         };
         const nextResult: AIResult = {
-          ...result,
+          ...resultRef.current,
           user_progress: nextProgress,
-          stats: computeStats(result.questions, answers, revealed),
+          stats: { ...computeStats(resultRef.current.questions, answers, revealed), last_practiced_at: lastPracticeRef.current ?? result.stats?.last_practiced_at },
         };
 
-        const supabase = createClient();
-        await supabase
-          .from("sessions")
-          .update({ ai_result: nextResult, score: isComplete ? correctCount : null })
-          .eq("id", sessionId);
+        await writeSnapshot(nextResult, isComplete ? correctCount : null);
+        setProgressSaveError(false);
       } catch {
-        // silent — UI tetap responsif walau save gagal
+        setProgressSaveError(true);
       }
     }, 600);
 
+    autosaveTimer.current = handle;
     return () => clearTimeout(handle);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answers, revealed, highlights, sessionId, isReview]);
@@ -1063,6 +1098,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
      ulang. XP gak dibalikin & gak dobel (xp_claimed tetap true). Coretan
      stabilo dibiarin (catatan, bukan jawaban). */
   const resetSession = async () => {
+    cancelPendingAutosave();
     setKonfirmReset(false);
     setResetting(true);
     try {
@@ -1083,11 +1119,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           stats: { answered: 0, correct: 0, perCat: {} },
         };
         setResult(nextResult);
-        const supabase = createClient();
-        await supabase
-          .from("sessions")
-          .update({ ai_result: nextResult, score: null })
-          .eq("id", sessionId);
+        await writeSnapshot(nextResult, null);
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
@@ -1235,10 +1267,15 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 
   const pick = (qi: number, id: string) => {
     if (revealed.has(qi)) return;
+    lastPracticeRef.current = new Date().toISOString();
     setAnswers(a => ({ ...a, [qi]: id }));
     catatAktivitas("soal");
   };
-  const reveal = (qi: number) => setRevealed(r => new Set([...r, qi]));
+  const reveal = (qi: number) => {
+    if (!revealed.has(qi)) catatAktivitas("soal");
+    lastPracticeRef.current = new Date().toISOString();
+    setRevealed(r => new Set([...r, qi]));
+  };
 
   /* Trigger flash halo amber di baris kotoba — biar user notice entry-nya
      baru/refresh. Auto-clear 1.3s setelah animation selesai. */
@@ -1372,7 +1409,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
               {isSaved && (
                 <a href="/riwayat-soal" className="meta-chip status-saved">
                   <Check className="size-3" />
-                  Tersimpan otomatis · <span className="meta-link">Lihat riwayat →</span>
+                  {progressSaveError ? "Progres belum tersimpan — coba Simpan & keluar" : "Tersimpan otomatis"} · <span className="meta-link">Lihat riwayat →</span>
                 </a>
               )}
               {!isSaved && (

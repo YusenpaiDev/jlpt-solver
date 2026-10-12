@@ -1,5 +1,9 @@
 "use client";
 
+import { loadSessionPages } from "@/lib/session-data";
+
+import { activityAt, hasPracticeDate, answeredCount, correctCount, recentPractice } from "@/lib/session-progress";
+
 import { useEffect, useMemo, useState } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -27,6 +31,7 @@ interface SessionStats {
   perCat?: Record<string, { a: number; c: number }>;
 }
 interface RawSession {
+  kind?: string | null;
   id: string;
   level: Level | null;
   category: string | null;
@@ -98,7 +103,8 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
   const [streakDb, setStreakDb] = useState<{ sekarang: number; terpanjang: number; total_hari: number } | null>(null);
 
   const [userInitial, setUserInitial] = useState("Y");
-  const [period, setPeriod] = useState<Period>(30);
+  const [period, setPeriod] = useState<Period>(0);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   /* Gabung ringkasan dari DB sama total kata per level. Level yang belum pernah
@@ -147,15 +153,16 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
 
       const [sessionRes, wordsRes, kotobaRes, streakRes] = await Promise.all([
-        supabase.from("sessions").select("id, level, category, total, score, created_at, ai_result->stats")
+        loadSessionPages((from,to) => supabase.from("sessions").select("id, level, category, total, score, created_at, ai_result->stats, ai_result->kind")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false }).order("id").range(from,to)),
         supabase.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.rpc("ringkas_kotoba"),
         supabase.rpc("streak_saya", { p_hari_ini: tanggalLokal() }),
       ]);
 
-      setSessions((sessionRes.data ?? []) as RawSession[]);
+      setLoadError(Boolean(sessionRes.error));
+      setSessions(recentPractice((sessionRes.data ?? []) as RawSession[]));
       setSavedWordsCount(wordsRes.count ?? 0);
       // Migrasi kotoba-level.sql belum jalan → RPC-nya belum ada. Biarin kosong,
       // kartunya nampilin ajakan mulai latihan, bukan error.
@@ -168,11 +175,11 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
   }, []);
 
   /* ── Filtered subset for KPIs ── */
-  const inPeriod = useMemo(() => sessions.filter(s => withinPeriod(s.created_at, period)), [sessions, period]);
+  const inPeriod = useMemo(() => sessions.filter(s => period === 0 || (hasPracticeDate(s) && withinPeriod(activityAt(s), period))), [sessions, period]);
   const prevPeriod = useMemo(() => {
     if (period === 0) return [];
     return sessions.filter(s =>
-      !withinPeriod(s.created_at, period) && withinPeriod(s.created_at, period * 2)
+      hasPracticeDate(s) && !withinPeriod(activityAt(s), period) && withinPeriod(activityAt(s), period * 2)
     );
   }, [sessions, period]);
 
@@ -185,13 +192,13 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
       for (const [k, v] of Object.entries(st?.perCat ?? {})) {
         perCat[k] = { answered: v.a ?? 0, correct: v.c ?? 0 };
       }
-      m.set(s.id, { answered: st?.answered ?? 0, correct: st?.correct ?? 0, perCat });
+      m.set(s.id, { answered: answeredCount(s), correct: correctCount(s), perCat });
     });
     return m;
   }, [sessions]);
 
-  const totalSoal = inPeriod.reduce((s, r) => s + (r.total ?? 0), 0);
-  const totalSoalPrev = prevPeriod.reduce((s, r) => s + (r.total ?? 0), 0);
+  const totalSoal = inPeriod.reduce((s, r) => s + answeredCount(r), 0);
+  const totalSoalPrev = prevPeriod.reduce((s, r) => s + answeredCount(r), 0);
   const totalSoalDelta = totalSoal - totalSoalPrev;
 
   /* Akurasi overall = total benar ÷ total dijawab (gabung semua soal, partial
@@ -210,8 +217,9 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
      RPC-nya balik null dan halaman ini masih nunjukin angka dari sessions. */
   const longestDariSesi = useMemo(() => {
     if (sessions.length === 0) return 0;
-    const days = new Set(sessions.map(s => s.created_at.slice(0, 10)));
+    const days = new Set(sessions.filter(hasPracticeDate).map(s => activityAt(s).slice(0, 10)));
     const sorted = Array.from(days).sort();
+    if (!sorted.length) return 0;
     let best = 1, cur = 1;
     for (let i = 1; i < sorted.length; i++) {
       const prev = new Date(sorted[i - 1] + "T00:00:00").getTime();
@@ -243,9 +251,9 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
       const count = sessions.filter(s => {
-        const ts = new Date(s.created_at).getTime();
-        return ts >= d.getTime() && ts < next.getTime();
-      }).reduce((sum, s) => sum + (s.total ?? 0), 0);
+        const ts = new Date(activityAt(s)).getTime();
+        return hasPracticeDate(s) && ts >= d.getTime() && ts < next.getTime();
+      }).reduce((sum, s) => sum + answeredCount(s), 0);
       buckets.push({ m: MONTH_NAMES[d.getMonth()], v: count, current: i === 0 });
     }
     return buckets;
@@ -264,8 +272,8 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
     sessions.forEach(s => {
       const d = derived.get(s.id);
       if (!d) return;
-      const in7 = withinPeriod(s.created_at, 7);
-      const inPrev7 = !in7 && withinPeriod(s.created_at, 14);
+      const in7 = hasPracticeDate(s) && withinPeriod(activityAt(s), 7);
+      const inPrev7 = hasPracticeDate(s) && !in7 && withinPeriod(activityAt(s), 14);
       for (const [cat, cs] of Object.entries(d.perCat)) {
         bump(all, cat, cs);
         if (in7) bump(w7, cat, cs);
@@ -316,9 +324,10 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
     // sesi sehari / soal sehari
     const perDay = new Map<string, { sesi: number; soal: number }>();
     sessions.forEach(s => {
-      const k = s.created_at.slice(0, 10);
+      if (!hasPracticeDate(s)) return;
+      const k = activityAt(s).slice(0, 10);
       const prev = perDay.get(k) ?? { sesi: 0, soal: 0 };
-      perDay.set(k, { sesi: prev.sesi + 1, soal: prev.soal + (s.total ?? 0) });
+      perDay.set(k, { sesi: prev.sesi + 1, soal: prev.soal + answeredCount(s) });
     });
     const arr = Array.from(perDay.values());
     const maxSesiSehari = arr.length > 0 ? Math.max(...arr.map(d => d.sesi)) : 0;
@@ -338,9 +347,10 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
     // bulan terbaik
     const perMonth = new Map<string, number>();
     sessions.forEach(s => {
-      const d = new Date(s.created_at);
+      if (!hasPracticeDate(s)) return;
+      const d = new Date(activityAt(s));
       const k = `${d.getFullYear()}-${d.getMonth()}`;
-      perMonth.set(k, (perMonth.get(k) ?? 0) + (s.total ?? 0));
+      perMonth.set(k, (perMonth.get(k) ?? 0) + answeredCount(s));
     });
     const bulanArr = Array.from(perMonth.entries()).sort((a, b) => b[1] - a[1]);
     const bulanTerbaik = bulanArr[0]
@@ -357,7 +367,8 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
   const hourBuckets = useMemo(() => {
     const counts = new Array(HOUR_BUCKETS.length).fill(0);
     sessions.forEach(s => {
-      const h = new Date(s.created_at).getHours();
+      if (!hasPracticeDate(s)) return;
+      const h = new Date(activityAt(s)).getHours();
       const idx = HOUR_BUCKETS.findIndex((b, i) => {
         const next = HOUR_BUCKETS[i + 1]?.start ?? 24;
         return h >= b.start && h < next;
@@ -367,7 +378,7 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
     const max = Math.max(...counts, 1);
     return HOUR_BUCKETS.map((b, i) => ({ hour: b.label, v: counts[i] / max, count: counts[i] }));
   }, [sessions]);
-  const bestHour = hourBuckets.length > 0
+  const bestHour = hourBuckets.some(h=>h.count>0)
     ? hourBuckets.reduce((best, h) => h.v > best.v ? h : best, hourBuckets[0])
     : null;
 
@@ -385,7 +396,7 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
   const belumAdaData = !loading && sessions.length === 0
     && kotobaTotal.dikuasai + kotobaTotal.muncul + kotobaTotal.seringSalah === 0;
 
-  const inner = (
+  const inner = loadError ? <p role="alert">Statistik belum bisa dimuat. Coba muat ulang.</p> : (
     <>
       <header className="st-header">
           <div>

@@ -17,9 +17,11 @@ export interface BerandaMentah {
   nama: string;
   avatar: string | null;
   sessions: Record<string, unknown>[];
+  sessionError?: boolean;
   kotobaTotal: number | null;
   kotobaMingguIni: number | null;
   aktifTerakhir: string | null;
+  aktivitasHarian?: { tanggal: string; jumlah: number }[] | null;
   kotobaProgres: { word: string; benar: number; salah: number }[];
   bunpouProgres: { pattern: string; benar: number; salah: number }[];
 }
