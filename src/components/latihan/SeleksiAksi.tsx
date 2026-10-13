@@ -18,7 +18,10 @@ function diInput(n: Node | null): boolean {
   return !!el?.closest("input, textarea, [contenteditable=''], [contenteditable='true']");
 }
 
-type Posisi = { teks: string; x: number; y: number; bawah: boolean };
+/* `dok` = layar sentuh: bar nempel di bawah layar, bukan di dekat seleksi —
+   menu bawaan iOS/Android (Salin, Cari Tahu, …) bisa muncul di atas ATAU di
+   bawah seleksi dan posisinya gak bisa diatur dari web, jadi pasti tabrakan. */
+type Posisi = { teks: string; x: number; y: number; bawah: boolean; dok: boolean };
 
 /**
  * Blok teks di soal/pembahasan → bar kecil [Tanya Sensei] [Simpan ke Kamus]
@@ -38,9 +41,19 @@ export function SeleksiAksi({ wadah, nonaktif, onTanya, onKamus, onCatat }: {
   useEffect(() => {
     if (nonaktif) return;
     let raf = 0;
+    /* Mouse masih ditahan = lagi ngeblok. Bar baru muncul setelah dilepas —
+       kalau muncul di tengah drag dan kursor lewat di atasnya, seleksi melar
+       sampai posisi bar di DOM (ujung <body>) dan ngeblok satu halaman. */
+    let ditahan = false;
+    const tekan = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse" || (e.target as Element | null)?.closest?.(".seleksi-aksi")) return;
+      ditahan = true; setPos(null);
+    };
+    const lepas = (e: PointerEvent) => { if (e.pointerType === "mouse" && ditahan) { ditahan = false; baca(); } };
     const baca = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
+        if (ditahan) return;
         const sel = window.getSelection();
         const root = wadah.current;
         if (!sel || sel.isCollapsed || !sel.rangeCount || !root) { setPos(null); return; }
@@ -49,23 +62,31 @@ export function SeleksiAksi({ wadah, nonaktif, onTanya, onKamus, onCatat }: {
         const teks = teksBersih(range);
         if (!teks || teks.length > MAKS) { setPos(null); return; }
         const r = range.getBoundingClientRect();
-        // Di layar sentuh menu bawaan HP muncul di atas seleksi → bar ditaruh di bawahnya.
-        const bawah = window.matchMedia("(pointer: coarse)").matches || r.top < 64;
-        // Kira-kira setengah lebar bar — biar gak kepotong di tepi.
+        const dok = window.matchMedia("(pointer: coarse)").matches;
+        const bawah = r.top < 64;
+        // Kira-kira setengah lebar bar — dijaga tetap di dalam kolom soal, biar
+        // gak kepotong di tepi layar atau numpuk ke nav rail.
         const separuh = Math.min(240, window.innerWidth / 2);
-        const x = Math.min(Math.max(r.left + r.width / 2, separuh), window.innerWidth - separuh);
+        const kolom = root.getBoundingClientRect();
+        const kiri = Math.max(separuh + 8, kolom.left + separuh);
+        const kanan = Math.min(window.innerWidth - separuh - 8, kolom.right - separuh);
+        const x = Math.min(Math.max(r.left + r.width / 2, kiri), Math.max(kiri, kanan));
         setDisalin(false);
-        setPos({ teks, x, y: bawah ? r.bottom + 10 : r.top - 10, bawah });
+        setPos({ teks, x, y: bawah ? r.bottom + 10 : r.top - 10, bawah, dok });
       });
     };
     const tutup = (e: KeyboardEvent) => { if (e.key === "Escape") { window.getSelection()?.removeAllRanges(); setPos(null); } };
     document.addEventListener("selectionchange", baca);
+    document.addEventListener("pointerdown", tekan, true);
+    document.addEventListener("pointerup", lepas, true);
     window.addEventListener("scroll", baca, true);
     window.addEventListener("resize", baca);
     document.addEventListener("keydown", tutup);
     return () => {
       cancelAnimationFrame(raf);
       document.removeEventListener("selectionchange", baca);
+      document.removeEventListener("pointerdown", tekan, true);
+      document.removeEventListener("pointerup", lepas, true);
       window.removeEventListener("scroll", baca, true);
       window.removeEventListener("resize", baca);
       document.removeEventListener("keydown", tutup);
@@ -87,8 +108,8 @@ export function SeleksiAksi({ wadah, nonaktif, onTanya, onKamus, onCatat }: {
   return createPortal(
     <div
       role="toolbar" aria-label="Aksi teks terpilih"
-      className={`seleksi-aksi${pos.bawah ? " bawah" : ""}`}
-      style={{ left: pos.x, top: pos.y }}
+      className={`seleksi-aksi${pos.dok ? " dok" : pos.bawah ? " bawah" : ""}`}
+      style={pos.dok ? undefined : { left: pos.x, top: pos.y }}
       onMouseDown={e => e.preventDefault()}
     >
       <button type="button" onClick={jalankan(onTanya)}><MessageCircle size={14} strokeWidth={1.9} />Tanya Sensei</button>
