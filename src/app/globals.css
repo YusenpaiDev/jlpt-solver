@@ -8712,8 +8712,11 @@ html:has(.beranda-v2), body:has(.beranda-v2) { overflow-x: clip; }
   .beranda-v2 .bv-hero-bird { order: -1; justify-self: end; width: 140px; height: 140px; margin: -12px -6px 2px 0; }
   .beranda-v2 .bv-hero h1 { font-size: 26px; }
   /* gelembung boleh 2 baris di HP (≥768 tetap 1 baris) */
-  .beranda-v2 .bv-hero-say { border-radius: 18px; }
+  .beranda-v2 .bv-hero-say { border-radius: 18px; padding: 8px 14px; }
   .beranda-v2 .bv-hero-say span { white-space: normal; overflow: visible; }
+  /* Kepala Honix 30px di gelembung kekecilan & dobel sama Honix hero tepat
+     di atasnya — di HP gelembungnya teks aja. */
+  .beranda-v2 .bv-hero-say img { display: none; }
   .beranda-v2 .bv-resume { flex-wrap: wrap; gap: 12px; padding: 14px; }
   .beranda-v2 .bv-resume .res-m { flex: 1; min-width: 140px; }
   .beranda-v2 .bv-resume > .btn { width: 100%; min-height: 44px; }
