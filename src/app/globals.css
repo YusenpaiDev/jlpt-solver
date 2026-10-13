@@ -9431,6 +9431,19 @@ html:has(.beranda-v2), body:has(.beranda-v2) { overflow-x: clip; }
   animation: fade-in var(--dur-small) var(--ease-out-expo);
 }
 .seleksi-aksi.bawah { transform: translate(-50%, 0); }
+/* Bar gak boleh ikut keblok — kalau bisa, drag yang lewat di atasnya melarin seleksi. */
+.seleksi-aksi, .seleksi-aksi * { -webkit-user-select: none; user-select: none; }
+/* Layar sentuh: nempel di bawah, di atas bottom nav (nutup dock Sensei/Coret sementara). */
+.seleksi-aksi.dok {
+  left: 12px; right: 12px; top: auto; max-width: none; transform: none; justify-content: space-between;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+}
+.seleksi-aksi.dok { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.seleksi-aksi.dok button { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; font-size: 11px; line-height: 1.2; white-space: normal; text-align: center; }
+@media (min-width: 768px) {
+  .seleksi-aksi.dok { display: flex; bottom: 24px; left: 50%; right: auto; transform: translateX(-50%); }
+  .seleksi-aksi.dok button { flex-direction: row; min-height: 44px; padding: 0 12px; font-size: 12.5px; white-space: nowrap; }
+}
 .seleksi-aksi button {
   display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px;
   border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary);
