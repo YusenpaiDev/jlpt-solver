@@ -8707,16 +8707,22 @@ html:has(.beranda-v2), body:has(.beranda-v2) { overflow-x: clip; }
 @media (max-width: 767px) {
   .beranda-v2 .bv-top { flex-wrap: wrap; }
   .beranda-v2 .bv-top-r { width: 100%; flex-wrap: wrap; }
-  /* HP: Honix di baris sendiri di atas isi hero — gak numpuk ke teks/CTA */
-  .beranda-v2 .bv-hero { grid-template-columns: 1fr; padding: 22px 20px 24px; gap: 0; }
-  .beranda-v2 .bv-hero-bird { order: -1; justify-self: end; width: 140px; height: 140px; margin: -12px -6px 2px 0; }
-  .beranda-v2 .bv-hero h1 { font-size: 26px; }
-  /* gelembung boleh 2 baris di HP (≥768 tetap 1 baris) */
-  .beranda-v2 .bv-hero-say { border-radius: 18px; padding: 8px 14px; }
+  /* HP: Honix sakura nempel di pojok kanan atas hero (absolute, nongol ke atas
+     kartu), bukan baris sendiri — dulu bikin ruang kosong gede di kiri. Isi
+     hero mulai dari atas; eyebrow & judul dikasih ruang kanan biar gak ketimpa. */
+  .beranda-v2 .bv-hero { grid-template-columns: 1fr; padding: 22px; gap: 0; overflow: visible; min-height: 0; }
+  .beranda-v2 .bv-hero-bird {
+    position: absolute; top: -36px; right: -14px; z-index: 1; margin: 0; pointer-events: none;
+    width: clamp(160px, 48vw, 210px); height: clamp(160px, 48vw, 210px);
+  }
+  .beranda-v2 .bv-hero-eye, .beranda-v2 .bv-hero h1 { padding-right: 42%; }
+  /* 2 baris: "おかえり, Nama" / "頑張ろう!" — ngecil dikit di layar sempit (360px) */
+  .beranda-v2 .bv-hero h1 { font-size: clamp(21px, 6.4vw, 26px); }
+  .beranda-v2 .bv-hero h1 .jp { display: block; }
+  /* gelembung boleh 2 baris di HP (≥768 tetap 1 baris); latar solid biar tetap
+     kebaca walau ekor Honix menjuntai di belakangnya */
+  .beranda-v2 .bv-hero-say { position: relative; z-index: 3; border-radius: 22px; background: rgba(26,22,32,.92); }
   .beranda-v2 .bv-hero-say span { white-space: normal; overflow: visible; }
-  /* Kepala Honix 30px di gelembung kekecilan & dobel sama Honix hero tepat
-     di atasnya — di HP gelembungnya teks aja. */
-  .beranda-v2 .bv-hero-say img { display: none; }
   .beranda-v2 .bv-resume { flex-wrap: wrap; gap: 12px; padding: 14px; }
   .beranda-v2 .bv-resume .res-m { flex: 1; min-width: 140px; }
   .beranda-v2 .bv-resume > .btn { width: 100%; min-height: 44px; }
