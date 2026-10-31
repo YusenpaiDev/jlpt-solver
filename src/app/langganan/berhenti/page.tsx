@@ -6,7 +6,6 @@ import Link from "next/link";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useBayar } from "@/lib/bayar";
-import { BATAS, KOSAKATA_FREE } from "@/lib/batas-paket";
 import { useLangganan, sisaHari, tglPanjang } from "@/lib/langganan";
 
 /**
@@ -79,10 +78,10 @@ export default function Berhenti() {
               </div>
               {gagal && <p className="py-galat" role="alert">Gagal menyimpan. Coba lagi sebentar.</p>}
               <p className="py-pp">
-                Setelah masa berlaku lewat, akunmu turun ke Free. Semua catatan, kosakata, dan riwayat latihanmu <b>tetap tersimpan</b> — yang berubah hanya batas harian.
+                Setelah masa berlaku lewat, akses belajar berakhir. Semua catatan, kosakata, dan riwayat latihanmu <b>tetap tersimpan</b> — berlangganan kembali untuk melanjutkan.
               </p>
               <p className="py-pp">
-                Kosakata di atas {KOSAKATA_FREE} <b>tidak dihapus</b>, cuma tidak bisa nambah sampai kamu Pro lagi. Bank soal ujian, latihan dengar, dan materi tetap terbuka seperti biasa.
+                Data belajarmu <b>tidak dihapus</b>. Masa percobaan tidak dimulai ulang setelah langganan habis.
               </p>
               {berjangka && (
                 <div className="py-acts">
@@ -99,15 +98,15 @@ export default function Berhenti() {
             </section>
 
             <section>
-              <div className="py-eyebrow">Batasmu setelah turun ke Free</div>
+              <div className="py-eyebrow">Setelah langganan berakhir</div>
               <div className="py-kv"><span className="py-kv-k">Chat AI</span>
-                <span className="py-kv-v">{BATAS.chat.pro} → <b className="down">{BATAS.chat.free}</b> / hari</span></div>
+                <span className="py-kv-v"><b className="down">Perlu langganan aktif</b></span></div>
               <div className="py-kv"><span className="py-kv-k">Furigana</span>
-                <span className="py-kv-v">{BATAS.furigana.pro} → <b className="down">{BATAS.furigana.free}</b> / hari</span></div>
+                <span className="py-kv-v"><b className="down">Perlu langganan aktif</b></span></div>
               <div className="py-kv"><span className="py-kv-k">Kosakata disimpan</span>
-                <span className="py-kv-v">Tanpa batas → <b className="down">maks {KOSAKATA_FREE}</b></span></div>
+                <span className="py-kv-v"><b>Tetap tersimpan</b></span></div>
               <p className="py-foot">
-                Bank soal 過去問, latihan dengar beraudio, dan materi Kotoba &amp; Bunpou <b>tidak termasuk batas ini</b> — semuanya tetap terbuka.
+                Bank soal, latihan dengar, dan materi dapat digunakan selama trial atau langganan aktif.
               </p>
             </section>
           </div>

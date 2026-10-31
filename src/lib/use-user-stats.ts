@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { statusAkses } from "@/lib/batas-paket";
 import { fetchProAccess } from "@/lib/access";
 import { tanggalLokal } from "@/lib/aktivitas";
 import { EVENT_XP_TERSIMPAN, XP_PER_LEVEL } from "@/lib/honix-level";
@@ -40,6 +41,7 @@ export interface UserStats {
   /** Level yang dipilih user waktu onboarding / di Pengaturan. */
   targetLevel: TargetLevel;
   isPro: boolean;
+  akses: ReturnType<typeof statusAkses>;
   /** Kapan akses Pro habis. null = gak punya langganan berjangka. */
   premiumUntil: string | null;
   /** Lifetime: gak punya tanggal habis sama sekali. */
@@ -60,6 +62,7 @@ const AWAL: UserStats = {
   xpTarget: XP_PER_LEVEL,
   targetLevel: "N3",   // samain sama default kolom profiles.target_level
   isPro: false,
+  akses: statusAkses(null, false),
   premiumUntil: null,
   isLifetime: false,
   examDate: null,
@@ -132,6 +135,7 @@ export function useUserStats(): UserStats {
         // Jangan hitung ulang dari email di sini: daftarnya udah gak ada di
         // client, dan entitlement yang dihitung di browser gampang dipalsuin.
         isPro,
+        akses: statusAkses(user.created_at, isPro),
         premiumUntil: (profil?.premium_until as string | null) ?? null,
         isLifetime: profil?.is_lifetime === true,
         examDate,

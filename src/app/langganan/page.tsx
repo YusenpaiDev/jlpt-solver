@@ -1,7 +1,8 @@
 "use client";
 
 import "@/styles/pembayaran.css";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
@@ -9,10 +10,10 @@ import { Meter } from "@/components/pembayaran/Meter";
 import { PengingatPro } from "@/components/pembayaran/PengingatPro";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useBayar } from "@/lib/bayar";
-import { BATAS, KOSAKATA_FREE, NAMA_FITUR, type Fitur } from "@/lib/batas-paket";
+import { NAMA_FITUR, type Fitur } from "@/lib/batas-paket";
 import { PAKET, rupiah } from "@/lib/paket";
 import {
-  useLangganan, sisaHari, hasilPerpanjang, isiMeter, namaPendek,
+  useLangganan, sisaHari, hasilPerpanjang, namaPendek,
   tglPanjang, tglPendek, tglJam, LABEL_TX,
 } from "@/lib/langganan";
 
@@ -28,6 +29,12 @@ interface Tx { order_id: string; paket_id: string; jumlah: number; status: strin
 
 const PER_HALAMAN = 6;
 const FITUR_METER: Fitur[] = ["chat", "furigana"];
+
+function PeringatanAkses() {
+  const params = useSearchParams();
+  return params.get("status") === "unavailable"
+    ? <p role="alert">Status akses belum bisa diperiksa. Coba muat ulang sebentar lagi.</p> : null;
+}
 
 export default function Langganan() {
   const stats = useUserStats();
@@ -72,7 +79,7 @@ export default function Langganan() {
     (async () => {
       const sb = createClient();
       const hasil = await Promise.all(FITUR_METER.map(f =>
-        sb.rpc("sisa_kuota", { p_fitur: f, p_batas: l.isPro ? BATAS[f].pro : BATAS[f].free })));
+        sb.rpc("sisa_kuota", { p_fitur: f, p_batas: null })));
       const { data: n } = await sb.rpc("jumlah_kotoba_saya");
       if (batal) return;
       const p: Partial<Record<Fitur, number>> = {};
@@ -116,6 +123,7 @@ export default function Langganan() {
           avatarLetter={stats.initial} isPro={stats.isPro} />
 
         <div className="py">
+          <Suspense fallback={null}><PeringatanAkses /></Suspense>
           <Breadcrumb items={[{ label: "Pengaturan", href: "/pengaturan" }, { label: "Langganan" }]} />
           <div className="py-hd" style={{ marginTop: 10 }}>
             <div>
@@ -179,11 +187,12 @@ export default function Langganan() {
                   </>
                 ) : (
                   <>
-                    <div className="py-stat py-s-off"><span className="py-d off" />TIDAK AKTIF</div>
+                    <div className="py-stat py-s-off"><span className="py-d off" />{l.akses.status === "trial" ? "PERCOBAAN 7 HARI" : "AKSES BERAKHIR"}</div>
                     <p className="py-lead">
-                      {l.premiumUntil
-                        ? <>Pro-mu berakhir {tglPanjang(l.premiumUntil)}. Akunmu sekarang di paket <b>Free</b> — catatan, kosakata, dan riwayatmu tetap tersimpan.</>
-                        : <>Kamu di paket <b>Free</b>. Bank soal ujian, latihan dengar, dan materi terbuka penuh; jatah fitur AI dibatasi per hari.</>}
+                      {l.akses.status === "trial"
+                        ? <>Masa percobaan 7 hari aktif sampai <b>{tglJam(l.akses.trialUntil!)}</b>. Semua fitur terbuka selama masa percobaan.</>
+                        : <>Masa percobaan atau langgananmu telah berakhir. Berlangganan Pro untuk melanjutkan. Catatan, kosakata, dan riwayatmu tetap tersimpan.</>}
+
                     </p>
                   </>
                 )}
@@ -191,28 +200,15 @@ export default function Langganan() {
                 <hr className="py-hr" />
                 <div className="py-eyebrow">Pemakaian hari ini</div>
                 <div className="py-usage2">
-                  {FITUR_METER.map(f => {
-                    const batas = l.isPro ? BATAS[f].pro : BATAS[f].free;
-                    const n = pakai[f] ?? 0;
-                    return (
-                      <Meter key={f} label={NAMA_FITUR[f]} nilai={`${n} / ${batas}`}
-                        persen={(n / batas) * 100} isi={isiMeter(n, batas)} />
-                    );
-                  })}
-                  {l.isPro ? (
-                    <Meter penuh label="Kosakata disimpan" nilai="Tanpa batas" warnaNilai="var(--py-ok)"
-                      persen={100} isi="py-f-ok" />
-                  ) : (
-                    <Meter penuh label="Kosakata disimpan"
-                      nilai={`${kosakata ?? 0} / ${KOSAKATA_FREE}`}
-                      persen={((kosakata ?? 0) / KOSAKATA_FREE) * 100}
-                      isi={isiMeter(kosakata ?? 0, KOSAKATA_FREE)} />
-                  )}
+                  {FITUR_METER.map(f => (
+                    <Meter key={f} label={NAMA_FITUR[f]}
+                      nilai={`${pakai[f] ?? 0} pemakaian · ${l.akses.boleh ? "tanpa batas" : "akses berakhir"}`}
+                      persen={0} isi="py-f-ok" />
+                  ))}
+                  <Meter penuh label="Kosakata disimpan" nilai={`${kosakata ?? 0} kata`}
+                    persen={0} isi="py-f-ok" />
                 </div>
-                <p className="py-foot">
-                  Batas reset tiap <b>00:00 WIB</b>.
-                  {berjangka && " Kalau langgananmu habis, angka ini turun ke batas Free."}
-                </p>
+                <p className="py-foot">Pro dan masa percobaan aktif tidak memiliki kuota harian. Masa percobaan berakhir 7 hari sejak akun dibuat.</p>
 
                 {!l.isLifetime && (berjangka || !l.isPro) && (
                   <>

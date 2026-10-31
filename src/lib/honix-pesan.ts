@@ -11,7 +11,7 @@ export const PESAN = {
   hi: ["Mantap! Apinya makin nyala.", "Keren, hampir sempurna!", "Kamu lagi on fire hari ini.", "Pola-pola ini mulai nempel nih.", "Satu set lagi, makin mantap!"],
   mid: ["Lumayan! Cek dulu yang meleset, yuk.", "Udah lebih dari setengah. Lanjut!", "Yang salah itu bahan belajar terbaik.", "Tinggal sedikit lagi. Lihat pembahasannya, ya."],
   lo: ["Phoenix selalu bangkit lagi. Coba lagi?", "Gak apa-apa, salah itu bagian dari belajar.", "Soalnya emang licin. Pelan-pelan aja.", "Bangkit lagi, kali ini pasti lebih baik."],
-  pro: ["Pro kamu udah nyala!", "Sekarang Honix bisa nemenin lebih lama.", "Siap! {chat} chat Sensei per hari."],
+  pro: ["Pro kamu udah nyala!", "Sekarang Honix bisa nemenin lebih lama.", "Siap! Chat Sensei sekarang tanpa batas."],
   proses: ["Tenang, pembayaranmu udah sampai.", "Honix lagi nungguin konfirmasi bank.", "Gak perlu bayar lagi, nanti nyala sendiri."],
   jatah: ["Honix tidur dulu, besok bangun lagi.", "Istirahat dulu. Materi lain masih bisa.", "Jatahnya habis, semangatnya jangan."],
   kosongRiwayat: ["Belum ada latihan di sini.", "Honix lagi baca-baca dulu.", "Riwayatmu masih kosong."],

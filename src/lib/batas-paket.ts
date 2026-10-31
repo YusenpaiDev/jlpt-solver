@@ -1,24 +1,22 @@
-/**
- * Batas Free vs Pro — SATU sumber buat server (kuota.ts) dan semua layar
- * yang nyebut angkanya: Pro aktif, /langganan, jatah habis, /langganan/berhenti,
- * Pengaturan. File ini sengaja gak import apa pun dari server, biar aman
- * di-bundle ke browser.
- *
- * Batas Free = janji di halaman harga. Batas Pro = rem biaya, bukan jualan.
- * Angka Pro DIPILIH DARI BIAYA, bukan dari rasa lega:
- *   furigana  Haiku, tapi max_tokens 4.000 dan sering dipanggil → diam-diam
- *             mahal kalau dibiarin di 500/hari.
- *   chat      max_tokens 280, paling murah per panggilan.
- *
- * Kalau salah satu angka di sini diubah, ubah juga daftar fitur & tabel
- * banding di src/app/premium/page.tsx — halaman itu nyebut angkanya terang
- * terangan, dan janji yang gak cocok sama kode itu yang bikin repot.
+/** Pro dan trial aktif tidak memiliki kuota harian.
+ * `free` hanya untuk membaca respons kuota dari versi aplikasi lama.
+ * null berarti tanpa batas; jangan ganti dengan angka besar atau Infinity.
  */
 export const BATAS = {
-  chat:              { free: 5,  pro: 50  },
-  furigana:          { free: 20, pro: 100 },
-  "tugas-generate":  { free: 5,  pro: 30  },
+  chat: { free: 5, pro: null },
+  furigana: { free: 20, pro: null },
+  "tugas-generate": { free: 5, pro: null },
 } as const;
+
+export const TRIAL_HARI = 7;
+export function statusAkses(dibuat: string | null | undefined, isPro: boolean, kini = Date.now()) {
+  const mulai = dibuat ? Date.parse(dibuat) : NaN;
+  const selesai = mulai + TRIAL_HARI * 86_400_000;
+  const trialUntil = Number.isFinite(selesai) ? new Date(selesai).toISOString() : null;
+  const trialAktif = Number.isFinite(mulai) && mulai <= kini && kini < selesai;
+  const status = isPro ? "pro" : trialAktif ? "trial" : "expired";
+  return { status, boleh: isPro || trialAktif, trialUntil } as const;
+}
 
 export type Fitur = keyof typeof BATAS;
 
@@ -27,9 +25,6 @@ export const NAMA_FITUR: Record<Fitur, string> = {
   furigana: "Furigana",
   "tugas-generate": "Lembar tugas AI",
 };
-
-/** Ditegakkan di DB lewat policy "saved_words: cap free" (kuota-free.sql). */
-export const KOSAKATA_FREE = 50;
 
 export const adalahFitur = (f: unknown): f is Fitur =>
   typeof f === "string" && f in BATAS;

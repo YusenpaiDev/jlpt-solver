@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchProAccess } from "@/lib/access";
+import { statusAkses } from "@/lib/batas-paket";
 import { PAKET, adalahPaket } from "@/lib/paket";
 
 /**
@@ -61,6 +62,7 @@ export const isiMeter = (pakai: number, batas: number) => {
 
 export interface Langganan {
   loaded: boolean;
+  akses: ReturnType<typeof statusAkses>;
   isPro: boolean;
   isLifetime: boolean;
   premiumUntil: string | null;
@@ -70,7 +72,7 @@ export interface Langganan {
 
 export function useLangganan(): Langganan & { setPengingat: (v: boolean) => Promise<boolean> } {
   const [d, setD] = useState<Langganan>({
-    loaded: false, isPro: false, isLifetime: false, premiumUntil: null, pengingat: true,
+    akses: statusAkses(null, false), loaded: false, isPro: false, isLifetime: false, premiumUntil: null, pengingat: true,
   });
 
   useEffect(() => {
@@ -89,6 +91,7 @@ export function useLangganan(): Langganan & { setPengingat: (v: boolean) => Prom
       ]);
       if (batal) return;
       setD({
+        akses: statusAkses(user.created_at, isPro),
         loaded: true,
         isPro,
         isLifetime: profil?.is_lifetime === true,

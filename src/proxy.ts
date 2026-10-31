@@ -1,3 +1,4 @@
+import { statusAkses } from "@/lib/batas-paket";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -66,11 +67,27 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Halaman akun dan pembayaran tetap dapat dibuka setelah akses berakhir.
+  const path = request.nextUrl.pathname;
+  const akun = ["/pengaturan", "/langganan", "/onboarding", "/api/payment"]
+    .some(p => path === p || path.startsWith(`${p}/`));
+  if (user && !isPublic && !akun) {
+    const { data: pro, error } = await supabase.rpc("is_pro");
+    const akses = statusAkses(user.created_at, pro === true);
+    const unavailable = Boolean(error) || typeof pro !== "boolean";
+    if (unavailable || !akses.boleh) {
+      const response = path.startsWith("/api/")
+        ? NextResponse.json({ error: unavailable ? "Status akses belum bisa diperiksa." : "Masa percobaan atau langgananmu sudah berakhir. Berlangganan Pro untuk melanjutkan.", code: unavailable ? "access_unavailable" : "subscription_required" }, { status: unavailable ? 503 : 403 })
+        : NextResponse.redirect(new URL(`/langganan${unavailable ? "?status=unavailable" : ""}`, request.url));
+      supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
+      return response;
+    }
+  }
   return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff|woff2|ttf|otf)$).*)",
   ],
 };
