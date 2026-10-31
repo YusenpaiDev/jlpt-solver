@@ -80,6 +80,17 @@ export async function ambilDasbor(kini = new Date()) {
       .then(({ count, error }) => (error ? null : count ?? 0)),
   ]);
 
+  /* Pencatat error (migration 20261101-error-log.sql). Tabel belum ada → null. */
+  const sejak24 = new Date(kini.getTime() - HARI).toISOString();
+  const [errHitung, errTerbaru] = await Promise.all([
+    sb.from("error_log").select("id", { count: "exact", head: true }).gte("waktu", sejak24),
+    sb.from("error_log").select("waktu, sumber, pesan, path, rute").order("waktu", { ascending: false }).limit(10),
+  ]);
+  const error = errHitung.error || errTerbaru.error ? null : {
+    hari: errHitung.count ?? 0,
+    terbaru: (errTerbaru.data ?? []) as { waktu: string; sumber: string; pesan: string; path: string | null; rute: string | null }[],
+  };
+
   const emailDari = new Map(users.map(u => [u.id, u.email]));
   const bankSoalPerLevel = Object.fromEntries(bankSoal) as Record<string, Record<string, number>>;
   return {
@@ -95,6 +106,7 @@ export async function ambilDasbor(kini = new Date()) {
       totalBankSoal: Object.values(bankSoalPerLevel).reduce((s, k) => s + Object.values(k).reduce((a, b) => a + b, 0), 0),
       sesiReview,
     },
+    error,
   };
 }
 

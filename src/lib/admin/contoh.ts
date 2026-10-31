@@ -33,6 +33,10 @@ export function dasborContoh(kini = new Date()): DasborAdmin {
       terakhir: tx.slice(0, 10).map((t, i) => ({ ...t, email: `user${i}@contoh.id` })),
     },
     pemakaian: ringkasPemakaian(sesi, usage, kini),
+    error: { hari: 2, terbaru: [
+      { waktu: lalu(0.1), sumber: "browser", pesan: "TypeError: Cannot read properties of undefined (reading 'questions')", path: "/analisis-foto", rute: null },
+      { waktu: lalu(0.6), sumber: "server", pesan: "Gagal menghubungi Anthropic: 529 overloaded", path: "/api/chat", rute: "route /api/chat" },
+    ] },
     konten: { bankSoal, totalBankSoal: Object.values(bankSoal).reduce((s, k) => s + Object.values(k).reduce((a, b) => a + b, 0), 0), sesiReview: 4 },
   };
 }

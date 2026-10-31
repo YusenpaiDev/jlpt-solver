@@ -53,3 +53,4 @@
   .adm-dua { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 480px) { .adm-kartu strong { font-size: 22px; } }
+.adm-tabel td.adm-pesan { white-space: normal; min-width: 280px; color: var(--text-secondary); }

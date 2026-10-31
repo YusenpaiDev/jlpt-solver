@@ -71,7 +71,7 @@ export async function proxy(request: NextRequest) {
 
   // Halaman akun dan pembayaran tetap dapat dibuka setelah akses berakhir.
   const path = request.nextUrl.pathname;
-  const akun = ["/pengaturan", "/langganan", "/onboarding", "/api/payment"]
+  const akun = ["/pengaturan", "/langganan", "/onboarding", "/api/payment", "/api/log-error"]
     .some(p => path === p || path.startsWith(`${p}/`));
   if (user && !isPublic && !akun) {
     const { data: pro, error } = await supabase.rpc("is_pro");

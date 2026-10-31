@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { GeistSans } from "geist/font/sans";
 import { HonixLevelUp } from "@/components/honix/HonixLevelUp";
+import { PencatatError } from "@/components/PencatatError";
 import "./fonts/noto-jp.css";
 import "./globals.css";
 
@@ -57,6 +58,7 @@ export default function RootLayout({
       <body className="min-h-screen app-canvas">
         {children}
         <HonixLevelUp />
+        <PencatatError />
       </body>
     </html>
   );
