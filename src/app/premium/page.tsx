@@ -19,7 +19,7 @@ interface PlanFeature {
 }
 
 interface Plan {
-  id: "free" | "pro" | "lifetime";
+  id: "trial" | "pro" | "lifetime";
   name: string;
   tagline: string;
   monthly: number | null;
@@ -34,21 +34,21 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: "free",
-    name: "Sensei Free",
-    tagline: "Buat eksplor & latihan ringan",
+    id: "trial",
+    name: "Percobaan 7 hari",
+    tagline: "Akses penuh selama 7 hari sejak tanggal daftar",
     monthly: 0,
     yearly: 0,
-    cta: "Plan kamu sekarang",
+    cta: "Lihat status percobaan",
     color: "slate",
     features: [
       { t: "Bank soal 過去問 lengkap", on: true },
       { t: "Choukai + audio per soal", on: true },
       { t: "Materi Kotoba & Bunpou", on: true },
-      { t: "50 kotoba tersimpan di Kamus", on: true },
-      { t: "5 chat Sensei AI / hari", on: true },
-      { t: "Kotoba tersimpan tanpa batas", on: false },
-      { t: "50 chat Sensei AI / hari", on: false },
+      { t: "Kotoba tersimpan tanpa batas", on: true },
+      { t: "Chat Sensei AI tanpa batas", on: true },
+      { t: "Furigana dan lembar tugas AI", on: true },
+      { t: "Berakhir 7 hari sejak daftar", on: true },
     ],
   },
   {
@@ -63,8 +63,8 @@ const PLANS: Plan[] = [
     color: "iris",
     features: [
       { t: "Kotoba tersimpan tanpa batas", on: true, highlight: true },
-      { t: "50 chat Sensei AI / hari", on: true, highlight: true },
-      { t: "100 furigana / hari", on: true },
+      { t: "Chat Sensei AI tanpa batas", on: true, highlight: true },
+      { t: "Furigana tanpa batas", on: true },
       { t: "Bank soal 過去問 lengkap", on: true },
       { t: "Choukai + audio per soal", on: true },
       { t: "Materi Kotoba & Bunpou", on: true },
@@ -88,19 +88,19 @@ const PLANS: Plan[] = [
 
 interface CompareRow {
   label: string;
-  free: string | boolean;
+  trial: string | boolean;
   pro: string | boolean;
   life: string | boolean;
 }
 
 const COMPARE: CompareRow[] = [
-  { label: "Bank soal 過去問",         free: "Lengkap",     pro: "Lengkap",      life: "Lengkap" },
-  { label: "Choukai + audio",          free: true,          pro: true,           life: true },
-  { label: "Materi Kotoba & Bunpou",   free: true,          pro: true,           life: true },
-  { label: "Kotoba tersimpan",         free: "50 max",      pro: "Tanpa batas",  life: "Tanpa batas" },
-  { label: "Chat Sensei AI",           free: "5 / hari",    pro: "50 / hari",    life: "50 / hari" },
-  { label: "Furigana otomatis",        free: "20 / hari",   pro: "100 / hari",   life: "100 / hari" },
-  { label: "Perpanjangan",             free: "—",           pro: "Bulanan",      life: "Sekali bayar" },
+  { label: "Bank soal 過去問",         trial: "Lengkap",     pro: "Lengkap",      life: "Lengkap" },
+  { label: "Choukai + audio",          trial: true,          pro: true,           life: true },
+  { label: "Materi Kotoba & Bunpou",   trial: true,          pro: true,           life: true },
+  { label: "Kotoba tersimpan",         trial: "Tanpa batas",      pro: "Tanpa batas",  life: "Tanpa batas" },
+  { label: "Chat Sensei AI",           trial: "Tanpa batas",    pro: "Tanpa batas",    life: "Tanpa batas" },
+  { label: "Furigana otomatis",        trial: "Tanpa batas",   pro: "Tanpa batas",   life: "Tanpa batas" },
+  { label: "Perpanjangan",             trial: "—",           pro: "Bulanan",      life: "Sekali bayar" },
 ];
 
 /* ⚠️ KONTAK: ganti KONTAK_SUPPORT di bawah sama email/WA yang beneran kamu
@@ -113,9 +113,9 @@ const FAQ = [
   { q: "Gimana cara bayarnya?",
     a: `Sekarang masih manual: hubungi ${KONTAK_SUPPORT}, transfer, terus akses Pro-nya diaktifin. Pembayaran otomatis (kartu, GoPay, QRIS) lagi disiapin.` },
   { q: "Bisa berhenti kapan saja?",
-    a: "Bisa. Pro itu bulanan — kalau gak diperpanjang, akses Pro berhenti di akhir periode dan akunmu balik ke Free. Gak ada ikatan." },
-  { q: "Kalau balik ke Free, kotoba & catatan saya hilang?",
-    a: "Nggak. Semua data kamu tetap ada. Yang berubah cuma batas hariannya — dan kotoba di atas 50 tetap kesimpen, cuma gak bisa nambah lagi sampai berlangganan." },
+    a: "Bisa. Pro itu bulanan — kalau gak diperpanjang, akses Pro berhenti di akhir periode dan akses belajar berakhir. Gak ada ikatan." },
+  { q: "Kalau langganan habis, kotoba & catatan saya hilang?",
+    a: "Nggak. Semua data kamu tetap ada. Berlangganan kembali untuk melanjutkan belajar. Masa percobaan tidak dimulai ulang." },
   { q: "Bedanya Pro vs Lifetime apa?",
     a: "Fitur identik. Pro dibayar bulanan; Lifetime sekali bayar buat akses selamanya, termasuk fitur yang nyusul nanti." },
   { q: "Bank soalnya beneran soal asli?",
@@ -135,7 +135,7 @@ export default function Premium() {
   /* Paket aktif dari status PRO yang sebenarnya — whitelist email atau flag
      is_premium hasil bayar (logikanya di access.ts). Skema belum punya kolom
      buat mbedain pro vs lifetime, jadi keduanya kebaca "pro". */
-  const currentPlan: "free" | "pro" | "lifetime" = stats.isPro ? "pro" : "free";
+  const currentPlan = stats.isLifetime ? "lifetime" : stats.isPro ? "pro" : stats.akses.status === "trial" ? "trial" : null;
   const xp = stats.xp;
   const xpTarget = stats.xpTarget;
 
@@ -162,6 +162,7 @@ export default function Premium() {
   const paying = payingPaket === "lifetime" ? "lifetime" : payingPaket ? "pro" : null;
 
   const handlePay = (planId: string) => {
+    if (planId === "trial") { window.location.assign("/langganan"); return; }
     const paketId = paketDari(planId);
     if (paketId) bayar(paketId);
   };
@@ -189,12 +190,12 @@ export default function Premium() {
           </div>
           <h1 className="pr-title">
             Belajar JLPT <span className="pr-title-jp">真剣に</span>.<br />
-            Jatah harian <span className="pr-grad">jauh lebih lega</span>.
+            Pro <span className="pr-grad">tanpa batas pemakaian</span>.
           </h1>
           <p className="pr-sub">
-            Jatah harian naik banyak: 50 chat Sensei, 100 furigana, 30 generate soal.
-            Kotoba tersimpan tanpa batas. Bank soal 過去問 dan choukai beraudio kebuka
-            buat semua — mulai Rp 99.000/bulan (Paket Ujian 6 bulan).
+            Coba semua fitur selama 7 hari sejak tanggal daftar. Lanjutkan dengan Pro:
+            chat AI, furigana, lembar tugas, dan kosakata tanpa kuota harian
+            — mulai Rp 99.000/bulan (Paket Ujian 6 bulan).
           </p>
 
           <div className="pr-toggle">
@@ -237,14 +238,14 @@ export default function Premium() {
           <div className="cmp-table glass-card">
             <div className="cmp-row cmp-head">
               <span className="cmp-feature">Fitur</span>
-              <span className="cmp-col">Free</span>
+              <span className="cmp-col">Trial 7 hari</span>
               <span className="cmp-col pop">Pro</span>
               <span className="cmp-col gold">Lifetime</span>
             </div>
             {COMPARE.map(r => (
               <div className="cmp-row" key={r.label}>
                 <span className="cmp-feature">{r.label}</span>
-                <span className="cmp-col">{renderCell(r.free)}</span>
+                <span className="cmp-col">{renderCell(r.trial)}</span>
                 <span className="cmp-col pop">{renderCell(r.pro)}</span>
                 <span className="cmp-col gold">{renderCell(r.life)}</span>
               </div>
@@ -345,7 +346,7 @@ function PlanCard({
         {price === 0 ? (
           <>
             <span className="plan-amount">Rp 0</span>
-            <span className="plan-period">selamanya</span>
+            <span className="plan-period">selama 7 hari sejak daftar</span>
           </>
         ) : isLifetime ? (
           <>
@@ -370,7 +371,7 @@ function PlanCard({
         onClick={onPay}
       >
         {isCurrent ? "Plan kamu sekarang" : paying ? "Memproses..." : plan.cta}
-        {!isCurrent && !paying && !isLifetime && plan.id !== "free" && (
+        {!isCurrent && !paying && !isLifetime && plan.id !== "trial" && (
           <span className="plan-cta-arrow">→</span>
         )}
       </button>

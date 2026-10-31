@@ -1337,9 +1337,13 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const chatHabis = chatMsgs.findLast(m => m.kuota)?.kuota;
   const chatMasihHabis = chatHabis && new Date(chatHabis.resetAt).getTime() > Date.now() ? chatHabis : null;
 
+  const chatQuestionRef = useRef(0);
+
   const sendChat = async () => {
     if (!chatInput.trim() || chatLoading || chatMasihHabis) return;
     const msg = chatInput.trim();
+    const requestedQuestion = msg.match(/(?:soal|nomor|no\.?)\s*(\d+)/i);
+    if (requestedQuestion) chatQuestionRef.current = Number(requestedQuestion[1]) - 1;
     setChatInput("");
     const newMsgs: ChatMsg[] = [...chatMsgs, { role: "user", text: msg }];
     setChatMsgs(newMsgs);
@@ -1350,8 +1354,11 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: msg,
-          context: result,
-          history: chatMsgs.map(m => ({ role: m.role, text: m.text })),
+          context: result ? {
+            title: result.title,
+            questions: [result.questions[chatQuestionRef.current]].filter(Boolean),
+          } : null,
+          history: chatMsgs.filter(m => !m.kuota && !m.kuotaHabis).slice(-8).map(m => ({ role: m.role, text: m.text.slice(0, 2000) })),
         }),
       });
       const json = await res.json();
@@ -1583,7 +1590,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                   })()}
 
                   {/* ── Question card v2 ── */}
-                  <article className="glass-card qc-v2">
+                  <article className="glass-card qc-v2" onPointerDownCapture={() => { chatQuestionRef.current = qi; }} onFocusCapture={() => { chatQuestionRef.current = qi; }}>
                     <div className="qc-v2-head">
                       <span className="qc-v2-num">{qi + 1}</span>
                       {q.category && (
@@ -2672,6 +2679,8 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         wadah={mainRef}
         nonaktif={drawMode}
         onTanya={t => {
+          const index = result?.questions.findIndex(q => q.question.includes(t));
+          if (index !== undefined && index >= 0) chatQuestionRef.current = index;
           bukaPanel("chat");
           setChatInput(`「${t}」 — artinya apa & dipakai gimana di soal ini?`);
           requestAnimationFrame(() => chatInputRef.current?.focus());

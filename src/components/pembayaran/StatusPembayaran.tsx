@@ -4,7 +4,6 @@ import "@/styles/pembayaran.css";
 import Link from "next/link";
 import { Meter } from "./Meter";
 import { HonixPy } from "./HonixPy";
-import { BATAS } from "@/lib/batas-paket";
 import { rupiah } from "@/lib/paket";
 import { namaPendek, durasiPaket, tglPanjang, tglPendek, jam } from "@/lib/langganan";
 
@@ -62,15 +61,9 @@ export function Aktif({ data }: { data: Status }) {
           : <>{namaPendek(data.paket_id)}, berlaku sampai <b>{data.premium_until ? tglPanjang(data.premium_until) : "—"}</b>.</>}
       </p>
       <hr className="py-hr" />
-      <div className="py-eyebrow">Batasmu naik mulai sekarang</div>
-      <Meter label="Chat AI" persen={100} isi="py-f-acc"
-        nilai={<>{BATAS.chat.pro} / hari<span className="py-gain">+{BATAS.chat.pro - BATAS.chat.free}</span></>}
-        legend={[
-          { warna: "var(--surface-3)", teks: `Free ${BATAS.chat.free}` },
-          { warna: "var(--py-accent)", teks: `Pro ${BATAS.chat.pro}` },
-        ]} />
-      <Meter label="Furigana" persen={100} isi="py-f-acc"
-        nilai={<>{BATAS.furigana.pro} / hari<span className="py-gain">+{BATAS.furigana.pro - BATAS.furigana.free}</span></>} />
+      <div className="py-eyebrow">Semua fitur Pro tanpa batas harian</div>
+      <Meter label="Chat AI" persen={100} isi="py-f-acc" nilai="Tanpa batas" />
+      <Meter label="Furigana" persen={100} isi="py-f-acc" nilai="Tanpa batas" />
       <Meter label="Kosakata disimpan" persen={100} isi="py-f-ok"
         nilai={`Tanpa batas`} warnaNilai="var(--py-ok)" />
       <hr className="py-hr" />

@@ -15,7 +15,6 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
-import { BATAS, KOSAKATA_FREE } from "@/lib/batas-paket";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -668,7 +667,7 @@ function SubscriptionSection() {
     ? Math.ceil((new Date(stats.premiumUntil).getTime() - openedAt) / 86_400_000)
     : null;
 
-  const namaPlan = stats.isLifetime ? "Sensei Lifetime" : stats.isPro ? "Sensei Pro" : "Sensei Free";
+  const namaPlan = stats.isLifetime ? "Sensei Lifetime" : stats.isPro ? "Sensei Pro" : stats.akses.status === "trial" ? "Percobaan 7 hari" : "Akses berakhir";
 
   return (
     <>
@@ -684,8 +683,8 @@ function SubscriptionSection() {
               {stats.isLifetime
                 ? "Akses penuh selamanya — nggak ada perpanjangan."
                 : stats.isPro
-                  ? "Semua jatah harian versi Pro aktif."
-                  : "Bank soal, choukai, dan materi terbuka. Jatah fitur AI terbatas."}
+                  ? "Semua fitur Pro aktif tanpa batas pemakaian harian."
+                  : stats.akses.status === "trial" ? "Akses percobaan selama 7 hari sejak tanggal daftar." : "Berlangganan Pro untuk melanjutkan belajar."}
             </p>
           </div>
         </div>
@@ -693,9 +692,9 @@ function SubscriptionSection() {
         {/* Angka dari src/lib/batas-paket.ts — sumber yang sama dengan yang
             ditegakkan server. */}
         <div className="pg-sub-meta">
-          <div><span>Chat Sensei</span><strong>{stats.isPro ? BATAS.chat.pro : BATAS.chat.free} / hari</strong></div>
-          <div><span>Furigana</span><strong>{stats.isPro ? BATAS.furigana.pro : BATAS.furigana.free} / hari</strong></div>
-          <div><span>Kotoba disimpan</span><strong>{stats.isPro ? "Tanpa batas" : `${KOSAKATA_FREE} maks`}</strong></div>
+          <div><span>Chat Sensei</span><strong>{stats.akses.boleh ? "Tanpa batas" : "Perlu langganan"}</strong></div>
+          <div><span>Furigana</span><strong>{stats.akses.boleh ? "Tanpa batas" : "Perlu langganan"}</strong></div>
+          <div><span>Kotoba disimpan</span><strong>{stats.akses.boleh ? "Tanpa batas" : "Tetap tersimpan"}</strong></div>
         </div>
 
         {!stats.isLifetime && stats.isPro && sisaHari != null && (
@@ -725,7 +724,7 @@ function SubscriptionSection() {
         {stats.isPro && !stats.isLifetime && (
           <p className="pg-sub-catatan">
             Nggak ada perpanjangan otomatis. Kalau dibiarkan, akses Pro berhenti
-            sendiri di tanggal itu dan akunmu balik ke Free — data kamu tetap aman.
+            sendiri di tanggal itu. Berlangganan kembali untuk melanjutkan — data kamu tetap tersimpan.
           </p>
         )}
       </div>

@@ -6,7 +6,6 @@ import {
   Home, BookOpen, ListTodo, BookA, NotebookPen, BarChart3,
   Settings, LogOut, Sparkles,
 } from "lucide-react";
-import { BATAS } from "@/lib/batas-paket";
 import { useIsPro } from "@/lib/use-is-pro";
 import { HonixTurHost } from "@/components/honix/HonixTurHost";
 
@@ -69,7 +68,7 @@ export function NavRail() {
           </div>
           <div className="nav-upgrade-text">
             <div className="nav-upgrade-title">Upgrade ke Pro</div>
-            <div className="nav-upgrade-sub">Chat AI {BATAS.chat.pro}× sehari</div>
+            <div className="nav-upgrade-sub">Chat AI tanpa batas</div>
           </div>
         </Link>
       )}
