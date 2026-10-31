@@ -54,14 +54,15 @@ const BAGIAN: Bagian[] = [
   },
   {
     id: "simpan", judul: "Berapa lama disimpan",
-    isi: <p>Data disimpan selama akunmu ada. Kalau trial atau langgananmu berakhir, data <b>tidak dihapus</b> — akses belajar saja yang berhenti, dan semuanya kembali saat kamu berlangganan. Catatan transaksi bisa kami simpan lebih lama untuk keperluan pembukuan dan penyelesaian sengketa pembayaran.</p>,
+    isi: <p>Data disimpan selama akunmu ada. Kalau trial atau langgananmu berakhir, data <b>tidak dihapus</b> — akses belajar saja yang berhenti, dan semuanya kembali saat kamu berlangganan. Saat akun dihapus, datamu di aplikasi ikut terhapus; catatan pembayaran tetap tersimpan di Midtrans sebagai pemroses pembayaran.</p>,
   },
   {
     id: "hak", judul: "Hak kamu",
     isi: <>
       <ul>
         <li><b>Melihat &amp; memperbaiki:</b> sebagian besar data bisa kamu lihat dan ubah langsung di aplikasi (Pengaturan, Kamus, Catatan).</li>
-        <li><b>Meminta salinan data</b> atau <b>menghapus akun</b>: kirim email ke <a href={`mailto:${EMAIL_DUKUNGAN}`}>{EMAIL_DUKUNGAN}</a> dari email akunmu. Kami proses paling lambat 30 hari. Penghapusan akun menghapus profil, progres, kosakata, dan catatan; catatan transaksi bisa tetap disimpan sesuai bagian sebelumnya.</li>
+        <li><b>Mengunduh salinan:</b> kosakata (CSV) dan catatan (Markdown) bisa diekspor sendiri di <b>Pengaturan → Privasi &amp; Data</b>. Untuk salinan data lain, email <a href={`mailto:${EMAIL_DUKUNGAN}`}>{EMAIL_DUKUNGAN}</a> — kami proses paling lambat 30 hari.</li>
+        <li><b>Menghapus akun:</b> langsung di <b>Pengaturan → Danger Zone → Hapus akun</b>. Profil, progres, kosakata, catatan, foto profil, dan riwayat transaksi di aplikasi terhapus saat itu juga (catatan pembayaran tetap ada di Midtrans sesuai aturan mereka). Bisa juga minta lewat email.</li>
       </ul>
     </>,
   },
@@ -83,7 +84,7 @@ export default function KebijakanPrivasi() {
   return (
     <HalamanLegal
       judul="Kebijakan Privasi" jp="個人情報"
-      ringkas={<p>Singkatnya: kami simpan data akun, progres belajar, dan transaksi supaya aplikasinya jalan. Tanpa iklan dan tanpa pelacak. Pertanyaan ke chat Sensei diproses AI Anthropic. Mau hapus akun? Email kami.</p>}
+      ringkas={<p>Singkatnya: kami simpan data akun, progres belajar, dan transaksi supaya aplikasinya jalan. Tanpa iklan dan tanpa pelacak. Pertanyaan ke chat Sensei diproses AI Anthropic. Mau hapus akun? Bisa langsung di Pengaturan.</p>}
       bagian={BAGIAN}
       lain={{ href: "/syarat", label: "Syarat & Ketentuan" }}
     />

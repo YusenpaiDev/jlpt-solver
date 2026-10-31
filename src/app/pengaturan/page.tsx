@@ -15,6 +15,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import { kotobaKeCsv, catatanKeMarkdown, type BarisKotoba, type BarisCatatan } from "@/lib/ekspor";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -72,9 +73,6 @@ export default function Pengaturan() {
   const [notifPush, setNotifPush] = useState(false);
 
   /* Privacy */
-  const [privLeaderboard, setPrivLeaderboard] = useState(false);
-  const [privShareFriends, setPrivShareFriends] = useState(true);
-  const [privAiTraining, setPrivAiTraining] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -278,13 +276,9 @@ export default function Pengaturan() {
             {active === "tutorial" && <TutorialSection />}
             {active === "sub" && <SubscriptionSection />}
             {active === "privacy" && (
-              <PrivacySection
-                leaderboard={privLeaderboard} setLeaderboard={setPrivLeaderboard}
-                shareFriends={privShareFriends} setShareFriends={setPrivShareFriends}
-                aiTraining={privAiTraining} setAiTraining={setPrivAiTraining}
-              />
+              <PrivacySection />
             )}
-            {active === "danger" && <DangerSection />}
+            {active === "danger" && <DangerSection email={email} />}
           </div>
         </div>
 
@@ -412,7 +406,7 @@ function ProfileSection({
   const displayAvatar = avatarPreview || avatarUrl;
   return (
     <>
-      <Card title="Profil" desc="Info dasar tentang kamu — terlihat di sertifikat & leaderboard">
+      <Card title="Profil" desc="Info dasar tentang kamu">
         <div className="pg-avatar-row">
           <div className="pg-avatar-big">
             {displayAvatar
@@ -749,63 +743,149 @@ function SubscriptionSection() {
 
 /* ─── Privacy section ─── */
 
-function PrivacySection({
-  leaderboard, setLeaderboard, shareFriends, setShareFriends, aiTraining, setAiTraining,
-}: {
-  leaderboard: boolean; setLeaderboard: (v: boolean) => void;
-  shareFriends: boolean; setShareFriends: (v: boolean) => void;
-  aiTraining: boolean; setAiTraining: (v: boolean) => void;
-}) {
+/* Ekspor beneran (dulu toggle leaderboard/teman/AI + tombol ekspor cuma
+   pajangan — fiturnya gak ada). Ambil semua baris, urutan unik biar paginasi
+   gak dobel/kelewat. */
+function PrivacySection() {
+  const [sibuk, setSibuk] = useState<"kotoba" | "catatan" | null>(null);
+  const [pesan, setPesan] = useState("");
+
+  async function ambilSemua<T>(tabel: "saved_words" | "catatan", kolom: string): Promise<T[]> {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Login dulu.");
+    const semua: T[] = [];
+    for (let dari = 0; ; dari += 1000) {
+      const { data, error } = await supabase.from(tabel).select(kolom).eq("user_id", user.id)
+        .order("created_at", { ascending: true }).order("id", { ascending: true }).range(dari, dari + 999);
+      if (error) throw error;
+      semua.push(...((data ?? []) as T[]));
+      if (!data || data.length < 1000) return semua;
+    }
+  }
+  function unduh(isi: string, nama: string, tipe: string) {
+    const url = URL.createObjectURL(new Blob([isi], { type: tipe }));
+    const a = document.createElement("a");
+    a.href = url; a.download = nama; a.click();
+    URL.revokeObjectURL(url);
+  }
+  async function ekspor(jenis: "kotoba" | "catatan") {
+    setSibuk(jenis); setPesan("");
+    const tgl = new Date().toISOString().slice(0, 10);
+    try {
+      if (jenis === "kotoba") {
+        const baris = await ambilSemua<BarisKotoba>("saved_words", "id, kanji, reading, meaning, level, example, favorite, created_at");
+        unduh(kotobaKeCsv(baris), `kotoba-sensei-jlpt-${tgl}.csv`, "text/csv;charset=utf-8");
+        setPesan(`${baris.length} kata diekspor.`);
+      } else {
+        const baris = await ambilSemua<BarisCatatan>("catatan", "id, judul, isi, created_at, updated_at");
+        unduh(catatanKeMarkdown(baris), `catatan-sensei-jlpt-${tgl}.md`, "text/markdown;charset=utf-8");
+        setPesan(`${baris.length} catatan diekspor.`);
+      }
+    } catch (e) {
+      setPesan(`Gagal ekspor: ${e instanceof Error ? e.message : "coba lagi"}`);
+    } finally { setSibuk(null); }
+  }
+
   return (
     <>
-      <Card title="Dokumen" desc="Cara kami menyimpan & memakai datamu">
-        <div className="pg-data-row">
-          <Link href="/privasi" className="btn btn-secondary btn-sm">Kebijakan Privasi</Link>
-          <Link href="/syarat" className="btn btn-secondary btn-sm">Syarat &amp; Ketentuan</Link>
-        </div>
-      </Card>
-      <Card title="Privasi" desc="Atur apa yang dilihat orang lain">
-        <Toggle label="Tampilkan profil di leaderboard publik" sub="Kalau off, masih kelihatan oleh teman"             on={leaderboard}   onChange={setLeaderboard} />
-        <Toggle label="Bagikan progress ke teman"              sub="Teman bisa lihat streak & XP kamu"                  on={shareFriends}  onChange={setShareFriends} />
-        <Toggle label="Data latihan boleh dipakai untuk ningkatin AI" sub="Anonim, tidak terikat akun kamu · bantu akurasi materi & pembahasan" on={aiTraining}    onChange={setAiTraining} />
-      </Card>
-      <Card title="Data kamu" desc="Export atau hapus data sesuai keinginan">
-        <div className="pg-data-row">
-          <button type="button" className="btn btn-secondary btn-sm">Export semua kotoba (CSV)</button>
-          <button type="button" className="btn btn-secondary btn-sm">Export riwayat soal (PDF)</button>
-          <button type="button" className="btn btn-secondary btn-sm">Export catatan (Markdown ZIP)</button>
-        </div>
-      </Card>
+    <Card title="Dokumen" desc="Cara kami menyimpan & memakai datamu">
+      <div className="pg-data-row">
+        <Link href="/privasi" className="btn btn-secondary btn-sm">Kebijakan Privasi</Link>
+        <Link href="/syarat" className="btn btn-secondary btn-sm">Syarat &amp; Ketentuan</Link>
+      </div>
+    </Card>
+    <Card title="Data kamu" desc="Unduh salinan data yang kamu buat sendiri">
+      <div className="pg-data-row">
+        <button type="button" className="btn btn-secondary btn-sm" disabled={sibuk != null} onClick={() => ekspor("kotoba")}>
+          {sibuk === "kotoba" ? "Menyiapkan…" : "Export kotoba (CSV)"}
+        </button>
+        <button type="button" className="btn btn-secondary btn-sm" disabled={sibuk != null} onClick={() => ekspor("catatan")}>
+          {sibuk === "catatan" ? "Menyiapkan…" : "Export catatan (Markdown)"}
+        </button>
+      </div>
+      {pesan && <p className="pg-data-pesan" role="status">{pesan}</p>}
+      <p className="pg-data-pesan">Butuh salinan data lain (riwayat latihan, transaksi)? Email <a href="mailto:yusufnashirsyarifuddin@gmail.com">yusufnashirsyarifuddin@gmail.com</a>.</p>
+    </Card>
     </>
   );
 }
 
-/* ─── Danger Zone ─── */
+/* ─── Danger Zone ───
+   Dulu tiga tombolnya pajangan. "Reset progress" dibuang: progres nempel di
+   sesi yang sekaligus jadi akses Bank Soal user — dihapus = materinya ikut
+   hilang. Hapus kotoba & hapus akun beneran jalan. */
 
-function DangerSection() {
+function DangerSection({ email }: { email: string }) {
+  const [status, setStatus] = useState<{ teks: string; gagal?: boolean } | null>(null);
+  const [kotobaSibuk, setKotobaSibuk] = useState(false);
+  const [bukaHapus, setBukaHapus] = useState(false);
+  const [ketik, setKetik] = useState("");
+  const [hapusSibuk, setHapusSibuk] = useState(false);
+  const cocok = !!email && ketik.trim().toLowerCase() === email.toLowerCase();
+
+  async function hapusKotoba() {
+    if (!confirm("Hapus SEMUA kata di Kamus? Ini gak bisa dibatalkan. Ekspor dulu di Privasi & Data kalau mau simpan salinan.")) return;
+    setKotobaSibuk(true); setStatus(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Login dulu.");
+      const { error } = await supabase.from("saved_words").delete().eq("user_id", user.id);
+      if (error) throw error;
+      setStatus({ teks: "Semua kata di Kamus udah dihapus." });
+    } catch (e) {
+      setStatus({ teks: `Gagal: ${e instanceof Error ? e.message : "coba lagi"}`, gagal: true });
+    } finally { setKotobaSibuk(false); }
+  }
+
+  async function hapusAkun() {
+    setHapusSibuk(true); setStatus(null);
+    try {
+      const res = await fetch("/api/akun/hapus", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ konfirmasi: ketik }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? "Gagal menghapus akun.");
+      await createClient().auth.signOut();
+      window.location.assign("/login");
+    } catch (e) {
+      setStatus({ teks: e instanceof Error ? e.message : "Gagal menghapus akun.", gagal: true });
+      setHapusSibuk(false);
+    }
+  }
+
   return (
     <Card title="Danger Zone" desc="Aksi yang tidak bisa diundo — pastikan kamu yakin">
-      <div className="danger-row">
-        <div>
-          <div className="danger-title">Reset semua progress</div>
-          <p className="danger-desc">Hapus semua riwayat soal, streak, XP, statistik. Kotoba & catatan tetap aman.</p>
-        </div>
-        <button type="button" className="btn btn-secondary btn-sm danger-link">Reset progress</button>
-      </div>
       <div className="danger-row">
         <div>
           <div className="danger-title">Hapus semua kotoba</div>
           <p className="danger-desc">Hapus semua entry di Kamus kamu. Tidak bisa di-recover.</p>
         </div>
-        <button type="button" className="btn btn-secondary btn-sm danger-link">Hapus kotoba</button>
+        <button type="button" className="btn btn-secondary btn-sm danger-link" disabled={kotobaSibuk} onClick={hapusKotoba}>
+          {kotobaSibuk ? "Menghapus…" : "Hapus kotoba"}
+        </button>
       </div>
       <div className="danger-row strong">
         <div>
           <div className="danger-title">Hapus akun permanen</div>
-          <p className="danger-desc">Semua data kamu — profil, kotoba, sesi, catatan, statistik — akan dihapus permanen dari server kami dalam 30 hari.</p>
+          <p className="danger-desc">Profil, progres, kotoba, catatan, dan riwayat transaksi dihapus saat itu juga. Masa Pro/Lifetime yang tersisa ikut hangus dan tidak dikembalikan.</p>
         </div>
-        <button type="button" className="btn danger-btn btn-sm">Hapus akun</button>
+        {!bukaHapus && <button type="button" className="btn danger-btn btn-sm" onClick={() => setBukaHapus(true)}>Hapus akun</button>}
       </div>
+      {bukaHapus && (
+        <div className="danger-konfirmasi">
+          <label htmlFor="hapus-email">Ketik email akunmu <b>{email}</b> buat konfirmasi:</label>
+          <input id="hapus-email" type="email" autoComplete="off" value={ketik} onChange={e => setKetik(e.target.value)} placeholder={email} />
+          <div className="danger-konfirmasi-aksi">
+            <button type="button" className="btn btn-secondary btn-sm" disabled={hapusSibuk} onClick={() => { setBukaHapus(false); setKetik(""); }}>Batal</button>
+            <button type="button" className="btn danger-btn btn-sm" disabled={!cocok || hapusSibuk} onClick={hapusAkun}>
+              {hapusSibuk ? "Menghapus…" : "Hapus akun permanen"}
+            </button>
+          </div>
+        </div>
+      )}
+      {status && <p className={`pg-data-pesan${status.gagal ? " gagal" : ""}`} role="status">{status.teks}</p>}
     </Card>
   );
 }
