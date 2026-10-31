@@ -1,0 +1,36 @@
+/* Halaman legal (/privasi, /syarat) — publik, tanpa nav rail. Full-width:
+   daftar isi nempel di kiri, isi di kanan; HP satu kolom. */
+.lgl { min-height: 100vh; padding: 24px clamp(16px, 4vw, 56px) 72px; color: var(--text-primary); }
+.lgl-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--edge-default); }
+.lgl-brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text-primary); text-decoration: none; }
+.lgl-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--primary); color: #fff; font-family: var(--font-serif-jp); font-size: 18px; }
+.lgl-lain { min-height: 44px; display: inline-flex; align-items: center; color: var(--text-secondary); font-size: 14px; text-decoration: none; }
+.lgl-lain:hover, .lgl-lain:focus-visible { color: var(--primary); outline: none; }
+.lgl-hero { padding: 36px 0 28px; }
+.lgl-hero h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -.02em; }
+.lgl-jp { display: inline-block; white-space: nowrap; font-family: var(--font-serif-jp); color: var(--primary); font-weight: 600; margin-left: 6px; }
+.lgl-tgl { margin-top: 6px; font-size: 13px; color: var(--text-tertiary); }
+.lgl-ringkas { margin-top: 18px; padding: 16px 18px; border-radius: var(--radius-md); background: rgba(221, 65, 36, .08); border: 1px solid rgba(221, 65, 36, .25); font-size: 15px; line-height: 1.65; color: var(--text-secondary); }
+.lgl-grid { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: clamp(24px, 4vw, 64px); align-items: start; }
+.lgl-toc { position: sticky; top: 24px; padding: 16px; border-radius: var(--radius-md); background: var(--surface-1); border: 1px solid var(--edge-default); }
+.lgl-toc p { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.lgl-toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.lgl-toc a { display: block; padding: 7px 8px; border-radius: 8px; font-size: 13.5px; color: var(--text-secondary); text-decoration: none; }
+.lgl-toc a:hover, .lgl-toc a:focus-visible { background: var(--surface-2); color: var(--text-primary); outline: none; }
+.lgl-isi { font-size: 15.5px; line-height: 1.75; color: var(--text-secondary); }
+.lgl-isi section { padding: 4px 0 26px; scroll-margin-top: 24px; }
+.lgl-isi section + section { border-top: 1px solid var(--edge-soft); padding-top: 26px; }
+.lgl-isi h2 { font-size: 19px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; letter-spacing: -.01em; }
+.lgl-isi h2 span { color: var(--primary); margin-right: 4px; }
+.lgl-isi p + p, .lgl-isi ul + p, .lgl-isi p + ul { margin-top: 10px; }
+.lgl-isi ul { margin: 0; padding-left: 22px; list-style: disc; }
+.lgl-isi li + li { margin-top: 8px; }
+.lgl-isi li::marker { color: var(--primary); }
+.lgl-isi b { color: var(--text-primary); font-weight: 600; }
+.lgl-isi a, .lgl-kontak a { color: #E8704F; }
+.lgl-kontak { margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--edge-default); font-size: 14px; color: var(--text-tertiary); }
+@media (max-width: 860px) {
+  .lgl-grid { grid-template-columns: 1fr; }
+  .lgl-toc { position: static; }
+  .lgl-toc ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -43,7 +43,9 @@ export async function proxy(request: NextRequest) {
      notifikasi pembayaran gak pernah sampai, dan Pro gak pernah nyala walau
      uangnya udah masuk. Keamanannya bukan dari sesi — payload-nya diverifikasi
      pakai tanda tangan SHA512 di route handler-nya. */
-  const publicPaths = ["/login", "/premium", "/auth", "/api/payment/webhook"];
+  /* /privasi & /syarat juga publik: harus bisa dibaca sebelum daftar & bayar,
+     dan oleh akun yang trial-nya habis. */
+  const publicPaths = ["/login", "/premium", "/auth", "/api/payment/webhook", "/privasi", "/syarat"];
   const isPublic = publicPaths.some(p => request.nextUrl.pathname.startsWith(p));
 
   if (!user && !isPublic) {

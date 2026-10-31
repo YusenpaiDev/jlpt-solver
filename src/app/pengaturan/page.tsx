@@ -758,6 +758,12 @@ function PrivacySection({
 }) {
   return (
     <>
+      <Card title="Dokumen" desc="Cara kami menyimpan & memakai datamu">
+        <div className="pg-data-row">
+          <Link href="/privasi" className="btn btn-secondary btn-sm">Kebijakan Privasi</Link>
+          <Link href="/syarat" className="btn btn-secondary btn-sm">Syarat &amp; Ketentuan</Link>
+        </div>
+      </Card>
       <Card title="Privasi" desc="Atur apa yang dilihat orang lain">
         <Toggle label="Tampilkan profil di leaderboard publik" sub="Kalau off, masih kelihatan oleh teman"             on={leaderboard}   onChange={setLeaderboard} />
         <Toggle label="Bagikan progress ke teman"              sub="Teman bisa lihat streak & XP kamu"                  on={shareFriends}  onChange={setShareFriends} />
