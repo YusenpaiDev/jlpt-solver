@@ -289,6 +289,7 @@ export default function Premium() {
           <div className="pr-cta-content">
             <h2>Mulai Pro hari ini.</h2>
             <p>Gak diperpanjang otomatis. Tanpa tagihan otomatis. Tanpa hidden cost.</p>
+            <p className="pr-legal">Dengan membayar, kamu setuju dengan <Link href="/syarat">Syarat &amp; Ketentuan</Link> (termasuk pengembalian dana) dan <Link href="/privasi">Kebijakan Privasi</Link>.</p>
             <div className="pr-cta-row">
               <button
                 type="button"

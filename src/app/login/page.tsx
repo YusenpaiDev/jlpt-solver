@@ -269,8 +269,8 @@ export default function Login() {
                     onChange={e => setAgreed(e.target.checked)}
                   />
                   <span>
-                    Setuju dengan <a href="#" onClick={e => e.preventDefault()}>Syarat</a> &amp;{" "}
-                    <a href="#" onClick={e => e.preventDefault()}>Privasi</a>
+                    Setuju dengan <a href="/syarat" target="_blank" rel="noopener">Syarat</a> &amp;{" "}
+                    <a href="/privasi" target="_blank" rel="noopener">Privasi</a>
                   </span>
                 </label>
               )}
@@ -298,9 +298,9 @@ export default function Login() {
           <footer className="lg-footer">
             <span>© 2026 Sensei JLPT</span>
             <span className="lg-footer-sep">·</span>
-            <a href="#" onClick={e => e.preventDefault()}>Syarat</a>
-            <a href="#" onClick={e => e.preventDefault()}>Privasi</a>
-            <a href="#" onClick={e => e.preventDefault()}>Bantuan</a>
+            <a href="/syarat">Syarat</a>
+            <a href="/privasi">Privasi</a>
+            <a href="mailto:yusufnashirsyarifuddin@gmail.com">Bantuan</a>
           </footer>
         </main>
 
