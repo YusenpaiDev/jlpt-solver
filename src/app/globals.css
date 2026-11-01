@@ -776,6 +776,35 @@ input, textarea, select { font-size: 16px; }
   box-shadow: 0 0 8px currentColor;
 }
 
+/* Materi = tombol prioritas (pintu utama belajar).
+   Desktop: item rail oranye + label "Mulai di sini". HP: bulat oranye di
+   tengah bottom nav, naik di atas bilah. */
+.nav-item.nav-prio {
+  background: rgba(221, 65, 36, 0.14); color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px rgba(221, 65, 36, 0.45), 0 0 18px -6px rgba(221, 65, 36, 0.55);
+}
+.nav-item.nav-prio .nav-item-icon { color: var(--primary); }
+.nav-item.nav-prio:hover, .nav-item.nav-prio:focus-visible { background: rgba(221, 65, 36, 0.22); color: var(--text-primary); }
+.nav-item.nav-prio.active { background: rgba(221, 65, 36, 0.24); }
+.nav-item.nav-prio .nav-item-label { display: flex; flex-direction: column; line-height: 1.15; }
+.nav-prio-tag { font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--primary); }
+
+.bn-item.bn-prio { justify-content: flex-end; gap: 3px; padding-bottom: 6px; }
+.bn-prio-bulat {
+  display: grid; place-items: center; width: 56px; height: 56px; margin-top: -30px; border-radius: 50%;
+  background: var(--primary); color: #fff; border: 4px solid #181C24;
+  box-shadow: 0 10px 22px -8px rgba(221, 65, 36, 0.8);
+  transition: transform 160ms var(--ease-out-back);
+}
+.bn-item.bn-prio svg { width: 24px; height: 24px; }
+.bn-item.bn-prio .bn-item-label { color: var(--text-primary); font-weight: 600; }
+.bn-item.bn-prio.active .bn-item-label { color: var(--primary); }
+.bn-item.bn-prio.active::before { display: none; }
+.bn-item.bn-prio:active .bn-prio-bulat { transform: scale(0.94); }
+.bn-item.bn-prio:focus-visible { outline: none; }
+.bn-item.bn-prio:focus-visible .bn-prio-bulat { outline: 2px solid #fff; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .bn-prio-bulat { transition: none; } }
+
 /* Bottom sheet stays in the browser top layer, above fixed navigation. */
 .bn-item { min-width: 44px; min-height: 44px; }
 .bn-sheet.glass-card {

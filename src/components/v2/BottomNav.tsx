@@ -9,10 +9,11 @@ import {
 } from "lucide-react";
 import { useIsPro } from "@/lib/use-is-pro";
 
+/* Materi di tengah jadi tombol bulat yang naik — pintu utama belajar. */
 const BOTTOM_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
-  { href: "/materi",        label: "Materi",        Icon: BookOpen },
   { href: "/lembar-tugas",  label: "Lembar Tugas",  Icon: ListTodo },
+  { href: "/materi",        label: "Materi",        Icon: BookOpen },
   { href: "/kamus",         label: "Kamus",         Icon: BookA },
 ] as const;
 
@@ -91,6 +92,20 @@ function MobileNav({ pathname }: { pathname: string }) {
         <div className="bottom-nav-inner">
           {BOTTOM_ITEMS.map(({ href, label, Icon }) => {
             const active = isActive(href);
+            if (href === "/materi") {
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`bn-item bn-prio${active ? " active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                  data-tur="materi"
+                >
+                  <span className="bn-prio-bulat"><Icon strokeWidth={2} aria-hidden="true" /></span>
+                  <span className="bn-item-label">{label}</span>
+                </Link>
+              );
+            }
             return (
               <Link
                 key={href}

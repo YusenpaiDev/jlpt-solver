@@ -45,16 +45,21 @@ export function NavRail() {
 
       {NAV_ITEMS.map(({ href, label, Icon }) => {
         const active = isActive(href);
+        /* Materi = pintu utama belajar — dibikin menonjol biar user baru gak bingung mulai dari mana. */
+        const prio = href === "/materi";
         return (
           <Link
             key={href}
             href={href}
-            className={`nav-item${active ? " active" : ""}`}
+            className={`nav-item${active ? " active" : ""}${prio ? " nav-prio" : ""}`}
             aria-current={active ? "page" : undefined}
             data-tur={href === "/" ? "beranda" : href.slice(1)}
           >
             <Icon className="nav-item-icon" size={20} strokeWidth={active ? 1.8 : 1.6} />
-            <span className="nav-item-label">{label}</span>
+            <span className="nav-item-label">
+              {label}
+              {prio && <small className="nav-prio-tag">Mulai di sini</small>}
+            </span>
           </Link>
         );
       })}
