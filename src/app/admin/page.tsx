@@ -181,10 +181,33 @@ export default async function AdminPage() {
           <div className="adm-grid adm-grid-1">
             <Kartu label="Sesi dengan soal ditandai REVIEW" nilai={konten.sesiReview == null ? "—" : angka(konten.sesiReview)}
               sub={konten.sesiReview == null ? "Gagal dihitung" : "Cek & betulin teks soalnya"} nada={konten.sesiReview ? "warn" : undefined} />
-            <Kartu label="Error terakhir" nilai="—" sub="App belum nyatet error" />
+            <Kartu label="Error 24 jam" nilai={d.error == null ? "—" : angka(d.error.hari)}
+              sub={d.error == null ? "Jalankan migration error_log dulu" : d.error.hari ? "Lihat daftar di bawah" : "Aman"}
+              nada={d.error == null ? undefined : d.error.hari ? "bad" : "ok"} />
           </div>
         </div>
       </section>
+
+      {d.error && d.error.terbaru.length > 0 && (
+        <section className="adm-sek" aria-labelledby="adm-error">
+          <h2 id="adm-error">Error terbaru</h2>
+          <div className="adm-panel">
+            <table className="adm-tabel">
+              <thead><tr><th>Waktu</th><th>Sumber</th><th>Halaman</th><th>Pesan</th></tr></thead>
+              <tbody>
+                {d.error.terbaru.map((e, i) => (
+                  <tr key={i}>
+                    <td>{tgl(e.waktu)}</td>
+                    <td><span className={`adm-chip ${e.sumber === "server" ? "st-gagal" : "st-pending"}`}>{e.sumber.toUpperCase()}</span></td>
+                    <td className="mono">{e.path ?? e.rute ?? "—"}</td>
+                    <td className="adm-pesan">{e.pesan}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </main>
   );
 }
