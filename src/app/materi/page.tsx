@@ -8,6 +8,7 @@ import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/com
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
 import kotobaData from "@/data/kotoba-n2.json";
 import { useUserStats } from "@/lib/use-user-stats";
+import { gabungBankSoal, type SetUjian, type SesiMilik, type SetKatalog } from "@/lib/bank-soal";
 
 /* Daftar kata yang beneran tampil di /materi/kotoba — saringannya wajib sama
    persis kayak di halaman itu, kalau beda nanti penyebut progresnya bohong.
@@ -20,16 +21,7 @@ const KOTOBA_WORDS = ((kotobaData as { vocabulary?: { word?: string; group?: str
 type Lv = "N1" | "N2" | "N3" | "N4" | "N5";
 const LEVEL_ORDER: Lv[] = ["N1", "N2", "N3", "N4", "N5"];
 
-interface Exam {
-  id: string;
-  level: string;
-  title: string;
-  total: number;
-  score: number | null;
-  section?: string | null;
-  created_at: string;
-  ready?: boolean; // false = konten belum lengkap → lock "SOON"
-}
+type Exam = SetUjian;
 type ExType = "筆記" | "聴解";
 function exType(e: Exam): ExType { return e.section === "choukai" ? "聴解" : "筆記"; }
 
@@ -38,7 +30,8 @@ function examMeta(title: string): { label: string; sortKey: number } {
   if (m) return { label: `${m[1]}年${m[2]}月`, sortKey: +m[1] * 100 + +m[2] };
   return { label: title.slice(0, 20), sortKey: 0 };
 }
-function relDate(iso: string): string {
+function relDate(iso: string | null): string {
+  if (!iso) return "";
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
   if (d < 1) return "hari ini"; if (d < 2) return "kemarin";
   if (d < 7) return `${d} hari lalu`; if (d < 30) return `${Math.floor(d / 7)} minggu lalu`;
@@ -63,6 +56,9 @@ export default function MateriHub() {
   const [level, setLevel] = useState<Lv | null>(null);
   const [statusF, setStatusF] = useState<StatusF>("all");
   const [showAll, setShowAll] = useState(false);
+  /* judul set yang lagi disiapin salinannya (klik pertama) + pesan kalau gagal */
+  const [membuka, setMembuka] = useState<string | null>(null);
+  const [gagalBuka, setGagalBuka] = useState<string | null>(null);
   const router = useRouter();
 
   const stats = useUserStats();
@@ -78,17 +74,20 @@ export default function MateriHub() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setMuat("error"); return; }
-      const [ex, bp, sw] = await Promise.all([
+      const [ex, kat, bp, sw] = await Promise.all([
         supabase.from("sessions")
           .select("id, level, title, total, score, created_at, ai_result->section, ai_result->ready")
           .eq("user_id", user.id)
           .eq("ai_result->>kind", "materi")
           .order("created_at", { ascending: false }),
+        supabase.rpc("daftar_katalog"),
         supabase.from("bunpou_patterns").select("favorite").eq("user_id", user.id),
         supabase.from("saved_words").select("kanji").eq("user_id", user.id).eq("favorite", true),
       ]);
       if (ex.error) { setMuat("error"); return; }
-      setExams((ex.data ?? []) as Exam[]);
+      /* Katalog gagal kebaca (mis. migration belum jalan) → tetap tampilin
+         salinan yang udah dimiliki, jangan bikin halaman error. */
+      setExams(gabungBankSoal((ex.data ?? []) as SesiMilik[], kat.error ? [] : (kat.data ?? []) as SetKatalog[]));
       setMuat("ready");
 
       const pola = bp.data ?? [];
@@ -150,14 +149,29 @@ export default function MateriHub() {
   /* pace: berapa set (grup) kelar minggu ini */
   const pace = useMemo(() => {
     const wk = Date.now() - 7 * 86_400_000;
-    const doneThisWk = (perLevel[lv] ?? []).filter(e => pctOf(e) != null && +new Date(e.created_at) >= wk).length;
+    const doneThisWk = (perLevel[lv] ?? []).filter(e => pctOf(e) != null && e.created_at != null && +new Date(e.created_at) >= wk).length;
     return { doneThisWk, target: 2 };
   }, [perLevel, lv]);
 
   /* NEXT: grup terbaru yang belum lengkap di level yang dimiliki */
   const next = useMemo(() => groups.find(g => gStatus(g) !== "done"), [groups]);
 
-  const openPart = (e?: Exam) => { if (!e || e.ready === false) return; router.push(exType(e) === "聴解" ? `/choukai/${e.id}` : `/latihan/${e.id}`); };
+  const openPart = async (e?: Exam) => {
+    if (!e || e.ready === false || membuka) return;
+    const ke = (id: string) => router.push(exType(e) === "聴解" ? `/choukai/${id}` : `/latihan/${id}`);
+    if (e.id) { ke(e.id); return; }
+    if (!e.katalogId) return;
+    /* Pertama kali dibuka: database nyalin set dari katalog ke akun ini. */
+    setMembuka(e.title); setGagalBuka(null);
+    const { data, error } = await createClient().rpc("ambil_set", { p_katalog: e.katalogId });
+    if (error || typeof data !== "string") {
+      setMembuka(null);
+      if (error?.message?.includes("subscription_required")) { router.push("/langganan"); return; }
+      setGagalBuka(`Set ${examMeta(e.title).label} ${exType(e)} belum bisa dibuka. Coba lagi sebentar.`);
+      return;
+    }
+    ke(data);
+  };
 
   return (
     <>
@@ -213,6 +227,7 @@ export default function MateriHub() {
             ))}
             <span className="bar-r">1 ujian = 筆記 + 聴解 · klik bagian buat mulai</span>
           </div>
+          {gagalBuka && <p className="m3-empty" role="alert">{gagalBuka}</p>}
 
           {/* exam grid */}
           <div className="m3-exams">
@@ -233,8 +248,8 @@ export default function MateriHub() {
                   </div>
                   <div className="exam-s">Ujian {g.level} · <b>{total} soal</b></div>
                   <div className="parts">
-                    <Part e={g.hisho} type="筆記" onOpen={openPart} />
-                    <Part e={g.choukai} type="聴解" onOpen={openPart} />
+                    <Part e={g.hisho} type="筆記" onOpen={openPart} membuka={membuka} />
+                    <Part e={g.choukai} type="聴解" onOpen={openPart} membuka={membuka} />
                   </div>
                 </div>
               );
@@ -310,7 +325,7 @@ export default function MateriHub() {
 }
 
 /* satu bagian ujian (筆記 / 聴解) di dalam kartu */
-function Part({ e, type, onOpen }: { e?: Exam; type: ExType; onOpen: (e?: Exam) => void }) {
+function Part({ e, type, onOpen, membuka }: { e?: Exam; type: ExType; onOpen: (e?: Exam) => void; membuka: string | null }) {
   const isCho = type === "聴解";
   if (!e) {
     return (
@@ -339,7 +354,7 @@ function Part({ e, type, onOpen }: { e?: Exam; type: ExType; onOpen: (e?: Exam) 
       <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
       <div className="part-m">
         <div className="part-t">{type} · {e.total} soal</div>
-        <div className="part-s">{pct != null ? `Terakhir ${pct}% · ${relDate(e.created_at)}` : isCho ? "~50 menit · audio" : "belum dikerjain"}</div>
+        <div className="part-s">{membuka === e.title ? "Menyiapkan soal…" : pct != null ? `Terakhir ${pct}% · ${relDate(e.created_at)}` : isCho ? "~50 menit · audio" : "belum dikerjain"}</div>
       </div>
       {pct != null
         ? <><span className="part-score" style={bad ? { background: "rgba(212,160,74,0.15)", color: "var(--warning)" } : undefined}>{pct}%</span><span className="part-go">{bad ? "↻ Ulangi" : "Review"}</span></>
