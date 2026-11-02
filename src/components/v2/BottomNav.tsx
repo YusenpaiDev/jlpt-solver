@@ -8,6 +8,7 @@ import {
   Settings, Sparkles, X,
 } from "lucide-react";
 import { useIsPro } from "@/lib/use-is-pro";
+import { TombolKeluar } from "./TombolKeluar";
 
 /* Materi di tengah jadi tombol bulat yang naik — pintu utama belajar. */
 const BOTTOM_ITEMS = [
@@ -202,6 +203,7 @@ function MobileNav({ pathname }: { pathname: string }) {
               </div>
             </Link>
           )}
+          <TombolKeluar />
         </nav>
       </dialog>
     </>
