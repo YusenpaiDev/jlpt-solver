@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { tanggalLokal, EVENT_AKTIVITAS } from "@/lib/aktivitas";
 import type { TargetLevel } from "@/lib/use-user-stats";
+import { statusAkses } from "@/lib/batas-paket";
+import { peringatanTrial, type AksesTrial } from "@/lib/peringatan-trial";
 
 /**
  * Peringatan belajar — streak mau putus, ujian makin dekat, latihan mandek,
@@ -84,6 +86,8 @@ export interface Bahan {
   bunpouNganggur: number;
   targetLevel: TargetLevel;
   examDate: string | null;
+  /** Status akses (trial/pro/expired) + kapan trial habis. null = gak kebaca. */
+  akses?: AksesTrial | null;
 }
 
 /** Selisih hari kalender antara dua tanggal YYYY-MM-DD.
@@ -131,7 +135,7 @@ async function ambilBahan(): Promise<Bahan | null> {
 
   const batasUlang = new Date(Date.now() - ULANG_SETELAH_HARI * 86_400_000).toISOString();
 
-  const [akt, ses, kot, bun, prof] = await Promise.all([
+  const [akt, ses, kot, bun, prof, pro] = await Promise.all([
     // Tanpa batas tanggal: satu baris per hari, jadi setahun pun cuma ~365
     // baris — dan streak 40 hari harus kebaca 40, bukan kepotong jendela.
     supabase.from("aktivitas_harian").select("tanggal")
@@ -143,6 +147,7 @@ async function ambilBahan(): Promise<Bahan | null> {
     supabase.from("bunpou_progress").select("benar,salah")
       .eq("user_id", user.id).lt("updated_at", batasUlang),
     supabase.from("profiles").select("target_level").eq("id", user.id).single(),
+    supabase.rpc("is_pro"),
   ]);
 
   /* Yang ditagih cuma yang salahnya lebih banyak dari benarnya. Bandingan
@@ -166,6 +171,9 @@ async function ambilBahan(): Promise<Bahan | null> {
     bunpouNganggur: seringSalah(bun.data as BarisProgres[] | null),
     targetLevel: mdLevel ?? (prof.data?.target_level as TargetLevel) ?? "N3",
     examDate: typeof mdExam === "string" && mdExam && mdExam !== "none" ? mdExam : null,
+    /* is_pro() gagal kebaca → jangan nebak; lebih baik diem daripada nyuruh
+       orang Pro berlangganan. */
+    akses: typeof pro.data === "boolean" ? statusAkses(user.created_at, pro.data) : null,
   };
 }
 
@@ -270,6 +278,13 @@ export function susunPeringatan(bahan: Bahan, sekarang = new Date()): Peringatan
   const soalPerHari = Math.round(soalPekan / 7);
 
   const sisaHari = bahan.examDate ? selisihHari(hariIni, bahan.examDate) : null;
+
+  /* ── 0. Masa percobaan ─────────────────────────────────────────────
+     Dipush paling awal: dalam satu tingkat urutannya stabil, jadi pas seri
+     sama peringatan lain, ini yang menang banner Beranda. */
+
+  const trial = peringatanTrial(bahan.akses, sekarang);
+  if (trial) P.push(trial);
 
   /* ── A. Streak ─────────────────────────────────────────────────────── */
 
