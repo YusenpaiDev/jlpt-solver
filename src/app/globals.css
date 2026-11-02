@@ -660,6 +660,9 @@ input, textarea, select { font-size: 16px; }
 }
 .nav-rail:hover .nav-section-label,
 .nav-rail.expanded .nav-section-label { opacity: 1; }
+/* Keluar = <button> (beneran sign out), tampil sama kayak link nav lain. */
+.nav-item.nav-keluar { background: none; border: 0; font: inherit; text-align: left; }
+.nav-item.nav-keluar:disabled { cursor: progress; opacity: .7; }
 .nav-item {
   display: flex;
   align-items: center;
@@ -7837,8 +7840,10 @@ html { scrollbar-gutter: stable; }
   .pr-cta-footer { padding: 32px 22px; }
   .pr-cta-content h2 { font-size: 24px; }
 
-  .pg-grid { grid-template-columns: 1fr !important; }
-  .pg-nav { position: static !important; }
+  /* minmax(0,…) — "1fr" gak boleh lebih sempit dari isinya, dan deretan tab
+     nowrap di bawah bikin kolomnya melar ±800px di HP (kartu kepotong). */
+  .pg-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .pg-nav { position: static !important; min-width: 0; }
   .pg-nav-list { display: flex; flex-direction: row; gap: 4px; overflow-x: auto; }
   .pg-nav-item { white-space: nowrap; padding: 8px 12px; }
   .pg-nav-item > svg { display: none; }

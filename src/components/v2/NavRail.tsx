@@ -4,10 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, BookOpen, ListTodo, BookA, NotebookPen, BarChart3,
-  Settings, LogOut, Sparkles,
+  Settings, Sparkles,
 } from "lucide-react";
 import { useIsPro } from "@/lib/use-is-pro";
 import { HonixTurHost } from "@/components/honix/HonixTurHost";
+import { TombolKeluar } from "./TombolKeluar";
 
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
@@ -87,10 +88,7 @@ export function NavRail() {
         <span className="nav-item-label">Pengaturan</span>
       </Link>
 
-      <Link href="/login" className="nav-item" aria-label="Keluar">
-        <LogOut className="nav-item-icon" size={20} />
-        <span className="nav-item-label">Keluar</span>
-      </Link>
+      <TombolKeluar />
 
       {/* Tur cara pakai — render lewat portal, jadi ikut jalan di HP walau rail-nya disembunyiin. */}
       <HonixTurHost />
