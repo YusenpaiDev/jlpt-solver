@@ -51,11 +51,16 @@ function posisiBalon(t: Kotak, hp: boolean): CSSProperties {
  * terang, Honix jelasin lewat balon. Dipakai tur menu (HonixTurHost) dan tur
  * per halaman (HonixTurHalaman). Langkah yang targetnya gak kelihatan dilewati.
  */
-export function HonixTur({ daftar, onSelesai, aksiAkhir }: {
+export function HonixTur({ daftar, onSelesai, aksiAkhir, pembuka, aksiPembuka }: {
   daftar: { desktop: LangkahTur[]; hp?: LangkahTur[] };
   onSelesai: () => void;
   /** Tombol utama di langkah terakhir; tanpa ini cuma "Selesai". */
   aksiAkhir?: { label: string; onClick: () => void };
+  /** Ganti isi balon pembuka (langkah 0 tanpa target). Dibaca tiap render,
+      jadi boleh nyusul — mis. info trial yang datanya kebaca belakangan. */
+  pembuka?: LangkahTur | null;
+  /** Tombol tambahan di balon pembuka, di samping "Ayo". */
+  aksiPembuka?: { label: string; onClick: () => void } | null;
 }) {
   const { kurangiGerak } = useHonix();
   const idJudul = useId(), idIsi = useId();
@@ -76,7 +81,7 @@ export function HonixTur({ daftar, onSelesai, aksiAkhir }: {
   }, [langkah, hp, daftar]);
 
   const n = langkah?.length ?? 0;
-  const l = langkah?.[i];
+  const l = i === 0 && pembuka && langkah?.[0] && !langkah[0].target ? pembuka : langkah?.[i];
   const target = l?.target ?? null;
   const akhir = i === n - 1;
   const maju = () => setI(x => Math.min(x + 1, n - 1));
@@ -151,9 +156,11 @@ export function HonixTur({ daftar, onSelesai, aksiAkhir }: {
           </div>
         </div>
         <div className="hx-tur-kaki">
-          <div className="hx-tur-titik" role="img" aria-label={`Langkah ${i + 1} dari ${langkah.length}`}>
-            {langkah.map((_, n) => <span key={n} className={n === i ? "hx-on" : n < i ? "hx-lewat" : ""} />)}
-          </div>
+          {langkah.length > 1 ? (
+            <div className="hx-tur-titik" role="img" aria-label={`Langkah ${i + 1} dari ${langkah.length}`}>
+              {langkah.map((_, n) => <span key={n} className={n === i ? "hx-on" : n < i ? "hx-lewat" : ""} />)}
+            </div>
+          ) : <span aria-hidden="true" />}
           <div className="hx-tur-aksi">
             {akhir && aksiAkhir ? (
               <>
@@ -170,7 +177,13 @@ export function HonixTur({ daftar, onSelesai, aksiAkhir }: {
               <>
                 <button type="button" className="hx-btn-link" onClick={onSelesai}>Lewati</button>
                 {i > 0 && <button type="button" className="hx-btn hx-btn-g" onClick={mundur}>Kembali</button>}
-                <button ref={utamaRef} type="button" className="hx-btn hx-btn-p" onClick={maju}>{i === 0 ? "Ayo" : "Lanjut"}</button>
+                {i === 0 && aksiPembuka && (
+                  <button type="button" className="hx-btn hx-btn-g"
+                    onClick={() => { onSelesai(); aksiPembuka.onClick(); }}>{aksiPembuka.label}</button>
+                )}
+                <button ref={utamaRef} type="button" className="hx-btn hx-btn-p" onClick={maju}>
+                  {i === 0 ? (aksiPembuka ? "Ayo keliling" : "Ayo") : "Lanjut"}
+                </button>
               </>
             )}
           </div>
