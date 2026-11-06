@@ -10,7 +10,8 @@ import bunpouN2 from "@/data/bunpou/N2.json";
 import bunpouN3 from "@/data/bunpou/N3.json";
 import bunpouN4 from "@/data/bunpou/N4.json";
 import bunpouN5 from "@/data/bunpou/N5.json";
-import { useUserStats } from "@/lib/use-user-stats";
+import { useUserStats, type UserStats } from "@/lib/use-user-stats";
+import { GantiTarget } from "@/components/v2/GantiTarget";
 
 interface Ex { jp: string; highlight: string; id: string; }
 interface Pattern {
@@ -24,8 +25,6 @@ interface Deck { level: string; count: number; groups: Grp[]; patterns: Pattern[
 const DECKS: Record<string, Deck> = {
   N5: bunpouN5 as Deck, N4: bunpouN4 as Deck, N3: bunpouN3 as Deck, N2: bunpouN2 as Deck, N1: bunpouN1 as Deck,
 };
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
-const DEFAULT_LEVEL = "N2";
 
 /* Status latihan — dari hasil drill beneran (tabel bunpou_progress). */
 type State = "known" | "seen" | "wrong" | "new";
@@ -69,6 +68,20 @@ function genQuestions(pats: Pattern[], all: Pattern[], byId: Map<string, Pattern
 
 export default function BunpouDeck() {
   const stats = useUserStats();
+  if (!stats.loaded) {
+    return (
+      <>
+        <AuroraBackground />
+        <NavRail />
+        <BottomNav />
+        <main className="app-shell"><div className="lk-load">Memuat…</div></main>
+      </>
+    );
+  }
+  return <BunpouIsi key={stats.targetLevel} level={stats.targetLevel} stats={stats} />;
+}
+
+function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
   const router = useRouter();
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
      profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
@@ -78,7 +91,6 @@ export default function BunpouDeck() {
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
 
-  const [level, setLevel] = useState(DEFAULT_LEVEL);
   const DECK = DECKS[level];
   const PATTERNS = DECK.patterns;
   const GROUPS = DECK.groups;
@@ -87,8 +99,8 @@ export default function BunpouDeck() {
   const [query, setQuery] = useState("");
   const [statusF, setStatusF] = useState<"all" | State | "fav" | "warn">("all");
   const [sort, setSort] = useState<Sort>("fungsi");
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([DECKS[DEFAULT_LEVEL].groups[0]?.key]));
-  const [sel, setSel] = useState<Pattern | null>(DECKS[DEFAULT_LEVEL].patterns[0] ?? null);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([GROUPS[0]?.key]));
+  const [sel, setSel] = useState<Pattern | null>(PATTERNS[0] ?? null);
   const [notice, setNotice] = useState<string | null>(null);
   const [progres, setProgres] = useState<Map<string, Prog>>(new Map());
 
@@ -98,15 +110,6 @@ export default function BunpouDeck() {
   const [drillPick, setDrillPick] = useState<string | null>(null);
   const [drillRes, setDrillRes] = useState<{ benar: number; salah: number }>({ benar: 0, salah: 0 });
   const [drillDone, setDrillDone] = useState(false);
-
-  const changeLevel = (lv: string) => {
-    if (lv === level) return;
-    const d = DECKS[lv];
-    setLevel(lv);
-    setOpenGroups(new Set([d.groups[0]?.key]));
-    setSel(d.patterns[0] ?? null);
-    setStatusF("all"); setQuery("");
-  };
 
   useEffect(() => {
     async function load() {
@@ -243,11 +246,8 @@ export default function BunpouDeck() {
               <h1>Bunpou <span className="jp">文法</span><span className="lvtag">{level}</span></h1>
               <p>{DECK.count} pola dikelompokin per <b>fungsi</b> — bukan urutan kamus. Pola yang mirip duduk bareng biar keliatan bedanya.</p>
               <div className="bv-levels">
-                {LEVELS.map(lv => (
-                  <button key={lv} className={`bv-lvl${level === lv ? " on" : ""}`} onClick={() => changeLevel(lv)}>
-                    {lv}<span className="c">{DECKS[lv].count}</span>
-                  </button>
-                ))}
+                <span className="bv-lvl on">{level}<span className="c">{DECK.count}</span></span>
+                <GantiTarget />
               </div>
             </div>
             <div className="bv-hd-right">

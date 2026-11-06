@@ -109,10 +109,9 @@ function buildQuestions(pool: Word[], all: Word[], progres: Map<string, Prog>, c
   return out;
 }
 
-function KotobaPlayer() {
+function KotobaPlayer({ level }: { level: string }) {
   const params = useSearchParams();
   const router = useRouter();
-  const level = (params.get("level") || "N2").toUpperCase();
   const group = params.get("group");
   const count = Math.min(20, Math.max(1, Number(params.get("count")) || 10));
 
@@ -330,7 +329,10 @@ function KotobaPlayer() {
 /* Di-key pakai query string: ganti sesi (lihat mulaiSesi) = player di-mount ulang. */
 function KotobaKeyed() {
   const params = useSearchParams();
-  return <KotobaPlayer key={params.toString()} />;
+  const { loaded, targetLevel } = useUserStats();
+  if (!loaded) return <div className="lk-load">Memuat…</div>;
+  /* Level selalu dari target akun. `?level=` di link lama sengaja diabaikan. */
+  return <KotobaPlayer key={params.toString()} level={targetLevel} />;
 }
 
 export default function Page() {

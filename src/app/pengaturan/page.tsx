@@ -95,6 +95,7 @@ export default function Pengaturan() {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
+      if (window.location.hash === "#target") setActive("target");
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
       setEmail(user.email ?? "");

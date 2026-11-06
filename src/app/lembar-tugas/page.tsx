@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
+import { GantiTarget } from "@/components/v2/GantiTarget";
 
 type Difficulty = "mudah" | "sedang" | "sulit";
 type CategoryAll = "全" | "語彙" | "文法" | "文字" | "読解";
@@ -92,7 +93,6 @@ export default function LembarTugas() {
   const [stage, setStage] = useState<Stage>("setup");
 
   /* Setup */
-  const [level, setLevel] = useState<Level>("N2");
   const [kategori, setKategori] = useState<CategoryAll>("文法");
   const [count, setCount] = useState(10);
   const [timerOn, setTimerOn] = useState(true);
@@ -113,6 +113,7 @@ export default function LembarTugas() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const stats = useUserStats();
+  const level: Level = stats.targetLevel;
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
      profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
      halaman nampilin angka beku yang sama. */
@@ -127,18 +128,11 @@ export default function LembarTugas() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
-      const [profileRes, sessionRes] = await Promise.all([
-        supabase.from("profiles").select("target_level").eq("id", user.id).single(),
-        supabase.from("sessions")
-          .select("id, title, category, level, total, score, created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(24),
-      ]);
-      if (profileRes.data) {
-        const tgt = profileRes.data.target_level as Level | null;
-        if (tgt && !LOCKED_LEVELS.has(tgt)) setLevel(tgt); // target N1/N5 masih dikunci → biarin default N2
-      }
+      const sessionRes = await supabase.from("sessions")
+        .select("id, title, category, level, total, score, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(24);
       setRiwayat((sessionRes.data ?? []) as RiwayatItem[]);
     }
     load();
@@ -306,9 +300,10 @@ export default function LembarTugas() {
           </div>
         )}
 
-        {stage === "setup" && (
+        {stage === "setup" && !stats.loaded && <div className="lk-load">Memuat…</div>}
+        {stage === "setup" && stats.loaded && (
           <SetupView
-            level={level} setLevel={setLevel}
+            level={level}
             kategori={kategori} setKategori={setKategori}
             count={count} setCount={setCount}
             timerOn={timerOn} setTimerOn={setTimerOn}
@@ -360,10 +355,10 @@ export default function LembarTugas() {
 /* ─── Setup view ─── */
 
 function SetupView({
-  level, setLevel, kategori, setKategori, count, setCount, timerOn, setTimerOn,
+  level, kategori, setKategori, count, setCount, timerOn, setTimerOn,
   riwayat, onStart,
 }: {
-  level: Level; setLevel: (l: Level) => void;
+  level: Level;
   kategori: CategoryAll; setKategori: (k: CategoryAll) => void;
   count: number; setCount: (n: number) => void;
   timerOn: boolean; setTimerOn: (b: boolean) => void;
@@ -377,12 +372,12 @@ function SetupView({
           <div className="section-head">
             <span className="section-num">1</span>
             <div>
-              <h3 className="section-title">Pilih Level</h3>
-              <p className="section-desc">AI akan tune kesulitan soal sesuai level kamu</p>
+              <h3 className="section-title">Level Target</h3>
+              <p className="section-desc">Soal mengikuti target kamu. <GantiTarget /></p>
             </div>
           </div>
           <div className="level-picker">
-            {LEVELS.map(opt => {
+            {LEVELS.filter(opt => opt.lv === level).map(opt => {
               const locked = LOCKED_LEVELS.has(opt.lv);
               return (
                 <button
@@ -391,7 +386,6 @@ function SetupView({
                   disabled={locked}
                   aria-disabled={locked}
                   className={`level-tile lvt-${opt.lv.toLowerCase()}${level === opt.lv ? " on" : ""}${locked ? " locked" : ""}`}
-                  onClick={() => { if (!locked) setLevel(opt.lv); }}
                 >
                   <span className="lvt-letter">{opt.lv}</span>
                   <span className="lvt-desc">{locked ? "Segera" : opt.desc}</span>
@@ -500,10 +494,10 @@ function SetupView({
           </div>
         </section>
 
-        <button type="button" className="lt-start-cta" onClick={onStart}>
+        <button type="button" className="lt-start-cta" onClick={onStart} disabled={LOCKED_LEVELS.has(level)}>
           <div className="cta-bg" />
           <Wand2 size={16} strokeWidth={1.8} />
-          <span className="cta-text">Generate &amp; Mulai Sesi</span>
+          <span className="cta-text">{LOCKED_LEVELS.has(level) ? `Soal ${level} segera hadir` : <>Generate &amp; Mulai Sesi</>}</span>
           <span className="cta-meta">
             {count} soal · {level} · {kategori === "全" ? "MIX" : kategori}
           </span>
