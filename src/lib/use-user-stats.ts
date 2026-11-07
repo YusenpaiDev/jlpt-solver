@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { statusAkses } from "@/lib/batas-paket";
 import { fetchProAccess } from "@/lib/access";
 import { tanggalLokal } from "@/lib/aktivitas";
+import { rapikanTanggalUjian } from "@/lib/sesi-ujian";
 import { EVENT_XP_TERSIMPAN, XP_PER_LEVEL } from "@/lib/honix-level";
 
 /**
@@ -117,7 +118,7 @@ export function useUserStats(): UserStats {
          Metadata itu yang beneran dipilih user, jadi itu yang dipercaya. */
       // Onboarding nyimpen "none" kalau user milih belum nentuin tanggal.
       const mdExam = user.user_metadata?.exam_date;
-      const examDate = typeof mdExam === "string" && mdExam && mdExam !== "none" ? mdExam : null;
+      const examDate = rapikanTanggalUjian(mdExam);
 
       const mdLevel = user.user_metadata?.target_level as TargetLevel | undefined;
       const targetLevel = mdLevel ?? (profil?.target_level as TargetLevel) ?? "N3";

@@ -8,6 +8,7 @@ import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/com
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
 import { GantiTarget } from "@/components/v2/GantiTarget";
 import { useUserStats } from "@/lib/use-user-stats";
+import { labelSesi } from "@/lib/sesi-ujian";
 import { gabungBankSoal, type SetUjian, type SesiMilik, type SetKatalog } from "@/lib/bank-soal";
 
 /* Deck Kotoba level target: buat angka di kartu Kotoba. Sumbernya sama dengan
@@ -63,11 +64,8 @@ export default function MateriHub() {
 
   const stats = useUserStats();
 
-  /* Tanggal ujian dari pilihan user; "Desember 2026" cuma ancar-ancar buat yang
-     belum nentuin (sesi JLPT terdekat). */
-  const targetDate = stats.examDate
-    ? new Date(stats.examDate).toLocaleDateString("id-ID", { month: "long", year: "numeric" })
-    : "Desember 2026";
+  /* Tanggal ujian dari pilihan user. */
+  const targetDate = stats.examDate ? labelSesi(stats.examDate) : "ujian berikutnya";
 
   useEffect(() => {
     async function load() {

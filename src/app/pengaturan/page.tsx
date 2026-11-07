@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import { cekAlasan, ALASAN_MAKS } from "@/lib/ganti-target";
+import { daftarSesiUjian, labelSesi, rapikanTanggalUjian, type SesiUjian } from "@/lib/sesi-ujian";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -59,7 +60,9 @@ export default function Pengaturan() {
   const [levelTersimpan, setLevelTersimpan] = useState<Level | null>(null);
   const [alasanGanti, setAlasanGanti] = useState("");
   const [pesanTarget, setPesanTarget] = useState<string | null>(null);
+  /* YYYY-MM-DD sesi ujian, "none" = belum tau, "" = belum pernah diisi. */
   const [ujianDate, setUjianDate] = useState("");
+  const [sesiUjian, setSesiUjian] = useState<SesiUjian[]>([]);
   const [waktuPerHari, setWaktuPerHari] = useState(30);
   const [kategoriFokus, setKategoriFokus] = useState<string[]>(["文法", "語彙", "読解"]);
 
@@ -100,6 +103,7 @@ export default function Pengaturan() {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
+      setSesiUjian(daftarSesiUjian(new Date()));
       if (window.location.hash === "#target") setActive("target");
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
@@ -119,7 +123,8 @@ export default function Pengaturan() {
       // + proxy). Override kalau ada.
       const md = user.user_metadata ?? {};
       if (md.target_level) { setTargetLevel(md.target_level as Level); setLevelTersimpan(md.target_level as Level); }
-      if (md.exam_date && md.exam_date !== "none") setUjianDate(md.exam_date as string);
+      if (md.exam_date === "none") setUjianDate("none");
+      else { const ujian = rapikanTanggalUjian(md.exam_date); if (ujian) setUjianDate(ujian); }
       if (typeof md.daily_goal_minutes === "number") setWaktuPerHari(md.daily_goal_minutes as number);
     }
     load();
@@ -276,7 +281,7 @@ export default function Pengaturan() {
             {active === "target" && (
               <TargetSection
                 targetLevel={targetLevel} setTargetLevel={setTargetLevel}
-                ujianDate={ujianDate} setUjianDate={setUjianDate}
+                ujianDate={ujianDate} setUjianDate={setUjianDate} sesiUjian={sesiUjian}
                 waktuPerHari={waktuPerHari} setWaktuPerHari={setWaktuPerHari}
                 kategoriFokus={kategoriFokus} toggleKategori={toggleKategori}
                 perluAlasan={levelTersimpan !== null && targetLevel !== levelTersimpan}
@@ -500,11 +505,11 @@ function ProfileSection({
 /* ─── Target section ─── */
 
 function TargetSection({
-  targetLevel, setTargetLevel, ujianDate, setUjianDate, waktuPerHari, setWaktuPerHari,
+  targetLevel, setTargetLevel, ujianDate, setUjianDate, sesiUjian, waktuPerHari, setWaktuPerHari,
   kategoriFokus, toggleKategori, perluAlasan, alasan, setAlasan, pesan, onSave, saving,
 }: {
   targetLevel: Level; setTargetLevel: (l: Level) => void;
-  ujianDate: string; setUjianDate: (d: string) => void;
+  ujianDate: string; setUjianDate: (d: string) => void; sesiUjian: SesiUjian[];
   waktuPerHari: number; setWaktuPerHari: (n: number) => void;
   kategoriFokus: string[]; toggleKategori: (k: string) => void;
   perluAlasan: boolean; alasan: string; setAlasan: (s: string) => void; pesan: string | null;
@@ -551,13 +556,17 @@ function TargetSection({
             />
           </Field>
         )}
-        <Field label="Tanggal target ujian">
-          <input
-            className="pg-input"
-            type="date"
-            value={ujianDate}
-            onChange={e => setUjianDate(e.target.value)}
-          />
+        <Field label="Sesi ujian JLPT" hint="Minggu pertama Juli & Desember">
+          <select className="pg-input" value={ujianDate} onChange={e => setUjianDate(e.target.value)}>
+            <option value="" disabled>Pilih sesi ujian</option>
+            {sesiUjian.map(s => (
+              <option key={s.iso} value={s.iso}>{s.label} · {s.hari} hari lagi</option>
+            ))}
+            {ujianDate && ujianDate !== "none" && !sesiUjian.some(s => s.iso === ujianDate) && (
+              <option value={ujianDate}>{labelSesi(ujianDate)} (pilihan lama)</option>
+            )}
+            <option value="none">Belum tau / cuma belajar dulu</option>
+          </select>
         </Field>
         <Field label="Waktu belajar per hari (target)">
           <div className="pg-range-wrap">

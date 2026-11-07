@@ -8,6 +8,7 @@ import { putarHonix } from "@/lib/honix-sfx";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { daftarSesiUjian, rapikanTanggalUjian, type SesiUjian } from "@/lib/sesi-ujian";
 
 type Lv = "N5" | "N4" | "N3" | "N2" | "N1";
 const LV_NAME: Record<Lv, string> = { N5: "Pemula", N4: "Dasar", N3: "Menengah", N2: "Pra-mahir", N1: "Mahir" };
@@ -24,22 +25,6 @@ const GOALS = [
   { v: 40, t: "⚡ Serius — 40+ menit", s: "~35 soal · buat yang deket ujian", wide: true },
 ];
 
-/* Dua sesi JLPT terdekat (Juli & Desember, hari Minggu pertama — perkiraan). */
-function upcomingExams(): { label: string; iso: string; days: number }[] {
-  const now = new Date();
-  const out: { label: string; iso: string; days: number }[] = [];
-  for (let y = now.getFullYear(); y <= now.getFullYear() + 2 && out.length < 2; y++) {
-    for (const m of [7, 12]) {
-      const d = new Date(y, m - 1, 1);
-      if (d.getTime() < now.getTime()) continue;
-      const days = Math.round((d.getTime() - now.getTime()) / 86_400_000);
-      out.push({ label: `${m === 7 ? "Juli" : "Desember"} ${y}`, iso: `${y}-${String(m).padStart(2, "0")}`, days });
-      if (out.length >= 2) break;
-    }
-  }
-  return out;
-}
-
 const LS_KEY = "jlpt-onboarding-v1";
 const CONFETTI = ["#DD4124", "#E8704F", "#D4A04A", "#8FCB52", "#F0B49A"];
 // Posisi confetti deterministik (dihitung sekali, bukan pas render) — biar
@@ -52,7 +37,7 @@ const CONFETTI_PIECES = Array.from({ length: 26 }, (_, i) => ({
 
 export default function Onboarding() {
   const router = useRouter();
-  const [exams, setExams] = useState<{ label: string; iso: string; days: number }[]>([]);
+  const [exams, setExams] = useState<SesiUjian[]>([]);
   const [step, setStep] = useState(0);
   const [level, setLevel] = useState<Lv | null>(null);
   const [examIso, setExamIso] = useState<string | null>(null);
@@ -63,13 +48,13 @@ export default function Onboarding() {
   // fungsi biar lolos rule "no sync setState in effect" (pola sama kayak page lain).
   useEffect(() => {
     async function init() {
-      setExams(upcomingExams());
+      setExams(daftarSesiUjian(new Date()));
       try {
         const raw = localStorage.getItem(LS_KEY);
         if (!raw) return;
         const s = JSON.parse(raw);
         if (s.level) setLevel(s.level);
-        if (s.examIso !== undefined) setExamIso(s.examIso);
+        if (s.examIso !== undefined) setExamIso(s.examIso === "none" ? "none" : rapikanTanggalUjian(s.examIso));
         if (s.goal !== undefined) setGoal(s.goal);
         if (typeof s.step === "number") setStep(Math.min(s.step, 4));
       } catch { /* ignore */ }
@@ -177,7 +162,7 @@ export default function Onboarding() {
               <div className="ob-chips">
                 {exams.map(e => (
                   <button key={e.iso} className={`ob-chip${examIso === e.iso ? " sel" : ""}`} onClick={() => setExamIso(e.iso)}>
-                    <div className="ob-cht">{e.label}</div><div className="ob-chs">≈ {e.days} hari lagi</div>
+                    <div className="ob-cht">{e.label}</div><div className="ob-chs">{e.hari} hari lagi</div>
                   </button>
                 ))}
                 <button className={`ob-chip wide${examIso === "none" ? " sel" : ""}`} onClick={() => setExamIso("none")}>
@@ -218,7 +203,7 @@ export default function Onboarding() {
               <p className="ob-sub">Profil belajarmu udah kesimpen. Mulai dari mana nih?</p>
               <div className="ob-sum">
                 <div className="ob-sumr"><span className="k">TARGET LEVEL</span><span className="v">{level ? `${level} — ${LV_NAME[level]}` : "—"}</span></div>
-                {selExam && <div className="ob-sumr"><span className="k">UJIAN</span><span className="v">{selExam.label} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>· {selExam.days} hari lagi</span></span></div>}
+                {selExam && <div className="ob-sumr"><span className="k">UJIAN</span><span className="v">{selExam.label} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>· {selExam.hari} hari lagi</span></span></div>}
                 {goal && <div className="ob-sumr"><span className="k">TARGET HARIAN</span><span className="v">{GOALS.find(g => g.v === goal)?.t} — {goal} menit/hari</span></div>}
               </div>
               <div className="ob-donecta">

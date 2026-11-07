@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { tanggalLokal, EVENT_AKTIVITAS } from "@/lib/aktivitas";
+import { rapikanTanggalUjian } from "@/lib/sesi-ujian";
 import type { TargetLevel } from "@/lib/use-user-stats";
 import { statusAkses } from "@/lib/batas-paket";
 import { peringatanTrial, type AksesTrial } from "@/lib/peringatan-trial";
@@ -170,7 +171,7 @@ async function ambilBahan(): Promise<Bahan | null> {
     kotobaNganggur: seringSalah(kot.data as BarisProgres[] | null),
     bunpouNganggur: seringSalah(bun.data as BarisProgres[] | null),
     targetLevel: mdLevel ?? (prof.data?.target_level as TargetLevel) ?? "N3",
-    examDate: typeof mdExam === "string" && mdExam && mdExam !== "none" ? mdExam : null,
+    examDate: rapikanTanggalUjian(mdExam),
     /* is_pro() gagal kebaca → jangan nebak; lebih baik diem daripada nyuruh
        orang Pro berlangganan. */
     akses: typeof pro.data === "boolean" ? statusAkses(user.created_at, pro.data) : null,
