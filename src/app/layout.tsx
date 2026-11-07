@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { GeistSans } from "geist/font/sans";
 import { HonixLevelUp } from "@/components/honix/HonixLevelUp";
 import { PencatatError } from "@/components/PencatatError";
+import { PencatatWaktu } from "@/components/PencatatWaktu";
 import "./fonts/noto-jp.css";
 import "./globals.css";
 
@@ -59,6 +60,7 @@ export default function RootLayout({
         {children}
         <HonixLevelUp />
         <PencatatError />
+        <PencatatWaktu />
       </body>
     </html>
   );

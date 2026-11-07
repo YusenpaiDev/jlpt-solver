@@ -19,7 +19,7 @@ const BAGIAN: Bagian[] = [
       <ul>
         <li><b>Akun:</b> email, nama, dan foto profil dari akun Google (kalau masuk pakai Google) atau email yang kamu daftarkan.</li>
         <li><b>Profil belajar:</b> level target, tanggal ujian, dan target belajar harian yang kamu isi saat onboarding atau di Pengaturan.</li>
-        <li><b>Aktivitas belajar:</b> jawaban, skor, dan riwayat latihan; progres Kotoba &amp; Bunpou; hari aktif (streak) dan XP.</li>
+        <li><b>Aktivitas belajar:</b> jawaban, skor, dan riwayat latihan; progres Kotoba &amp; Bunpou; hari aktif (streak), XP, dan lama belajar per hari.</li>
         <li><b>Isi yang kamu buat:</b> kosakata di Kamus, catatan, soal yang kamu edit atau tandai review, dan foto profil yang kamu unggah.</li>
         <li><b>Pemakaian fitur AI:</b> jumlah pemakaian chat Sensei, furigana, dan lembar tugas per hari.</li>
         <li><b>Transaksi:</b> nomor pesanan, paket, nominal, status, waktu, dan notifikasi pembayaran dari Midtrans (buat audit). <b>Kami tidak menyimpan data kartu, rekening, atau PIN</b> — itu ditangani Midtrans.</li>
