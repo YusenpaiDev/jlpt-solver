@@ -37,6 +37,10 @@ export function dasborContoh(kini = new Date()): DasborAdmin {
       { waktu: lalu(0.1), sumber: "browser", pesan: "TypeError: Cannot read properties of undefined (reading 'questions')", path: "/analisis-foto", rute: null },
       { waktu: lalu(0.6), sumber: "server", pesan: "Gagal menghubungi Anthropic: 529 overloaded", path: "/api/chat", rute: "route /api/chat" },
     ] },
+    gantiTarget: [
+      { id: "g1", dibuat: lalu(0.2), email: "user3@contoh.id", dari: "N3", ke: "N2", alasan: "Sudah lulus N3 Juli kemarin, mau lanjut N2 Desember." },
+      { id: "g2", dibuat: lalu(2), email: "user8@contoh.id", dari: "N2", ke: "N3", alasan: "Ternyata N2 masih berat, mau mantapin N3 dulu." },
+    ],
     konten: { bankSoal, totalBankSoal: Object.values(bankSoal).reduce((s, k) => s + Object.values(k).reduce((a, b) => a + b, 0), 0), sesiReview: 4 },
   };
 }

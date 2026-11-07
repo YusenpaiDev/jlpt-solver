@@ -15,6 +15,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
+import { cekAlasan, ALASAN_MAKS } from "@/lib/ganti-target";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -54,6 +55,10 @@ export default function Pengaturan() {
 
   /* Target */
   const [targetLevel, setTargetLevel] = useState<Level>("N2");
+  /* Level yang tersimpan sekarang. Beda dengan pilihan → wajib isi alasan. */
+  const [levelTersimpan, setLevelTersimpan] = useState<Level | null>(null);
+  const [alasanGanti, setAlasanGanti] = useState("");
+  const [pesanTarget, setPesanTarget] = useState<string | null>(null);
   const [ujianDate, setUjianDate] = useState("");
   const [waktuPerHari, setWaktuPerHari] = useState(30);
   const [kategoriFokus, setKategoriFokus] = useState<string[]>(["文法", "語彙", "読解"]);
@@ -113,7 +118,7 @@ export default function Pengaturan() {
       // Target belajar sekarang di-source dari user_metadata (dipakai onboarding
       // + proxy). Override kalau ada.
       const md = user.user_metadata ?? {};
-      if (md.target_level) setTargetLevel(md.target_level as Level);
+      if (md.target_level) { setTargetLevel(md.target_level as Level); setLevelTersimpan(md.target_level as Level); }
       if (md.exam_date && md.exam_date !== "none") setUjianDate(md.exam_date as string);
       if (typeof md.daily_goal_minutes === "number") setWaktuPerHari(md.daily_goal_minutes as number);
     }
@@ -165,6 +170,25 @@ export default function Pengaturan() {
   }
 
   async function handleSaveTarget() {
+    const ganti = levelTersimpan !== null && targetLevel !== levelTersimpan;
+    if (ganti) {
+      const cek = cekAlasan(alasanGanti);
+      if (!cek.ok) { setPesanTarget(cek.pesan); return; }
+      setSaving(true);
+      /* Alasan dicatat + dikirim ke admin dulu. Gagal → level gak ikut berubah. */
+      const res = await fetch("/api/target/ganti", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ke: targetLevel, alasan: cek.alasan }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        const j = await res?.json().catch(() => null) as { pesan?: string } | null;
+        setPesanTarget(j?.pesan ?? "Belum bisa disimpan. Coba lagi sebentar.");
+        setSaving(false);
+        return;
+      }
+    }
+    setPesanTarget(null);
     setSaving(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -176,6 +200,8 @@ export default function Pengaturan() {
       await supabase.auth.updateUser({
         data: { target_level: targetLevel, exam_date: ujianDate || null, daily_goal_minutes: waktuPerHari },
       });
+      setLevelTersimpan(targetLevel);
+      setAlasanGanti("");
     }
     setSaving(false);
     showSaved();
@@ -253,6 +279,8 @@ export default function Pengaturan() {
                 ujianDate={ujianDate} setUjianDate={setUjianDate}
                 waktuPerHari={waktuPerHari} setWaktuPerHari={setWaktuPerHari}
                 kategoriFokus={kategoriFokus} toggleKategori={toggleKategori}
+                perluAlasan={levelTersimpan !== null && targetLevel !== levelTersimpan}
+                alasan={alasanGanti} setAlasan={setAlasanGanti} pesan={pesanTarget}
                 onSave={handleSaveTarget}
                 saving={saving}
               />
@@ -473,12 +501,13 @@ function ProfileSection({
 
 function TargetSection({
   targetLevel, setTargetLevel, ujianDate, setUjianDate, waktuPerHari, setWaktuPerHari,
-  kategoriFokus, toggleKategori, onSave, saving,
+  kategoriFokus, toggleKategori, perluAlasan, alasan, setAlasan, pesan, onSave, saving,
 }: {
   targetLevel: Level; setTargetLevel: (l: Level) => void;
   ujianDate: string; setUjianDate: (d: string) => void;
   waktuPerHari: number; setWaktuPerHari: (n: number) => void;
   kategoriFokus: string[]; toggleKategori: (k: string) => void;
+  perluAlasan: boolean; alasan: string; setAlasan: (s: string) => void; pesan: string | null;
   onSave: () => void; saving: boolean;
 }) {
   const KATEGORIS = [
@@ -510,6 +539,18 @@ function TargetSection({
             ))}
           </div>
         </Field>
+        {perluAlasan && (
+          <Field label={`Kenapa ganti target ke ${targetLevel}?`} hint="wajib, dikirim ke admin">
+            <textarea
+              className="pg-input pg-alasan"
+              rows={3}
+              maxLength={ALASAN_MAKS}
+              value={alasan}
+              onChange={e => setAlasan(e.target.value)}
+              placeholder="Misal: sudah lulus N3, mau lanjut N2"
+            />
+          </Field>
+        )}
         <Field label="Tanggal target ujian">
           <input
             className="pg-input"
@@ -518,7 +559,7 @@ function TargetSection({
             onChange={e => setUjianDate(e.target.value)}
           />
         </Field>
-        <Field label="Waktu belajar per hari (target)" hint="AI akan ingatin kalau kurang">
+        <Field label="Waktu belajar per hari (target)">
           <div className="pg-range-wrap">
             <input
               type="range"
@@ -556,6 +597,7 @@ function TargetSection({
           </div>
         </Field>
       </Card>
+      {pesan && <p className="pg-target-pesan" role="alert">{pesan}</p>}
       <SaveBtn onSave={onSave} saving={saving} />
     </>
   );

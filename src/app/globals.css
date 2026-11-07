@@ -9518,3 +9518,7 @@ html:has(.beranda-v2), body:has(.beranda-v2) { overflow-x: clip; }
 .ganti-target { font-size: 12px; font-weight: 600; color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px; }
 .ganti-target:hover { color: #E8704F; }
 .lt-start-cta:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Pengaturan: alasan ganti level target. */
+.pg-alasan { resize: vertical; min-height: 84px; line-height: 1.5; font-family: inherit; }
+.pg-target-pesan { margin: 0; font-size: 13px; color: #E8704F; }

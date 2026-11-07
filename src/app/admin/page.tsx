@@ -188,6 +188,29 @@ export default async function AdminPage() {
         </div>
       </section>
 
+      {d.gantiTarget && (
+        <section className="adm-sek" aria-labelledby="adm-target">
+          <h2 id="adm-target">Ganti target</h2>
+          <div className="adm-panel">
+            {d.gantiTarget.length === 0 ? <p className="adm-sub">Belum ada yang ganti target.</p> : (
+              <table className="adm-tabel">
+                <thead><tr><th>Waktu</th><th>Akun</th><th>Level</th><th>Alasan</th></tr></thead>
+                <tbody>
+                  {d.gantiTarget.map(g => (
+                    <tr key={g.id}>
+                      <td>{tgl(g.dibuat)}</td>
+                      <td className="mono">{g.email ?? "—"}</td>
+                      <td>{g.dari ?? "?"} → {g.ke}</td>
+                      <td className="adm-pesan">{g.alasan}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+      )}
+
       {d.error && d.error.terbaru.length > 0 && (
         <section className="adm-sek" aria-labelledby="adm-error">
           <h2 id="adm-error">Error terbaru</h2>
