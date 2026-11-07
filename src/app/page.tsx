@@ -16,6 +16,7 @@ import { Honix } from "@/components/honix/Honix";
 import { devBeranda, type BerandaMentah } from "@/lib/dev-beranda";
 import { AuroraBackground, NavRail, BottomNav, PeringatanBanner } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
+import { daftarSesiUjian, hariMenuju, labelSesi } from "@/lib/sesi-ujian";
 import { PengingatPro } from "@/components/pembayaran/PengingatPro";
 import kotobaN1 from "@/data/kotoba/N1.json";
 import kotobaN2 from "@/data/kotoba/N2.json";
@@ -290,7 +291,7 @@ export default function Home() {
   const [name, setName] = useState("Yusuf");
   const [avatar, setAvatar] = useState<string | null>(null);
   const [loveNote, setLoveNote] = useState<string | null>(null);
-  const [meta, setMeta] = useState<{ date: string; days: number | null }>({ date: "", days: null });
+  const [meta, setMeta] = useState<{ date: string; days: number | null; ujian: string | null }>({ date: "", days: null, ujian: null });
   const [kanji, setKanji] = useState<KanjiHarian | null>(null);
 
   /* Honix */
@@ -305,9 +306,7 @@ export default function Home() {
   const [faseNaik, setFaseNaik] = useState<null | "naik" | "keluar" | "selesai">(null);
   const [pesanBanner, setPesanBanner] = useState<ReactNode>(null);
 
-  const examLabel = stats.examDate
-    ? new Date(stats.examDate).toLocaleDateString("id-ID", { month: "short", year: "numeric" })
-    : "Des 2026";
+  const examLabel = meta.ujian ? labelSesi(meta.ujian) : "";
   const [focus, setFocus] = useState<Focus[]>([]);
   const [week, setWeek] = useState<WeekDay[]>([]);
   const [activeDays, setActiveDays] = useState(0);
@@ -323,11 +322,10 @@ export default function Home() {
       // tanggal + countdown (browser-only → lolos purity)
       const now = new Date();
       const dateStr = now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-      // Tanggal ujian pilihan user; kalau dia skip pas onboarding, pakai
-      // sesi JLPT terdekat (Desember) sebagai ancar-ancar.
-      const exam = stats.examDate ? new Date(stats.examDate) : new Date(2026, 11, 6);
-      const days = Math.max(0, Math.ceil((exam.getTime() - now.getTime()) / 86_400_000));
-      setMeta({ date: dateStr, days });
+      // Tanggal ujian pilihan user; kalau belum milih, sesi JLPT terdekat.
+      const ujian = stats.examDate ?? daftarSesiUjian(now, 1)[0].iso;
+      const days = Math.max(0, hariMenuju(ujian, now));
+      setMeta({ date: dateStr, days, ujian });
       setJam(labelJam(now.getHours()));
       setAcak(Math.floor(Math.random() * 1000));
       if (KANJI_POOL.length) setKanji(KANJI_POOL[hariKe(now) % KANJI_POOL.length]);
