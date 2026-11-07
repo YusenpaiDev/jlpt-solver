@@ -94,10 +94,9 @@ function buildQuestions(pats: Pattern[], all: Pattern[], byId: Map<string, Patte
   return out;
 }
 
-function KilatPlayer() {
+function KilatPlayer({ level }: { level: string }) {
   const params = useSearchParams();
   const router = useRouter();
-  const level = (params.get("level") || "N2").toUpperCase();
   const group = params.get("group");
   const item = params.get("item");
   const count = Math.min(20, Math.max(1, Number(params.get("count")) || (item ? 5 : 10)));
@@ -430,7 +429,10 @@ function KilatPlayer() {
 /* Di-key pakai query string: ganti sesi (lihat mulaiSesi) = player di-mount ulang. */
 function KilatKeyed() {
   const params = useSearchParams();
-  return <KilatPlayer key={params.toString()} />;
+  const { loaded, targetLevel } = useUserStats();
+  if (!loaded) return <div className="lk-load">Memuat…</div>;
+  /* Level selalu dari target akun. `?level=` di link lama sengaja diabaikan. */
+  return <KilatPlayer key={params.toString()} level={targetLevel} />;
 }
 
 export default function Page() {

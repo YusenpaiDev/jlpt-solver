@@ -6,20 +6,22 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
-import kotobaData from "@/data/kotoba-n2.json";
+import { GantiTarget } from "@/components/v2/GantiTarget";
 import { useUserStats } from "@/lib/use-user-stats";
 import { gabungBankSoal, type SetUjian, type SesiMilik, type SetKatalog } from "@/lib/bank-soal";
 
-/* Daftar kata yang beneran tampil di /materi/kotoba — saringannya wajib sama
-   persis kayak di halaman itu, kalau beda nanti penyebut progresnya bohong.
-   (Label lama "585 kata" ngitung mentah dari file; yang lolos saringan 505.) */
-const NON_N2 = /\bN[1345]\b/;
-const KOTOBA_WORDS = ((kotobaData as { vocabulary?: { word?: string; group?: string }[] }).vocabulary ?? [])
-  .filter(w => w.word && !NON_N2.test(w.group ?? ""))
-  .map(w => w.word as string);
+/* Deck Kotoba level target: buat angka di kartu Kotoba. Sumbernya sama dengan
+   /materi/kotoba, jadi jumlah katanya selalu cocok. */
+interface DekKotoba { source: string; vocabulary: { word: string }[]; }
+const DEK_KOTOBA: Record<Lv, () => Promise<DekKotoba>> = {
+  N5: () => import("@/data/kotoba/N5.json").then(m => m.default as DekKotoba),
+  N4: () => import("@/data/kotoba/N4.json").then(m => m.default as DekKotoba),
+  N3: () => import("@/data/kotoba/N3.json").then(m => m.default as DekKotoba),
+  N2: () => import("@/data/kotoba/N2.json").then(m => m.default as DekKotoba),
+  N1: () => import("@/data/kotoba/N1.json").then(m => m.default as DekKotoba),
+};
 
 type Lv = "N1" | "N2" | "N3" | "N4" | "N5";
-const LEVEL_ORDER: Lv[] = ["N1", "N2", "N3", "N4", "N5"];
 
 type Exam = SetUjian;
 type ExType = "筆記" | "聴解";
@@ -50,10 +52,8 @@ export default function MateriHub() {
   /* Progres materi belajar — dihitung dari data, bukan dipatok. Yang diukur
      "ditandai/disimpan", bukan "dikuasai": itu yang beneran kelacak. */
   const [bunpou, setBunpou] = useState({ total: 0, ditandai: 0 });
-  const [kotobaTersimpan, setKotobaTersimpan] = useState(0);
-  /* null = profil belum kebaca. Jangan default ke level tertentu di sini —
-     itu yang bikin user yang milih N3 tetap dikasih lihat N2. */
-  const [level, setLevel] = useState<Lv | null>(null);
+  const [kataFavorit, setKataFavorit] = useState<Set<string>>(new Set());
+  const [dekKotoba, setDekKotoba] = useState<DekKotoba | null>(null);
   const [statusF, setStatusF] = useState<StatusF>("all");
   const [showAll, setShowAll] = useState(false);
   /* judul set yang lagi disiapin salinannya (klik pertama) + pesan kalau gagal */
@@ -93,10 +93,7 @@ export default function MateriHub() {
       const pola = bp.data ?? [];
       setBunpou({ total: pola.length, ditandai: pola.filter(r => r.favorite).length });
 
-      // Cuma hitung bintang yang kena daftar 585 kata Kotoba — Kamus juga isinya
-      // kata hasil Analisis Foto, dan itu bukan progres materi ini.
-      const bintang = new Set((sw.data ?? []).map(r => r.kanji));
-      setKotobaTersimpan(KOTOBA_WORDS.filter(w => bintang.has(w)).length);
+      setKataFavorit(new Set((sw.data ?? []).map(r => r.kanji)));
     }
     load().catch(() => setMuat("error"));
   }, []);
@@ -107,20 +104,27 @@ export default function MateriHub() {
     return m;
   }, [exams]);
 
-  const levelsPresent = LEVEL_ORDER.filter(x => (perLevel[x]?.length ?? 0) > 0);
+  /* Bank Soal cuma nampilin level target. Level lain dibuka lewat ganti target. */
+  const lv: Lv = stats.targetLevel;
+  const setLevelIni = useMemo(() => (stats.loaded ? perLevel[lv] ?? [] : []), [stats.loaded, perLevel, lv]);
 
-  /* Level tampilan: pilihan user kalau dia udah nge-klik tab. Kalau belum,
-     level targetnya — TAPI cuma kalau dia beneran punya materi di situ.
-     Tester yang dikasih paket N2 padahal targetnya N3 harus lihat paketnya,
-     bukan halaman N3 yang kosong. */
-  const lv: Lv = level
-    ?? (levelsPresent.includes(stats.targetLevel) ? stats.targetLevel : levelsPresent[0])
-    ?? stats.targetLevel;
+  useEffect(() => {
+    if (!stats.loaded) return;
+    let batal = false;
+    void DEK_KOTOBA[lv]().then(d => { if (!batal) setDekKotoba(d); });
+    return () => { batal = true; };
+  }, [stats.loaded, lv]);
+
+  const kotobaTotal = dekKotoba?.vocabulary.length ?? 0;
+  const kotobaTersimpan = useMemo(
+    () => (dekKotoba?.vocabulary ?? []).filter(w => kataFavorit.has(w.word)).length,
+    [dekKotoba, kataFavorit],
+  );
 
   /* group per tanggal → {hisho, choukai} */
   const groups = useMemo<Group[]>(() => {
     const map = new Map<string, Group>();
-    for (const e of perLevel[lv] ?? []) {
+    for (const e of setLevelIni) {
       const { label, sortKey } = examMeta(e.title);
       const key = `${e.level}·${label}`;
       let g = map.get(key);
@@ -128,7 +132,7 @@ export default function MateriHub() {
       if (exType(e) === "聴解") g.choukai = e; else g.hisho = e;
     }
     return [...map.values()].sort((a, b) => b.sortKey - a.sortKey);
-  }, [perLevel, lv]);
+  }, [setLevelIni]);
 
   const gStatus = (g: Group): StatusF => {
     const parts = [g.hisho, g.choukai].filter(Boolean) as Exam[];
@@ -141,17 +145,14 @@ export default function MateriHub() {
   const shown = showAll ? filtered : filtered.slice(0, DEFAULT_SHOWN);
   const moreN = filtered.length - shown.length;
 
-  const counts = (target: Lv) => {
-    const set = new Set((perLevel[target] ?? []).map(e => examMeta(e.title).label));
-    return set.size;
-  };
+  const jumlahUjian = new Set(setLevelIni.map(e => examMeta(e.title).label)).size;
 
   /* pace: berapa set (grup) kelar minggu ini */
   const pace = useMemo(() => {
     const wk = Date.now() - 7 * 86_400_000;
-    const doneThisWk = (perLevel[lv] ?? []).filter(e => pctOf(e) != null && e.created_at != null && +new Date(e.created_at) >= wk).length;
+    const doneThisWk = setLevelIni.filter(e => pctOf(e) != null && e.created_at != null && +new Date(e.created_at) >= wk).length;
     return { doneThisWk, target: 2 };
-  }, [perLevel, lv]);
+  }, [setLevelIni]);
 
   /* NEXT: grup terbaru yang belum lengkap di level yang dimiliki */
   const next = useMemo(() => groups.find(g => gStatus(g) !== "done"), [groups]);
@@ -216,11 +217,8 @@ export default function MateriHub() {
 
           {/* filter */}
           <div className="m3-bar">
-            {levelsPresent.map(lvItem => (
-              <button key={lvItem} className={`fchip${lv === lvItem ? " on" : ""}`} onClick={() => { setLevel(lvItem); setShowAll(false); }}>
-                {lvItem} <span className="c">{counts(lvItem)} ujian</span>
-              </button>
-            ))}
+            <span className="fchip on">{lv} <span className="c">{jumlahUjian} ujian</span></span>
+            <GantiTarget />
             <span className="m3-div" />
             {([["all", "Semua"], ["incomplete", "Belum lengkap"], ["done", "✓ Selesai"]] as const).map(([v, l]) => (
               <button key={v} className={`fchip${statusF === v ? " on" : ""}`} onClick={() => { setStatusF(v); setShowAll(false); }}>{l}</button>
@@ -263,12 +261,12 @@ export default function MateriHub() {
                 </div>
               </button>
             )}
-            {muat === "loading" ? <p className="m3-empty" role="status">Memuat materi…</p>
+            {muat === "loading" || !stats.loaded ? <p className="m3-empty" role="status">Memuat materi…</p>
               : muat === "error" ? <div className="m3-empty" role="alert">Materi belum bisa dimuat. <button type="button" className="btn btn-g" onClick={() => window.location.reload()}>Coba lagi</button></div>
-              : exams.length === 0 ? (
+              : setLevelIni.length === 0 ? (
                 <div className="hx-empty-wide">
                   <HonixEmpty momen="kosongMateri"
-                    body="Set ujianmu akan muncul di sini. Sambil menunggu, kamu bisa belajar Bunpou dan Kotoba."
+                    body={`Set ujian ${lv} belum tersedia. Sambil menunggu, kamu bisa belajar Bunpou dan Kotoba.`}
                     cta={<Link href="/materi/bunpou" className="hx-btn hx-btn-p">Belajar Bunpou</Link>} />
                 </div>
               ) : shown.length === 0 && <p className="m3-empty">Belum ada ujian di filter ini.</p>}
@@ -297,10 +295,10 @@ export default function MateriHub() {
               <div className="mat-b">
                 <span className="mat-eyebrow">Kosakata Terstruktur</span>
                 <span className="mat-t">Kotoba</span>
-                <span className="mat-d">{KOTOBA_WORDS.length} kata N2 kurasi <b>Nihongo no Mori</b> — flash mode per tema, simpan ⭐ ke Kamus.</span>
+                <span className="mat-d">{kotobaTotal > 0 ? `${kotobaTotal} kata ${lv}` : `Kosakata ${lv}`}{dekKotoba && <> · <b>{dekKotoba.source}</b></>} — flash mode per tema, simpan ⭐ ke Kamus.</span>
                 <div className="mat-foot">
-                  <div className="mat-track"><i style={{ width: `${KOTOBA_WORDS.length > 0 ? Math.round((kotobaTersimpan / KOTOBA_WORDS.length) * 100) : 0}%` }} /></div>
-                  <span className="mat-pct">{kotobaTersimpan} dari {KOTOBA_WORDS.length} kata disimpan</span>
+                  <div className="mat-track"><i style={{ width: `${kotobaTotal > 0 ? Math.round((kotobaTersimpan / kotobaTotal) * 100) : 0}%` }} /></div>
+                  <span className="mat-pct">{kotobaTersimpan} dari {kotobaTotal} kata disimpan</span>
                   <span className="mat-go">Buka Kotoba →</span>
                 </div>
               </div>

@@ -7,23 +7,20 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { Search, Star, Zap, X, ChevronRight, Check } from "lucide-react";
-import kotobaN2 from "@/data/kotoba/N2.json";
-import kotobaIndex from "@/data/kotoba/index.json";
-import { useUserStats } from "@/lib/use-user-stats";
+import { useUserStats, type UserStats } from "@/lib/use-user-stats";
+import { GantiTarget } from "@/components/v2/GantiTarget";
 import { catatAktivitas } from "@/lib/aktivitas";
 import FlashPlayer, { type FlashWord } from "@/components/FlashPlayer";
 
 interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; note?: string; }
 interface Deck { level: string; title: string; source: string; count: number; groupOrder: string[]; vocabulary: Kotoba[]; }
 
-/* Level dari termudah → tersulit (badge jumlah kata dari index.json). */
-const LEVEL_META = (kotobaIndex as { levels: { level: string; count: number }[] }).levels;
-/* Deck default = N2 (deck Nihongo no Mori kamu + kosakata inti). Level lain di-load
-   dinamis pas dipilih biar bundle awal ringan. Ini dipanggil di event handler, aman. */
+/* Deck di-load sesuai level target biar bundle awal ringan. */
 const LOADERS: Record<string, () => Promise<Deck>> = {
   N5: () => import("@/data/kotoba/N5.json").then(m => m.default as Deck),
   N4: () => import("@/data/kotoba/N4.json").then(m => m.default as Deck),
   N3: () => import("@/data/kotoba/N3.json").then(m => m.default as Deck),
+  N2: () => import("@/data/kotoba/N2.json").then(m => m.default as Deck),
   N1: () => import("@/data/kotoba/N1.json").then(m => m.default as Deck),
 };
 
@@ -84,7 +81,31 @@ function hitsText(s: WStat): { t: string; bad?: boolean } {
 
 export default function KotobaDeck() {
   const stats = useUserStats();
+  const [deck, setDeck] = useState<Deck | null>(null);
+
+  useEffect(() => {
+    if (!stats.loaded) return;
+    let batal = false;
+    void LOADERS[stats.targetLevel]().then(d => { if (!batal) setDeck(d); });
+    return () => { batal = true; };
+  }, [stats.loaded, stats.targetLevel]);
+
+  if (!deck) {
+    return (
+      <>
+        <AuroraBackground />
+        <NavRail />
+        <BottomNav />
+        <main className="app-shell"><div className="lk-load">Memuat…</div></main>
+      </>
+    );
+  }
+  return <KotobaIsi key={deck.level} deck={deck} stats={stats} />;
+}
+
+function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
   const router = useRouter();
+  const level = deck.level;
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
      profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
      halaman nampilin angka beku yang sama. */
@@ -95,10 +116,6 @@ export default function KotobaDeck() {
   const [progres, setProgres] = useState<Map<string, Progres>>(new Map());
   const [busy, setBusy] = useState<string | null>(null);
 
-  const N2_DECK = kotobaN2 as Deck;
-  const [level, setLevel] = useState("N2");
-  const [deck, setDeck] = useState<Deck>(N2_DECK);
-  const [deckLoading, setDeckLoading] = useState(false);
   const DATA = deck.vocabulary as Kotoba[];
   const GROUP_ORDER = deck.groupOrder;
   const POS_LIST = useMemo(() => POS_ALL.filter(p => DATA.some(w => posOf(w) === p)), [DATA]);
@@ -106,22 +123,10 @@ export default function KotobaDeck() {
   const [query, setQuery] = useState("");
   const [statusF, setStatusF] = useState<"all" | State | "fav">("all");
   const [posF, setPosF] = useState<Pos | null>(null);
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([N2_DECK.groupOrder[0]]));
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([deck.groupOrder[0]]));
   const [sel, setSel] = useState<Kotoba | null>(null);
 
   const [flashWords, setFlashWords] = useState<FlashWord[] | null>(null);
-
-  /* Ganti level: load deck dinamis (event handler, aman dari purity), reset panel
-     & filter jenis-kata, buka grup pertama. */
-  const changeLevel = async (lv: string) => {
-    if (lv === level || deckLoading) return;
-    setLevel(lv); setDeckLoading(true); setSel(null); setPosF(null);
-    try {
-      const d = lv === "N2" ? N2_DECK : await LOADERS[lv]();
-      setDeck(d);
-      setOpenGroups(new Set([d.groupOrder[0]]));
-    } finally { setDeckLoading(false); }
-  };
 
   useEffect(() => {
     async function load() {
@@ -183,7 +188,7 @@ export default function KotobaDeck() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      await supabase.from("saved_words").upsert({ user_id: user.id, kanji: w.word, reading: w.reading, meaning: w.meaning, level: w.jlpt_level || "N2", favorite: next }, { onConflict: "user_id,kanji" });
+      await supabase.from("saved_words").upsert({ user_id: user.id, kanji: w.word, reading: w.reading, meaning: w.meaning, level: w.jlpt_level || level, favorite: next }, { onConflict: "user_id,kanji" });
     } catch { /* optimistic */ } finally { setBusy(null); }
   };
 
@@ -259,12 +264,8 @@ export default function KotobaDeck() {
               <h1>Kotoba <span className="jp">語彙</span><span className="lvtag">{level}</span></h1>
               <p>{deck.count} kata · <b>{deck.source}</b> — status tiap kata keisi otomatis dari latihanmu.</p>
               <div className="kv-levels">
-                {LEVEL_META.map(m => (
-                  <button key={m.level} className={`kv-lvl${level === m.level ? " on" : ""}`} onClick={() => changeLevel(m.level)} disabled={deckLoading}>
-                    {m.level}<span className="c">{m.count}</span>
-                  </button>
-                ))}
-                {deckLoading && <span className="kv-lvl-load">memuat…</span>}
+                <span className="kv-lvl on">{level}<span className="c">{deck.count}</span></span>
+                <GantiTarget />
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
