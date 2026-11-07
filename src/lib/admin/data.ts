@@ -92,6 +92,14 @@ export async function ambilDasbor(kini = new Date()) {
   };
 
   const emailDari = new Map(users.map(u => [u.id, u.email]));
+
+  /* Alasan ganti target (migration 20261107-ganti-target.sql). Tabel belum ada → null. */
+  const gt = await sb.from("ganti_target").select("id, dibuat, user_id, dari, ke, alasan")
+    .order("dibuat", { ascending: false }).limit(20);
+  const gantiTarget = gt.error ? null : (gt.data ?? []).map(r => ({
+    id: r.id as string, dibuat: r.dibuat as string, email: emailDari.get(r.user_id) ?? null,
+    dari: r.dari as string | null, ke: r.ke as string, alasan: r.alasan as string,
+  }));
   const bankSoalPerLevel = Object.fromEntries(bankSoal) as Record<string, Record<string, number>>;
   return {
     dibuat: kini.toISOString(),
@@ -107,6 +115,7 @@ export async function ambilDasbor(kini = new Date()) {
       sesiReview,
     },
     error,
+    gantiTarget,
   };
 }
 

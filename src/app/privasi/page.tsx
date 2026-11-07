@@ -18,7 +18,7 @@ const BAGIAN: Bagian[] = [
     isi: <>
       <ul>
         <li><b>Akun:</b> email, nama, dan foto profil dari akun Google (kalau masuk pakai Google) atau email yang kamu daftarkan.</li>
-        <li><b>Profil belajar:</b> level target, tanggal ujian, dan target belajar harian yang kamu isi saat onboarding atau di Pengaturan.</li>
+        <li><b>Profil belajar:</b> level target, tanggal ujian, dan target belajar harian yang kamu isi saat onboarding atau di Pengaturan, serta alasan setiap kali kamu mengganti level target.</li>
         <li><b>Aktivitas belajar:</b> jawaban, skor, dan riwayat latihan; progres Kotoba &amp; Bunpou; hari aktif (streak), XP, dan lama belajar per hari.</li>
         <li><b>Isi yang kamu buat:</b> kosakata di Kamus, catatan, soal yang kamu edit atau tandai review, dan foto profil yang kamu unggah.</li>
         <li><b>Pemakaian fitur AI:</b> jumlah pemakaian chat Sensei, furigana, dan lembar tugas per hari.</li>
@@ -47,6 +47,7 @@ const BAGIAN: Bagian[] = [
         <li><b>Vercel</b> — server tempat aplikasi berjalan.</li>
         <li><b>Anthropic (Claude)</b> — model AI untuk chat Sensei, furigana, dan lembar tugas. Saat kamu memakai fitur ini, pertanyaanmu dan teks soal yang relevan dikirim ke Anthropic untuk diproses. Jangan masukkan data pribadi sensitif ke chat.</li>
         <li><b>Midtrans</b> — pemrosesan pembayaran.</li>
+        <li><b>Resend</b> — mengirim email pemberitahuan ke admin, mis. saat kamu mengganti level target (berisi email, nama, dan alasanmu).</li>
         <li><b>Google</b> — login dengan akun Google (kalau kamu memilihnya).</li>
       </ul>
       <p>Server penyedia layanan ini bisa berada di luar Indonesia.</p>
