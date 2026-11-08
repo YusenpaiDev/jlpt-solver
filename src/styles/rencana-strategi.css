@@ -1,0 +1,89 @@
+/* Strategi ujian + kartu teknik + banner di Bank Soal — port 1:1 dari handoff
+   Claude Design (rb-komp.css + rb.css `.m`). Token & tombol di rencana-dasar.css. */
+
+/* ── Halaman strategi ── */
+.rbk .sg{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-top:24px}
+.rbk .cheat{padding:24px;grid-row:span 2}
+.rbk .cheat-n{font-size:34px;font-weight:700;letter-spacing:-.035em;margin-top:6px;line-height:1.1}
+.rbk .cheat-n b{color:var(--pt)}
+.rbk .cheat-n s{color:var(--dim);text-decoration-thickness:2px}
+.rbk .cheat>p{font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.rbk .scale{position:relative;height:12px;border-radius:7px;background:var(--surface-3);margin:46px 0 30px}
+.rbk .scale>i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:linear-gradient(90deg,rgba(221,65,36,.35),var(--primary));animation:rbk-barfill 1s var(--ease) both}
+.rbk .mk{position:absolute;top:-30px;bottom:-22px;width:0;border-left:2px dashed rgba(255,255,255,.5)}
+.rbk .mk span{position:absolute;top:0;left:6px;font-size:11.5px;font-weight:600;white-space:nowrap;color:var(--muted)}
+.rbk .mk.safe{border-left:2px solid var(--pt)}
+.rbk .mk.safe span{color:var(--pt)}
+.rbk .mk.r span{left:auto;right:6px}
+.rbk .scale-x{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:-22px;font-variant-numeric:tabular-nums}
+.rbk .mins{margin-top:26px;display:flex;flex-direction:column;gap:12px;padding-top:20px;border-top:1px solid var(--line)}
+.rbk .mn{display:grid;grid-template-columns:150px minmax(0,1fr) 92px;gap:12px;align-items:center}
+.rbk .mn-k{font-family:var(--jp);font-size:14px;font-weight:600}
+.rbk .mn-k small{display:block;font-family:var(--sans);font-size:11px;color:var(--dim);font-weight:400}
+.rbk .mn-b{position:relative;height:8px;border-radius:5px;background:var(--surface-3)}
+.rbk .mn-b i{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--danger);border-radius:2px}
+.rbk .mn-b em{position:absolute;inset:0 auto 0 0;border-radius:5px;background:rgba(224,86,111,.3);font-style:normal}
+.rbk .mn-v{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.rbk .mn-v b{color:var(--danger)}
+.rbk .warnbox{margin-top:18px;padding:12px 14px;border-radius:12px;background:rgba(224,86,111,.10);border:1px solid rgba(224,86,111,.35);font-size:13px;line-height:1.5}
+.rbk .tcard{padding:22px}
+.rbk .tl-bar{display:flex;gap:3px;height:40px;margin:16px 0 14px;border-radius:10px;overflow:hidden}
+.rbk .tl-bar>div{display:flex;align-items:center;padding:0 10px;font-size:11.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;min-width:0}
+.rbk .tl-list{display:flex;flex-direction:column;gap:10px}
+.rbk .tl-r{display:flex;justify-content:space-between;gap:10px;font-size:13.5px}
+.rbk .tl-r span{font-family:var(--jp);font-weight:600;display:flex;align-items:center;gap:8px}
+.rbk .tl-r span i{width:9px;height:9px;border-radius:3px;flex:none}
+.rbk .tl-r b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.rbk .tl-sp{font-size:12px;color:var(--dim);margin:-4px 0 2px 17px;line-height:1.5}
+.rbk .tl-sp b{color:var(--muted);font-weight:500}
+.rbk .ord{list-style:none;display:flex;flex-direction:column;gap:12px;margin:14px 0 0;padding:0;counter-reset:o}
+.rbk .ord li{display:grid;grid-template-columns:28px 1fr;gap:10px;font-size:13.5px;line-height:1.45;counter-increment:o}
+.rbk .ord li::before{content:counter(o);width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;background:rgba(221,65,36,.14);color:var(--pt)}
+.rbk .ord small{display:block;color:var(--dim);font-size:12px;margin-top:2px}
+.rbk .sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:30px}
+.rbk .tk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.rbk .tkc{padding:16px;display:flex;flex-direction:column;gap:8px;border-radius:16px;transition:border-color .2s,transform .2s var(--ease)}
+.rbk .tkc:hover,.rbk .tkc:focus-visible{border-color:var(--line-2);transform:translateY(-2px)}
+.rbk .tkc-t{font-family:var(--jp);font-size:16px;font-weight:600}
+.rbk .tkc-s{font-size:12px;color:var(--dim);line-height:1.45}
+.rbk .tkc-f{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--dim);margin-top:auto;padding-top:6px}
+.rbk .tkc-f .off{color:var(--warning)}
+.rbk .offi{font-size:11.5px;color:var(--dim);margin-top:18px}
+
+/* ── Kartu teknik (overlay) ── */
+.rbk .ov{position:fixed;inset:0;z-index:999;background:rgba(6,5,7,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;justify-content:center;align-items:flex-start;padding-top:70px;animation:rbk-fade .3s both}
+.rbk .sheet{width:520px;max-width:100%;padding:28px;position:relative;animation:rbk-sheet .45s var(--ease) both;background:linear-gradient(180deg,#221C28,var(--surface));border-color:var(--line-2)}
+.rbk .tk{width:620px;max-width:100%;display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px;padding:26px 28px 24px 18px}
+.rbk .tk-hx{width:170px;max-width:none;margin:-60px 0 0 -20px;align-self:start}
+.rbk .tk-t{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-top:10px;line-height:1.2;text-align:left}
+.rbk .tk-l{list-style:none;display:flex;flex-direction:column;gap:10px;margin:16px 0;padding:0;counter-reset:t}
+.rbk .tk-l li{display:grid;grid-template-columns:24px 1fr;gap:8px;font-size:14px;line-height:1.5;counter-increment:t}
+.rbk .tk-l li::before{content:counter(t);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--surface-3);color:var(--muted);margin-top:1px}
+.rbk .ck{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);min-height:44px;cursor:pointer}
+.rbk .ck input{width:18px;height:18px;accent-color:var(--primary)}
+.rbk .tk-a{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.rbk .tk-f{font-size:12px;color:var(--dim);margin-top:12px}
+
+/* ── Banner di Bank Soal ── */
+.rbk .strat-bn{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:16px;align-items:center;width:100%;padding:16px 20px;margin:0 0 13px;border-radius:16px;background:linear-gradient(135deg,rgba(221,65,36,.12),var(--surface) 60%);border:1px solid rgba(221,65,36,.3);transition:border-color .2s;color:var(--text)}
+.rbk .strat-bn:hover,.rbk .strat-bn:focus-visible{border-color:rgba(221,65,36,.6);color:var(--text)}
+.rbk .sb-g{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-family:var(--jps);font-size:24px;color:var(--pt);background:rgba(221,65,36,.14);box-shadow:inset 0 0 0 1px rgba(221,65,36,.4)}
+.rbk .strat-bn b{display:block;font-size:14px;font-weight:600;margin-top:4px}
+.rbk .strat-bn small{display:block;font-size:12px;color:var(--dim);margin-top:2px}
+
+/* ── HP (rb.css `.m`) ── */
+@media (max-width:767px){
+  .rbk .sg{grid-template-columns:1fr}
+  .rbk .cheat{grid-row:auto;padding:20px}
+  .rbk .cheat-n{font-size:27px}
+  .rbk .mn{grid-template-columns:96px minmax(0,1fr) 70px;gap:8px}
+  .rbk .tcard{padding:18px}
+  .rbk .tl-bar{height:16px}
+  .rbk .tl-bar>div{font-size:0;padding:0}
+  .rbk .tk-grid{grid-template-columns:1fr}
+  .rbk .ov{align-items:flex-end;padding:0}
+  .rbk .sheet{border-radius:28px 28px 0 0;padding:22px 20px 34px;width:100%}
+  .rbk .tk{grid-template-columns:1fr;gap:8px;padding:20px 20px 30px}
+  .rbk .tk-hx{width:110px;margin:-74px auto 0}
+  .rbk .tk-a .btn-p{flex:1}
+}
