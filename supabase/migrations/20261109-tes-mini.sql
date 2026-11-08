@@ -90,9 +90,11 @@ begin
     raise exception 'Soal % belum cukup buat tes mini', p_level using errcode = 'P0002';
   end if;
 
+  -- category: kolom sessions.category cuma nerima 文法/語彙/文字/読解/AI (supabase-schema.sql).
+  -- 'AI' = sesi campuran; jenis aslinya ada di ai_result.kind = 'tes_mini'.
   insert into public.sessions (user_id, level, category, title, total, score, ai_result)
   values (
-    uid, p_level, 'Tes mini', 'Tes mini ' || p_level || ' · minggu ' || to_char(p_minggu, 'DD/MM/YYYY'), jml, null,
+    uid, p_level, 'AI', 'Tes mini ' || p_level || ' · minggu ' || to_char(p_minggu, 'DD/MM/YYYY'), jml, null,
     jsonb_build_object('kind', 'tes_mini', 'title', 'Tes mini ' || p_level, 'minggu', p_minggu, 'questions', soal)
   )
   returning id into sid;
