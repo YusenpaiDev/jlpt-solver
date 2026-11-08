@@ -11,15 +11,16 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
-import { History, BarChart3, RotateCcw, CalendarDays } from "lucide-react";
+import { History, BarChart3, RotateCcw, CalendarDays, ClipboardCheck } from "lucide-react";
 import { StatistikView } from "@/app/statistik/page";
 import { tanggalLokal } from "@/lib/aktivitas";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useWaktuBelajar } from "@/lib/use-waktu-belajar";
 import { rekapPerHari } from "@/lib/waktu-kalender";
 import { WaktuBelajar } from "@/components/rencana/WaktuBelajar";
+import { TesMini } from "@/components/rencana/TesMini";
 
-type Tab = "log" | "stat" | "waktu";
+type Tab = "log" | "stat" | "waktu" | "tes";
 
 interface SessStats { answered?: number; correct?: number; perCat?: Record<string, { a?: number; c?: number }> }
 interface Sess {
@@ -53,7 +54,7 @@ function within(iso: string, days: number) { return (Date.now() - new Date(iso).
 type SType = "exam" | "choukai" | "foto";
 function sessType(s: Sess): SType {
   if (s.section === "choukai") return "choukai";
-  if (s.kind === "materi") return "exam";
+  if (s.kind === "materi" || s.kind === "tes_mini") return "exam";
   return "foto";
 }
 const TYPE_META: Record<SType, { icon: string; tag: string; ic: string; tt: string }> = {
@@ -81,7 +82,7 @@ function Progres() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabUrl = searchParams.get("tab");
-  const tab: Tab = tabUrl === "log" || tabUrl === "waktu" ? tabUrl : "stat";
+  const tab: Tab = tabUrl === "log" || tabUrl === "waktu" || tabUrl === "tes" ? tabUrl : "stat";
   const waktu = useWaktuBelajar();
 
   const [sessions, setSessions] = useState<Sess[]>([]);
@@ -186,6 +187,16 @@ function Progres() {
     bagian: Object.entries(s.stats?.perCat ?? {}).filter(([, v]) => (v.a ?? 0) > 0).map(([k]) => k),
   }))), [done]);
 
+  /* Tes mini: skor 聴解 diperkirakan dari latihan 聴解 30 hari terakhir. */
+  const choukai30 = useMemo(() => {
+    let a = 0, c = 0;
+    done.filter(s => hasPracticeDate(s) && within(activityAt(s), 30)).forEach(s => {
+      const v = s.stats?.perCat?.["聴解"];
+      a += Math.max(0, v?.a ?? 0); c += Math.max(0, v?.c ?? 0);
+    });
+    return a > 0 ? { a, c } : null;
+  }, [done]);
+
   const levelsPresent = useMemo(() => Array.from(new Set(logSessions.map(s => s.level))).sort(), [logSessions]);
   const resetF = () => { setTypeF("all"); setLevelF("all"); };
   const isEmpty = !loading && logSessions.length === 0;
@@ -217,10 +228,13 @@ function Progres() {
           <button type="button" className={`pr-tab${tab === "stat" ? " on" : ""}`} onClick={() => setTab("stat")}><BarChart3 size={14} strokeWidth={1.8} /> Statistik</button>
           <button type="button" className={`pr-tab${tab === "log" ? " on" : ""}`} onClick={() => setTab("log")}><History size={14} strokeWidth={1.8} /> Log</button>
           <button type="button" className={`pr-tab${tab === "waktu" ? " on" : ""}`} onClick={() => setTab("waktu")}><CalendarDays size={14} strokeWidth={1.8} /> Waktu belajar</button>
+          <button type="button" className={`pr-tab${tab === "tes" ? " on" : ""}`} onClick={() => setTab("tes")}><ClipboardCheck size={14} strokeWidth={1.8} /> Tes mini</button>
         </div>
 
         {tab === "stat" ? (
           <StatistikView embedded />
+        ) : tab === "tes" ? (
+          loading || !stats.loaded ? null : <TesMini level={stats.targetLevel} sesi={sessions} choukai30={choukai30} />
         ) : tab === "waktu" ? (
           waktu.gagal ? <p role="alert">Waktu belajar belum bisa dimuat. Coba muat ulang.</p>
             : waktu.siap ? <WaktuBelajar waktu={waktu} streak={streak} streakTerpanjang={stats.rekor} rekapSesi={rekapSesi} />
