@@ -26,7 +26,6 @@ import { bacaKuotaHabis, sisaWaktuReset, type KuotaHabis } from "@/lib/kuota-hab
 
 /* ─── Types ─────────────────────────────────────────────────── */
 type Stage = "upload" | "setup" | "analyzing" | "result";
-type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 type Category = "文法" | "語彙" | "文字" | "読解" | "ai";
 
 interface AIQuestion {
@@ -354,7 +353,7 @@ function StabiloLayer({
   );
 }
 
-function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview, sessionLevel, sessionCategory, streak }: {
+function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved, sessionId, isReview, sessionCategory, streak }: {
   onReset: () => void;
   result: AIResult;
   setResult: React.Dispatch<React.SetStateAction<AIResult | null>>;
@@ -363,7 +362,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   isSaved: boolean;
   sessionId: string | null;
   isReview?: boolean;
-  sessionLevel?: Level | null;
   sessionCategory?: Category | null;
   /** Buat kotak "hari streak" di popup selesai. */
   streak: number;
@@ -623,134 +621,15 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     if (editIdx === null || !editDraft || editSaving) return;
     setEditSaving(true);
     try {
-      const isNew = editIdx >= result.questions.length;
       const next: AIResult = {
         ...result,
-        questions: isNew
-          ? [...result.questions, editDraft]
-          : result.questions.map((q, i) => (i === editIdx ? editDraft : q)),
+        questions: result.questions.map((q, i) => (i === editIdx ? editDraft : q)),
       };
       setResult(next);
       persistResultJsonb(next).catch(() => { /* swallow */ });
       closeEdit();
     } finally {
       setEditSaving(false);
-    }
-  };
-
-  /* Open the modal with a blank draft → manual-add new question */
-  const openAddManual = () => {
-    setEditIdx(result.questions.length);
-    setEditDraft({
-      question: "",
-      options: ["1. ", "2. ", "3. ", "4. "],
-      correct: "1",
-      explanation: "",
-      why_wrong: "",
-      tip: "",
-      category: "文法",
-    });
-  };
-
-  /* Re-photo: upload a new image, send to /api/analisis with the session's
-     level/category, append returned questions to current session. */
-  const [addingPhoto, setAddingPhoto] = useState(false);
-
-  /* Ensure we know the session level/category — re-fetch lazily if state is empty
-     (happens for sessions loaded before this feature shipped, or via a stale tab). */
-  const ensureSessionMeta = async (): Promise<{ level: Level; category: Category } | null> => {
-    if (sessionLevel) return { level: sessionLevel, category: sessionCategory ?? "ai" };
-    if (!sessionId) return null;
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("sessions")
-      .select("level, category")
-      .eq("id", sessionId)
-      .single();
-    if (!data?.level) return null;
-    return {
-      level: data.level as Level,
-      category: ((data.category === "AI" ? "ai" : data.category) ?? "ai") as Category,
-    };
-  };
-
-  const handleAddFromPhoto = async (file: File) => {
-    setAddingPhoto(true);
-    try {
-      const meta = await ensureSessionMeta();
-      if (!meta) {
-        setToast({ text: "Level sesi nggak ketahuan. Save sesi dulu lalu coba lagi.", ok: false });
-        setTimeout(() => setToast(null), 2500);
-        return;
-      }
-
-      // Dispatch by file type so each format is sent the way /api/analisis expects.
-      const isDocx = file.name.toLowerCase().endsWith(".docx") ||
-        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-      const isPdf  = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-
-      let body: Record<string, unknown>;
-      if (isDocx) {
-        const mammoth = (await import("mammoth")).default;
-        const buf = await file.arrayBuffer();
-        const ext = await mammoth.extractRawText({ arrayBuffer: buf });
-        if (!ext.value.trim()) throw new Error("Dokumen Word kosong / tidak ada teks");
-        body = {
-          textContent: ext.value,
-          mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          level: meta.level,
-          category: meta.category,
-        };
-      } else {
-        const reader = new FileReader();
-        const base64: string = await new Promise((resolve, reject) => {
-          reader.onload  = () => resolve((reader.result as string).split(",")[1]);
-          reader.onerror = () => reject(new Error("Gagal baca file"));
-          reader.readAsDataURL(file);
-        });
-        body = {
-          imageBase64: base64,
-          mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
-          level: meta.level,
-          category: meta.category,
-        };
-      }
-
-      const res = await fetch("/api/analisis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Analisis gagal");
-
-      const data: AIResult = json.data;
-      const newQs = (data.questions ?? []).map(q => ({ ...q, ...sanitizeQuestion(q) }));
-      if (newQs.length === 0) {
-        setToast({ text: "Nggak ada soal yang ke-detect di file", ok: false });
-        setTimeout(() => setToast(null), 2000);
-        return;
-      }
-
-      // Merge: append questions, dedupe vocab by word.
-      const mergedVocab = Array.from(
-        new Map([...(result.vocabulary ?? []), ...(data.vocabulary ?? [])].map(v => [v.word, v])).values(),
-      );
-      const next: AIResult = {
-        ...result,
-        vocabulary: mergedVocab,
-        questions: [...result.questions, ...newQs],
-      };
-      setResult(next);
-      persistResultJsonb(next).catch(() => { /* swallow */ });
-      setToast({ text: `+${newQs.length} soal ditambah`, ok: true });
-      setTimeout(() => setToast(null), 2000);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal tambah dari file";
-      setToast({ text: msg, ok: false });
-      setTimeout(() => setToast(null), 3000);
-    } finally {
-      setAddingPhoto(false);
     }
   };
 
@@ -1890,17 +1769,6 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           });
         })()}
 
-        {/* ── Tambah soal v2: manual / dari file ── */}
-        <div className="af-add-row">
-          <button
-            type="button"
-            className="af-add-btn manual"
-            onClick={openAddManual}
-            disabled={addingPhoto}
-          >
-            <Plus size={14} strokeWidth={2.2} /> Tambah soal manual
-          </button>
-        </div>
         </div>
 
         {/* ── Kosakata dari Foto v2 ── */}
@@ -2350,12 +2218,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                 </div>
                 <div>
                   <h2 className="af-modal-title">
-                    {editIdx >= result.questions.length ? "Tambah Soal Manual" : `Edit Soal #${editIdx + 1}`}
+                    {`Edit Soal #${editIdx + 1}`}
                   </h2>
                   <p className="af-modal-sub">
-                    {editIdx >= result.questions.length
-                      ? "Ketik soal + opsi + jawaban + penjelasan dari nol"
-                      : "Perbaiki field manual kalau AI kurang akurat"}
+                    Perbaiki field manual kalau AI kurang akurat
                   </p>
                 </div>
               </div>
@@ -2723,7 +2589,6 @@ export default function AnalisisFoto() {
   const [fase, setFase] = useState<"cek" | "alih" | "siap">("cek");
   const [files,               setFiles]               = useState<FileData[]>([]);
   const [result,              setResult]              = useState<AIResult | null>(null);
-  const [resultLevel,         setResultLevel]         = useState<Level | null>(null);
   const [resultCategory,      setResultCategory]      = useState<Category | null>(null);
   const [chatMsgs,            setChatMsgs]            = useState<ChatMsg[]>([]);
   const [savedSessionId,      setSavedSessionId]      = useState<string | null>(null);
@@ -2903,7 +2768,6 @@ export default function AnalisisFoto() {
           questions: (raw.questions ?? []).map(q => ({ ...q, ...sanitizeQuestion(q) })),
         };
         setResult(cleaned);
-        setResultLevel((data.level ?? null) as Level | null);
         setResultCategory(((data.category === "AI" ? "ai" : data.category) ?? null) as Category | null);
         setSavedSessionId(id);
         setChatMsgs([]);
@@ -3005,7 +2869,6 @@ export default function AnalisisFoto() {
             isSaved={!!savedSessionId}
             sessionId={savedSessionId}
             isReview={isReviewMode}
-            sessionLevel={resultLevel}
             sessionCategory={resultCategory}
             streak={stats.streak}
           />
