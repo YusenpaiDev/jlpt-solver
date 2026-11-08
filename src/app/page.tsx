@@ -16,6 +16,7 @@ import { Honix } from "@/components/honix/Honix";
 import { devBeranda, type BerandaMentah } from "@/lib/dev-beranda";
 import { AuroraBackground, NavRail, BottomNav, PeringatanBanner } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
+import { KalenderMini } from "@/components/rencana/KalenderMini";
 import { PengingatPro } from "@/components/pembayaran/PengingatPro";
 import kotobaN1 from "@/data/kotoba/N1.json";
 import kotobaN2 from "@/data/kotoba/N2.json";
@@ -654,6 +655,8 @@ export default function Home() {
                 </div>
                 <div className="wk-note">{activeDays > 0 ? <><b>{activeDays} dari 7 hari</b> aktif — streak {streak} hari 🔥 jaga hari ini!</> : <>Belum ada aktivitas minggu ini — <b>mulai hari ini</b> 💪</>}</div>
               </div>
+
+              <KalenderMini />
 
               <div className="bv-scard card">
                 <div className="s-h">Riwayat Terakhir <Link href="/progres?tab=log" className="s-all">Semua →</Link></div>
