@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { daftarSesiUjian, rapikanTanggalUjian, type SesiUjian } from "@/lib/sesi-ujian";
+import { JanjiBelajar } from "@/components/rencana/JanjiBelajar";
 
 type Lv = "N5" | "N4" | "N3" | "N2" | "N1";
 const LV_NAME: Record<Lv, string> = { N5: "Pemula", N4: "Dasar", N3: "Menengah", N2: "Pra-mahir", N1: "Mahir" };
@@ -43,6 +44,8 @@ export default function Onboarding() {
   const [examIso, setExamIso] = useState<string | null>(null);
   const [goal, setGoal] = useState<number | null>(20);
   const [saved, setSaved] = useState(false);
+  /* Sesi/pace diubah lewat "Janji di awal" setelah profil kesimpen di langkah 4. */
+  const [janjiDiubah, setJanjiDiubah] = useState(false);
 
   // Init browser-only (tanggal ujian pakai Date + resume localStorage). Dibungkus
   // fungsi biar lolos rule "no sync setState in effect" (pola sama kayak page lain).
@@ -100,7 +103,12 @@ export default function Onboarding() {
     setStep(n);
     if (n === 4) persist();
   };
-  const finish = (dest: string) => { router.replace(dest); };
+  const finish = async (dest: string) => {
+    if (janjiDiubah) {
+      try { await createClient().auth.updateUser({ data: { exam_date: examIso, daily_goal_minutes: goal } }); } catch { /* lanjut aja */ }
+    }
+    router.replace(dest);
+  };
 
   const selExam = exams.find(e => e.iso === examIso);
 
@@ -206,6 +214,10 @@ export default function Onboarding() {
                 {selExam && <div className="ob-sumr"><span className="k">UJIAN</span><span className="v">{selExam.label} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>· {selExam.hari} hari lagi</span></span></div>}
                 {goal && <div className="ob-sumr"><span className="k">TARGET HARIAN</span><span className="v">{GOALS.find(g => g.v === goal)?.t} — {goal} menit/hari</span></div>}
               </div>
+              {level && (
+                <JanjiBelajar level={level} ujian={examIso ?? ""} pace={goal ?? 20} sesi={exams}
+                  onUbah={(u, m) => { setExamIso(u); setGoal(m); setJanjiDiubah(true); }} />
+              )}
               <div className="ob-donecta">
                 <button className="ob-btn ob-btn-p" onClick={() => finish("/materi")}>▶ Mulai belajar materi</button>
                 <button className="ob-btn ob-btn-g" onClick={() => finish("/")}>Buka Beranda</button>

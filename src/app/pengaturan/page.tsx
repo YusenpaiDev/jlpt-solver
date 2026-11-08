@@ -17,6 +17,7 @@ import {
 import { useUserStats } from "@/lib/use-user-stats";
 import { cekAlasan, ALASAN_MAKS } from "@/lib/ganti-target";
 import { daftarSesiUjian, labelSesi, rapikanTanggalUjian, type SesiUjian } from "@/lib/sesi-ujian";
+import { JanjiBelajar } from "@/components/rencana/JanjiBelajar";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -581,6 +582,10 @@ function TargetSection({
             />
             <span className="pg-range-val">{waktuPerHari} menit</span>
           </div>
+        </Field>
+        <Field label="Janji belajar" hint="kekejar gak sama waktu yang ada">
+          <JanjiBelajar level={targetLevel} ujian={ujianDate} pace={waktuPerHari} sesi={sesiUjian}
+            onUbah={(u, m) => { setUjianDate(u); setWaktuPerHari(m); }} />
         </Field>
         <Field label="Fokus area">
           <div className="pg-focus-grid">
