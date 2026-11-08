@@ -11,12 +11,15 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
-import { History, BarChart3, RotateCcw } from "lucide-react";
+import { History, BarChart3, RotateCcw, CalendarDays } from "lucide-react";
 import { StatistikView } from "@/app/statistik/page";
 import { tanggalLokal } from "@/lib/aktivitas";
 import { useUserStats } from "@/lib/use-user-stats";
+import { useWaktuBelajar } from "@/lib/use-waktu-belajar";
+import { rekapPerHari } from "@/lib/waktu-kalender";
+import { WaktuBelajar } from "@/components/rencana/WaktuBelajar";
 
-type Tab = "log" | "stat";
+type Tab = "log" | "stat" | "waktu";
 
 interface SessStats { answered?: number; correct?: number; perCat?: Record<string, { a?: number; c?: number }> }
 interface Sess {
@@ -77,7 +80,9 @@ function Progres() {
   const stats = useUserStats();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tab: Tab = searchParams.get("tab") === "log" ? "log" : "stat";
+  const tabUrl = searchParams.get("tab");
+  const tab: Tab = tabUrl === "log" || tabUrl === "waktu" ? tabUrl : "stat";
+  const waktu = useWaktuBelajar();
 
   const [sessions, setSessions] = useState<Sess[]>([]);
   const [daily, setDaily] = useState<{ tanggal: string; jumlah: number }[] | null>(null);
@@ -174,6 +179,13 @@ function Progres() {
   const activeDays = week.filter(w => w.n > 0).length;
   const weakest = useMemo(() => catAcc.filter(c => c.pct != null).sort((a, b) => a.pct! - b.pct!)[0], [catAcc]);
 
+  /* Detail hari di kalender: soal dijawab + bagian, per tanggal lokal latihan. */
+  const rekapSesi = useMemo(() => rekapPerHari(done.filter(hasPracticeDate).map(s => ({
+    tanggal: tanggalLokal(new Date(activityAt(s))),
+    soal: answeredCount(s),
+    bagian: Object.entries(s.stats?.perCat ?? {}).filter(([, v]) => (v.a ?? 0) > 0).map(([k]) => k),
+  }))), [done]);
+
   const levelsPresent = useMemo(() => Array.from(new Set(logSessions.map(s => s.level))).sort(), [logSessions]);
   const resetF = () => { setTypeF("all"); setLevelF("all"); };
   const isEmpty = !loading && logSessions.length === 0;
@@ -204,10 +216,15 @@ function Progres() {
         <div className="pr-tabs">
           <button type="button" className={`pr-tab${tab === "stat" ? " on" : ""}`} onClick={() => setTab("stat")}><BarChart3 size={14} strokeWidth={1.8} /> Statistik</button>
           <button type="button" className={`pr-tab${tab === "log" ? " on" : ""}`} onClick={() => setTab("log")}><History size={14} strokeWidth={1.8} /> Log</button>
+          <button type="button" className={`pr-tab${tab === "waktu" ? " on" : ""}`} onClick={() => setTab("waktu")}><CalendarDays size={14} strokeWidth={1.8} /> Waktu belajar</button>
         </div>
 
         {tab === "stat" ? (
           <StatistikView embedded />
+        ) : tab === "waktu" ? (
+          waktu.gagal ? <p role="alert">Waktu belajar belum bisa dimuat. Coba muat ulang.</p>
+            : waktu.siap ? <WaktuBelajar waktu={waktu} streak={streak} streakTerpanjang={stats.rekor} rekapSesi={rekapSesi} />
+            : null
         ) : isEmpty ? (
           <HonixEmpty momen="kosongRiwayat"
             body="Setelah kamu selesai satu set soal, skor dan pembahasannya muncul di sini."
