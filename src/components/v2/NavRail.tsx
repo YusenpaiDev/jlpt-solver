@@ -34,7 +34,9 @@ const NAV_ITEMS = [
 export function NavRail() {
   const pathname = usePathname();
   const isPro = useIsPro();
-  const isActive = (href: string) => href === "/" ? pathname === "/" : pathname?.startsWith(href);
+  /* Bank Soal belum punya halaman sendiri; Strategi ujian ada di bawahnya. */
+  const isActive = (href: string) => href === "/materi#bank-soal" ? pathname === "/strategi"
+    : href === "/" ? pathname === "/" : pathname?.startsWith(href);
 
   return (
     <nav className="nav-rail" aria-label="Navigasi utama">

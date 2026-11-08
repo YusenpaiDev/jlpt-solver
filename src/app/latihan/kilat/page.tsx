@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useHonixReaksi } from "@/lib/use-honix-reaksi";
 import { putarHonix } from "@/lib/honix-sfx";
-import { laporkanXp } from "@/lib/honix-level";
+import { catatJawabanBunpou } from "@/lib/bunpou-progres";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
 import { KartuTeknik } from "@/components/rencana/KartuTeknik";
@@ -163,20 +163,7 @@ function KilatPlayer({ level }: { level: string }) {
   const pick = useCallback((n: number) => { if (locked || !q || n >= q.opts.length) return; setSel(n); }, [locked, q]);
 
   // Rekam SATU jawaban langsung ke DB (biar 1 soal aja udah kecatat, walau keluar di tengah).
-  const recordOne = useCallback(async (pattern: string, correct: boolean) => {
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from("bunpou_progress").select("benar, salah").eq("user_id", user.id).eq("pattern", pattern).maybeSingle();
-      await supabase.from("bunpou_progress").upsert({ user_id: user.id, pattern, benar: (data?.benar ?? 0) + (correct ? 1 : 0), salah: (data?.salah ?? 0) + (correct ? 0 : 1) }, { onConflict: "user_id,pattern" });
-      const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
-      if (!prof) return;
-      const { data: tersimpan } = await supabase.from("profiles")
-        .update({ xp: prof.xp + (correct ? 8 : 2) }).eq("id", user.id).select("xp").single();
-      if (tersimpan) laporkanXp({ userId: user.id, sebelum: prof.xp, sesudah: tersimpan.xp });
-    } catch { /* nyusul */ }
-  }, []);
+  const recordOne = useCallback((pattern: string, correct: boolean) => catatJawabanBunpou(pattern, correct, { xp: true }), []);
 
   // Bikin/entri Riwayat drill dari jawaban PERTAMA, update tiap jawab → muncul di Log walau 1 soal.
   const saveSession = useCallback(async (answered: number, correctCount: number) => {
@@ -262,6 +249,8 @@ function KilatPlayer({ level }: { level: string }) {
     const mastered = [...lastByGm.values()].filter(r => r.correct && r.streak >= 3);
     const drillSalah = () => { const it = deck?.patterns.find(p => p.pattern === wrongPats[0]); mulaiSesi(`level=${level}${it ? `&item=${it.id}` : ""}&count=${Math.max(5, wrongPats.length)}`); };
     const sesiLagi = () => mulaiSesi(`level=${level}`);
+    /* Pola salah pertama yang punya kembaran mirip → bandingin di Bunpou (Rencana Belajar §8). */
+    const polaBanding = wrongPats.map(gm => deck?.patterns.find(p => p.pattern === gm)).find(p => p && p.confusableWith.length > 0);
     return (
       <div className="latihan-kilat">
         {popupSelesai && (
@@ -322,6 +311,7 @@ function KilatPlayer({ level }: { level: string }) {
             {wrongPats.length > 0
               ? <button className="btn btn-p" onClick={drillSalah}>⚡ Drill {wrongPats.length} pola yang salah</button>
               : <button className="btn btn-p" onClick={sesiLagi}>⚡ Sesi lagi</button>}
+            {polaBanding && <button className="btn btn-g" onClick={() => router.push(`/materi/bunpou?banding=${polaBanding.id}`)}>Bandingin {polaBanding.pattern} sama yang mirip</button>}
             <button className="btn btn-g" onClick={() => router.push("/materi/bunpou")}>Kembali ke Bunpou</button>
           </div>
         </div>
