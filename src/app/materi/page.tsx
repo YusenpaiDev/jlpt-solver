@@ -1,5 +1,8 @@
 "use client";
 
+import "@/styles/rencana-dasar.css";
+import "@/styles/rencana-strategi.css";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -234,6 +237,15 @@ export default function MateriHub() {
             <span className="bar-r">1 ujian = 筆記 + 聴解 · klik bagian buat mulai</span>
           </div>
           {gagalBuka && <p className="m3-empty" role="alert">{gagalBuka}</p>}
+
+          {/* Pintu masuk Strategi ujian (Rencana Belajar §1b) */}
+          <div className="rbk">
+            <Link href="/strategi" className="strat-bn">
+              <span className="sb-g" lang="ja">戦</span>
+              <span><span className="eyebrow">Baru · Strategi ujian {lv}</span><b>Contekan hari ujian: waktu per bagian, skor aman, urutan ngerjain</b><small>Plus tips per jenis soal sebelum latihan</small></span>
+              <span className="btn btn-g">Buka →</span>
+            </Link>
+          </div>
 
           {/* exam grid */}
           <div className="m3-exams">

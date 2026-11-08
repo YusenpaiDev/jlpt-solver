@@ -9,6 +9,8 @@ import { putarHonix } from "@/lib/honix-sfx";
 import { laporkanXp } from "@/lib/honix-level";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
+import { KartuTeknik } from "@/components/rencana/KartuTeknik";
+import { useTeknikDisembunyikan } from "@/lib/use-teknik";
 
 
 interface Ex { jp: string; highlight: string; id: string; }
@@ -100,6 +102,10 @@ function KilatPlayer({ level }: { level: string }) {
   const group = params.get("group");
   const item = params.get("item");
   const count = Math.min(20, Math.max(1, Number(params.get("count")) || (item ? 5 : 10)));
+  /* Kartu teknik 文法形式の判断 sebelum soal pertama, kecuali udah disembunyiin. */
+  const teknik = useTeknikDisembunyikan();
+  /* ?teknik=lewat: datang dari kartu yang sama di halaman Strategi. */
+  const [teknikDitutup, setTeknikDitutup] = useState(params.get("teknik") === "lewat");
 
   const [qs, setQs] = useState<KilatQ[] | null>(null);
   const [idx, setIdx] = useState(0);
@@ -223,17 +229,20 @@ function KilatPlayer({ level }: { level: string }) {
     router.push(`/latihan/kilat?${query}&sesi=${Date.now()}`);
   }, [router]);
 
+  const teknikBuka = Boolean(qs?.length) && !done && teknik.siap && !teknikDitutup && !teknik.daftar.includes("bunpou");
+  const tutupTeknik = useCallback(() => setTeknikDitutup(true), []);
+
   // keyboard
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (done) return;
+      if (done || teknikBuka) return;
       if (["1", "2", "3", "4"].includes(e.key)) pick(+e.key - 1);
       if (e.key === "Enter") { locked ? next() : submit(); }
       if (e.key === "Escape") router.push("/materi/bunpou");
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [done, locked, pick, next, submit, router]);
+  }, [done, teknikBuka, locked, pick, next, submit, router]);
 
   const KEYS = ["A", "B", "C", "D"];
   const pct = qs && qs.length ? Math.round((ok / qs.length) * 100) : 0;
@@ -322,6 +331,10 @@ function KilatPlayer({ level }: { level: string }) {
 
   return (
     <div className="latihan-kilat">
+      {teknikBuka && (
+        <KartuTeknik jenis="bunpou" disembunyikan={false}
+          onAtur={s => teknik.atur("bunpou", s)} onMulai={tutupTeknik} onLewati={tutupTeknik} />
+      )}
       <div className="top">
         <div className="top-in">
           <div className="tt"><span className="tt-jp">文法</span><span className="tt-l">Latihan Kilat</span><span className="tt-lv">{level}</span></div>
