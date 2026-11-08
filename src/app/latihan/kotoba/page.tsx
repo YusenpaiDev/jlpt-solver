@@ -8,6 +8,7 @@ import { useUserStats } from "@/lib/use-user-stats";
 import { useHonixReaksi } from "@/lib/use-honix-reaksi";
 import { putarHonix } from "@/lib/honix-sfx";
 import { laporkanXp } from "@/lib/honix-level";
+import { PindahLangkah, langkahMisi } from "@/components/rencana/PindahLangkah";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
 
@@ -114,6 +115,11 @@ function KotobaPlayer({ level }: { level: string }) {
   const router = useRouter();
   const group = params.get("group");
   const count = Math.min(20, Math.max(1, Number(params.get("count")) || 10));
+  /* Misi harian (Rencana Belajar): mode=ulang → kata sering salah, mode=baru → kata baru;
+     misi=1|2|3|penyelamat → akhir sesi jadi layar pindah langkah. */
+  const mode = params.get("mode");
+  const misi = langkahMisi(params.get("misi"));
+  const [mulai] = useState(() => Date.now());
 
   const [qs, setQs] = useState<KQ[] | null>(null);
   const [idx, setIdx] = useState(0);
@@ -154,11 +160,16 @@ function KotobaPlayer({ level }: { level: string }) {
 
       let pool = deck.vocabulary;
       if (group) pool = pool.filter(w => w.group === group);
+      if (mode === "ulang" || mode === "baru") {
+        const mau = mode === "ulang" ? "wrong" : "new";
+        const saring = pool.filter(w => statOf(w.word, progres) === mau);
+        if (saring.length) pool = saring;
+      }
       setQs(buildQuestions(pool, deck.vocabulary, progres, count));
     }
     init();
     return () => { batal = true; };
-  }, [level, group, count]);
+  }, [level, group, count, mode]);
 
   const q = qs && !done ? qs[idx] : null;
   const pick = useCallback((n: number) => { if (locked || !q || n >= q.opts.length) return; setSel(n); }, [locked, q]);
@@ -224,7 +235,8 @@ function KotobaPlayer({ level }: { level: string }) {
     const sesiLagi = () => mulaiSesi(`level=${level}`);
     return (
       <div className="latihan-kilat">
-        {popupSelesai && (
+        {misi && <PindahLangkah misi={misi} level={level} benar={ok} total={qs.length} mulai={mulai} />}
+        {popupSelesai && !misi && (
           <HonixFinishDialog
             skor={ok} total={qs.length} kategori="語彙" xp={xp} streak={stats.streak}
             ekstra={wrongWords.length
