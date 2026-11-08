@@ -40,5 +40,16 @@
 .rbk .ov{position:fixed;inset:0;z-index:999;background:rgba(6,5,7,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;justify-content:center;align-items:flex-start;padding-top:70px;animation:rbk-fade .3s both}
 .rbk .sheet{width:520px;max-width:100%;padding:28px;position:relative;animation:rbk-sheet .45s var(--ease) both;background:linear-gradient(180deg,#221C28,var(--surface));border-color:var(--line-2)}
 .rbk .btn-lg{min-height:52px;padding:0 26px;font-size:15px}
-@media (max-width:767px){.rbk .h1{font-size:30px}.rbk .head{gap:14px}.rbk .ov{align-items:flex-end;padding:0}.rbk .sheet{border-radius:28px 28px 0 0;padding:22px 20px 34px;width:100%}}
+/* Kartu hasil / pindah langkah (drill banding, misi) */
+.rbk .ml{max-width:520px;margin:0 auto;padding:34px;text-align:center;animation:rbk-rise .5s var(--ease) both}
+.rbk .ml-ok{width:64px;height:64px;border-radius:50%;margin:0 auto 16px;display:grid;place-items:center;font-size:28px;font-weight:700;color:var(--success);background:rgba(143,203,82,.14);box-shadow:inset 0 0 0 1px rgba(143,203,82,.45);animation:rbk-pop .5s .1s var(--back) both}
+.rbk .ml h2{font-size:26px;font-weight:600;letter-spacing:-.025em;margin-top:6px}
+.rbk .ml>p{font-size:14px;color:var(--muted);margin-top:8px;line-height:1.5}
+.rbk .ml-a{display:flex;flex-direction:column;gap:6px;align-items:center}
+.rbk .ml-a .btn-p{width:100%}
+.rbk .ml-next{margin:24px 0;padding:16px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
+.rbk .ml-next span{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.rbk .ml-next b{font-size:17px}
+.rbk .ml-next small{font-size:13px;color:var(--muted)}
+@media (max-width:767px){.rbk .ml{padding:26px 20px}.rbk .h1{font-size:30px}.rbk .head{gap:14px}.rbk .ov{align-items:flex-end;padding:0}.rbk .sheet{border-radius:28px 28px 0 0;padding:22px 20px 34px;width:100%}}
 @media (prefers-reduced-motion:reduce){.rbk *,.rbk *::before,.rbk *::after{animation:none!important;transition:none!important}}

@@ -1,0 +1,62 @@
+/* Misi harian + misi penyelamat + sheet "Dua hari gak ketemu" — port 1:1 dari
+   handoff Claude Design (rb-komp.css versi tempel .rbk-misi + rb.css `.m`). */
+
+.rbk .bub{position:absolute;top:6px;right:40px;max-width:220px;padding:10px 14px;border-radius:14px 14px 4px 14px;background:var(--surface-3);border:1px solid var(--line-2);font-size:13px;line-height:1.4;animation:rbk-rise .5s .2s var(--ease) both;z-index:2}
+.rbk .misi{margin-top:20px;padding:20px;position:relative;z-index:2;background:rgba(18,15,22,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-color:var(--line-2)}
+.rbk .misi-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.rbk .misi-h>div:first-child{flex:1;min-width:0}
+.rbk .misi-t{white-space:nowrap;font-size:18px;font-weight:600;margin-top:4px;letter-spacing:-.015em}
+.rbk .misi-min{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.rbk .misi-min b{font-size:22px;color:var(--text);font-weight:700}
+.rbk .mbar{height:6px;border-radius:4px;background:var(--surface-3);margin:14px 0 4px;overflow:hidden}
+.rbk .mbar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--primary),var(--primary-h));box-shadow:0 0 10px rgba(221,65,36,.6);animation:rbk-barfill .9s .2s var(--ease) both}
+.rbk .misi.done .mbar i{background:linear-gradient(90deg,#6B8E3F,var(--success));box-shadow:0 0 10px rgba(143,203,82,.5)}
+.rbk .steps{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 0;padding:0}
+.rbk .st{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line)}
+.rbk .st-n{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--surface-3);color:var(--muted)}
+.rbk .st b{display:block;font-size:13px;font-weight:600}
+.rbk .st small{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;line-height:1.35}
+.rbk .st-s{display:block;font-size:11px;font-weight:600;margin-top:6px;color:var(--dim)}
+.rbk .st.done .st-n{background:rgba(143,203,82,.18);color:var(--success)}
+.rbk .st.done .st-s{color:var(--success)}
+.rbk .st.run{border-color:rgba(221,65,36,.5);background:rgba(221,65,36,.08)}
+.rbk .st.run .st-n{background:var(--primary);color:#fff}
+.rbk .st.run .st-s{color:var(--pt)}
+.rbk .st.skip{opacity:.7}
+.rbk .st.skip b{text-decoration:line-through;text-decoration-color:rgba(255,255,255,.4)}
+.rbk .misi-cta{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.rbk .misi-p{font-size:13.5px;color:var(--muted);line-height:1.5;margin-top:10px;text-wrap:pretty}
+.rbk .misi-p b{color:var(--text)}
+.rbk .misi.rescue{border-color:rgba(212,160,74,.45);background:linear-gradient(135deg,rgba(212,160,74,.12),rgba(18,15,22,.85))}
+.rbk .misi.rescue .eyebrow{color:var(--warning)}
+
+/* Sheet "Dua hari gak ketemu" */
+.rbk .sheet h2{font-size:22px;font-weight:600;letter-spacing:-.02em;text-align:center}
+.rbk .sheet>p{font-size:14px;color:var(--muted);text-align:center;margin-top:6px}
+.rbk .sh-hx{width:120px;margin:-90px auto 6px}
+.rbk .opts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px}
+.rbk .opts .chip{font-size:13px;padding:8px 16px;min-height:44px}
+.rbk .opts .chip.sel{background:rgba(221,65,36,.16);border-color:rgba(221,65,36,.5);color:var(--text)}
+.rbk .opts .chip:hover{border-color:var(--line-2);color:var(--text)}
+.rbk .resp{margin-top:18px;padding:16px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);animation:rbk-rise .4s var(--ease) both}
+.rbk .resp p{font-size:14px;line-height:1.5}
+.rbk .sh-a{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.rbk .sh-x{display:flex;margin:12px auto 0}
+
+/* Versi tempel di Beranda */
+.rbk-misi{position:relative;margin:0 0 16px}
+.rbk .misi{margin-top:0}
+.rbk .misi-wrap{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:8px;align-items:center}
+.rbk .misi-hx{display:flex;flex-direction:column;align-items:center;gap:0}
+.rbk .misi-hx .hx{width:190px;max-width:none}
+.rbk .misi-hx .bub{position:static;max-width:200px;margin-bottom:-4px}
+
+@media (max-width:767px){
+  .rbk .misi-t{font-size:16px}
+  .rbk .bub{display:none}
+  .rbk .steps{grid-template-columns:1fr}
+  .rbk .misi-cta .btn-lg{width:100%}
+  .rbk .sh-a .btn{flex:1}
+  .rbk .misi-wrap{grid-template-columns:1fr}
+  .rbk .misi-hx{display:none}
+}

@@ -14,6 +14,7 @@ import { useHonix } from "@/lib/use-honix";
 import { putarHonix } from "@/lib/honix-sfx";
 import { Honix } from "@/components/honix/Honix";
 import { KalenderMini } from "@/components/rencana/KalenderMini";
+import { MisiHarian } from "@/components/rencana/MisiHarian";
 import { devBeranda, type BerandaMentah } from "@/lib/dev-beranda";
 import { AuroraBackground, NavRail, BottomNav, PeringatanBanner } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
@@ -565,6 +566,8 @@ export default function Home() {
 
           <div className="bv-grid">
             <div className="bv-col">
+              {/* Misi harian (Rencana Belajar §3): paling atas kolom kiri, di bawah baris statistik. */}
+              {stats.loaded && <MisiHarian level={stats.targetLevel} rekorStreak={stats.rekor} />}
               {/* kanji + quiz */}
               <div className="bv-duo">
                 <div className="bv-kanji card">

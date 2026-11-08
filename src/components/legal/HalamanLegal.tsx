@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "@/styles/legal.css";
 
 export const EMAIL_DUKUNGAN = "yusufnashirsyarifuddin@gmail.com";
-export const BERLAKU = "7 November 2026";
+export const BERLAKU = "8 November 2026";
 
 export type Bagian = { id: string; judul: string; isi: ReactNode };
 

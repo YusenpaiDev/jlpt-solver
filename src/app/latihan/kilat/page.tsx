@@ -9,6 +9,7 @@ import { putarHonix } from "@/lib/honix-sfx";
 import { catatJawabanBunpou } from "@/lib/bunpou-progres";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
+import { PindahLangkah, langkahMisi } from "@/components/rencana/PindahLangkah";
 import { KartuTeknik } from "@/components/rencana/KartuTeknik";
 import { useTeknikDisembunyikan } from "@/lib/use-teknik";
 
@@ -102,6 +103,11 @@ function KilatPlayer({ level }: { level: string }) {
   const group = params.get("group");
   const item = params.get("item");
   const count = Math.min(20, Math.max(1, Number(params.get("count")) || (item ? 5 : 10)));
+  /* Misi harian (Rencana Belajar): mode=ulang → pola sering salah;
+     misi=1|2|3|penyelamat → akhir sesi jadi layar pindah langkah. */
+  const mode = params.get("mode");
+  const misi = langkahMisi(params.get("misi"));
+  const [mulai] = useState(() => Date.now());
   /* Kartu teknik 文法形式の判断 sebelum soal pertama, kecuali udah disembunyiin. */
   const teknik = useTeknikDisembunyikan();
   /* ?teknik=lewat: datang dari kartu yang sama di halaman Strategi. */
@@ -152,11 +158,15 @@ function KilatPlayer({ level }: { level: string }) {
       let pats = d.patterns;
       if (group) pats = pats.filter(p => p.functionGroup === group);
       else if (item) { const it = byId.get(item); pats = it ? [it, ...it.confusableWith.map(c => byId.get(c)).filter(Boolean) as Pattern[]] : d.patterns; }
+      if (mode === "ulang") {
+        const saring = pats.filter(p => statOf(p.pattern, progres) === "wrong");
+        if (saring.length) pats = saring;
+      }
       setQs(buildQuestions(pats, d.patterns, byId, d.groups, progres, count));
     }
     init();
     return () => { batal = true; };
-  }, [level, group, item, count]);
+  }, [level, group, item, count, mode]);
 
   const q = qs && !done ? qs[idx] : null;
 
@@ -253,7 +263,8 @@ function KilatPlayer({ level }: { level: string }) {
     const polaBanding = wrongPats.map(gm => deck?.patterns.find(p => p.pattern === gm)).find(p => p && p.confusableWith.length > 0);
     return (
       <div className="latihan-kilat">
-        {popupSelesai && (
+        {misi && <PindahLangkah misi={misi} level={level} benar={ok} total={qs.length} mulai={mulai} />}
+        {popupSelesai && !misi && (
           <HonixFinishDialog
             skor={ok} total={qs.length} kategori="文法" xp={xp} streak={stats.streak}
             ekstra={wrongPats.length
