@@ -1,0 +1,56 @@
+/* Tes mini mingguan (mulai + hasil) — port 1:1 dari handoff Claude Design
+   (rb-komp.css + rb.css `.m`). Baris nilai minimum (.mins/.mn) dari rencana-strategi.css. */
+
+.rbk .bad-t{color:var(--danger)}
+.rbk .tes-in{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin-top:24px}
+.rbk .ti{padding:26px}
+.rbk .ti-big{font-size:40px;font-weight:700;letter-spacing:-.035em;margin-top:6px}
+.rbk .ti-big span{color:var(--dim);font-weight:500;font-size:.55em;margin:0 6px}
+.rbk .comp{display:flex;gap:3px;height:12px;border-radius:7px;overflow:hidden;margin:18px 0 10px}
+.rbk .comp-l{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted)}
+.rbk .comp-l span{display:flex;align-items:center;gap:6px;font-family:var(--jp)}
+.rbk .comp-l i{width:9px;height:9px;border-radius:3px}
+.rbk .rules{list-style:none;display:flex;flex-direction:column;gap:10px;margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--line)}
+.rbk .rules li{font-size:13.5px;line-height:1.45;color:var(--muted);display:grid;grid-template-columns:18px 1fr;gap:8px}
+.rbk .rules li::before{content:'·';color:var(--pt);font-weight:700}
+.rbk .misi-cta{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+
+.rbk .tr-h{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:20px;padding:28px;position:relative;overflow:visible;--vc:var(--success);border-color:color-mix(in oklch,var(--vc) 40%,transparent);background:linear-gradient(135deg,color-mix(in oklch,var(--vc) 12%,transparent),var(--surface) 60%);animation:rbk-rise .5s var(--ease) both}
+.rbk .tr-h.no{--vc:var(--danger)}
+.rbk .tr-h.none{--vc:var(--dim)}
+.rbk .tr-v{font-size:30px;font-weight:700;letter-spacing:-.03em;color:var(--vc);margin-top:6px}
+.rbk .tr-n{font-size:52px;font-weight:700;letter-spacing:-.04em;margin-top:8px;font-variant-numeric:tabular-nums}
+.rbk .tr-n span{font-size:.4em;color:var(--dim);font-weight:500;margin-left:4px}
+.rbk .tr-s{font-size:13.5px;color:var(--muted)}
+.rbk .tr-hx{display:flex;align-items:center;justify-content:center}
+.rbk .tr-hx .hx{width:210px;max-width:none;margin:-50px 0 -30px}
+.rbk .why{margin-top:16px;padding:14px 16px;border-radius:14px;background:rgba(224,86,111,.10);border:1px solid rgba(224,86,111,.4);font-size:14px;line-height:1.55;text-wrap:pretty}
+.rbk .why b{color:var(--text)}
+.rbk .sr{padding:22px;margin-top:16px}
+.rbk .srr{display:grid;grid-template-columns:160px minmax(0,1fr) 150px;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.rbk .srr:last-child{border-bottom:0}
+.rbk .srk{font-family:var(--jp);font-size:15px;font-weight:600}
+.rbk .srk small{display:block;font-family:var(--sans);font-size:11px;color:var(--dim);font-weight:400}
+.rbk .srb{position:relative;height:12px;border-radius:7px;background:var(--surface-3)}
+.rbk .srb>i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;animation:rbk-barfill .9s var(--ease) both}
+.rbk .srb>em{position:absolute;top:-6px;bottom:-6px;width:2px;background:rgba(255,255,255,.75);font-style:normal}
+.rbk .srb>em span{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--dim);white-space:nowrap}
+.rbk .srv{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rbk .srv b{font-size:18px}
+.rbk .srv span{font-size:12px;color:var(--dim)}
+.rbk .srv small{display:block;font-size:11.5px;font-weight:600;margin-top:2px}
+.rbk .srr.low .srk{color:var(--danger)}
+.rbk .tr-a{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+
+@media (max-width:767px){
+  .rbk .tes-in{grid-template-columns:1fr}
+  .rbk .ti{padding:20px}
+  .rbk .tr-h{grid-template-columns:1fr;padding:20px}
+  .rbk .tr-v{font-size:24px;padding-right:96px}
+  .rbk .tr-hx{position:absolute;top:-24px;right:-6px}
+  .rbk .tr-hx .hx{width:120px;margin:0}
+  .rbk .sr{padding:18px}
+  .rbk .srr{grid-template-columns:1fr auto;gap:8px 12px}
+  .rbk .srr .srb{grid-column:1/-1;grid-row:2;margin-top:18px}
+  .rbk .tr-a .btn{flex:1}
+}

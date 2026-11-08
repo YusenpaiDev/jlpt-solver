@@ -75,6 +75,8 @@ interface SessionStats {
 }
 interface AIResult {
   title: string;
+  /** "materi" = set Bank Soal, "tes_mini" = tes mini mingguan (Rencana Belajar). */
+  kind?: string;
   vocabulary?: VocabItem[];
   questions: AIQuestion[];
   user_progress?: UserProgress;
@@ -2611,7 +2613,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
           xp={correctTotal * 10 + 5} streak={streak}
           ekstra={{ nilai: total - correctTotal, label: "soal perlu dicek" }}
           onCobaLagi={() => { setShowCompletion(false); setKonfirmReset(true); }}
-          onLanjut={() => { setShowCompletion(false); router.push("/materi"); }}
+          onLanjut={() => { setShowCompletion(false); router.push(result.kind === "tes_mini" ? "/progres?tab=tes" : "/materi"); }}
           onPembahasan={() => setShowCompletion(false)}
           onTutup={() => setShowCompletion(false)}
         />

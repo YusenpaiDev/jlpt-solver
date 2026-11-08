@@ -236,6 +236,7 @@ function ResumeSub({ s }: { s: Session }) {
 function jenisSesi(s: Session): string {
   if (s.section === "choukai") return "Choukai";
   if (s.kind === "drill") return "Drill";
+  if (s.kind === "tes_mini") return "Tes mini";
   return "Bank Soal";
 }
 
