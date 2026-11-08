@@ -98,6 +98,13 @@ export default function MateriHub() {
     load().catch(() => setMuat("error"));
   }, []);
 
+  /* Datang dari menu "Bank Soal": daftar ujian baru kebentuk setelah data
+     masuk, jadi geser ulang ke sana begitu siap (scroll bawaan Next kecepetan). */
+  useEffect(() => {
+    if (muat !== "ready" || !stats.loaded || window.location.hash !== "#bank-soal") return;
+    requestAnimationFrame(() => document.getElementById("bank-soal")?.scrollIntoView({ block: "start" }));
+  }, [muat, stats.loaded]);
+
   const perLevel = useMemo(() => {
     const m: Record<string, Exam[]> = {};
     exams.forEach(e => (m[e.level] ??= []).push(e));
@@ -196,6 +203,9 @@ export default function MateriHub() {
               <div className="sub">Minggu ini: <b>{pace.doneThisWk} / {pace.target} set</b>{pace.doneThisWk < pace.target && " — lanjut yuk"}</div>
             </div>
           </div>
+
+          {/* Tujuan menu "Bank Soal" di sidebar (/materi#bank-soal). */}
+          <div id="bank-soal" className="m3-jangkar" />
 
           {/* NEXT hero */}
           {next && (
