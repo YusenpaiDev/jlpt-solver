@@ -81,7 +81,8 @@ export function TesMini({ level, sesi, choukai30 }: {
     if (error) {
       setMulai(false);
       if (error.message.includes("subscription_required")) { router.push("/langganan"); return; }
-      setPesan(error.message.includes("belum cukup") ? `Soal ${level} di Bank Soal belum cukup buat tes mini.` : "Tes mini belum bisa dibuat. Coba lagi sebentar.");
+      /* Alasan asli dari database ikut ditampilin kecil, biar gagalnya gampang dilacak. */
+      setPesan(error.message.includes("belum cukup") ? `Soal ${level} di Bank Soal belum cukup buat tes mini.` : `Tes mini belum bisa dibuat. Coba lagi sebentar. (${error.message.slice(0, 140)})`);
       return;
     }
     router.push(`/latihan/${data as string}`);
