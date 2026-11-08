@@ -1,5 +1,6 @@
 "use client";
 
+import "@/styles/rencana-dasar.css";
 import "@/styles/rencana-belajar.css";
 import { useMemo, useState } from "react";
 import {

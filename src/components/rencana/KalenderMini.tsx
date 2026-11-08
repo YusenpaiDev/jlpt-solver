@@ -1,5 +1,6 @@
 "use client";
 
+import "@/styles/rencana-dasar.css";
 import "@/styles/rencana-belajar.css";
 import Link from "next/link";
 import { jamMenit, selBulan, tingkatMenit } from "@/lib/waktu-kalender";
