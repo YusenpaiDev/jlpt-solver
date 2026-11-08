@@ -4,18 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, BookOpen, ListTodo, BookA, NotebookPen, BarChart3,
-  Settings, Sparkles, Library,
+  Settings, Sparkles,
 } from "lucide-react";
 import { useIsPro } from "@/lib/use-is-pro";
 import { HonixTurHost } from "@/components/honix/HonixTurHost";
 import { TombolKeluar } from "./TombolKeluar";
 import { lompatDiHalamanSama } from "@/lib/lompat-jangkar";
+import { IkonBankSoal } from "./IkonBankSoal";
 
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
   { href: "/materi",        label: "Materi",        Icon: BookOpen },
   /* Bank Soal belum punya halaman sendiri: lompat ke daftar ujian di Materi. */
-  { href: "/materi#bank-soal", label: "Bank Soal",  Icon: Library },
+  { href: "/materi#bank-soal", label: "Bank Soal",  Icon: IkonBankSoal },
   { href: "/lembar-tugas",  label: "Lembar Tugas",  Icon: ListTodo },
   { href: "/kamus",         label: "Kamus",         Icon: BookA },
   { href: "/catatan",       label: "Catatan",       Icon: NotebookPen },
