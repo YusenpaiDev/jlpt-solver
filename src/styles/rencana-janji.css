@@ -1,0 +1,43 @@
+/* Janji di awal (verdict + perbaikan + atur sesi/pace) — port 1:1 dari handoff
+   Claude Design (rb-komp.css versi tempel .rbk-janji + rb.css `.m`). */
+
+.rbk .chip.sel{background:rgba(221,65,36,.16);border-color:rgba(221,65,36,.5);color:var(--text)}
+.rbk button.chip{min-height:36px}
+.rbk button.chip:hover{border-color:var(--line-2);color:var(--text)}
+
+.rbk .jn-v{margin-top:14px;padding:20px 22px;--vc:var(--success)}
+.rbk .jn-v.v-mepet{--vc:var(--warning)}
+.rbk .jn-v.v-gak{--vc:var(--danger)}
+.rbk .jn-v.v-none{--vc:var(--dim)}
+.rbk .jn-v{border-color:color-mix(in oklch,var(--vc) 45%,transparent);background:linear-gradient(135deg,color-mix(in oklch,var(--vc) 12%,transparent),var(--surface) 70%)}
+.rbk .jn-vl{display:flex;align-items:center;gap:9px;font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--vc)}
+.rbk .jn-vl i{width:10px;height:10px;border-radius:50%;background:var(--vc);box-shadow:0 0 12px var(--vc)}
+.rbk .jn-v p{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.5}
+.rbk .jn-v p b{color:var(--text)}
+.rbk .jb{display:grid;grid-template-columns:110px minmax(0,1fr) 70px;align-items:center;gap:12px;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.rbk .jb-t{height:10px;border-radius:6px;background:var(--surface-3);overflow:hidden}
+.rbk .jb-t i{display:block;height:100%;border-radius:6px;animation:rbk-barfill .8s var(--ease) both}
+.rbk .jb b{text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+.rbk .jn-fix{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.rbk .fx{padding:14px 16px;display:flex;flex-direction:column;gap:6px;border-radius:16px;transition:border-color .2s,background .2s}
+.rbk .fx:hover,.rbk .fx:focus-visible{border-color:rgba(221,65,36,.5);background:var(--surface-2)}
+.rbk .fx b{font-size:14px;font-weight:600}
+.rbk .vt{font-size:11.5px;font-weight:600;align-self:flex-start;padding:3px 9px;border-radius:99px}
+.rbk .vt.v-ok{color:var(--success);background:rgba(143,203,82,.14)}
+.rbk .vt.v-mepet{color:var(--warning);background:rgba(212,160,74,.14)}
+.rbk .vt.v-gak{color:var(--danger);background:rgba(224,86,111,.14)}
+.rbk .jn-adj{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+.rbk .jn-adj>div{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rbk .jn-adj label{font-size:12px;color:var(--dim);width:64px}
+
+/* Versi tempel di halaman lama (onboarding, Pengaturan) */
+.rbk-janji{margin:0 0 22px;text-align:left}
+.rbk-janji .jn-v{margin-top:0}
+.rbk-janji .jn-fix{grid-template-columns:1fr}
+.rbk-janji .jn-adj label{width:100%}
+
+@media (max-width:767px){
+  .rbk .jb{grid-template-columns:88px minmax(0,1fr) 56px;gap:8px}
+  .rbk .jn-fix{grid-template-columns:1fr}
+  .rbk .jn-adj label{width:100%}
+}
