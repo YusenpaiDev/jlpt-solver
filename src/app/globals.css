@@ -8350,6 +8350,7 @@ html { scrollbar-gutter: stable; }
 .materi-v3 .btn-g:hover { border-color: rgba(221,65,36,0.45); color: #E8704F; }
 
 /* filter bar */
+.materi-v3 .m3-jangkar { scroll-margin-top: 16px; }
 .materi-v3 .m3-bar { display: flex; align-items: center; gap: 9px; margin: 22px 0 14px; flex-wrap: wrap; }
 .materi-v3 .fchip { padding: 8px 15px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--text-dim); cursor: pointer; font-family: var(--font-sans); display: inline-flex; align-items: center; gap: 6px; transition: .15s; }
 .materi-v3 .fchip:hover { color: var(--text-muted); border-color: var(--line-2); }
