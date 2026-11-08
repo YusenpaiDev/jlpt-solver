@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { prepareChat, SENSEI_SCOPE } from "@/lib/chat-context";
 import { pakaiKuota, responsKuota } from "@/lib/kuota";
+import { createClient } from "@/lib/supabase/server";
+import { ambilProfilBelajar } from "@/lib/profil-belajar-server";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -17,9 +19,17 @@ export async function POST(req: NextRequest) {
   if (!input.question) return NextResponse.json({ success: true, reply: "Pilih soal yang mau dibahas dulu ya." });
 
   try {
+    /* Profil belajar akun ini (target, akurasi, yang sering salah). Tanpa
+       nama/email. Gagal dibaca → Sensei tetap jawab, cuma tanpa profil. */
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const profil = user
+      ? await ambilProfilBelajar(supabase, user).catch(err => { console.error("[chat] profil:", err); return null; })
+      : null;
+
     const messages: Anthropic.MessageParam[] = [
       ...input.history.map(m => ({ role: m.role, content: m.text })),
-      { role: "user", content: JSON.stringify({ materi_soal: { judul: input.title, ...input.question }, pertanyaan: input.message }) },
+      { role: "user", content: JSON.stringify({ profil_belajar: profil, materi_soal: { judul: input.title, ...input.question }, pertanyaan: input.message }) },
     ];
 
     const response = await client.messages.create({
