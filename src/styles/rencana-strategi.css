@@ -51,8 +51,6 @@
 .rbk .offi{font-size:11.5px;color:var(--dim);margin-top:18px}
 
 /* ── Kartu teknik (overlay) ── */
-.rbk .ov{position:fixed;inset:0;z-index:999;background:rgba(6,5,7,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;justify-content:center;align-items:flex-start;padding-top:70px;animation:rbk-fade .3s both}
-.rbk .sheet{width:520px;max-width:100%;padding:28px;position:relative;animation:rbk-sheet .45s var(--ease) both;background:linear-gradient(180deg,#221C28,var(--surface));border-color:var(--line-2)}
 .rbk .tk{width:620px;max-width:100%;display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px;padding:26px 28px 24px 18px}
 .rbk .tk-hx{width:170px;max-width:none;margin:-60px 0 0 -20px;align-self:start}
 .rbk .tk-t{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-top:10px;line-height:1.2;text-align:left}
@@ -81,8 +79,6 @@
   .rbk .tl-bar{height:16px}
   .rbk .tl-bar>div{font-size:0;padding:0}
   .rbk .tk-grid{grid-template-columns:1fr}
-  .rbk .ov{align-items:flex-end;padding:0}
-  .rbk .sheet{border-radius:28px 28px 0 0;padding:22px 20px 34px;width:100%}
   .rbk .tk{grid-template-columns:1fr;gap:8px;padding:20px 20px 30px}
   .rbk .tk-hx{width:110px;margin:-74px auto 0}
   .rbk .tk-a .btn-p{flex:1}

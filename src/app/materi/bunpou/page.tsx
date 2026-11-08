@@ -12,6 +12,9 @@ import bunpouN4 from "@/data/bunpou/N4.json";
 import bunpouN5 from "@/data/bunpou/N5.json";
 import { useUserStats, type UserStats } from "@/lib/use-user-stats";
 import { GantiTarget } from "@/components/v2/GantiTarget";
+import { catatJawabanBunpou } from "@/lib/bunpou-progres";
+import { grupBanding } from "@/lib/banding-pola";
+import { BandingPola } from "@/components/rencana/BandingPola";
 
 interface Ex { jp: string; highlight: string; id: string; }
 interface Pattern {
@@ -103,6 +106,8 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
   const [sel, setSel] = useState<Pattern | null>(PATTERNS[0] ?? null);
   const [notice, setNotice] = useState<string | null>(null);
   const [progres, setProgres] = useState<Map<string, Prog>>(new Map());
+  /* Overlay "Bandingin pola" (Rencana Belajar §8); ?banding=<id> dari hasil Latihan Kilat. */
+  const [banding, setBanding] = useState<Pattern | null>(null);
 
   // Drill state
   const [drillQs, setDrillQs] = useState<DrillQ[] | null>(null);
@@ -115,6 +120,8 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
+      const dariKilat = BY_ID.get(new URLSearchParams(window.location.search).get("banding") ?? "");
+      if (dariKilat) { setSel(dariKilat); setBanding(dariKilat); }
       if (!user) return;
       setUserInitial((user.user_metadata?.full_name || user.email || "Y")[0].toUpperCase());
       const [f, pr] = await Promise.all([
@@ -125,7 +132,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
       if (pr.data) setProgres(new Map(pr.data.map(r => [r.pattern, { benar: r.benar ?? 0, salah: r.salah ?? 0 }])));
     }
     load();
-  }, []);
+  }, [BY_ID]);
 
   const summary = useMemo(() => {
     let known = 0, seen = 0, wrong = 0, neu = 0, warn = 0;
@@ -184,19 +191,9 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
     if (!qs.length) { setNotice("Belum cukup contoh kalimat buat bikin soal di sini."); return; }
     setDrillQs(qs); setDrillIdx(0); setDrillPick(null); setDrillRes({ benar: 0, salah: 0 }); setDrillDone(false);
   };
-  const recordResult = async (pattern: string, benar: boolean) => {
+  const recordResult = (pattern: string, benar: boolean) => {
     setProgres(prev => { const m = new Map(prev); const c = m.get(pattern) ?? { benar: 0, salah: 0 }; m.set(pattern, { benar: c.benar + (benar ? 1 : 0), salah: c.salah + (benar ? 0 : 1) }); return m; });
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from("bunpou_progress").select("benar, salah").eq("user_id", user.id).eq("pattern", pattern).maybeSingle();
-      await supabase.from("bunpou_progress").upsert({
-        user_id: user.id, pattern,
-        benar: (data?.benar ?? 0) + (benar ? 1 : 0),
-        salah: (data?.salah ?? 0) + (benar ? 0 : 1),
-      }, { onConflict: "user_id,pattern" });
-    } catch { /* optimistic — nyusul pas reload */ }
+    void catatJawabanBunpou(pattern, benar);
   };
   const answerDrill = (opt: string) => {
     if (drillPick || !drillQs) return;
@@ -365,6 +362,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
                   <div className="bv-det-act">
                     <button className="btn btn-p" onClick={() => router.push(`/latihan/kilat?level=${level}&item=${sel.id}`)}><Zap size={13} /> Drill pola ini (5 soal)</button>
                     <button className="btn btn-g" onClick={() => router.push(`/latihan/kilat?level=${level}&group=${sel.functionGroup}`)}>Drill kelompok</button>
+                    {selConfusables.length > 0 && <button className="btn btn-g" onClick={() => setBanding(sel)}>Bandingkan {grupBanding(sel, BY_ID).length} pola</button>}
                   </div>
                 </div>
               ) : (
@@ -418,6 +416,11 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
           <div className="bv-toast" onClick={() => setNotice(null)}>
             {notice} <span className="x"><X size={13} /></span>
           </div>
+        )}
+
+        {banding && (
+          <BandingPola key={banding.id} grup={grupBanding(banding, BY_ID)} level={level} progres={progres}
+            onCatat={recordResult} onTutup={() => setBanding(null)} />
         )}
       </main>
     </>

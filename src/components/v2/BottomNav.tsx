@@ -41,7 +41,8 @@ function MobileNav({ pathname }: { pathname: string }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogId = useId();
   const titleId = useId();
-  const isActive = (href: string) => pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+  const isActive = (href: string) => href === "/materi#bank-soal" ? pathname === "/strategi"
+    : pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
   const moreActive = MORE_ITEMS.some(({ href }) => isActive(href)) || isActive("/premium");
 
   useEffect(() => {
