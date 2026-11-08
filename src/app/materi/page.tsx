@@ -1,5 +1,8 @@
 "use client";
 
+import "@/styles/rencana-dasar.css";
+import "@/styles/rencana-strategi.css";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,8 +11,6 @@ import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/com
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
 import { GantiTarget } from "@/components/v2/GantiTarget";
 import { useUserStats } from "@/lib/use-user-stats";
-import "@/styles/rencana-dasar.css";
-import "@/styles/rencana-strategi.css";
 import { gabungBankSoal, type SetUjian, type SesiMilik, type SetKatalog } from "@/lib/bank-soal";
 
 /* Deck Kotoba level target: buat angka di kartu Kotoba. Sumbernya sama dengan
