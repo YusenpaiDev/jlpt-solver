@@ -2,6 +2,7 @@
 
 import "@/styles/rencana-dasar.css";
 import "@/styles/rencana-belajar.css";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   jamMenit, rentangBulan, ringkasWaktu, selBulan, tingkatMenit,
@@ -73,7 +74,7 @@ export function WaktuBelajar({ waktu, streak, streakTerpanjang, rekapSesi }: {
 
   return (
     <div className="rbk rbk-waktu">
-      <div className="wk-h"><div className="h2">Waktu belajar<span className="jp-g" lang="ja">時間</span></div></div>
+      <div className="wk-h"><div className="h2">Waktu belajar<span className="jp-g" lang="ja">時間</span></div><Link className="btn btn-g" href="/progres/pamer">Pamerin ↗</Link></div>
 
       <section className="card tw">
         <div>
