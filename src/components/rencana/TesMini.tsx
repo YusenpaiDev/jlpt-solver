@@ -20,7 +20,7 @@ interface BarisTes { minggu: string; sesi_id: string }
 
 const WARNA: Record<string, string> = { "言語知識": "goi", "読解": "dokkai", "聴解": "choukai", "言語知識・読解": "bunpou" };
 /* Latihan paling nyambung buat bagian yang paling tipis. */
-const LATIHAN: Record<string, string> = { "言語知識": "/latihan/kilat", "言語知識・読解": "/latihan/kilat", "読解": "/materi#bank-soal", "聴解": "/materi#bank-soal" };
+const LATIHAN: Record<string, string> = { "言語知識": "/latihan/kilat", "言語知識・読解": "/latihan/kilat", "読解": "/bank-soal", "聴解": "/bank-soal" };
 const beda = (x: number) => (x > 0 ? `+${x}` : x < 0 ? `${x}` : "±0");
 
 /** Tab Progres → Tes mini (handoff Rencana Belajar §9). */
@@ -132,7 +132,7 @@ export function TesMini({ level, sesi, choukai30 }: {
           })}
           <p className="note" style={{ marginTop: 12 }}>Perkiraan dari 15 soal 筆記 + latihan 聴解 30 hari, bukan skor resmi.</p>
           <div className="tr-a">
-            <Link className="btn btn-p" href={LATIHAN[bLemah.k] ?? "/materi#bank-soal"}>Latihan <span lang="ja">{bLemah.k}</span>{gagal ? " sekarang" : " (paling tipis)"}</Link>
+            <Link className="btn btn-p" href={LATIHAN[bLemah.k] ?? "/bank-soal"}>Latihan <span lang="ja">{bLemah.k}</span>{gagal ? " sekarang" : " (paling tipis)"}</Link>
             <Link className="btn btn-g" href="/strategi">Lihat strategi</Link>
           </div>
         </section>

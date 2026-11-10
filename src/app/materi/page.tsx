@@ -2,185 +2,154 @@
 
 import "@/styles/rencana-dasar.css";
 import "@/styles/rencana-strategi.css";
+import "@/styles/rencana-misi.css";
+import "@/styles/materi-bank.css";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
-import { HonixEmpty } from "@/components/honix/HonixEmpty";
-import { GantiTarget } from "@/components/v2/GantiTarget";
+import { BarisLevel } from "@/components/rencana/BarisLevel";
+import { KartuKurikulumDisiapkan } from "@/components/rencana/KartuKurikulum";
 import { useUserStats } from "@/lib/use-user-stats";
-import { labelSesi } from "@/lib/sesi-ujian";
-import { gabungBankSoal, type SetUjian, type SesiMilik, type SetKatalog } from "@/lib/bank-soal";
+import { gabungBankSoal, type SetKatalog } from "@/lib/bank-soal";
+import { susunPerjalanan } from "@/lib/perjalanan-soal";
+import { bacaTerakhir, kapan, type Terakhir } from "@/lib/terakhir-dibuka";
+import { DEV_BYPASS, devBankSoal, devProgres } from "@/lib/dev-materi";
+import {
+  statusKata, statusPola, hitungEmpat, persenDimulai, persenDikuasai, namaKelompokKata,
+  type Empat, type Hitungan,
+} from "@/lib/status-materi";
 
-/* Deck Kotoba level target: buat angka di kartu Kotoba. Sumbernya sama dengan
-   /materi/kotoba, jadi jumlah katanya selalu cocok. */
-interface DekKotoba { source: string; vocabulary: { word: string }[]; }
-const DEK_KOTOBA: Record<Lv, () => Promise<DekKotoba>> = {
+type Lv = "N1" | "N2" | "N3" | "N4" | "N5";
+interface DekKotoba { groupOrder: string[]; vocabulary: { word: string; group: string }[] }
+interface DekBunpou { groups: { key: string; name: string; jp: string }[]; patterns: { pattern: string; functionGroup: string; confusableWith: string[] }[] }
+
+/* Deck level target di-load pas perlu biar bundle awal ringan. */
+const KOTOBA: Record<Lv, () => Promise<DekKotoba>> = {
   N5: () => import("@/data/kotoba/N5.json").then(m => m.default as DekKotoba),
   N4: () => import("@/data/kotoba/N4.json").then(m => m.default as DekKotoba),
   N3: () => import("@/data/kotoba/N3.json").then(m => m.default as DekKotoba),
   N2: () => import("@/data/kotoba/N2.json").then(m => m.default as DekKotoba),
   N1: () => import("@/data/kotoba/N1.json").then(m => m.default as DekKotoba),
 };
+const BUNPOU: Record<Lv, () => Promise<DekBunpou>> = {
+  N5: () => import("@/data/bunpou/N5.json").then(m => m.default as DekBunpou),
+  N4: () => import("@/data/bunpou/N4.json").then(m => m.default as DekBunpou),
+  N3: () => import("@/data/bunpou/N3.json").then(m => m.default as DekBunpou),
+  N2: () => import("@/data/bunpou/N2.json").then(m => m.default as DekBunpou),
+  N1: () => import("@/data/bunpou/N1.json").then(m => m.default as DekBunpou),
+};
 
-type Lv = "N1" | "N2" | "N3" | "N4" | "N5";
+/* Warna 4 status: Dikuasai · Pernah muncul · Sering salah · Baru */
+const EMPAT: [string, string][] = [
+  ["Dikuasai", "var(--success)"], ["Pernah muncul", "rgba(255,255,255,.5)"],
+  ["Sering salah", "var(--danger)"], ["Baru", "var(--surface-3)"],
+];
+const BARIS = 6;
 
-type Exam = SetUjian;
-type ExType = "筆記" | "聴解";
-function exType(e: Exam): ExType { return e.section === "choukai" ? "聴解" : "筆記"; }
+interface Kelompok { kunci: string; jp: string; nama: string; total: number; empat: Empat; rawan: number; href: string }
 
-function examMeta(title: string): { label: string; sortKey: number } {
-  const m = title.match(/(20\d{2})\s*年\s*(\d{1,2})\s*月/);
-  if (m) return { label: `${m[1]}年${m[2]}月`, sortKey: +m[1] * 100 + +m[2] };
-  return { label: title.slice(0, 20), sortKey: 0 };
-}
-function relDate(iso: string | null): string {
-  if (!iso) return "";
-  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (d < 1) return "hari ini"; if (d < 2) return "kemarin";
-  if (d < 7) return `${d} hari lalu`; if (d < 30) return `${Math.floor(d / 7)} minggu lalu`;
-  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-}
-const pctOf = (e: Exam) => (e.score != null && e.total > 0 ? Math.round((e.score / e.total) * 100) : null);
-
-/* 1 ujian = 1 grup (tanggal) berisi bagian 筆記 + 聴解 */
-interface Group { key: string; level: Lv; label: string; sortKey: number; hisho?: Exam; choukai?: Exam; }
-type StatusF = "all" | "incomplete" | "done";
-const DEFAULT_SHOWN = 5;
-
-export default function MateriHub() {
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [muat, setMuat] = useState<"loading" | "ready" | "error">("loading");
-  /* Progres materi belajar — dihitung dari data, bukan dipatok. Yang diukur
-     "ditandai/disimpan", bukan "dikuasai": itu yang beneran kelacak. */
-  const [bunpou, setBunpou] = useState({ total: 0, ditandai: 0 });
-  const [kataFavorit, setKataFavorit] = useState<Set<string>>(new Set());
-  const [dekKotoba, setDekKotoba] = useState<DekKotoba | null>(null);
-  const [statusF, setStatusF] = useState<StatusF>("all");
-  const [showAll, setShowAll] = useState(false);
-  /* judul set yang lagi disiapin salinannya (klik pertama) + pesan kalau gagal */
-  const [membuka, setMembuka] = useState<string | null>(null);
-  const [gagalBuka, setGagalBuka] = useState<string | null>(null);
-  const router = useRouter();
-
+/** /materi = tempat belajar: kurikulum + Kotoba & Bunpou
+    (HANDOFF-materi-bank-soal §2). Daftar ujian pindah ke /bank-soal. */
+export default function MateriPage() {
   const stats = useUserStats();
-
-  /* Tanggal ujian dari pilihan user. */
-  const targetDate = stats.examDate ? labelSesi(stats.examDate) : "ujian berikutnya";
+  const lv = stats.targetLevel as Lv;
+  const [dekK, setDekK] = useState<DekKotoba | null>(null);
+  const [dekB, setDekB] = useState<DekBunpou | null>(null);
+  const [progK, setProgK] = useState<Map<string, Hitungan>>(new Map());
+  const [progB, setProgB] = useState<Map<string, Hitungan>>(new Map());
+  const [favorit, setFavorit] = useState<Set<string>>(new Set());
+  const [jumlahSet, setJumlahSet] = useState<Record<string, number>>({});
+  const [terakhir, setTerakhir] = useState<Terakhir>({});
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setMuat("error"); return; }
-      const [ex, kat, bp, sw] = await Promise.all([
-        supabase.from("sessions")
-          .select("id, level, title, total, score, created_at, ai_result->section, ai_result->ready")
-          .eq("user_id", user.id)
-          .eq("ai_result->>kind", "materi")
-          .order("created_at", { ascending: false }),
-        supabase.rpc("daftar_katalog"),
-        supabase.from("bunpou_patterns").select("favorite").eq("user_id", user.id),
+      setTerakhir(bacaTerakhir());
+      if (DEV_BYPASS) {
+        const mode = new URLSearchParams(window.location.search).get("dev");
+        const d = ["N1", "N2", "N3", "N4", "N5"].map(l => devBankSoal(l, mode));
+        const semua = gabungBankSoal([], d.flatMap(x => x.katalog));
+        setJumlahSet(Object.fromEntries(["N1", "N2", "N3", "N4", "N5"].map(l => [l, susunPerjalanan(semua.filter(s => s.level === l)).filter(p => p.status !== "segera").length])));
+        return;
+      }
+      if (!user) return;
+      const [kp, bp, sw, kat] = await Promise.all([
+        supabase.from("kotoba_progress").select("word, benar, salah").eq("user_id", user.id),
+        supabase.from("bunpou_progress").select("pattern, benar, salah").eq("user_id", user.id),
         supabase.from("saved_words").select("kanji").eq("user_id", user.id).eq("favorite", true),
+        supabase.rpc("daftar_katalog"),
       ]);
-      if (ex.error) { setMuat("error"); return; }
-      /* Katalog gagal kebaca (mis. migration belum jalan) → tetap tampilin
-         salinan yang udah dimiliki, jangan bikin halaman error. */
-      setExams(gabungBankSoal((ex.data ?? []) as SesiMilik[], kat.error ? [] : (kat.data ?? []) as SetKatalog[]));
-      setMuat("ready");
-
-      const pola = bp.data ?? [];
-      setBunpou({ total: pola.length, ditandai: pola.filter(r => r.favorite).length });
-
-      setKataFavorit(new Set((sw.data ?? []).map(r => r.kanji)));
+      setProgK(new Map((kp.data ?? []).map(r => [r.word, { benar: r.benar ?? 0, salah: r.salah ?? 0 }])));
+      setProgB(new Map((bp.data ?? []).map(r => [r.pattern, { benar: r.benar ?? 0, salah: r.salah ?? 0 }])));
+      setFavorit(new Set((sw.data ?? []).map(r => r.kanji)));
+      const semua = gabungBankSoal([], kat.error ? [] : (kat.data ?? []) as SetKatalog[]);
+      const per: Record<string, number> = {};
+      for (const l of ["N1", "N2", "N3", "N4", "N5"]) {
+        per[l] = susunPerjalanan(semua.filter(s => s.level === l)).filter(p => p.status !== "segera").length;
+      }
+      setJumlahSet(per);
     }
-    load().catch(() => setMuat("error"));
+    void load();
   }, []);
-
-  /* Datang dari menu "Bank Soal": daftar ujian baru kebentuk setelah data
-     masuk, jadi geser ulang ke sana begitu siap (scroll bawaan Next kecepetan). */
-  useEffect(() => {
-    if (muat !== "ready" || !stats.loaded || window.location.hash !== "#bank-soal") return;
-    requestAnimationFrame(() => document.getElementById("bank-soal")?.scrollIntoView({ block: "start" }));
-  }, [muat, stats.loaded]);
-
-  const perLevel = useMemo(() => {
-    const m: Record<string, Exam[]> = {};
-    exams.forEach(e => (m[e.level] ??= []).push(e));
-    return m;
-  }, [exams]);
-
-  /* Bank Soal cuma nampilin level target. Level lain dibuka lewat ganti target. */
-  const lv: Lv = stats.targetLevel;
-  const setLevelIni = useMemo(() => (stats.loaded ? perLevel[lv] ?? [] : []), [stats.loaded, perLevel, lv]);
 
   useEffect(() => {
     if (!stats.loaded) return;
     let batal = false;
-    void DEK_KOTOBA[lv]().then(d => { if (!batal) setDekKotoba(d); });
+    void Promise.all([KOTOBA[lv](), BUNPOU[lv]()]).then(([k, b]) => {
+      if (batal) return;
+      setDekK(k); setDekB(b);
+      if (DEV_BYPASS) {
+        const d = devProgres(k.vocabulary.map(w => w.word), b.patterns.map(p => p.pattern), new URLSearchParams(window.location.search).get("dev"));
+        setProgK(new Map(d.kata.map(r => [r.word, r])));
+        setProgB(new Map(d.pola.map(r => [r.pattern, r])));
+      }
+    });
     return () => { batal = true; };
   }, [stats.loaded, lv]);
 
-  const kotobaTotal = dekKotoba?.vocabulary.length ?? 0;
-  const kotobaTersimpan = useMemo(
-    () => (dekKotoba?.vocabulary ?? []).filter(w => kataFavorit.has(w.word)).length,
-    [dekKotoba, kataFavorit],
-  );
+  const hasil = useMemo(() => {
+    if (!dekK || !dekB) return null;
+    const sk = (w: { word: string }) => statusKata(progK.get(w.word));
+    const sp = (p: { pattern: string }) => statusPola(progB.get(p.pattern));
+    const tk = terakhir.kotoba?.level === lv ? terakhir.kotoba : undefined;
+    const tb = terakhir.bunpou?.level === lv ? terakhir.bunpou : undefined;
 
-  /* group per tanggal → {hisho, choukai} */
-  const groups = useMemo<Group[]>(() => {
-    const map = new Map<string, Group>();
-    for (const e of setLevelIni) {
-      const { label, sortKey } = examMeta(e.title);
-      const key = `${e.level}·${label}`;
-      let g = map.get(key);
-      if (!g) { g = { key, level: e.level as Lv, label, sortKey }; map.set(key, g); }
-      if (exType(e) === "聴解") g.choukai = e; else g.hisho = e;
-    }
-    return [...map.values()].sort((a, b) => b.sortKey - a.sortKey);
-  }, [setLevelIni]);
+    const kataK: Kelompok[] = dekK.groupOrder.map(g => {
+      const isi = dekK.vocabulary.filter(w => w.group === g);
+      const n = namaKelompokKata(g);
+      return { kunci: g, jp: n.jp, nama: n.id, total: isi.length, empat: hitungEmpat(isi, sk), rawan: 0, href: `/materi/kotoba?grup=${encodeURIComponent(g)}` };
+    }).filter(k => k.total > 0);
+    const kataB: Kelompok[] = dekB.groups.map(g => {
+      const isi = dekB.patterns.filter(p => p.functionGroup === g.key);
+      return { kunci: g.key, jp: g.jp, nama: g.name, total: isi.length, empat: hitungEmpat(isi, sp), rawan: isi.filter(p => p.confusableWith.length > 0).length, href: `/materi/bunpou?grup=${encodeURIComponent(g.key)}` };
+    }).filter(k => k.total > 0);
 
-  const gStatus = (g: Group): StatusF => {
-    const parts = [g.hisho, g.choukai].filter(Boolean) as Exam[];
-    const doneN = parts.filter(e => pctOf(e) != null).length;
-    if (doneN === 0) return "incomplete"; // belum mulai = belum lengkap
-    if (doneN === parts.length) return "done";
-    return "incomplete";
-  };
-  const filtered = useMemo(() => statusF === "all" ? groups : groups.filter(g => gStatus(g) === statusF), [groups, statusF]);
-  const shown = showAll ? filtered : filtered.slice(0, DEFAULT_SHOWN);
-  const moreN = filtered.length - shown.length;
+    /* Terakhir dibuka di atas, sisanya urutan bawaan. */
+    const urut = (daftar: Kelompok[], kunci?: string) => {
+      const t = daftar.find(k => k.kunci === kunci);
+      return t ? [t, ...daftar.filter(k => k !== t)] : daftar;
+    };
+    /* Belum ada catatan "terakhir" di perangkat ini → kelompok yang lagi
+       dikerjain (paling banyak dimulai tapi belum penuh), kalau gak ada yang pertama. */
+    const tebak = (daftar: Kelompok[]) =>
+      [...daftar].filter(k => persenDimulai(k.empat) < 100).sort((a, b) => persenDimulai(b.empat) - persenDimulai(a.empat))[0] ?? daftar[0];
 
-  const jumlahUjian = new Set(setLevelIni.map(e => examMeta(e.title).label)).size;
-
-  /* pace: berapa set (grup) kelar minggu ini */
-  const pace = useMemo(() => {
-    const wk = Date.now() - 7 * 86_400_000;
-    const doneThisWk = setLevelIni.filter(e => pctOf(e) != null && e.created_at != null && +new Date(e.created_at) >= wk).length;
-    return { doneThisWk, target: 2 };
-  }, [setLevelIni]);
-
-  /* NEXT: grup terbaru yang belum lengkap di level yang dimiliki */
-  const next = useMemo(() => groups.find(g => gStatus(g) !== "done"), [groups]);
-
-  const openPart = async (e?: Exam) => {
-    if (!e || e.ready === false || membuka) return;
-    const ke = (id: string) => router.push(exType(e) === "聴解" ? `/choukai/${id}` : `/latihan/${id}`);
-    if (e.id) { ke(e.id); return; }
-    if (!e.katalogId) return;
-    /* Pertama kali dibuka: database nyalin set dari katalog ke akun ini. */
-    setMembuka(e.title); setGagalBuka(null);
-    const { data, error } = await createClient().rpc("ambil_set", { p_katalog: e.katalogId });
-    if (error || typeof data !== "string") {
-      setMembuka(null);
-      if (error?.message?.includes("subscription_required")) { router.push("/langganan"); return; }
-      setGagalBuka(`Set ${examMeta(e.title).label} ${exType(e)} belum bisa dibuka. Coba lagi sebentar.`);
-      return;
-    }
-    ke(data);
-  };
+    const K = hitungEmpat(dekK.vocabulary, sk);
+    const P = hitungEmpat(dekB.patterns, sp);
+    const lanjutK = kataK.find(k => k.kunci === tk?.grup) ?? tebak(kataK);
+    const lanjutB = kataB.find(k => k.kunci === tb?.grup) ?? tebak(kataB);
+    return {
+      K, P, tk, tb, lanjutK, lanjutB,
+      kataK: urut(kataK, tk?.grup), kataB: urut(kataB, tb?.grup),
+      jumlahKelompokK: kataK.length, jumlahKelompokB: kataB.length,
+      rawan: dekB.patterns.filter(p => p.confusableWith.length > 0).length,
+      disimpan: dekK.vocabulary.filter(w => favorit.has(w.word)).length,
+      baru: K[0] + K[1] + K[2] + P[0] + P[1] + P[2] === 0 && !tk && !tb,
+    };
+  }, [dekK, dekB, progK, progB, favorit, terakhir, lv]);
 
   return (
     <>
@@ -189,194 +158,182 @@ export default function MateriHub() {
       <BottomNav />
       <main className="app-shell">
         <UserBar streakDays={stats.streak} xp={stats.xp} xpTarget={stats.xpTarget} avatarLetter={stats.initial} isPro={stats.isPro} />
+        <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Materi" }]} />
 
-        <div className="materi-v3">
-          <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Materi" }]} />
-
-          <div className="m3-hd">
+        <div className="rbk mbk">
+          <div className="head">
             <div>
-              <h1>Materi <span className="jp">教材</span></h1>
-              <p>Bank soal ujian lengkap + materi belajar terstruktur. Kotoba personal kamu ada di <Link href="/kamus">Kamus →</Link></p>
-            </div>
-            <div className="m3-pace">
-              <div className="m3-pace-top"><span className="t">Pace menuju {stats.targetLevel} · {targetDate}</span><span className="badge">{pace.doneThisWk >= pace.target ? "ON TRACK" : "AYO"}</span></div>
-              <div className="main">Kerjain <b>{pace.target} set / minggu</b> biar konsisten sampai ujian ✓</div>
-              <div className="sub">Minggu ini: <b>{pace.doneThisWk} / {pace.target} set</b>{pace.doneThisWk < pace.target && " — lanjut yuk"}</div>
+              <h1 className="h1">Materi<span className="jp-g" lang="ja">教材</span></h1>
+              <BarisLevel level={lv} examDate={stats.examDate} />
             </div>
           </div>
 
-          {/* Tujuan menu "Bank Soal" di sidebar (/materi#bank-soal). */}
-          <div id="bank-soal" className="m3-jangkar" />
+          {!hasil ? <p className="mb-muat" role="status">Memuat materi…</p> : (
+            <>
+              <div className="mt-sec">
+                <KartuKurikulumDisiapkan level={lv} kata={dekK?.vocabulary.length ?? 0} pola={dekB?.patterns.length ?? 0} />
+              </div>
 
-          {/* NEXT hero */}
-          {next && (
-            <div className="m3-next">
-              <div>
-                <div className="eyebrow"><span className="d" />Berikutnya buat kamu</div>
-                <div className="t"><span className="jpt">{next.label}</span> — ujian {next.level}</div>
-                <div className="meta">
-                  {next.hisho && <span>✍️ <b>筆記 {next.hisho.total} soal</b></span>}
-                  {next.choukai && <span>🎧 <b>聴解 {next.choukai.total} soal</b></span>}
-                </div>
+              <div className="today">
+                <section className="card lj">
+                  <div className="eyebrow">{hasil.baru ? "Mulai belajar" : "Lanjut dari terakhir"}</div>
+                  {hasil.lanjutK && (
+                    <div className="lj-r">
+                      <span className="lj-g k" lang="ja">{hasil.lanjutK.jp.slice(0, 1)}</span>
+                      <span>
+                        <b>{hasil.baru ? "Mulai dari kelompok pertama: " : "Kotoba · "}<span lang="ja">{hasil.lanjutK.jp}</span> {hasil.lanjutK.nama}</b>
+                        <small>{hasil.baru ? `${hasil.lanjutK.total} kata` : `${hasil.lanjutK.empat[0] + hasil.lanjutK.empat[1]} dari ${hasil.lanjutK.total} kata dimulai${hasil.tk ? ` · ${kapan(hasil.tk.at)}` : ""}`}</small>
+                        {!hasil.baru && <div className="mbar"><i style={{ width: `${persenDimulai(hasil.lanjutK.empat)}%` }} /></div>}
+                      </span>
+                      <Link className="btn btn-p" href={hasil.lanjutK.href}>{hasil.baru ? "Mulai" : "Lanjut"}</Link>
+                    </div>
+                  )}
+                  {hasil.lanjutB && (
+                    <div className="lj-r">
+                      <span className="lj-g b" lang="ja">{hasil.lanjutB.jp.slice(0, 1)}</span>
+                      <span>
+                        <b>{hasil.baru ? "Atau Bunpou: " : "Bunpou · "}<span lang="ja">{hasil.lanjutB.jp}</span> {hasil.lanjutB.nama}</b>
+                        <small>
+                          {hasil.baru ? `${hasil.lanjutB.total} pola`
+                            : hasil.tb?.pola ? <>Terakhir dibuka <span lang="ja">{hasil.tb.pola}</span> · {kapan(hasil.tb.at)}</>
+                            : `${hasil.lanjutB.empat[0] + hasil.lanjutB.empat[1]} dari ${hasil.lanjutB.total} pola dimulai${hasil.tb ? ` · ${kapan(hasil.tb.at)}` : ""}`}
+                        </small>
+                      </span>
+                      <Link className="btn btn-g" href={hasil.lanjutB.href}>{hasil.baru ? "Mulai" : "Lanjut"}</Link>
+                    </div>
+                  )}
+                </section>
+                <PintuCepat salahK={hasil.K[2]} salahP={hasil.P[2]} rawan={hasil.rawan} />
               </div>
-              <div className="acts">
-                {next.hisho && next.hisho.ready !== false && <button className="btn btn-p" onClick={() => openPart(next.hisho)}>▶ Mulai 筆記</button>}
-                {next.choukai && next.choukai.ready !== false && <button className="btn btn-g" onClick={() => openPart(next.choukai)}>🎧 Atau 聴解 dulu</button>}
+
+              <div className="kb">
+                <Panel judul="Kotoba" jp="語彙" ket={`${(dekK?.vocabulary.length ?? 0).toLocaleString("id-ID")} kata ${lv} · ${hasil.jumlahKelompokK} kelompok`}
+                  empat={hasil.K} kelompok={hasil.kataK} satuan="kata" terakhir={hasil.tk?.grup}
+                  semua={{ href: "/materi/kotoba", teks: `Semua ${hasil.jumlahKelompokK} kelompok →` }}
+                  catatan={`⭐ ${hasil.disimpan} kata disimpan ke Kamus`} />
+                <Panel judul="Bunpou" jp="文法" ket={`${dekB?.patterns.length ?? 0} pola ${lv} · ${hasil.jumlahKelompokB} kelompok fungsi`}
+                  empat={hasil.P} kelompok={hasil.kataB} satuan="pola" terakhir={hasil.tb?.grup}
+                  semua={{ href: "/materi/bunpou", teks: `Semua ${hasil.jumlahKelompokB} kelompok →` }}
+                  catatan={`${hasil.rawan} pola rawan ketuker`} />
               </div>
-            </div>
+
+              <div className="drs">
+                <Link className="card dr2" href="/strategi">
+                  <span className="sb-g" lang="ja">戦</span>
+                  <span><b>Strategi ujian {lv}</b><small>Waktu per bagian, skor aman, urutan ngerjain</small></span>
+                  <span className="btn btn-g">Buka</span>
+                </Link>
+                <Link className="card dr2 bs" href="/bank-soal">
+                  <span className="sb-g" lang="ja">問</span>
+                  <span><b>Latihan soal format JLPT</b><small>Bank Soal · {jumlahSet[lv] ? `${jumlahSet[lv]} set ${lv}` : "belum ada set"}, <span lang="ja">筆記</span> + <span lang="ja">聴解</span></small></span>
+                  <span className="btn btn-g">Bank Soal →</span>
+                </Link>
+              </div>
+
+              <div className="sec-h"><div className="h2">Materi mendatang</div><span className="note">Belum bisa dibuka</span></div>
+              <div className="up">
+                {([["漢", "Kanji", "Bacaan & tulisan per level"], ["聴", "Choukai terstruktur", "Latihan dengar per jenis soal"], ["読", "Dokkai", "Bacaan bertahap per panjang teks"]] as const).map(([g, t, d]) => (
+                  <div className="card upc" key={t}>
+                    <span className="sb-g" lang="ja">{g}</span>
+                    <span><b>{t}</b><small>{d}</small></span>
+                    <span className="chip">Segera</span>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
-
-          {/* filter */}
-          <div className="m3-bar">
-            <span className="fchip on">{lv} <span className="c">{jumlahUjian} ujian</span></span>
-            <GantiTarget />
-            <span className="m3-div" />
-            {([["all", "Semua"], ["incomplete", "Belum lengkap"], ["done", "✓ Selesai"]] as const).map(([v, l]) => (
-              <button key={v} className={`fchip${statusF === v ? " on" : ""}`} onClick={() => { setStatusF(v); setShowAll(false); }}>{l}</button>
-            ))}
-            <span className="bar-r">1 ujian = 筆記 + 聴解 · klik bagian buat mulai</span>
-          </div>
-          {gagalBuka && <p className="m3-empty" role="alert">{gagalBuka}</p>}
-
-          {/* Pintu masuk Strategi ujian (Rencana Belajar §1b) */}
-          <div className="rbk">
-            <Link href="/strategi" className="strat-bn">
-              <span className="sb-g" lang="ja">戦</span>
-              <span><span className="eyebrow">Baru · Strategi ujian {lv}</span><b>Contekan hari ujian: waktu per bagian, skor aman, urutan ngerjain</b><small>Plus tips per jenis soal sebelum latihan</small></span>
-              <span className="btn btn-g">Buka →</span>
-            </Link>
-          </div>
-
-          {/* exam grid */}
-          <div className="m3-exams">
-            {shown.map(g => {
-              const parts = [g.hisho, g.choukai].filter(Boolean) as Exam[];
-              const doneN = parts.filter(e => pctOf(e) != null).length;
-              const total = parts.reduce((n, e) => n + e.total, 0);
-              const badge = doneN === parts.length && parts.length > 1 ? { t: "✓ LENGKAP", c: "done" }
-                : g.hisho && pctOf(g.hisho) != null ? { t: `✓ 筆記 ${pctOf(g.hisho)}%`, c: "done" }
-                : g.choukai && pctOf(g.choukai) != null ? { t: `✓ 聴解 ${pctOf(g.choukai)}%`, c: "done" }
-                : null;
-              return (
-                <div key={g.key} className="exam card">
-                  <span className="exam-glyph">験</span>
-                  <div className="exam-top">
-                    <span className="exam-t">{g.label}</span>
-                    {badge && <span className={`exam-badge eb-${badge.c}`}>{badge.t}</span>}
-                  </div>
-                  <div className="exam-s">Ujian {g.level} · <b>{total} soal</b></div>
-                  <div className="parts">
-                    <Part e={g.hisho} type="筆記" onOpen={openPart} membuka={membuka} />
-                    <Part e={g.choukai} type="聴解" onOpen={openPart} membuka={membuka} />
-                  </div>
-                </div>
-              );
-            })}
-            {moreN > 0 && (
-              <button className="more" onClick={() => setShowAll(true)}>
-                <div style={{ textAlign: "center" }}>
-                  <div className="n">+{moreN} ujian lagi</div>
-                  <div className="l">makin lama makin klasik</div>
-                  <div className="a">Tampilkan semua {lv} →</div>
-                </div>
-              </button>
-            )}
-            {muat === "loading" || !stats.loaded ? <p className="m3-empty" role="status">Memuat materi…</p>
-              : muat === "error" ? <div className="m3-empty" role="alert">Materi belum bisa dimuat. <button type="button" className="btn btn-g" onClick={() => window.location.reload()}>Coba lagi</button></div>
-              : setLevelIni.length === 0 ? (
-                <div className="hx-empty-wide">
-                  <HonixEmpty momen="kosongMateri"
-                    body={`Set ujian ${lv} belum tersedia. Sambil menunggu, kamu bisa belajar Bunpou dan Kotoba.`}
-                    cta={<Link href="/materi/bunpou" className="hx-btn hx-btn-p">Belajar Bunpou</Link>} />
-                </div>
-              ) : shown.length === 0 && <p className="m3-empty">Belum ada ujian di filter ini.</p>}
-          </div>
-
-          {/* Materi Belajar */}
-          <div className="m3-sec"><h2>Materi Belajar</h2><span className="b">2</span><span className="r">Referensi + drill — nyambung ke status latihanmu</span></div>
-          <div className="m3-duo">
-            <Link href="/materi/bunpou" className="mat card gold">
-              <div className="mat-g gold"><span className="gl">文</span></div>
-              <div className="mat-b">
-                <span className="mat-eyebrow gold">Tata Bahasa</span>
-                <span className="mat-t">Bunpou</span>
-                <span className="mat-d">Pola grammar JLPT lengkap per level: penjelasan, penyambungan, contoh kalimat, drill per pola.</span>
-                <div className="mat-foot">
-                  <div className="mat-track"><i className="gold" style={{ width: `${bunpou.total > 0 ? Math.round((bunpou.ditandai / bunpou.total) * 100) : 0}%` }} /></div>
-                  <span className="mat-pct">
-                    {bunpou.total === 0 ? "belum ada pola" : `${bunpou.ditandai} dari ${bunpou.total} pola ditandai`}
-                  </span>
-                  <span className="mat-go">Buka Bunpou →</span>
-                </div>
-              </div>
-            </Link>
-            <Link href="/materi/kotoba" className="mat card" style={{ textDecoration: "none" }}>
-              <div className="mat-g"><span className="gl">語</span></div>
-              <div className="mat-b">
-                <span className="mat-eyebrow">Kosakata Terstruktur</span>
-                <span className="mat-t">Kotoba</span>
-                <span className="mat-d">{kotobaTotal > 0 ? `${kotobaTotal} kata ${lv}` : `Kosakata ${lv}`}{dekKotoba && <> · <b>{dekKotoba.source}</b></>} — flash mode per tema, simpan ⭐ ke Kamus.</span>
-                <div className="mat-foot">
-                  <div className="mat-track"><i style={{ width: `${kotobaTotal > 0 ? Math.round((kotobaTersimpan / kotobaTotal) * 100) : 0}%` }} /></div>
-                  <span className="mat-pct">{kotobaTersimpan} dari {kotobaTotal} kata disimpan</span>
-                  <span className="mat-go">Buka Kotoba →</span>
-                </div>
-              </div>
-            </Link>
-          </div>
-
-          {/* Mendatang */}
-          <div className="m3-sec"><h2>Materi Mendatang</h2><span className="b muted">3</span></div>
-          <div className="m3-soon card">
-            {[["字", "Kanji", "Karakter per level, urutan stroke"], ["聴", "Choukai", "Listening dengan audio terstruktur"], ["読", "Dokkai", "Teks bacaan panjang + pembahasan"]].map(([g, t, d]) => (
-              <div className="soon-i" key={t}>
-                <span className="soon-ic">{g}<span className="lk">🔒</span></span>
-                <div><div className="soon-t">{t}</div><div className="soon-s">{d}</div></div>
-              </div>
-            ))}
-            <div className="soon-vote"><span className="t">Mana yang paling kamu butuhin?</span><button className="vbtn" onClick={() => alert("Makasih! Fitur vote materi lagi disiapin 🙌")}>Vote materi berikutnya →</button></div>
-          </div>
         </div>
       </main>
     </>
   );
 }
 
-/* satu bagian ujian (筆記 / 聴解) di dalam kartu */
-function Part({ e, type, onOpen, membuka }: { e?: Exam; type: ExType; onOpen: (e?: Exam) => void; membuka: string | null }) {
-  const isCho = type === "聴解";
-  if (!e) {
-    return (
-      <div className="part disabled">
-        <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
-        <div className="part-m"><div className="part-t">{type}</div><div className="part-s">Belum tersedia</div></div>
-        <span className="part-soon">segera</span>
-      </div>
-    );
-  }
-  if (e.ready === false) {
-    return (
-      <div className="part soon">
-        <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
-        <div className="part-m"><div className="part-t">{type} · {e.total} soal</div><div className="part-s">Lagi disiapin — segera hadir</div></div>
-        <span className="part-soon">🔒 SOON</span>
-      </div>
-    );
-  }
-  const pct = pctOf(e);
-  const bad = pct != null && pct < 65;
-  const click = () => onOpen(e);
+function PintuCepat({ salahK, salahP, rawan }: { salahK: number; salahP: number; rawan: number }) {
+  const salah = salahK + salahP;
+  const ulang = salahK > 0 ? "/latihan/kotoba?mode=ulang&count=10" : "/latihan/kilat?mode=ulang&count=10&teknik=lewat";
   return (
-    <div className="part" onClick={click} role="button" tabIndex={0}
-      onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); click(); } }}>
-      <span className={`part-ic ${isCho ? "pi-l" : "pi-w"}`}>{isCho ? "🎧" : "✍️"}</span>
-      <div className="part-m">
-        <div className="part-t">{type} · {e.total} soal</div>
-        <div className="part-s">{membuka === e.title ? "Menyiapkan soal…" : pct != null ? `Terakhir ${pct}% · ${relDate(e.created_at)}` : isCho ? "~50 menit · audio" : "belum dikerjain"}</div>
-      </div>
-      {pct != null
-        ? <><span className="part-score" style={bad ? { background: "rgba(212,160,74,0.15)", color: "var(--warning)" } : undefined}>{pct}%</span><span className="part-go">{bad ? "↻ Ulangi" : "Review"}</span></>
-        : <span className="part-go">Mulai →</span>}
+    <div className="qd">
+      {salah > 0 ? (
+        <Link className="card qd-b" href={ulang}>
+          <span className="qd-i" lang="ja" style={{ color: "var(--danger)", background: "rgba(224,86,111,.14)" }}>誤</span>
+          <span><b>Ulang yang sering salah</b><small>Kata & pola yang paling sering meleset</small></span>
+          <span className="qd-n">{salah}</span>
+        </Link>
+      ) : (
+        <div className="card qd-b off" aria-disabled="true">
+          <span className="qd-i" lang="ja" style={{ color: "var(--danger)", background: "rgba(224,86,111,.14)" }}>誤</span>
+          <span><b>Ulang yang sering salah</b><small>Belum ada. Muncul setelah kamu latihan.</small></span>
+          <span className="qd-n">0</span>
+        </div>
+      )}
+      <Link className="card qd-b" href="/latihan/kilat">
+        <span className="qd-i" lang="ja" style={{ color: "var(--pt)", background: "rgba(221,65,36,.14)" }}>速</span>
+        <span><b>Latihan Kilat</b><small>Drill 10 soal pola Bunpou</small></span>
+        <span className="qd-n" />
+      </Link>
+      <Link className="card qd-b" href="/materi/bunpou?status=warn">
+        <span className="qd-i" lang="ja" style={{ color: "#9CCBCD", background: "rgba(74,124,126,.2)" }}>比</span>
+        <span><b>Bandingin pola rawan ketuker</b><small>Grup pola yang gampang ketuker</small></span>
+        <span className="qd-n">{rawan}</span>
+      </Link>
     </div>
+  );
+}
+
+function BarStatus({ e }: { e: Empat }) {
+  return (
+    <div className="stb" role="img" aria-label={EMPAT.map(([t], i) => `${t} ${e[i]}`).join(", ")}>
+      {e.slice(0, 3).map((v, i) => v > 0 && <i key={i} style={{ flex: v, background: EMPAT[i][1] }} />)}
+      {e[3] > 0 && <i style={{ flex: e[3], background: "transparent" }} />}
+    </div>
+  );
+}
+
+function Panel({ judul, jp, ket, empat, kelompok, satuan, terakhir, semua, catatan }: {
+  judul: string; jp: string; ket: string; empat: Empat; kelompok: Kelompok[]; satuan: "kata" | "pola";
+  terakhir?: string; semua: { href: string; teks: string }; catatan: string;
+}) {
+  return (
+    <section className="card kbp">
+      <div className="kbp-h">
+        <div>
+          <div className="kbp-t">{judul}<span className="jp-g" lang="ja">{jp}</span></div>
+          <div className="kbp-c">{ket}</div>
+        </div>
+        <div className="kbp-big"><b>{persenDikuasai(empat)}%</b><small>dikuasai</small></div>
+      </div>
+      <BarStatus e={empat} />
+      <div className="sleg">
+        {EMPAT.map(([t, w], i) => (
+          <div key={t}>
+            <span><i style={{ background: w, boxShadow: i === 3 ? "inset 0 0 0 1px var(--line-2)" : undefined }} />{t}</span>
+            <b>{empat[i].toLocaleString("id-ID")}</b>
+          </div>
+        ))}
+      </div>
+      <ul className="gl">
+        {kelompok.slice(0, BARIS).map(k => (
+          <li key={k.kunci}>
+            <Link className="gr" href={k.href}>
+              <span className="gr-j" lang="ja">{k.jp}</span>
+              <span>
+                <b>{k.nama}{k.kunci === terakhir && <span className="last">Terakhir</span>}</b>
+                <small>
+                  <span>{k.total} {satuan}</span>
+                  {k.empat[2] > 0 && <span className="bad-t">{k.empat[2]} sering salah</span>}
+                  {k.rawan > 0 && <span className="warn-t">{k.rawan} rawan ketuker</span>}
+                </small>
+              </span>
+              <span className="gr-p">{persenDimulai(k.empat)}% dimulai<BarStatus e={k.empat} /></span>
+              <span className="gr-go" aria-hidden="true">›</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <div className="kbp-f">
+        <Link className="btn btn-g" href={semua.href}>{semua.teks}</Link>
+        <span className="note">{catatan}</span>
+      </div>
+    </section>
   );
 }

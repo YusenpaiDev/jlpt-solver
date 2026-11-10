@@ -15,6 +15,8 @@ import { GantiTarget } from "@/components/v2/GantiTarget";
 import { catatJawabanBunpou } from "@/lib/bunpou-progres";
 import { grupBanding } from "@/lib/banding-pola";
 import { BandingPola } from "@/components/rencana/BandingPola";
+import { statusPola } from "@/lib/status-materi";
+import { catatTerakhir } from "@/lib/terakhir-dibuka";
 
 interface Ex { jp: string; highlight: string; id: string; }
 interface Pattern {
@@ -36,11 +38,7 @@ interface Prog { benar: number; salah: number; }
 /* Aturan status (HANDOFF): belum pernah → new; salah≥2 & lebih sering salah → wrong;
    benar≥3 & unggul → known; sisanya seen. Key = string pola (sama kayak favorit). */
 function statOf(pattern: string, progres: Map<string, Prog>): State {
-  const p = progres.get(pattern);
-  if (!p || p.benar + p.salah === 0) return "new";
-  if (p.salah >= 2 && p.salah > p.benar) return "wrong";
-  if (p.benar >= 3 && p.benar > p.salah) return "known";
-  return "seen";
+  return statusPola(progres.get(pattern));
 }
 
 type Sort = "fungsi" | "az";
@@ -171,6 +169,24 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
     if (query.trim() || statusF !== "all") setOpenGroups(new Set(groups.map(g => g.key)));
   }, [query, statusF, groups]);
 
+  /* Dari /materi: ?grup=<key> → buka kelompok itu; ?status=warn → pola rawan ketuker. */
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("status") === "warn") setStatusF("warn");
+    const grup = q.get("grup");
+    if (!grup || !GROUPS.some(g => g.key === grup)) return;
+    setOpenGroups(new Set([grup]));
+    const pertama = PATTERNS.find(p => p.functionGroup === grup);
+    if (pertama) setSel(pertama);
+    catatTerakhir("bunpou", { level, grup });
+    requestAnimationFrame(() => document.querySelector(`[data-grup="${CSS.escape(grup)}"]`)?.scrollIntoView({ block: "start" }));
+  }, [GROUPS, PATTERNS, level]);
+  const toggleGrup = (key: string) => {
+    if (!openGroups.has(key)) catatTerakhir("bunpou", { level, grup: key });
+    setOpenGroups(s => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  };
+  const pilihPola = (p: Pattern) => { setSel(p); catatTerakhir("bunpou", { level, grup: p.functionGroup, pola: p.pattern }); };
+
   const toggleFav = async (p: Pattern) => {
     if (busy) return;
     setBusy(p.pattern);
@@ -283,8 +299,8 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
               {groups.map(g => {
                 const open = openGroups.has(g.key);
                 return (
-                  <div className={`bv-fn${open ? " open" : ""}`} key={g.key}>
-                    <div className="bv-fn-head" onClick={() => setOpenGroups(s => { const n = new Set(s); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n; })}>
+                  <div className={`bv-fn${open ? " open" : ""}`} key={g.key} data-grup={g.key}>
+                    <div className="bv-fn-head" onClick={() => toggleGrup(g.key)}>
                       <ChevronRight size={14} className="bv-chev" />
                       <span className="bv-fn-t">
                         {g.name} · <span className="jpt">{g.jp}</span> <span className="cnt">{g.total} pola</span>
@@ -300,7 +316,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
                           const st = statOf(p.pattern, progres); const fav = favs.has(p.pattern); const pg = progres.get(p.pattern);
                           const hit = st === "wrong" ? `salah ${pg?.salah ?? 0}×` : st === "known" ? `benar ${pg?.benar ?? 0}×` : st === "seen" ? `${(pg?.benar ?? 0) + (pg?.salah ?? 0)}× coba` : "—";
                           return (
-                            <div className={`bv-p${sel?.id === p.id ? " sel" : ""}`} key={p.id} onClick={() => setSel(p)}>
+                            <div className={`bv-p${sel?.id === p.id ? " sel" : ""}`} key={p.id} onClick={() => pilihPola(p)}>
                               <span className={`bv-dot ${DOT[st]}`} />
                               <span className="bv-p-gm">{p.pattern}</span>
                               <span className="bv-p-arti">{p.meaning}</span>

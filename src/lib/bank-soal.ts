@@ -14,6 +14,10 @@ export interface SetUjian {
   section?: string | null;
   created_at: string | null;
   ready?: boolean; // false = konten belum lengkap → lock "SOON"
+  /** soal yang udah dijawab (ai_result.stats.answered) */
+  dijawab?: number;
+  /** terakhir dikerjain (ai_result.stats.last_practiced_at) */
+  terakhir?: string | null;
 }
 
 export interface SesiMilik {
@@ -25,6 +29,7 @@ export interface SesiMilik {
   section?: string | null;
   created_at: string;
   ready?: boolean | null;
+  stats?: { answered?: number; last_practiced_at?: string } | null;
 }
 
 export interface SetKatalog {
@@ -50,6 +55,8 @@ export function gabungBankSoal(milik: SesiMilik[], katalog: SetKatalog[]): SetUj
       id: s.id, katalogId: k?.id ?? null, level: s.level, title: s.title, total: s.total,
       score: s.score, section: s.section ?? k?.section ?? null, created_at: s.created_at,
       ready: k ? k.ready : s.ready !== false,
+      dijawab: s.stats?.answered ?? (s.score != null ? s.total : 0),
+      terakhir: s.stats?.last_practiced_at ?? null,
     });
   }
   for (const k of katalog) {
