@@ -8,6 +8,7 @@ import {
   jamMenit, rentangBulan, ringkasWaktu, selBulan, tingkatMenit,
 } from "@/lib/waktu-kalender";
 import type { WaktuBelajar as DataWaktu } from "@/lib/use-waktu-belajar";
+import { useCapBaru } from "@/lib/use-cap-baru";
 
 export const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 export const BLN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -43,6 +44,10 @@ export function WaktuBelajar({ waktu, streak, streakTerpanjang, rekapSesi }: {
   const geser = (n: number) => { const t = keNomor(bulan) + n; setBulan([Math.floor(t / 12), t % 12]); };
 
   let hariBulan = 0, menitBulan = 0;
+  /* Animasi "ngecap" pas cap hari ini baru muncul / naik tingkat. */
+  const hIni = hari.get(hariIni), mIni = hIni?.menit ?? 0;
+  const putar = useCapBaru(true, hariIni, mIni > 0 || hIni?.aktif ? Math.max(1, tingkatMenit(mIni)) : 0);
+
   const sel = [];
   for (let d = 1; d <= jumlahHari; d++) {
     const k = kunci(y, mo, d);
@@ -52,13 +57,14 @@ export function WaktuBelajar({ waktu, streak, streakTerpanjang, rekapSesi }: {
     if (ada) { hariBulan++; menitBulan += m; }
     const nonaktif = k > hariIni || k < awalData;
     const rek = ring.rekor?.tanggal === k;
+    const ngecap = k === hariIni && putar > 0;
     sel.push(
-      <button key={k} type="button" className={`cd${k === pilih ? " sel" : ""}${k === hariIni ? " td" : ""}`}
+      <button key={ngecap ? `${k}-${putar}` : k} type="button" className={`cd${k === pilih ? " sel" : ""}${k === hariIni ? " td" : ""}${ngecap ? " ngecap" : ""}`}
         disabled={nonaktif} onClick={() => setPilih(k)}
         aria-label={`${d} ${BLN[mo]}, ${h?.aktif && !m ? "ada latihan, menit belum tercatat" : `${m} menit`}`}
         aria-pressed={k === pilih}>
         <span className="cd-n">{d}</span>
-        {ada && <span className={`stamp t${Math.max(1, tingkatMenit(m))}${rek ? " gold" : ""}`} style={{ animationDelay: `${d * 12}ms` }} aria-hidden="true">{rek ? "極" : "学"}</span>}
+        {ada && <span className={`stamp t${Math.max(1, tingkatMenit(m))}${rek ? " gold" : ""}${ngecap ? " ngecap" : ""}`} style={ngecap ? undefined : { animationDelay: `${d * 12}ms` }} aria-hidden="true">{rek ? "極" : "学"}</span>}
       </button>,
     );
   }
