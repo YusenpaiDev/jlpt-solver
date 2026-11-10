@@ -441,8 +441,8 @@ function VisualPanel() {
             ))}
           </div>
           <div className="lg-proof-text">
-            <strong>2,400+ pelajar</strong>
-            <span>sudah lulus JLPT pakai Sensei</span>
+            <strong>8.300+ kata &amp; 650 pola bunpou</strong>
+            <span>N5 sampai N1, siap kamu pelajari</span>
           </div>
         </div>
       </div>
