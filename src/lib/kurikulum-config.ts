@@ -34,3 +34,13 @@ export const FASE = [
   { id: "jebakan", t: "Jebakan", tingkat: "T3", d: "soal jebakan", minggu: [17, 22], warna: "var(--primary)" },
   { id: "sim", t: "Simulasi & set latihan", tingkat: "", d: "ujian penuh", minggu: [23, 26], warna: "var(--warning)" },
 ] as const;
+
+/** Penanda 模 (simulasi) di peta Premium — PLACEHOLDER jadwal simulasi (§12). */
+export const MINGGU_SIMULASI = [4, 8, 13, 17, 21, 24];
+
+/** Angka aset (dihitung dari src/data per Nov 2026; soal orisinal = target). */
+export const ASET = { kata: 8342, pola: 650, setPerLevel: 29, soalOrisinal: 11900 };
+
+export function faseMinggu(u: number) {
+  return FASE.find(f => u >= f.minggu[0] && u <= f.minggu[1]) ?? FASE[FASE.length - 1];
+}

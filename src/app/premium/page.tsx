@@ -8,6 +8,9 @@ import { Check, X, Sparkles, Star } from "lucide-react";
 import { useUserStats } from "@/lib/use-user-stats";
 import { PAKET, type PaketId } from "@/lib/paket";
 import { useBayar } from "@/lib/bayar";
+import { fiturLive, type FiturBaru } from "@/lib/kurikulum-config";
+import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
+import { KurikulumPremium, TabelBanding, type GrupBanding } from "@/components/pembayaran/KurikulumPremium";
 
 type Cycle = "monthly" | "yearly";
 type PlanColor = "slate" | "iris" | "gold";
@@ -16,6 +19,8 @@ interface PlanFeature {
   t: string;
   on: boolean;
   highlight?: boolean;
+  /** fitur kurikulum yang belum tentu live → label "Sedang disiapkan" */
+  fitur?: FiturBaru;
 }
 
 interface Plan {
@@ -42,9 +47,11 @@ const PLANS: Plan[] = [
     cta: "Lihat status percobaan",
     color: "slate",
     features: [
-      { t: "Bank soal 過去問 lengkap", on: true },
+      { t: "Bank Soal set latihan format JLPT", on: true },
       { t: "Choukai + audio per soal", on: true },
-      { t: "Materi Kotoba & Bunpou", on: true },
+      { t: "Materi 8.342 kata · 650 pola", on: true },
+      { t: "Tes penempatan", on: true, fitur: "penempatan" },
+      { t: "Ulangan mingguan", on: true, fitur: "ulangan" },
       { t: "Kotoba tersimpan tanpa batas", on: true },
       { t: "Chat Sensei AI tanpa batas", on: true },
       { t: "Furigana dan lembar tugas AI", on: true },
@@ -62,12 +69,16 @@ const PLANS: Plan[] = [
     popular: true,
     color: "iris",
     features: [
+      { t: "Kurikulum mingguan sampai hari ujian", on: true, highlight: true, fitur: "kurikulum" },
+      { t: "Soal orisinal bertingkat T1–T3", on: true, highlight: true, fitur: "soal_orisinal" },
+      { t: "Perkiraan skor per bagian + tren", on: true, fitur: "perkiraan" },
+      { t: "Simulasi bulanan", on: true, fitur: "simulasi" },
       { t: "Kotoba tersimpan tanpa batas", on: true, highlight: true },
       { t: "Chat Sensei AI tanpa batas", on: true, highlight: true },
       { t: "Furigana tanpa batas", on: true },
-      { t: "Bank soal 過去問 lengkap", on: true },
+      { t: "Bank Soal set latihan format JLPT", on: true },
       { t: "Choukai + audio per soal", on: true },
-      { t: "Materi Kotoba & Bunpou", on: true },
+      { t: "Materi 8.342 kata · 650 pola", on: true },
     ],
   },
   {
@@ -86,21 +97,28 @@ const PLANS: Plan[] = [
   },
 ];
 
-interface CompareRow {
-  label: string;
-  trial: string | boolean;
-  pro: string | boolean;
-  life: string | boolean;
-}
-
-const COMPARE: CompareRow[] = [
-  { label: "Bank soal 過去問",         trial: "Lengkap",     pro: "Lengkap",      life: "Lengkap" },
-  { label: "Choukai + audio",          trial: true,          pro: true,           life: true },
-  { label: "Materi Kotoba & Bunpou",   trial: true,          pro: true,           life: true },
-  { label: "Kotoba tersimpan",         trial: "Tanpa batas",      pro: "Tanpa batas",  life: "Tanpa batas" },
-  { label: "Chat Sensei AI",           trial: "Tanpa batas",    pro: "Tanpa batas",    life: "Tanpa batas" },
-  { label: "Furigana otomatis",        trial: "Tanpa batas",   pro: "Tanpa batas",   life: "Tanpa batas" },
-  { label: "Perpanjangan",             trial: "—",           pro: "Bulanan",      life: "Sekali bayar" },
+/* Trial = akses penuh selama 7 hari, jadi fitur baru ikut kebuka di trial. */
+const COMPARE: GrupBanding[] = [
+  { grup: "Belajar & latihan", baris: [
+    { label: "Bank Soal set latihan format JLPT", trial: "Lengkap", pro: "Lengkap", life: "Lengkap" },
+    { label: "Choukai + audio",                   trial: true, pro: true, life: true },
+    { label: "Materi Kotoba & Bunpou · 8.342 kata, 650 pola", trial: true, pro: true, life: true },
+    { label: "Misi harian, kalender cap, strategi ujian",     trial: true, pro: true, life: true },
+  ] },
+  { grup: "Kurikulum & tes", baris: [
+    { label: "Tes penempatan",                        trial: true, pro: true, life: true, fitur: "penempatan" },
+    { label: "Kurikulum mingguan sampai hari ujian",  trial: "Penuh", pro: "Penuh", life: "Penuh", fitur: "kurikulum" },
+    { label: "Soal orisinal bertingkat T1–T3",        trial: true, pro: true, life: true, fitur: "soal_orisinal" },
+    { label: "Ulangan mingguan",                      trial: true, pro: true, life: true, fitur: "ulangan" },
+    { label: "Perkiraan skor",                        trial: "Per bagian + tren", pro: "Per bagian + tren", life: "Per bagian + tren", fitur: "perkiraan" },
+    { label: "Simulasi bulanan",                      trial: true, pro: true, life: true, fitur: "simulasi" },
+  ] },
+  { grup: "Sensei AI", baris: [
+    { label: "Kotoba tersimpan",   trial: "Tanpa batas", pro: "Tanpa batas", life: "Tanpa batas" },
+    { label: "Chat Sensei AI",     trial: "Tanpa batas", pro: "Tanpa batas", life: "Tanpa batas" },
+    { label: "Furigana otomatis",  trial: "Tanpa batas", pro: "Tanpa batas", life: "Tanpa batas" },
+    { label: "Perpanjangan",       trial: "—",           pro: "Bulanan",     life: "Sekali bayar" },
+  ] },
 ];
 
 /* ⚠️ KONTAK: ganti KONTAK_SUPPORT di bawah sama email/WA yang beneran kamu
@@ -125,7 +143,8 @@ const FAQ = [
 const fmt = (n: number) => "Rp " + n.toLocaleString("id-ID");
 
 export default function Premium() {
-  const [cycle, setCycle] = useState<Cycle>("monthly");
+  /* Default Paket Ujian (HANDOFF-kurikulum §3): kurikulumnya nempel di paket ini. */
+  const [cycle, setCycle] = useState<Cycle>("yearly");
   const [userInitial, setUserInitial] = useState("Y");
   const stats = useUserStats();
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
@@ -230,27 +249,14 @@ export default function Premium() {
           ))}
         </div>
 
-        <section className="pr-compare">
+        <KurikulumPremium />
+
+        <section className="pr-compare" id="compare">
           <div className="pr-compare-head">
             <h2 className="pr-section-title">Bandingkan semua fitur</h2>
             <p className="pr-section-sub">Lengkap, jujur — tanpa marketing fluff</p>
           </div>
-          <div className="cmp-table glass-card">
-            <div className="cmp-row cmp-head">
-              <span className="cmp-feature">Fitur</span>
-              <span className="cmp-col">Trial 7 hari</span>
-              <span className="cmp-col pop">Pro</span>
-              <span className="cmp-col gold">Lifetime</span>
-            </div>
-            {COMPARE.map(r => (
-              <div className="cmp-row" key={r.label}>
-                <span className="cmp-feature">{r.label}</span>
-                <span className="cmp-col">{renderCell(r.trial)}</span>
-                <span className="cmp-col pop">{renderCell(r.pro)}</span>
-                <span className="cmp-col gold">{renderCell(r.life)}</span>
-              </div>
-            ))}
-          </div>
+          <TabelBanding grup={COMPARE} render={renderCell} />
         </section>
 
         <section className="pr-testi-section">
@@ -337,6 +343,9 @@ function PlanCard({
         </span>
       )}
       {isCurrent && <span className="plan-current-badge">Aktif</span>}
+      {plan.id === "pro" && cycle === "yearly" && (
+        <div className="plan-rib">Termasuk kurikulum 26 minggu sampai hari ujian{!fiturLive("kurikulum") && <LabelDisiapkan kecil />}</div>
+      )}
 
       <div>
         <h3 className="plan-name">{plan.name}</h3>
@@ -378,14 +387,20 @@ function PlanCard({
       </button>
 
       <ul className="plan-features">
-        {plan.features.map(f => (
-          <li key={f.t} className={f.on ? (f.highlight ? "on highlight" : "on") : "off"}>
-            {f.on
-              ? <Check size={13} strokeWidth={2.4} />
-              : <X size={13} strokeWidth={2} />}
-            <span>{f.t}</span>
-          </li>
-        ))}
+        {plan.features.map(f => {
+          /* Fitur yang belum live: lingkaran putus-putus + teks redup + label. */
+          if (f.fitur && !fiturLive(f.fitur)) {
+            return <li key={f.t} className="pp"><span className="pp-i" aria-hidden="true" /><span>{f.t}<LabelDisiapkan kecil /></span></li>;
+          }
+          return (
+            <li key={f.t} className={f.on ? (f.highlight ? "on highlight" : "on") : "off"}>
+              {f.on
+                ? <Check size={13} strokeWidth={2.4} />
+                : <X size={13} strokeWidth={2} />}
+              <span>{f.t}</span>
+            </li>
+          );
+        })}
       </ul>
     </article>
   );
