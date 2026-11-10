@@ -42,7 +42,7 @@ const jetbrainsMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Sensei JLPT",
+  title: "Honix JLPT",
   description: "Taklukan JLPT dengan Presisi AI.",
 };
 

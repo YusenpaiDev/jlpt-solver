@@ -74,7 +74,7 @@ export function Aktif({ data }: { data: Status }) {
         <Link href="/langganan" className="py-btn py-btn-q">Status langganan</Link>
       </div>
       <p className="py-foot">
-        Di mutasi rekeningmu transaksi ini tercatat sebagai <b>WILDbyZ</b>, bukan Sensei JLPT. Itu nama merchant pembayaran kami.
+        Di mutasi rekeningmu transaksi ini tercatat sebagai <b>WILDbyZ</b>, bukan Honix JLPT. Itu nama merchant pembayaran kami.
       </p>
     </>
   );

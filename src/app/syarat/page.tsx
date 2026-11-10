@@ -4,8 +4,8 @@ import { PAKET } from "@/lib/paket";
 import { TRIAL_HARI } from "@/lib/batas-paket";
 
 export const metadata: Metadata = {
-  title: "Syarat & Ketentuan · Sensei JLPT",
-  description: "Aturan pakai Sensei JLPT: akun, masa percobaan, paket Pro, pembayaran, pengembalian dana, dan konten.",
+  title: "Syarat & Ketentuan · Honix JLPT",
+  description: "Aturan pakai Honix JLPT: akun, masa percobaan, paket Pro, pembayaran, pengembalian dana, dan konten.",
 };
 
 const rp = (n: number) => "Rp" + n.toLocaleString("id-ID");
@@ -15,7 +15,7 @@ const rp = (n: number) => "Rp" + n.toLocaleString("id-ID");
 const BAGIAN: Bagian[] = [
   {
     id: "setuju", judul: "Persetujuan",
-    isi: <p>Dengan membuat akun atau memakai Sensei JLPT, kamu setuju dengan Syarat &amp; Ketentuan ini dan <a href="/privasi">Kebijakan Privasi</a>. Kalau tidak setuju, mohon jangan memakai layanan ini.</p>,
+    isi: <p>Dengan membuat akun atau memakai Honix JLPT, kamu setuju dengan Syarat &amp; Ketentuan ini dan <a href="/privasi">Kebijakan Privasi</a>. Kalau tidak setuju, mohon jangan memakai layanan ini.</p>,
   },
   {
     id: "akun", judul: "Akun",
@@ -33,9 +33,9 @@ const BAGIAN: Bagian[] = [
     id: "paket", judul: "Paket & harga",
     isi: <>
       <ul>
-        <li><b>{PAKET["pro-bulanan"].nama.replace("Sensei JLPT ", "")}</b> — {rp(PAKET["pro-bulanan"].harga)} untuk 1 bulan.</li>
-        <li><b>{PAKET["pro-ujian"].nama.replace("Sensei JLPT ", "")}</b> — {rp(PAKET["pro-ujian"].harga)} untuk 6 bulan.</li>
-        <li><b>Lifetime</b> — {rp(PAKET.lifetime.harga)}, sekali bayar, berlaku selama layanan Sensei JLPT beroperasi.</li>
+        <li><b>{PAKET["pro-bulanan"].nama.replace("Honix JLPT ", "")}</b> — {rp(PAKET["pro-bulanan"].harga)} untuk 1 bulan.</li>
+        <li><b>{PAKET["pro-ujian"].nama.replace("Honix JLPT ", "")}</b> — {rp(PAKET["pro-ujian"].harga)} untuk 6 bulan.</li>
+        <li><b>Lifetime</b> — {rp(PAKET.lifetime.harga)}, sekali bayar, berlaku selama layanan Honix JLPT beroperasi.</li>
       </ul>
       <p>Pro dan masa percobaan tidak dibatasi kuota harian, tapi tetap tunduk pada penggunaan wajar (bagian 7). Harga bisa berubah; perubahan tidak memengaruhi paket yang sudah kamu bayar.</p>
     </>,
@@ -65,7 +65,7 @@ const BAGIAN: Bagian[] = [
     isi: <>
       <p>Kamu setuju untuk tidak:</p>
       <ul>
-        <li>menyalin, menyebarkan ulang, atau menjual soal, pembahasan, audio, atau materi dari Sensei JLPT;</li>
+        <li>menyalin, menyebarkan ulang, atau menjual soal, pembahasan, audio, atau materi dari Honix JLPT;</li>
         <li>mengakses layanan dengan bot, skrip, atau cara otomatis lain, termasuk ke fitur AI;</li>
         <li>mencoba membobol keamanan, mengakses data orang lain, atau mengakali pembayaran dan masa percobaan;</li>
         <li>memakai fitur AI untuk konten yang melanggar hukum atau merugikan orang lain.</li>
@@ -77,7 +77,7 @@ const BAGIAN: Bagian[] = [
     id: "konten", judul: "Konten & hak cipta",
     isi: <ul>
       <li>Materi disediakan untuk <b>latihan pribadi</b>. Hak atas soal ujian, audio, dan bahan dari pihak lain tetap milik pemiliknya masing-masing.</li>
-      <li>Sensei JLPT <b>tidak berafiliasi</b> dengan Japan Foundation, JEES, atau penyelenggara resmi JLPT.</li>
+      <li>Honix JLPT <b>tidak berafiliasi</b> dengan Japan Foundation, JEES, atau penyelenggara resmi JLPT.</li>
       <li>Isi yang kamu buat (kosakata, catatan) tetap milikmu; kamu mengizinkan kami menyimpan dan memprosesnya untuk menjalankan aplikasi.</li>
       <li>Kalau kamu pemilik hak atas suatu materi dan keberatan, hubungi kami — kami akan meninjau dan menurunkannya bila perlu.</li>
     </ul>,
@@ -88,7 +88,7 @@ const BAGIAN: Bagian[] = [
   },
   {
     id: "jaminan", judul: "Batasan tanggung jawab",
-    isi: <p>Sensei JLPT membantu kamu berlatih, tetapi <b>tidak menjamin kelulusan</b> JLPT atau skor tertentu. Layanan disediakan apa adanya; kami berusaha menjaganya tetap berjalan, tetapi gangguan sesekali bisa terjadi. Sejauh diizinkan hukum, tanggung jawab kami terbatas pada jumlah yang kamu bayarkan untuk paket yang sedang aktif.</p>,
+    isi: <p>Honix JLPT membantu kamu berlatih, tetapi <b>tidak menjamin kelulusan</b> JLPT atau skor tertentu. Layanan disediakan apa adanya; kami berusaha menjaganya tetap berjalan, tetapi gangguan sesekali bisa terjadi. Sejauh diizinkan hukum, tanggung jawab kami terbatas pada jumlah yang kamu bayarkan untuk paket yang sedang aktif.</p>,
   },
   {
     id: "akhir", judul: "Perubahan & penghentian",

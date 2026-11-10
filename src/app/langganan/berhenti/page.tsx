@@ -62,7 +62,7 @@ export default function Berhenti() {
           <div className="py-cols">
             <section>
               <p className="py-lead" style={{ marginTop: 0 }}>
-                Sensei JLPT <b>tidak menagih otomatis</b>. Kamu bayar sekali untuk satu periode, dan langganannya berhenti sendiri saat masa berlakunya lewat. Cukup tidak perpanjang.
+                Honix JLPT <b>tidak menagih otomatis</b>. Kamu bayar sekali untuk satu periode, dan langganannya berhenti sendiri saat masa berlakunya lewat. Cukup tidak perpanjang.
               </p>
               <hr className="py-hr" />
               <div className="py-tg-row">

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "@/styles/legal.css";
 
 export const EMAIL_DUKUNGAN = "yusufnashirsyarifuddin@gmail.com";
-export const BERLAKU = "8 November 2026";
+export const BERLAKU = "10 November 2026";
 
 export type Bagian = { id: string; judul: string; isi: ReactNode };
 
@@ -22,7 +22,7 @@ export function HalamanLegal({ judul, jp, ringkas, bagian, lain }: {
   return (
     <div className="lgl">
       <header className="lgl-top">
-        <Link href="/" className="lgl-brand"><span className="lgl-mark">先</span>Sensei JLPT</Link>
+        <Link href="/" className="lgl-brand"><span className="lgl-mark">先</span>Honix JLPT</Link>
         <Link href={lain.href} className="lgl-lain">{lain.label} →</Link>
       </header>
 

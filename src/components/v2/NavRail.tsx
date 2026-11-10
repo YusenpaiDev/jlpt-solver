@@ -43,7 +43,7 @@ export function NavRail() {
       <Link href="/" className="nav-brand">
         <div className="nav-brand-mark">先</div>
         <div className="nav-brand-text">
-          <span className="nav-brand-name">Sensei</span>
+          <span className="nav-brand-name">Honix</span>
           <span className="nav-brand-tag">JLPT · AI</span>
         </div>
       </Link>

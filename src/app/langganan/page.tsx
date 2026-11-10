@@ -154,7 +154,7 @@ export default function Langganan() {
                       <div className="py-seal gold" aria-hidden>永</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="py-stat py-s-ok"><span className="py-d ok" />BERLAKU SELAMANYA</div>
-                        <div className="py-lt-name">Sensei JLPT Lifetime</div>
+                        <div className="py-lt-name">Honix JLPT Lifetime</div>
                       </div>
                     </div>
                     <p className="py-lead">

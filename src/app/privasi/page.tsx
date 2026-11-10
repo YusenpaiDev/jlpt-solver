@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { HalamanLegal, EMAIL_DUKUNGAN, type Bagian } from "@/components/legal/HalamanLegal";
 
 export const metadata: Metadata = {
-  title: "Kebijakan Privasi · Sensei JLPT",
-  description: "Data apa yang disimpan Sensei JLPT, dipakai buat apa, dibagikan ke siapa, dan cara menghapusnya.",
+  title: "Kebijakan Privasi · Honix JLPT",
+  description: "Data apa yang disimpan Honix JLPT, dipakai buat apa, dibagikan ke siapa, dan cara menghapusnya.",
 };
 
 /* Isinya HARUS sesuai yang beneran dilakukan app. Nambah layanan pihak ketiga,
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const BAGIAN: Bagian[] = [
   {
     id: "pengelola", judul: "Siapa kami",
-    isi: <p>Sensei JLPT adalah aplikasi web latihan JLPT. Pembayaran diproses atas nama merchant <b>WILDbyZ</b>. Kebijakan ini menjelaskan data apa yang kami simpan saat kamu memakai Sensei JLPT dan apa yang kami lakukan dengannya.</p>,
+    isi: <p>Honix JLPT adalah aplikasi web latihan JLPT. Pembayaran diproses atas nama merchant <b>WILDbyZ</b>. Kebijakan ini menjelaskan data apa yang kami simpan saat kamu memakai Honix JLPT dan apa yang kami lakukan dengannya.</p>,
   },
   {
     id: "data", judul: "Data yang kami simpan",
@@ -72,7 +72,7 @@ const BAGIAN: Bagian[] = [
   },
   {
     id: "anak", judul: "Pengguna di bawah umur",
-    isi: <p>Kalau kamu belum berusia 18 tahun, gunakan Sensei JLPT dan lakukan pembayaran dengan sepengetahuan orang tua atau wali.</p>,
+    isi: <p>Kalau kamu belum berusia 18 tahun, gunakan Honix JLPT dan lakukan pembayaran dengan sepengetahuan orang tua atau wali.</p>,
   },
   {
     id: "perubahan", judul: "Perubahan kebijakan",

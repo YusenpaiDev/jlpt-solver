@@ -113,7 +113,7 @@ export default function Login() {
           <Link href="/" className="lg-brand">
             <div className="lg-brand-mark">先</div>
             <div className="lg-brand-text">
-              <span className="lg-brand-name">Sensei</span>
+              <span className="lg-brand-name">Honix</span>
               <span className="lg-brand-tag">JLPT · AI</span>
             </div>
           </Link>
@@ -296,7 +296,7 @@ export default function Login() {
           </div>
 
           <footer className="lg-footer">
-            <span>© 2026 Sensei JLPT</span>
+            <span>© 2026 Honix JLPT</span>
             <span className="lg-footer-sep">·</span>
             <a href="/syarat">Syarat</a>
             <a href="/privasi">Privasi</a>
@@ -411,7 +411,7 @@ function VisualPanel() {
       <div className="lg-visual-content">
         <span className="lg-visual-eyebrow">
           <Sparkles size={11} fill="currentColor" strokeWidth={1} />
-          Sensei JLPT
+          Honix JLPT
         </span>
         <h2 className="lg-visual-title">
           Soal 過去問 asli.<br />

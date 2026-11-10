@@ -724,7 +724,7 @@ function SubscriptionSection() {
     ? Math.ceil((new Date(stats.premiumUntil).getTime() - openedAt) / 86_400_000)
     : null;
 
-  const namaPlan = stats.isLifetime ? "Sensei Lifetime" : stats.isPro ? "Sensei Pro" : stats.akses.status === "trial" ? "Percobaan 7 hari" : "Akses berakhir";
+  const namaPlan = stats.isLifetime ? "Honix Lifetime" : stats.isPro ? "Honix Pro" : stats.akses.status === "trial" ? "Percobaan 7 hari" : "Akses berakhir";
 
   return (
     <>

@@ -24,21 +24,21 @@ export interface Paket {
 export const PAKET = {
   "pro-bulanan": {
     id: "pro-bulanan",
-    nama: "Sensei JLPT Pro — Bulanan",
+    nama: "Honix JLPT Pro — Bulanan",
     harga: 129_000,
     bulan: 1,
     ringkas: "Akses Pro 1 bulan",
   },
   "pro-ujian": {
     id: "pro-ujian",
-    nama: "Sensei JLPT Pro — Paket Ujian (6 bulan)",
+    nama: "Honix JLPT Pro — Paket Ujian (6 bulan)",
     harga: 594_000,
     bulan: 6,
     ringkas: "Akses Pro 6 bulan · setara Rp 99.000/bulan",
   },
   lifetime: {
     id: "lifetime",
-    nama: "Sensei JLPT Lifetime",
+    nama: "Honix JLPT Lifetime",
     harga: 1_490_000,
     bulan: null,
     ringkas: "Akses Pro selamanya",
