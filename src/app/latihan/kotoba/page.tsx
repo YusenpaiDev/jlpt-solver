@@ -206,7 +206,7 @@ function KotobaPlayer({ level }: { level: string }) {
         }
         const ai_result = { kind: "drill", stats: { answered, correct: correctCount, perCat: { "語彙": { a: answered, c: correctCount } } } };
         if (sessId) await supabase.from("sessions").update({ total: answered, score: correctCount, ai_result }).eq("id", sessId);
-        else { const { data } = await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 語彙", title: `Drill Kotoba ${level}`, total: answered, score: correctCount, ai_result }).select("id").single(); if (data) setSessId(data.id); }
+        else { const { data } = await supabase.from("sessions").insert({ user_id: user.id, level, category: "語彙", title: `Drill Kotoba ${level}`, total: answered, score: correctCount, ai_result }).select("id").single(); if (data) setSessId(data.id); }
       } catch { /* nyusul */ }
     })();
   }, [locked, sel, q, results.length, ok, sessId, level, catat, idx]);

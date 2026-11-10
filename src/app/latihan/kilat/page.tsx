@@ -181,11 +181,12 @@ function KilatPlayer({ level }: { level: string }) {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      /* sessions.category cuma nerima 文法/語彙/文字/読解/AI (check constraint); jenis drill ada di ai_result.kind. */
       const ai_result = { kind: "drill", stats: { answered, correct: correctCount, perCat: { "文法": { a: answered, c: correctCount } } } };
       if (sessId) {
         await supabase.from("sessions").update({ total: answered, score: correctCount, ai_result }).eq("id", sessId);
       } else {
-        const { data } = await supabase.from("sessions").insert({ user_id: user.id, level, category: "Drill 文法", title: `Drill Bunpou ${level}`, total: answered, score: correctCount, ai_result }).select("id").single();
+        const { data } = await supabase.from("sessions").insert({ user_id: user.id, level, category: "文法", title: `Drill Bunpou ${level}`, total: answered, score: correctCount, ai_result }).select("id").single();
         if (data) setSessId(data.id);
       }
     } catch { /* nyusul */ }

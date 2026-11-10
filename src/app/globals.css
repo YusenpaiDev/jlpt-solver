@@ -2304,12 +2304,14 @@ input, textarea, select { font-size: 16px; }
 .pr-ic-exam { background: rgba(221,65,36,0.12); border-color: rgba(221,65,36,0.3); }
 .pr-ic-foto { background: rgba(85,112,181,0.14); border-color: rgba(85,112,181,0.35); }
 .pr-ic-cho  { background: rgba(139,90,140,0.16); border-color: rgba(139,90,140,0.4); }
+.pr-ic-drill { background: rgba(74,124,126,0.16); border-color: rgba(74,124,126,0.4); }
 .pr-sess-m { min-width: 0; }
 .pr-sess-t { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
 .pr-typetag { font-size: 9px; font-weight: 800; letter-spacing: .08em; padding: 2px 7px; border-radius: 5px; flex-shrink: 0; }
 .pr-tt-exam { background: rgba(221,65,36,0.14); color: #E8704F; }
 .pr-tt-foto { background: rgba(85,112,181,0.16); color: #8FA3D8; }
 .pr-tt-cho  { background: rgba(139,90,140,0.18); color: #C79BC8; }
+.pr-tt-drill { background: rgba(74,124,126,0.18); color: #8FC3C5; }
 .pr-sess-s { font-size: 11px; color: var(--text-dim); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
 .pr-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-dim); display: inline-block; }
 .pr-sess-score { text-align: right; }

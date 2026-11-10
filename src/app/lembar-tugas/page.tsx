@@ -198,7 +198,8 @@ export default function LembarTugas() {
     await supabase.from("sessions").insert({
       user_id: user.id,
       level,
-      category: catLabel,
+      // sessions.category cuma nerima 文法/語彙/文字/読解/AI — campuran = "AI".
+      category: kategori === "全" ? "AI" : kategori,
       title: `Lembar Tugas ${level} — ${catLabel}`,
       total: soalList.length,
       score: correctCount,
