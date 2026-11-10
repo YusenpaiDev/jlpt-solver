@@ -51,15 +51,17 @@ function dayGroup(iso: string): Group {
 function timeStr(iso: string) { return new Date(iso).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }); }
 function within(iso: string, days: number) { return (Date.now() - new Date(iso).getTime()) / 86_400_000 < days; }
 
-type SType = "exam" | "choukai" | "foto";
+type SType = "exam" | "choukai" | "drill" | "foto";
 function sessType(s: Sess): SType {
   if (s.section === "choukai") return "choukai";
   if (s.kind === "materi" || s.kind === "tes_mini") return "exam";
+  if (s.kind === "drill") return "drill";
   return "foto";
 }
 const TYPE_META: Record<SType, { icon: string; tag: string; ic: string; tt: string }> = {
   exam:    { icon: "✍️", tag: "BANK SOAL",     ic: "pr-ic-exam", tt: "pr-tt-exam" },
   choukai: { icon: "🎧", tag: "CHOUKAI",       ic: "pr-ic-cho",  tt: "pr-tt-cho" },
+  drill:   { icon: "⚡", tag: "DRILL",         ic: "pr-ic-drill", tt: "pr-tt-drill" },
   foto:    { icon: "📷", tag: "ANALISIS FOTO", ic: "pr-ic-foto", tt: "pr-tt-foto" },
 };
 function tone(pct: number) { return pct >= 75 ? "good" : pct >= 65 ? "mid" : "bad"; }
