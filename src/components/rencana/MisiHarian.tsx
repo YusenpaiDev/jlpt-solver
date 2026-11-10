@@ -95,7 +95,7 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
           {langkah}
           <div className="misi-cta">
             <Link className="btn btn-g" href="/materi">Latihan bebas</Link>
-            <Link className="btn btn-q" href="/progres?tab=waktu">Lihat kalender cap →</Link>
+            <Link className="btn btn-q" href="/progres/pamer">Pamerin progres →</Link>
           </div>
         </div>
       );
