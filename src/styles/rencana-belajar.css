@@ -9,10 +9,12 @@
 .rbk .mcal-h a{font-size:12px}
 .rbk .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .rbk .mg{aspect-ratio:1;border-radius:7px;background:var(--surface-2);display:grid;place-items:center;font-family:var(--jps);font-size:10px;color:transparent;font-style:normal}
-.rbk .mg.a1{background:rgba(221,65,36,.18)}
-.rbk .mg.a2{background:rgba(221,65,36,.34)}
-.rbk .mg.a3{background:rgba(221,65,36,.55);color:rgba(255,255,255,.7)}
-.rbk .mg.a4{background:var(--primary);color:#fff}
+/* Cap mini: gaya .stamp kalender Progres, dikecilin buat sel ±37px. */
+.rbk .mg .stamp.t1{--s:15px;border-width:1.5px}
+.rbk .mg .stamp.t2{--s:18px;border-width:1.5px}
+.rbk .mg .stamp.t3{--s:21px}
+.rbk .mg .stamp.t4{--s:23px;box-shadow:0 0 0 1.5px var(--surface-2),0 0 0 3px #E9573A,0 0 10px rgba(233,87,58,.35)}
+.rbk .mg .stamp.gold{box-shadow:0 0 0 1.5px var(--surface-2),0 0 0 3px var(--warning),0 0 10px rgba(212,160,74,.4)}
 .rbk .mg.fut{background:transparent;border:1px dashed var(--line)}
 .rbk .mg.emp{background:transparent}
 .rbk .mg.td{box-shadow:0 0 0 2px var(--pt)}

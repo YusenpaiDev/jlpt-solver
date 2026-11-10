@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { tanggalLokal } from "@/lib/aktivitas";
 import {
-  halamanBelajar, detikDihitung, KIRIM_TIAP_DETIK, MAKS_DETIK_SEKALI_KIRIM,
+  halamanBelajar, detikDihitung, KIRIM_TIAP_DETIK, MAKS_DETIK_SEKALI_KIRIM, EVENT_WAKTU,
 } from "@/lib/waktu-belajar";
 
 /* Mencatat lama belajar di semua halaman belajar. Gak nampilin apa-apa. */
@@ -39,7 +39,9 @@ export function PencatatWaktu() {
           antre.current.detik = Math.min(antre.current.detik + detik, MAKS_DETIK_SEKALI_KIRIM);
         }
         console.warn(`[waktu belajar] gagal catat ${detik} detik (${tanggal}): ${error.message}`);
+        return;
       }
+      window.dispatchEvent(new Event(EVENT_WAKTU));
     };
 
     const detak = setInterval(() => {
