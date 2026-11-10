@@ -11,6 +11,10 @@ export const KIRIM_TIAP_DETIK = 60;
 /** Batas satu kiriman. Sama dengan batas di catat_waktu() di database. */
 export const MAKS_DETIK_SEKALI_KIRIM = 300;
 
+/** Ditembakin ke window tiap menit belajar berhasil kesimpen (PencatatWaktu),
+ *  biar kalender & angka menit yang lagi kebuka ikut update. */
+export const EVENT_WAKTU = "honix:waktu-tercatat";
+
 const HALAMAN_BELAJAR = [
   "/materi",
   "/latihan",

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { tanggalLokal } from "@/lib/aktivitas";
+import { tanggalLokal, EVENT_AKTIVITAS } from "@/lib/aktivitas";
+import { EVENT_WAKTU } from "@/lib/waktu-belajar";
 import { gabungHari, tambahHari, type HariBelajar } from "@/lib/waktu-kalender";
 
 /* Ditulis langsung (bukan diimport) biar Next bisa buang cabang dev di build. */
@@ -30,9 +31,10 @@ export function useWaktuBelajar(): WaktuBelajar {
 
   useEffect(() => {
     if (DEV_BYPASS) return;
-    const hariIni = tanggalLokal();
     let batal = false;
-    (async () => {
+    let jeda: ReturnType<typeof setTimeout> | undefined;
+    const ambil = async () => {
+      const hariIni = tanggalLokal();
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { if (!batal) setHasil(h => ({ ...h, siap: true, hariIni })); return; }
@@ -49,8 +51,22 @@ export function useWaktuBelajar(): WaktuBelajar {
         hariIni,
         pace: Number.isFinite(pace) && pace > 0 ? pace : PACE_BAWAAN,
       });
-    })().catch(() => { if (!batal) setHasil(h => ({ ...h, siap: true, gagal: true, hariIni })); });
-    return () => { batal = true; };
+    };
+    const muat = () => ambil().catch(() => { if (!batal) setHasil(h => ({ ...h, siap: true, gagal: true, hariIni: tanggalLokal() })); });
+    /* Menit/aktivitas baru kesimpen, atau tab dibuka lagi → ambil ulang (ditunda dikit biar gak dobel). */
+    const segarkan = () => { clearTimeout(jeda); jeda = setTimeout(muat, 400); };
+    const pasTerlihat = () => { if (document.visibilityState === "visible") segarkan(); };
+    void muat();
+    window.addEventListener(EVENT_WAKTU, segarkan);
+    window.addEventListener(EVENT_AKTIVITAS, segarkan);
+    document.addEventListener("visibilitychange", pasTerlihat);
+    return () => {
+      batal = true;
+      clearTimeout(jeda);
+      window.removeEventListener(EVENT_WAKTU, segarkan);
+      window.removeEventListener(EVENT_AKTIVITAS, segarkan);
+      document.removeEventListener("visibilitychange", pasTerlihat);
+    };
   }, []);
 
   return hasil;

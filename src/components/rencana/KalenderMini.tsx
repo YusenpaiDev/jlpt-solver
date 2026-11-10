@@ -3,7 +3,7 @@
 import "@/styles/rencana-dasar.css";
 import "@/styles/rencana-belajar.css";
 import Link from "next/link";
-import { jamMenit, selBulan, tingkatMenit } from "@/lib/waktu-kalender";
+import { jamMenit, ringkasWaktu, selBulan, tingkatMenit } from "@/lib/waktu-kalender";
 import { useWaktuBelajar } from "@/lib/use-waktu-belajar";
 import { BLN } from "./WaktuBelajar";
 
@@ -14,6 +14,7 @@ export function KalenderMini() {
   const { siap, hari, hariIni } = useWaktuBelajar();
   const y = Number(hariIni.slice(0, 4)), mo = Number(hariIni.slice(5, 7)) - 1;
   const { kosongDepan, jumlahHari } = selBulan(y, mo);
+  const rekor = ringkasWaktu(hari, hariIni).rekor?.tanggal;
 
   let aktif = 0, menit = 0;
   const sel = [];
@@ -23,8 +24,12 @@ export function KalenderMini() {
     const m = h?.menit ?? 0;
     const ada = m > 0 || Boolean(h?.aktif);
     if (ada) { aktif++; menit += m; }
-    const kelas = k > hariIni ? "fut" : `a${ada ? Math.max(1, tingkatMenit(m)) : 0}`;
-    sel.push(<i key={k} className={`mg ${kelas}${k === hariIni ? " td" : ""}`} title={`${d} ${BLS[mo]} · ${m} menit`}>{ada ? "学" : ""}</i>);
+    /* Sama kayak kalender Progres: cap 学, ukurannya ngikut menit, hari rekor cap emas 極. */
+    sel.push(
+      <i key={k} className={`mg${k > hariIni ? " fut" : ""}${k === hariIni ? " td" : ""}`} title={`${d} ${BLS[mo]} · ${m} menit`}>
+        {ada && <span className={`stamp t${Math.max(1, tingkatMenit(m))}${k === rekor ? " gold" : ""}`} style={{ animationDelay: `${d * 12}ms` }}>{k === rekor ? "極" : "学"}</span>}
+      </i>,
+    );
   }
 
   return (
