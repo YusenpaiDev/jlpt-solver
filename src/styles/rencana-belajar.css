@@ -56,7 +56,7 @@
 .rbk .cd[disabled]{background:transparent;border:1px dashed var(--line);cursor:default}
 .rbk .cd.emp{background:transparent;visibility:hidden}
 .rbk .cd-n{position:absolute;top:6px;left:8px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
-.rbk .stamp{--s:34px;width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;font-family:var(--jps);font-weight:700;font-size:calc(var(--s)*.5);color:#E9573A;border:2px solid #E9573A;transform:rotate(-8deg);background:radial-gradient(circle at 40% 35%,rgba(233,87,58,.22),rgba(233,87,58,.06) 70%);animation:rbk-pop .45s var(--back) both;text-shadow:0 0 1px rgba(233,87,58,.6);font-style:normal}
+.rbk .stamp{--s:34px;width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;font-family:var(--jps);font-weight:700;font-size:calc(var(--s)*.62);line-height:1;color:#E9573A;border:2px solid #E9573A;transform:rotate(-8deg);background:radial-gradient(circle at 40% 35%,rgba(233,87,58,.22),rgba(233,87,58,.06) 70%);animation:rbk-pop .45s var(--back) both;text-shadow:0 0 1px rgba(233,87,58,.6);font-style:normal}
 .rbk .stamp.t1{--s:22px;opacity:.55;border-width:1.5px}
 .rbk .stamp.t2{--s:28px;opacity:.75}
 .rbk .stamp.t3{--s:34px;opacity:.92}
