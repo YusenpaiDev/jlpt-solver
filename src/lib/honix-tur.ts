@@ -1,7 +1,7 @@
 import type { HonixPose } from "./honix-pose";
 
 /**
- * Tur Honix — cara pakai Sensei JLPT (spec 2026-10-09-honix-tur-design).
+ * Tur Honix — cara pakai Honix JLPT (spec 2026-10-09-honix-tur-design).
  * Sorot ikon menu navigasi satu per satu; file ini cuma data + keputusan
  * jadwal (murni, dites di tests/honix-tur.test.mjs). UI di HonixTur.tsx.
  */

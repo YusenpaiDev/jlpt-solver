@@ -53,7 +53,7 @@ const PLANS: Plan[] = [
   },
   {
     id: "pro",
-    name: "Sensei Pro",
+    name: "Honix Pro",
     tagline: "Serius nyiapin ujian — belajar sampai lulus",
     monthly: 129_000,
     yearly: 99_000,        // per-bulan kalau ambil Paket Ujian 6 bulan (total 594rb)
@@ -72,7 +72,7 @@ const PLANS: Plan[] = [
   },
   {
     id: "lifetime",
-    name: "Sensei Lifetime",
+    name: "Honix Lifetime",
     tagline: "Bayar sekali, pakai selamanya",
     monthly: null,
     lifetimePrice: 1_490_000,

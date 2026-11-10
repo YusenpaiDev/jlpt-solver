@@ -6,14 +6,14 @@ import { dasborContoh } from "@/lib/admin/contoh";
 import { PAKET, adalahPaket } from "@/lib/paket";
 import "./admin.css";
 
-export const metadata: Metadata = { title: "Admin · Sensei JLPT", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Admin · Honix JLPT", robots: { index: false, follow: false } };
 
 const rp = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
 const angka = (n: number) => n.toLocaleString("id-ID");
 const tgl = (iso: string) => new Date(iso).toLocaleString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-/* Nama dari paket.ts dibuang awalan "Sensei JLPT" — langganan.ts punya versi
+/* Nama dari paket.ts dibuang awalan "Honix JLPT" — langganan.ts punya versi
    pendeknya, tapi itu modul "use client" (gak bisa dipanggil dari server). */
-const namaPendek = (id: string) => (adalahPaket(id) ? PAKET[id].nama.replace(/^Sensei JLPT /, "") : id);
+const namaPendek = (id: string) => (adalahPaket(id) ? PAKET[id].nama.replace(/^Honix JLPT /, "") : id);
 const NAMA_FITUR: Record<string, string> = { chat: "Chat Sensei", furigana: "Furigana", "tugas-generate": "Lembar tugas AI" };
 
 function Kartu({ label, nilai, sub, nada }: { label: string; nilai: string; sub?: string; nada?: "ok" | "warn" | "bad" }) {
