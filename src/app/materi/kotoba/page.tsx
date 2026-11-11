@@ -13,6 +13,7 @@ import { catatAktivitas } from "@/lib/aktivitas";
 import FlashPlayer, { type FlashWord } from "@/components/FlashPlayer";
 import { statusKata } from "@/lib/status-materi";
 import { catatTerakhir } from "@/lib/terakhir-dibuka";
+import { catatItem } from "@/lib/kurikulum-db";
 
 interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; note?: string; }
 interface Deck { level: string; title: string; source: string; count: number; groupOrder: string[]; vocabulary: Kotoba[]; }
@@ -224,6 +225,7 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
     });
     try {
       await createClient().rpc("catat_kotoba", { p_word: word, p_benar: tau, p_level: level });
+      void catatItem("kata", word, level, tau);
       catatAktivitas("kotoba");
     } catch {
       // Gagal simpan: biarin angka di layar naik. Nilai-diri itu ritmenya cepat,

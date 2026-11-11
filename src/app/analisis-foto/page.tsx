@@ -68,6 +68,8 @@ interface UserProgress {
    perCat keyed kategori asli soal: {文法:{a:answered,c:correct}, ...} */
 interface SessionStats {
   last_practiced_at?: string;
+  /** detik dikerjain (timer nyala), dijumlah lintas buka-tutup — buat tempo simulasi */
+  detik?: number;
   answered: number;
   correct: number;
   perCat: Record<string, { a: number; c: number }>;
@@ -381,6 +383,10 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   // Snapshot progress pas masuk sesi — buat opsi "keluar tanpa simpan".
   const initialProgressRef = useRef<UserProgress | undefined>(result.user_progress);
   const initialPracticeAtRef = useRef(result.stats?.last_practiced_at);
+  /* Detik dari kunjungan sebelumnya + timer sesi ini (cuma jalan pas timer nyala). */
+  const detikAwalRef = useRef(result.stats?.detik ?? 0);
+  const elapsedRef = useRef(0);
+  const detikTotal = () => detikAwalRef.current + elapsedRef.current;
   const resultRef = useRef(result);
   const saveQueue = useRef(createSaveQueue());
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -456,7 +462,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         const nextResult: AIResult = {
           ...resultRef.current,
           user_progress: progress,
-          stats: { ...computeStats(result.questions, progress?.answers ?? {}, progress?.revealed ?? []), last_practiced_at: mode === "save" ? lastPracticeRef.current ?? result.stats?.last_practiced_at : initialPracticeAtRef.current },
+          stats: { ...computeStats(result.questions, progress?.answers ?? {}, progress?.revealed ?? []), last_practiced_at: mode === "save" ? lastPracticeRef.current ?? result.stats?.last_practiced_at : initialPracticeAtRef.current, detik: mode === "save" ? detikTotal() : detikAwalRef.current },
         };
         await writeSnapshot(nextResult, scoreFromProgress(progress));
       } catch {
@@ -513,6 +519,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
   const [chatInput,    setChatInput]    = useState("");
   const [chatLoading,  setChatLoading]  = useState(false);
   const [elapsed,      setElapsed]      = useState(0);
+  useEffect(() => { elapsedRef.current = elapsed; }, [elapsed]);
   const [timerOn,      setTimerOn]      = useState(true);
   const [savedWords,   setSavedWords]   = useState<Set<string>>(new Set());
   const [savingWord,   setSavingWord]   = useState<string | null>(null);
@@ -575,7 +582,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
     const progress: UserProgress = { answers, revealed: Array.from(revealed), xp_claimed: scoreSaved, highlights };
     const snapshot: AIResult = {
       ...next, user_progress: progress,
-      stats: { ...computeStats(next.questions, answers, revealed), last_practiced_at: lastPracticeRef.current ?? resultRef.current.stats?.last_practiced_at },
+      stats: { ...computeStats(next.questions, answers, revealed), last_practiced_at: lastPracticeRef.current ?? resultRef.current.stats?.last_practiced_at, detik: detikTotal() },
     };
     try {
       const complete = next.questions.length > 0 && next.questions.every((_,i)=>revealed.has(i));
@@ -898,7 +905,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         const nextResult: AIResult = {
           ...resultRef.current,
           user_progress: nextProgress,
-          stats: { ...computeStats(resultRef.current.questions, answers, revealed), last_practiced_at: lastPracticeRef.current ?? result.stats?.last_practiced_at },
+          stats: { ...computeStats(resultRef.current.questions, answers, revealed), last_practiced_at: lastPracticeRef.current ?? result.stats?.last_practiced_at, detik: detikTotal() },
         };
 
         await writeSnapshot(nextResult, isComplete ? correctCount : null);

@@ -136,8 +136,8 @@ const FAQ = [
     a: "Nggak. Semua data kamu tetap ada. Berlangganan kembali untuk melanjutkan belajar. Masa percobaan tidak dimulai ulang." },
   { q: "Bedanya Pro vs Lifetime apa?",
     a: "Fitur identik. Pro dibayar bulanan; Lifetime sekali bayar buat akses selamanya, termasuk fitur yang nyusul nanti." },
-  { q: "Bank soalnya beneran soal asli?",
-    a: "Iya — 過去問 dari ujian yang udah lewat, bukan soal karangan AI. Choukai-nya juga pakai audio asli, dipotong per soal. Sebagian kecil soal N1 bacaannya hasil rekonstruksi karena teks aslinya rusak waktu diekstrak; itu ditandai di datanya." },
+  { q: "Bank Soal isinya apa aja?",
+    a: "Set latihan format JLPT per level: 文字・語彙, 文法, 読解, plus 聴解 dengan audio yang dipotong per soal. Bukan soal karangan AI, dan tiap soal ada pembahasannya. Sebagian kecil bacaan N1 direkonstruksi karena teksnya rusak waktu diekstrak; itu ditandai di datanya." },
 ];
 
 const fmt = (n: number) => "Rp " + n.toLocaleString("id-ID");
@@ -269,7 +269,7 @@ export default function Premium() {
               color="iris"
             />
             <Testi
-              quote="Best Rp 99k yang gw spend. Bank soal 過去問-nya lengkap — gw bisa latihan jam berapa aja, kayak punya tutor 24/7."
+              quote="Best Rp 99k yang gw spend. Bank soalnya lengkap — gw bisa latihan jam berapa aja, kayak punya tutor 24/7."
               name="Reza · prep N1"
               avatar="R"
               color="amber"

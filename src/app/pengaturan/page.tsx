@@ -18,6 +18,7 @@ import { useUserStats } from "@/lib/use-user-stats";
 import { cekAlasan, ALASAN_MAKS } from "@/lib/ganti-target";
 import { daftarSesiUjian, labelSesi, rapikanTanggalUjian, type SesiUjian } from "@/lib/sesi-ujian";
 import { JanjiBelajar } from "@/components/rencana/JanjiBelajar";
+import { fiturLive } from "@/lib/kurikulum-config";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -587,6 +588,11 @@ function TargetSection({
           <JanjiBelajar level={targetLevel} ujian={ujianDate} pace={waktuPerHari} sesi={sesiUjian}
             onUbah={(u, m) => { setUjianDate(u); setWaktuPerHari(m); }} />
         </Field>
+        {fiturLive("penempatan") && (
+          <Field label="Tes penempatan" hint="titik mulai kurikulum">
+            <Link href="/penempatan" className="ganti-target">Ulangi tes penempatan →</Link>
+          </Field>
+        )}
         <Field label="Fokus area">
           <div className="pg-focus-grid">
             {KATEGORIS.map(k => {
@@ -926,7 +932,7 @@ function TutorialSection() {
         <button type="button" className="hx-btn hx-btn-g" onClick={mulaiTur}>▶ Putar</button>
       </div>
       <div className="hx-row">
-        <div><div className="hx-row-t">Bank Soal 過去問</div><p className="hx-row-s">Furigana, review, blok teks ke Sensei/Kamus/Catatan, salin pilihan, coret, timer.</p></div>
+        <div><div className="hx-row-t">Bank Soal</div><p className="hx-row-s">Furigana, review, blok teks ke Sensei/Kamus/Catatan, salin pilihan, coret, timer.</p></div>
         {sesiTerakhir
           ? <Link className="hx-btn hx-btn-g" href={`/analisis-foto?session=${sesiTerakhir}&tur=banksoal`}>▶ Putar</Link>
           : sesiTerakhir === null

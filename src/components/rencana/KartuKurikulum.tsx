@@ -1,5 +1,12 @@
+"use client";
+
+import "@/styles/kurikulum.css";
+import Link from "next/link";
 import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
-import { FASE, JUMLAH_UNIT } from "@/lib/kurikulum-config";
+import { BelumMulai, Strip } from "@/components/kurikulum/Bagian";
+import { FASE, JUMLAH_UNIT, faseMinggu, fiturLive } from "@/lib/kurikulum-config";
+import { dimulai } from "@/lib/kurikulum";
+import { useKurikulum } from "@/lib/use-kurikulum";
 
 /** Kartu Kurikulum paling atas /materi, versi "Sedang disiapkan"
     (HANDOFF-materi-bank-soal §2.2): bikin penasaran, tanpa tombol. */
@@ -28,5 +35,26 @@ export function KartuKurikulumDisiapkan({ level, kata, pola }: { level: string; 
         <div><b>{JUMLAH_UNIT}</b><span>unit mingguan</span></div>
       </div>
     </section>
+  );
+}
+
+/** Kartu Kurikulum live di /materi (HANDOFF-kurikulum §6 "Kartu di Materi"). */
+export function KartuKurikulumLive({ level }: { level: string }) {
+  const k = useKurikulum(level);
+  if (!k.siap) return <section className="card kmc" aria-busy="true" style={{ minHeight: 120 }} />;
+  if (k.belumMulai) return <BelumMulai level={level} penempatan={fiturLive("penempatan")} />;
+  const u = k.unit[Math.min(26, k.cur) - 1];
+  const fase = faseMinggu(u.u);
+  const polaMulai = u.pola.filter(p => k.statusItem("pola", p) !== "baru").length;
+  return (
+    <Link className="kmc" href="/kurikulum">
+      <span>
+        <span className="eyebrow">Kurikulum {level} · {k.cur > 26 ? "masa cadangan" : `Minggu ${k.cur} dari 26`}</span>
+        <b>Fase {fase.t} · minggu ini {u.kata.length} kata + {u.pola.length} pola</b>
+        <Strip unit={k.unit} />
+        <small>{dimulai(u.kataSt)} / {u.kata.length} kata dimulai · {polaMulai} / {u.pola.length} pola{k.sisaMinggu != null ? ` · ${k.sisaMinggu} minggu ke ujian` : ""}</small>
+      </span>
+      <span className="btn btn-g">Buka peta →</span>
+    </Link>
   );
 }
