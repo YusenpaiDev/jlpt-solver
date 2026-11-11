@@ -61,7 +61,7 @@ const AKHIR: LangkahTur = { target: null, pose: "lulus", judul: "Siap!", isi: "M
 
 const INTI: LangkahTur[] = [
   { target: "beranda", pose: "tunjuk", judul: "Beranda", isi: "Pusat harimu: target, streak, dan lanjut latihan." },
-  { target: "materi", pose: "baca", judul: "Materi", isi: "Kotoba, Bunpou, Bank Soal 過去問, dan Choukai per level." },
+  { target: "materi", pose: "baca", judul: "Materi", isi: "Tempat belajar: Kotoba & Bunpou per level, nanti juga kurikulum mingguan." },
   { target: "lembar-tugas", pose: "tunjuk", judul: "Lembar Tugas", isi: "Bikin set soal latihan dari materi pilihanmu." },
   { target: "kamus", pose: "tunjuk", judul: "Kamus", isi: "Simpan kata, terus hafalin pakai FLASH." },
 ];

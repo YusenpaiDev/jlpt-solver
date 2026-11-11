@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { useIsPro } from "@/lib/use-is-pro";
 import { TombolKeluar } from "./TombolKeluar";
-import { lompatDiHalamanSama } from "@/lib/lompat-jangkar";
 import { IkonBankSoal } from "./IkonBankSoal";
+import { navAktif } from "@/lib/nav-aktif";
 
 /* Materi di tengah jadi tombol bulat yang naik — pintu utama belajar. */
 const BOTTOM_ITEMS = [
@@ -21,8 +21,7 @@ const BOTTOM_ITEMS = [
 ] as const;
 
 const MORE_ITEMS = [
-  /* Lompat ke daftar ujian di Materi. */
-  { href: "/materi#bank-soal", label: "Bank Soal",  Icon: IkonBankSoal },
+  { href: "/bank-soal",     label: "Bank Soal",     Icon: IkonBankSoal },
   { href: "/catatan",       label: "Catatan",       Icon: NotebookPen },
   { href: "/progres",       label: "Progres",       Icon: BarChart3 },
   { href: "/pengaturan",    label: "Pengaturan",    Icon: Settings },
@@ -41,8 +40,7 @@ function MobileNav({ pathname }: { pathname: string }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogId = useId();
   const titleId = useId();
-  const isActive = (href: string) => href === "/materi#bank-soal" ? pathname === "/strategi"
-    : pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+  const isActive = (href: string) => navAktif(href, pathname);
   const moreActive = MORE_ITEMS.some(({ href }) => isActive(href)) || isActive("/premium");
 
   useEffect(() => {
@@ -190,7 +188,7 @@ function MobileNav({ pathname }: { pathname: string }) {
                 href={href}
                 className={`nav-item${active ? " active" : ""}`}
                 aria-current={active ? "page" : undefined}
-                onClick={e => { lompatDiHalamanSama(e, href); setOpen(false); }}
+                onClick={() => setOpen(false)}
               >
                 <Icon className="nav-item-icon" size={20} strokeWidth={active ? 1.8 : 1.6} aria-hidden="true" />
                 <span className="nav-item-label">{label}</span>

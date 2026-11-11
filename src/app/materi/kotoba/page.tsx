@@ -11,6 +11,8 @@ import { useUserStats, type UserStats } from "@/lib/use-user-stats";
 import { GantiTarget } from "@/components/v2/GantiTarget";
 import { catatAktivitas } from "@/lib/aktivitas";
 import FlashPlayer, { type FlashWord } from "@/components/FlashPlayer";
+import { statusKata } from "@/lib/status-materi";
+import { catatTerakhir } from "@/lib/terakhir-dibuka";
 
 interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; note?: string; }
 interface Deck { level: string; title: string; source: string; count: number; groupOrder: string[]; vocabulary: Kotoba[]; }
@@ -52,11 +54,7 @@ interface Progres { benar: number; salah: number; riwayat: boolean[] }
      sisanya (baru sekali bener) → seen
    Sengaja butuh 2× benar buat "dikuasai" — sekali bener bisa cuma nebak. */
 function statDari(p?: Progres): WStat {
-  if (!p || p.benar + p.salah === 0) return { state: "new", correct: 0, wrong: 0, seen: 0 };
-  const dasar = { correct: p.benar, wrong: p.salah, seen: p.benar + p.salah };
-  if (p.salah > p.benar) return { ...dasar, state: "wrong" };
-  if (p.benar >= 2 && p.benar > p.salah) return { ...dasar, state: "known" };
-  return { ...dasar, state: "seen" };
+  return { state: statusKata(p), correct: p?.benar ?? 0, wrong: p?.salah ?? 0, seen: (p?.benar ?? 0) + (p?.salah ?? 0) };
 }
 const DOT: Record<State, string> = { known: "d-known", seen: "d-seen", wrong: "d-wrong", new: "d-new" };
 
@@ -178,6 +176,19 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
   }, [query, statusF, posF, favs, progres, DATA, GROUP_ORDER]);
 
   useEffect(() => { if (query.trim() || statusF !== "all" || posF) setOpenGroups(new Set(groups.map(g => g.name))); }, [query, statusF, posF, groups]);
+
+  /* Dari /materi: ?grup=<nama> → buka kelompok itu dan geser ke sana. */
+  useEffect(() => {
+    const grup = new URLSearchParams(window.location.search).get("grup");
+    if (!grup || !GROUP_ORDER.includes(grup)) return;
+    setOpenGroups(new Set([grup]));
+    catatTerakhir("kotoba", { level, grup });
+    requestAnimationFrame(() => document.querySelector(`[data-grup="${CSS.escape(grup)}"]`)?.scrollIntoView({ block: "start" }));
+  }, [GROUP_ORDER, level]);
+  const toggleGrup = (name: string) => {
+    if (!openGroups.has(name)) catatTerakhir("kotoba", { level, grup: name });
+    setOpenGroups(s => { const n = new Set(s); if (n.has(name)) n.delete(name); else n.add(name); return n; });
+  };
 
   const toggleFav = async (w: Kotoba) => {
     if (busy) return;
@@ -306,8 +317,8 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
                 const open = openGroups.has(g.name);
                 const th = THEME[g.name];
                 return (
-                  <div className={`kv-unit${open ? " open" : ""}`} key={g.name}>
-                    <div className="kv-uhead" onClick={() => setOpenGroups(s => { const n = new Set(s); if (n.has(g.name)) n.delete(g.name); else n.add(g.name); return n; })}>
+                  <div className={`kv-unit${open ? " open" : ""}`} key={g.name} data-grup={g.name}>
+                    <div className="kv-uhead" onClick={() => toggleGrup(g.name)}>
                       <ChevronRight size={14} className="kv-chev" />
                       <span className="kv-ut">
                         {th?.label ? `${th.label} · ` : ""}{g.name.replace(/ 合う$/, "")}{th?.jp && <span className="jpt"> {th.jp}</span>} {th?.id && <span className="thid">{th.id}</span>}

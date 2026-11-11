@@ -9,14 +9,13 @@ import {
 import { useIsPro } from "@/lib/use-is-pro";
 import { HonixTurHost } from "@/components/honix/HonixTurHost";
 import { TombolKeluar } from "./TombolKeluar";
-import { lompatDiHalamanSama } from "@/lib/lompat-jangkar";
 import { IkonBankSoal } from "./IkonBankSoal";
+import { navAktif } from "@/lib/nav-aktif";
 
 const NAV_ITEMS = [
   { href: "/",              label: "Beranda",       Icon: Home },
   { href: "/materi",        label: "Materi",        Icon: BookOpen },
-  /* Bank Soal belum punya halaman sendiri: lompat ke daftar ujian di Materi. */
-  { href: "/materi#bank-soal", label: "Bank Soal",  Icon: IkonBankSoal },
+  { href: "/bank-soal",     label: "Bank Soal",     Icon: IkonBankSoal },
   { href: "/lembar-tugas",  label: "Lembar Tugas",  Icon: ListTodo },
   { href: "/kamus",         label: "Kamus",         Icon: BookA },
   { href: "/catatan",       label: "Catatan",       Icon: NotebookPen },
@@ -34,9 +33,7 @@ const NAV_ITEMS = [
 export function NavRail() {
   const pathname = usePathname();
   const isPro = useIsPro();
-  /* Bank Soal belum punya halaman sendiri; Strategi ujian ada di bawahnya. */
-  const isActive = (href: string) => href === "/materi#bank-soal" ? pathname === "/strategi"
-    : href === "/" ? pathname === "/" : pathname?.startsWith(href);
+  const isActive = (href: string) => navAktif(href, pathname ?? "");
 
   return (
     <nav className="nav-rail" aria-label="Navigasi utama">
@@ -60,8 +57,7 @@ export function NavRail() {
             href={href}
             className={`nav-item${active ? " active" : ""}${prio ? " nav-prio" : ""}`}
             aria-current={active ? "page" : undefined}
-            data-tur={href === "/" ? "beranda" : href.split("#")[1] ?? href.slice(1)}
-            onClick={e => lompatDiHalamanSama(e, href)}
+            data-tur={href === "/" ? "beranda" : href.slice(1)}
           >
             <Icon className="nav-item-icon" size={20} strokeWidth={active ? 1.8 : 1.6} />
             <span className="nav-item-label">

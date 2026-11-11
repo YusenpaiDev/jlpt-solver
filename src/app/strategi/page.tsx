@@ -36,7 +36,7 @@ export default function StrategiPage() {
       <BottomNav />
       <main className="app-shell">
         <UserBar streakDays={stats.streak} xp={stats.xp} xpTarget={stats.xpTarget} avatarLetter={stats.initial} isPro={stats.isPro} />
-        <Breadcrumb items={[{ label: "Bank Soal", href: "/materi#bank-soal" }, { label: "Strategi ujian" }]} />
+        <Breadcrumb items={[{ label: "Bank Soal", href: "/bank-soal" }, { label: "Strategi ujian" }]} />
 
         <div className="rbk">
           <div className="head">
@@ -120,7 +120,7 @@ export default function StrategiPage() {
             jenis={buka}
             disembunyikan={teknik.daftar.includes(buka)}
             onAtur={s => teknik.atur(buka, s)}
-            onMulai={() => router.push(LATIHAN[buka] ?? "/materi#bank-soal")}
+            onMulai={() => router.push(LATIHAN[buka] ?? "/bank-soal")}
             onLewati={() => setBuka(null)}
             linkStrategi={false}
           />
