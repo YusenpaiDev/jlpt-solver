@@ -11,13 +11,14 @@ import { ATURAN } from "@/lib/kurikulum-config";
 
 export type IsiMomen =
   | { jenis: "naik" | "turun"; jenisSoal: string; tingkat: number; akurasi: number }
-  | { jenis: "unit"; minggu: number; kata: number; pola: number };
+  /** judul = "Minggu 11" / "Unit 5–6"; berikut = unit yang kebuka (null = jadwal materi habis) */
+  | { jenis: "unit"; judul: string; kata: number; pola: number; berikut: string | null };
 
 const NAMA_TINGKAT = ["", "pengenalan", "standar JLPT", "jebakan"];
 
 function isiKartu(isi: IsiMomen) {
   if (isi.jenis === "unit") {
-    return { hx: "senang" as const, eb: "Unit selesai", t: `Minggu ${isi.minggu} beres!`, p: `${isi.kata} kata dan ${isi.pola} pola udah masuk pengulangan.${isi.minggu < 26 ? ` Minggu ${isi.minggu + 1} kebuka. Senin ada ulangan ±10 menit.` : ""}`, ok: "Lanjut", lain: ["Lihat peta", "/kurikulum"] };
+    return { hx: "senang" as const, eb: "Unit selesai", t: `${isi.judul} beres!`, p: `${isi.kata} kata dan ${isi.pola} pola udah masuk pengulangan.${isi.berikut ? ` ${isi.berikut} kebuka. Senin ada ulangan ±10 menit.` : ""}`, ok: "Lanjut", lain: ["Lihat peta", "/kurikulum"] };
   }
   const a = Math.round(isi.akurasi * 100);
   const lain = ["Lihat keterampilan", "/kurikulum/keterampilan"];

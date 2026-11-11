@@ -9,9 +9,10 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { honixSrc } from "@/lib/honix-pose";
 import { ATURAN } from "@/lib/kurikulum-config";
-import { JUMLAH_UNIT, nilaiPenempatan, susunUnit, type Grup, type PosisiBagian, type Unit } from "@/lib/kurikulum";
+import { JUMLAH_UNIT, nilaiPenempatan, susunJadwal, susunUnit, type Grup, type ModeWaktu, type PosisiBagian, type Unit } from "@/lib/kurikulum";
 import { susunPenempatan, type Soal, type SoalKatalog } from "@/lib/soal-kurikulum";
-import { muatBunpou, muatKotoba, type DekBunpou, type DekKotoba } from "@/lib/dek-materi";
+import { muatBunpou, muatKotoba, muatPrioritas, type DekBunpou, type DekKotoba } from "@/lib/dek-materi";
+import { tanggalLokal } from "@/lib/aktivitas";
 import { catatItem, catatJenis, mulaiKurikulum, tandaiDikuasai } from "@/lib/kurikulum-db";
 import { LABEL, penilaianJanji } from "@/lib/janji-belajar";
 import { hariMenuju, labelSesi } from "@/lib/sesi-ujian";
@@ -22,6 +23,13 @@ const WARNA: Record<Grup, string> = { "文字・語彙": "var(--moji)", "文法"
 const KOMPOSISI: { k: Grup; n: number }[] = [{ k: "文字・語彙", n: 16 }, { k: "文法", n: 12 }, { k: "読解", n: 12 }];
 
 interface Hasil { posisi: PosisiBagian[]; unitMulai: number; kata: number; pola: number; sisa: number }
+
+/** Satu kalimat mode sisa waktu di hasil tes (detailnya di kepala /kurikulum). */
+const TEKS_MODE: Record<Exclude<ModeWaktu, "normal">, (minggu: number, sampai: number) => string> = {
+  padat: m => `Ujian ${m} minggu lagi, jadi unitnya dipadatin: sebagian minggu dapat 2 unit.`,
+  kejar: (m, s) => `Ujian ${m} minggu lagi, gak cukup buat semua materi. Unit sampai ${s} dijadwalin, yang lebih penting duluan; sisanya tetap bisa diintip.`,
+  akhir: m => `Ujian ${m} minggu lagi, jadi materi baru gak ditambah. Fokusnya ulang yang lemah dan set latihan format JLPT.`,
+};
 
 /** Langkah-langkah atas (onboarding): "Langkah 5 dari 6". */
 function Atas({ langkah }: { langkah?: [number, number] }) {
@@ -53,8 +61,8 @@ export function Penempatan({ level, ujian, pace, langkah, onSelesai }: {
 
   useEffect(() => {
     let batal = false;
-    void Promise.all([muatKotoba(level), muatBunpou(level)]).then(([k, b]) => {
-      if (!batal) setDek({ k, b, unit: susunUnit(k.vocabulary, b.patterns) });
+    void Promise.all([muatKotoba(level), muatBunpou(level), muatPrioritas(level)]).then(([k, b, p]) => {
+      if (!batal) setDek({ k, b, unit: susunUnit(k.vocabulary, b.patterns, p) });
     });
     if (!DEV_BYPASS) {
       void createClient().rpc("soal_katalog", { p_level: level, p_kategori: "読解", p_n: 12 })
@@ -103,6 +111,7 @@ export function Penempatan({ level, ujian, pace, langkah, onSelesai }: {
     const hari = ujian ? hariMenuju(ujian, new Date()) : null;
     const v = penilaianJanji(level, hari, pace, hasil.sisa);
     const sisaUnit = JUMLAH_UNIT - hasil.unitMulai + 1;
+    const jadwal = susunJadwal({ level, tanggal_mulai: tanggalLokal(), unit_mulai: hasil.unitMulai, tanggal_ujian: ujian }, ATURAN.waktu);
     const awal = hasil.posisi.filter(p => p.k !== "読解").sort((a, b) => a.minggu - b.minggu)[0];
     return (
       <div className="rbk"><div className="ob" style={{ maxWidth: 760 }}>
@@ -113,11 +122,12 @@ export function Penempatan({ level, ujian, pace, langkah, onSelesai }: {
             <div className="tr-v">Mulai dari minggu {hasil.unitMulai}</div>
             <div className="pen-big">{JUMLAH_UNIT} minggu jadi <b>{sisaUnit}</b></div>
             <div className="tr-s" style={{ marginTop: 6 }}>{hasil.unitMulai > 1
-              ? `Materi minggu 1–${hasil.unitMulai - 1} udah kamu kuasai, jadi langsung dilewati. Sisa ${hasil.unitMulai - 1} minggu jadi cadangan sebelum ujian.`
+              ? `Materi minggu 1–${hasil.unitMulai - 1} udah kamu kuasai, jadi langsung dilewati.${jadwal.mode === "normal" && ujian ? ` Sisa ${hasil.unitMulai - 1} minggu jadi cadangan sebelum ujian.` : ""}`
               : "Kita mulai dari awal biar fondasinya kuat. Unit yang udah kamu bisa bakal kerasa cepet."}</div>
           </div>
           <div className="tr-hx">{/* eslint-disable-next-line @next/next/no-img-element -- PNG transparan Honix */}<img className="hx" src={honixSrc("lulus")} alt="Honix senang" /></div>
         </section>
+        {jadwal.mode !== "normal" && <p className="ku-mode" role="note">{TEKS_MODE[jadwal.mode](jadwal.minggu.length, jadwal.sampai)}</p>}
         <section className="card sr">
           <div className="h2">Posisi per bagian</div>
           {hasil.posisi.filter(p => p.total > 0).map(p => (

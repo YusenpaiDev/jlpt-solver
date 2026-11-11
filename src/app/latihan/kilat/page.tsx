@@ -8,7 +8,7 @@ import { useHonixReaksi } from "@/lib/use-honix-reaksi";
 import { putarHonix } from "@/lib/honix-sfx";
 import { catatJawabanBunpou } from "@/lib/bunpou-progres";
 import { catatJenis, jatuhTempo } from "@/lib/kurikulum-db";
-import { susunUnit } from "@/lib/kurikulum";
+import { bacaUnit, muatUnit } from "@/lib/dek-materi";
 import { MomenKurikulum, type IsiMomen } from "@/components/kurikulum/Momen";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
@@ -109,7 +109,8 @@ function KilatPlayer({ level }: { level: string }) {
   /* Misi harian (Rencana Belajar): mode=ulang → pola sering salah;
      misi=1|2|3|penyelamat → akhir sesi jadi layar pindah langkah. */
   const mode = params.get("mode");
-  const unit = Number(params.get("unit")) || 0;
+  /* ?unit=5 atau 5,6 (dua unit seminggu kalau kurikulum dipadatin) */
+  const unitP = params.get("unit");
   const misi = langkahMisi(params.get("misi"));
   const [mulai] = useState(() => Date.now());
   /* Kartu teknik 文法形式の判断 sebelum soal pertama, kecuali udah disembunyiin. */
@@ -162,8 +163,11 @@ function KilatPlayer({ level }: { level: string }) {
       let pats = d.patterns;
       if (group) pats = pats.filter(p => p.functionGroup === group);
       /* Kurikulum: unit=n → pola unit itu; mode=tempo → yang jatuh tempo hari ini. */
-      if (unit >= 1 && unit <= 26) {
-        const isi = new Set(susunUnit([], d.patterns)[unit - 1].pola);
+      const unit = bacaUnit(unitP);
+      if (unit.length) {
+        const semua = await muatUnit(level);
+        if (batal) return;
+        const isi = new Set(unit.flatMap(u => semua[u - 1].pola));
         pats = pats.filter(p => isi.has(p.pattern));
       }
       if (mode === "tempo") {
@@ -181,7 +185,7 @@ function KilatPlayer({ level }: { level: string }) {
     }
     init();
     return () => { batal = true; };
-  }, [level, group, item, count, mode, unit]);
+  }, [level, group, item, count, mode, unitP]);
 
   const q = qs && !done ? qs[idx] : null;
 

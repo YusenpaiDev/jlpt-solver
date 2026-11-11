@@ -59,5 +59,9 @@ export const ATURAN = {
   ulangan: { kata: 12, pola: 6, jenis: 6, senang: 0.75 },
   /** momen kecil nutup sendiri setelah n detik */
   momenDetik: 8,
+  /** USULAN mode sisa waktu: ≤ akhir minggu = mode Akhir (gak ada materi baru); maks unit per
+      minggu kalau dipadatin; minggu terakhir sebelum ujian disisain buat ulang & simulasi;
+      mode Kejar simulasi tiap n hari */
+  waktu: { akhir: 4, maksPerMinggu: 2, cadangan: 1, simulasiKejar: 14 },
 };
 export type Aturan = typeof ATURAN;

@@ -8,13 +8,13 @@ import { createPortal } from "react-dom";
 import { honixSrc, type HonixPose } from "@/lib/honix-pose";
 import "@/styles/kurikulum.css";
 import { ITEM_PENYELAMAT, MENIT_PENYELAMAT, PACE_MISI, langkahBerikut, urlLangkah, urlPenyelamat, type Langkah } from "@/lib/misi-harian";
-import { rencanaKurikulum, urlKurikulum } from "@/lib/misi-kurikulum";
+import { namaUnit, rencanaKurikulum, setUnit, urlKurikulum } from "@/lib/misi-kurikulum";
 import { useMisiHarian, type AlasanBolong } from "@/lib/use-misi-harian";
 import { useKurikulum } from "@/lib/use-kurikulum";
 import { fiturLive } from "@/lib/kurikulum-config";
-import { seninDari } from "@/lib/kurikulum";
+import { labelPosisi, seninDari } from "@/lib/kurikulum";
 import { Strip } from "@/components/kurikulum/Bagian";
-import { unitUlangan } from "@/components/kurikulum/Ulangan";
+import { judulUlangan, unitUlangan } from "@/components/kurikulum/Ulangan";
 import { MomenKurikulum, type IsiMomen } from "@/components/kurikulum/Momen";
 
 const BOLONG: Record<AlasanBolong, [string, string]> = {
@@ -63,11 +63,12 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
   /* Minggu baru: momen "unit selesai" sekali per minggu (§8). */
   useEffect(() => {
     if (!ku || !senin) return;
-    const lalu = ku.unit[Math.min(26, ku.cur - 1) - 1];
-    if (!lalu || ku.cur - 1 < (ku.kur?.unit_mulai ?? 1) || ku.cur > 27 || lalu.st === "skip") return;
+    const lalu = setUnit(ku, ku.lalu);
+    if (!lalu) return;
     if (baca(KUNCI_MOMEN) === senin) return;
     tulis(KUNCI_MOMEN, senin);
-    const t = setTimeout(() => setMomen({ jenis: "unit", minggu: lalu.u, kata: lalu.kata.length, pola: lalu.pola.length }), 600);
+    const isi: IsiMomen = { jenis: "unit", judul: namaUnit(ku, ku.lalu), kata: lalu.kata.length, pola: lalu.pola.length, berikut: ku.ini.length ? namaUnit(ku, ku.ini) : null };
+    const t = setTimeout(() => setMomen(isi), 600);
     return () => clearTimeout(t);
   }, [ku, senin]);
 
@@ -85,10 +86,11 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
   const rencana = ku ? rencanaKurikulum(ku, m.tingkat) : m.rencana;
   const berikut = langkahBerikut(rencana, m.langkah);
   const urlBerikut = (l: Langkah) => (ku ? urlKurikulum(l, ku) : urlLangkah(l, m.salah));
-  const eyebrow = ku ? `Misi hari ini · ${ku.cur > 26 ? "masa cadangan" : `Minggu ${ku.cur} dari 26`}` : "Misi hari ini";
+  const posisi = ku ? labelPosisi(ku.mode, ku.ini) : "";
+  const eyebrow = ku ? `Misi hari ini · ${posisi}` : "Misi hari ini";
   const tierKilat = ku?.tingkat.get("文法形式の判断")?.tingkat ?? 1;
-  const unitUl = ku ? unitUlangan(ku) : null;
-  const ulanganSenin = ku && fiturLive("ulangan") && unitUl && new Date(`${ku.hariIni}T12:00:00`).getDay() === 1
+  const unitUl = ku ? unitUlangan(ku) : [];
+  const ulanganSenin = ku && fiturLive("ulangan") && unitUl.length > 0 && new Date(`${ku.hariIni}T12:00:00`).getDay() === 1
     && !ku.ulangan.some(u => u.minggu === senin) && !lewatSenin && baca(KUNCI_LEWAT) !== senin;
   const selesai = berikut === null;
   let kartu: React.ReactNode;
@@ -97,8 +99,8 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
   if (ulanganSenin) {
     kartu = (
       <div className="card misi">
-        <div className="mku-h"><div className="eyebrow">Senin · misi khusus · Minggu {ku.cur} dari 26</div><Link href="/kurikulum">Peta kurikulum →</Link></div>
-        <div className="misi-t">Ulangan minggu {unitUl} · ±10 menit</div>
+        <div className="mku-h"><div className="eyebrow">Senin · misi khusus · {posisi}</div><Link href="/kurikulum">Peta kurikulum →</Link></div>
+        <div className="misi-t">Ulangan {judulUlangan(ku, unitUl)} · ±10 menit</div>
         <Strip unit={ku.unit} />
         <p className="misi-p">Materi & yang salah minggu lalu, ditanya ulang dalam bentuk baru. <b>24 soal.</b> Misi biasa tetap ada setelahnya.</p>
         <div className="misi-cta">
@@ -170,6 +172,7 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
           <Kepala eyebrow={eyebrow} peta={Boolean(ku)} judul={`${P.e} ${P.t} · ${P.m} menit`} menit={m.menitHariIni} target={P.m} />
           {ku && <Strip unit={ku.unit} />}
           {rencana[0].dilewati && !jalan && <p className="misi-p">Gak ada yang perlu diulang hari ini. Waktunya dipindah ke materi baru dan latihan soal.</p>}
+          {ku && !ku.ini.length && <p className="misi-p">{ku.mode === "akhir" ? "Ujian udah dekat, materi baru gak ditambah." : "Semua unit udah kebagian."} Tambahin satu bagian set latihan format JLPT tiap hari. <Link href="/bank-soal">Buka Bank Soal →</Link></p>}
           {langkah}
           <div className="misi-cta">
             <Link className="btn btn-p btn-lg" href={urlBerikut(berikut)}>{jalan ? `Lanjut · ${berikut.judul}` : `Mulai misi · ${P.m} menit`}</Link>

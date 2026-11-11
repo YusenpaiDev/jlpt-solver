@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { catatItem, jatuhTempo } from "@/lib/kurikulum-db";
-import { susunUnit } from "@/lib/kurikulum";
+import { bacaUnit, muatUnit } from "@/lib/dek-materi";
 import { catatAktivitas } from "@/lib/aktivitas";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useHonixReaksi } from "@/lib/use-honix-reaksi";
@@ -120,7 +120,8 @@ function KotobaPlayer({ level }: { level: string }) {
   /* Misi harian (Rencana Belajar): mode=ulang → kata sering salah, mode=baru → kata baru;
      misi=1|2|3|penyelamat → akhir sesi jadi layar pindah langkah. */
   const mode = params.get("mode");
-  const unit = Number(params.get("unit")) || 0;
+  /* ?unit=5 atau 5,6 (dua unit seminggu kalau kurikulum dipadatin) */
+  const unitP = params.get("unit");
   const misi = langkahMisi(params.get("misi"));
   const [mulai] = useState(() => Date.now());
 
@@ -164,8 +165,11 @@ function KotobaPlayer({ level }: { level: string }) {
       let pool = deck.vocabulary;
       if (group) pool = pool.filter(w => w.group === group);
       /* Kurikulum: unit=n → kata unit itu; mode=tempo → yang jatuh tempo hari ini. */
-      if (unit >= 1 && unit <= 26) {
-        const isi = new Set(susunUnit(deck.vocabulary, [])[unit - 1].kata);
+      const unit = bacaUnit(unitP);
+      if (unit.length) {
+        const semua = await muatUnit(level);
+        if (batal) return;
+        const isi = new Set(unit.flatMap(u => semua[u - 1].kata));
         pool = pool.filter(w => isi.has(w.word));
       }
       if (mode === "tempo") {
@@ -183,7 +187,7 @@ function KotobaPlayer({ level }: { level: string }) {
     }
     init();
     return () => { batal = true; };
-  }, [level, group, count, mode, unit]);
+  }, [level, group, count, mode, unitP]);
 
   const q = qs && !done ? qs[idx] : null;
   const pick = useCallback((n: number) => { if (locked || !q || n >= q.opts.length) return; setSel(n); }, [locked, q]);

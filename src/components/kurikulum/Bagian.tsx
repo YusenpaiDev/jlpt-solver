@@ -6,7 +6,8 @@ import "@/styles/kurikulum.css";
 import Link from "next/link";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
-import { faseMinggu } from "@/lib/kurikulum-config";
+import { JUMLAH_UNIT, faseMinggu } from "@/lib/kurikulum-config";
+import { labelPosisi } from "@/lib/kurikulum";
 import type { UserStats } from "@/lib/use-user-stats";
 import type { Kurikulum, UnitTampil } from "@/lib/use-kurikulum";
 
@@ -66,19 +67,43 @@ export function BelumMulai({ level, penempatan }: { level: string; penempatan: b
   );
 }
 
+/** Penjelasan mode sisa waktu (Dipadatin / Kejar / Akhir). Normal = gak tampil. */
+export function CatatanMode({ k }: { k: Kurikulum }) {
+  if (!k.kur || !k.jadwal || k.mode === "normal") return null;
+  const mulai = k.kur.unit_mulai;
+  const sisa = JUMLAH_UNIT - mulai + 1;
+  const n = k.jadwal.minggu.length;
+  const sampai = k.jadwal.sampai;
+  const sering = k.kur.level !== "N5";
+  return (
+    <div className="ku-mode" role="note">
+      {k.mode === "padat" && <><b>Mode Dipadatin.</b> Ujian {n} minggu dari awal mulai, sisa {sisa} unit. Jadi sebagian minggu dapat 2 unit, dan minggu terakhir disisain buat ulang & simulasi.</>}
+      {k.mode === "kejar" && <><b>Mode Kejar.</b> Waktunya gak cukup buat semua materi. Unit {mulai}–{sampai} dijadwalin, sampai 2 unit per minggu{sering ? "; unit awal isinya kata & pola yang paling sering keluar di soal" : ""}. Unit {sampai + 1}–{JUMLAH_UNIT} di luar jadwal, tetap bisa diintip. Simulasi tiap 2 minggu.</>}
+      {k.mode === "akhir" && <><b>Mode Akhir.</b> Ujian tinggal {k.sisaMinggu ?? n} minggu, jadi materi baru gak ditambah. Fokusnya ulang yang lemah, set latihan format JLPT di Bank Soal, dan strategi ujian. Simulasi 2 minggu & 1 minggu sebelum ujian.</>}
+    </div>
+  );
+}
+
+/** Kalimat posisi di kepala halaman. */
+function subPosisi(k: Kurikulum): string {
+  if (!k.ini.length) return k.mode === "akhir" ? "Mode akhir: ulang yang lemah + set latihan format JLPT" : "Masa cadangan sebelum ujian";
+  const fase = faseMinggu(k.ini[0]);
+  return `${labelPosisi(k.mode, k.ini)} · Fase ${fase.t}`;
+}
+
 /** Kepala /kurikulum + tab Peta minggu / Keterampilan (§6). */
 export function KepalaKurikulum({ k, tab }: { k: Kurikulum; tab: "peta" | "skill" }) {
-  const fase = faseMinggu(Math.min(26, k.cur));
   return (
     <>
       <div className="head">
         <div>
           <div className="eyebrow">{k.kur?.level}{k.kur?.tanggal_ujian ? ` · ujian ${bulanTahun(k.kur.tanggal_ujian)}` : ""}{k.sisaMinggu != null ? ` · ${k.sisaMinggu} minggu lagi` : ""}</div>
           <h1 className="h1">Kurikulum<span className="jp-g" lang="ja">課程</span></h1>
-          <p className="sub">{k.cur > 26 ? "Masa cadangan sebelum ujian" : `Minggu ${k.cur} dari 26 · Fase ${fase.t}`}. Tiap minggu satu unit: kata, pola, dan jenis soal.</p>
+          <p className="sub">{subPosisi(k)}.{k.mode === "normal" ? " Tiap minggu satu unit: kata, pola, dan jenis soal." : ""}</p>
         </div>
         <Link className="btn btn-p" href="/">Lanjut misi hari ini</Link>
       </div>
+      <CatatanMode k={k} />
       <div className="tabs" role="tablist">
         <Link className={`tab${tab === "peta" ? " on" : ""}`} href="/kurikulum" role="tab" aria-selected={tab === "peta"}>Peta minggu</Link>
         <Link className={`tab${tab === "skill" ? " on" : ""}`} href="/kurikulum/keterampilan" role="tab" aria-selected={tab === "skill"}>Keterampilan</Link>
