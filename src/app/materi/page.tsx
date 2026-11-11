@@ -10,8 +10,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { BarisLevel } from "@/components/rencana/BarisLevel";
-import { KartuKurikulumDisiapkan } from "@/components/rencana/KartuKurikulum";
+import { KartuKurikulumDisiapkan, KartuKurikulumLive } from "@/components/rencana/KartuKurikulum";
+import { fiturLive } from "@/lib/kurikulum-config";
 import { useUserStats } from "@/lib/use-user-stats";
+import { muatBunpou, muatKotoba, type DekBunpou, type DekKotoba } from "@/lib/dek-materi";
 import { gabungBankSoal, type SetKatalog } from "@/lib/bank-soal";
 import { susunPerjalanan } from "@/lib/perjalanan-soal";
 import { bacaTerakhir, kapan, type Terakhir } from "@/lib/terakhir-dibuka";
@@ -22,24 +24,6 @@ import {
 } from "@/lib/status-materi";
 
 type Lv = "N1" | "N2" | "N3" | "N4" | "N5";
-interface DekKotoba { groupOrder: string[]; vocabulary: { word: string; group: string }[] }
-interface DekBunpou { groups: { key: string; name: string; jp: string }[]; patterns: { pattern: string; functionGroup: string; confusableWith: string[] }[] }
-
-/* Deck level target di-load pas perlu biar bundle awal ringan. */
-const KOTOBA: Record<Lv, () => Promise<DekKotoba>> = {
-  N5: () => import("@/data/kotoba/N5.json").then(m => m.default as DekKotoba),
-  N4: () => import("@/data/kotoba/N4.json").then(m => m.default as DekKotoba),
-  N3: () => import("@/data/kotoba/N3.json").then(m => m.default as DekKotoba),
-  N2: () => import("@/data/kotoba/N2.json").then(m => m.default as DekKotoba),
-  N1: () => import("@/data/kotoba/N1.json").then(m => m.default as DekKotoba),
-};
-const BUNPOU: Record<Lv, () => Promise<DekBunpou>> = {
-  N5: () => import("@/data/bunpou/N5.json").then(m => m.default as DekBunpou),
-  N4: () => import("@/data/bunpou/N4.json").then(m => m.default as DekBunpou),
-  N3: () => import("@/data/bunpou/N3.json").then(m => m.default as DekBunpou),
-  N2: () => import("@/data/bunpou/N2.json").then(m => m.default as DekBunpou),
-  N1: () => import("@/data/bunpou/N1.json").then(m => m.default as DekBunpou),
-};
 
 /* Warna 4 status: Dikuasai · Pernah muncul · Sering salah · Baru */
 const EMPAT: [string, string][] = [
@@ -98,7 +82,7 @@ export default function MateriPage() {
   useEffect(() => {
     if (!stats.loaded) return;
     let batal = false;
-    void Promise.all([KOTOBA[lv](), BUNPOU[lv]()]).then(([k, b]) => {
+    void Promise.all([muatKotoba(lv), muatBunpou(lv)]).then(([k, b]) => {
       if (batal) return;
       setDekK(k); setDekB(b);
       if (DEV_BYPASS) {
@@ -171,7 +155,9 @@ export default function MateriPage() {
           {!hasil ? <p className="mb-muat" role="status">Memuat materi…</p> : (
             <>
               <div className="mt-sec">
-                <KartuKurikulumDisiapkan level={lv} kata={dekK?.vocabulary.length ?? 0} pola={dekB?.patterns.length ?? 0} />
+                {fiturLive("kurikulum")
+                  ? <KartuKurikulumLive level={lv} />
+                  : <KartuKurikulumDisiapkan level={lv} kata={dekK?.vocabulary.length ?? 0} pola={dekB?.patterns.length ?? 0} />}
               </div>
 
               <div className="today">

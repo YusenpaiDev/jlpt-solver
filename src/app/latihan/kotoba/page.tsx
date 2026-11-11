@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { catatItem, jatuhTempo } from "@/lib/kurikulum-db";
+import { susunUnit } from "@/lib/kurikulum";
 import { catatAktivitas } from "@/lib/aktivitas";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useHonixReaksi } from "@/lib/use-honix-reaksi";
@@ -118,6 +120,7 @@ function KotobaPlayer({ level }: { level: string }) {
   /* Misi harian (Rencana Belajar): mode=ulang → kata sering salah, mode=baru → kata baru;
      misi=1|2|3|penyelamat → akhir sesi jadi layar pindah langkah. */
   const mode = params.get("mode");
+  const unit = Number(params.get("unit")) || 0;
   const misi = langkahMisi(params.get("misi"));
   const [mulai] = useState(() => Date.now());
 
@@ -160,6 +163,17 @@ function KotobaPlayer({ level }: { level: string }) {
 
       let pool = deck.vocabulary;
       if (group) pool = pool.filter(w => w.group === group);
+      /* Kurikulum: unit=n → kata unit itu; mode=tempo → yang jatuh tempo hari ini. */
+      if (unit >= 1 && unit <= 26) {
+        const isi = new Set(susunUnit(deck.vocabulary, [])[unit - 1].kata);
+        pool = pool.filter(w => isi.has(w.word));
+      }
+      if (mode === "tempo") {
+        const tempo = await jatuhTempo("kata", level);
+        if (batal) return;
+        const saring = pool.filter(w => tempo.has(w.word));
+        if (saring.length) pool = saring;
+      }
       if (mode === "ulang" || mode === "baru") {
         const mau = mode === "ulang" ? "wrong" : "new";
         const saring = pool.filter(w => statOf(w.word, progres) === mau);
@@ -169,7 +183,7 @@ function KotobaPlayer({ level }: { level: string }) {
     }
     init();
     return () => { batal = true; };
-  }, [level, group, count, mode]);
+  }, [level, group, count, mode, unit]);
 
   const q = qs && !done ? qs[idx] : null;
   const pick = useCallback((n: number) => { if (locked || !q || n >= q.opts.length) return; setSel(n); }, [locked, q]);
@@ -196,6 +210,7 @@ function KotobaPlayer({ level }: { level: string }) {
         // p_level dikirim biar Statistik bisa ngerinci penguasaan per level tanpa
         // mesti muat deck (2,3 MB) cuma buat nyocokin kata → level.
         await supabase.rpc("catat_kotoba", { p_word: q.word, p_benar: correct, p_level: level });
+        void catatItem("kata", q.word, level, correct);
         catatAktivitas("kotoba");
         if (!user) return;
         const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();

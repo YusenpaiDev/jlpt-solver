@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { langkahBerikut, urlLangkah } from "@/lib/misi-harian";
 import { catatMisi, useMisiHarian } from "@/lib/use-misi-harian";
+import { useKurikulum } from "@/lib/use-kurikulum";
+import { rencanaKurikulum, urlKurikulum } from "@/lib/misi-kurikulum";
 
 export type LangkahMisi = "1" | "2" | "3" | "penyelamat";
 export const langkahMisi = (x: string | null): LangkahMisi | null =>
@@ -21,6 +23,10 @@ export function PindahLangkah({ misi, level, benar, total, mulai }: {
   mulai: number;
 }) {
   const m = useMisiHarian(level);
+  /* Kurikulum aktif → langkah & link versi kurikulum, sama kayak kartu di Beranda. */
+  const k = useKurikulum(level);
+  const ku = k.siap && k.kur ? k : null;
+  const rencana = ku ? rencanaKurikulum(ku, m.tingkat) : m.rencana;
   const [menit] = useState(() => Math.max(1, Math.round((Date.now() - mulai) / 60_000)));
   const tercatat = useRef(false);
 
@@ -31,8 +37,8 @@ export function PindahLangkah({ misi, level, benar, total, mulai }: {
   }, [misi]);
 
   const n = misi === "penyelamat" ? 0 : Number(misi);
-  const ini = m.rencana.find(l => l.n === n);
-  const berikut = misi === "penyelamat" ? null : langkahBerikut(m.rencana, n);
+  const ini = rencana.find(l => l.n === n);
+  const berikut = misi === "penyelamat" ? null : langkahBerikut(rencana, n);
   const hasil = `${benar} dari ${total} benar · ${menit} menit.`;
 
   let isi: React.ReactNode;
@@ -67,7 +73,7 @@ export function PindahLangkah({ misi, level, benar, total, mulai }: {
         <div className="ml-next"><span>Berikutnya</span><b>{berikut.judul}</b><small>{berikut.isi} · ±{berikut.menit} menit</small></div>
         <div className="ml-a">
           {m.siap
-            ? <Link className="btn btn-p btn-lg" href={urlLangkah(berikut, m.salah)}>Lanjut</Link>
+            ? <Link className="btn btn-p btn-lg" href={ku ? urlKurikulum(berikut, ku) : urlLangkah(berikut, m.salah)}>Lanjut</Link>
             : <span className="btn btn-p btn-lg" aria-disabled="true">Menyiapkan…</span>}
           <Link className="btn btn-q" href="/">Berhenti dulu</Link>
         </div>

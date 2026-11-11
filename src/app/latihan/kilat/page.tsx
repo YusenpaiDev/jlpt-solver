@@ -7,6 +7,9 @@ import { useUserStats } from "@/lib/use-user-stats";
 import { useHonixReaksi } from "@/lib/use-honix-reaksi";
 import { putarHonix } from "@/lib/honix-sfx";
 import { catatJawabanBunpou } from "@/lib/bunpou-progres";
+import { catatJenis, jatuhTempo } from "@/lib/kurikulum-db";
+import { susunUnit } from "@/lib/kurikulum";
+import { MomenKurikulum, type IsiMomen } from "@/components/kurikulum/Momen";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
 import { PindahLangkah, langkahMisi } from "@/components/rencana/PindahLangkah";
@@ -106,6 +109,7 @@ function KilatPlayer({ level }: { level: string }) {
   /* Misi harian (Rencana Belajar): mode=ulang → pola sering salah;
      misi=1|2|3|penyelamat → akhir sesi jadi layar pindah langkah. */
   const mode = params.get("mode");
+  const unit = Number(params.get("unit")) || 0;
   const misi = langkahMisi(params.get("misi"));
   const [mulai] = useState(() => Date.now());
   /* Kartu teknik 文法形式の判断 sebelum soal pertama, kecuali udah disembunyiin. */
@@ -157,6 +161,17 @@ function KilatPlayer({ level }: { level: string }) {
 
       let pats = d.patterns;
       if (group) pats = pats.filter(p => p.functionGroup === group);
+      /* Kurikulum: unit=n → pola unit itu; mode=tempo → yang jatuh tempo hari ini. */
+      if (unit >= 1 && unit <= 26) {
+        const isi = new Set(susunUnit([], d.patterns)[unit - 1].pola);
+        pats = pats.filter(p => isi.has(p.pattern));
+      }
+      if (mode === "tempo") {
+        const tempo = await jatuhTempo("pola", level);
+        if (batal) return;
+        const saring = pats.filter(p => tempo.has(p.pattern));
+        if (saring.length) pats = saring;
+      }
       else if (item) { const it = byId.get(item); pats = it ? [it, ...it.confusableWith.map(c => byId.get(c)).filter(Boolean) as Pattern[]] : d.patterns; }
       if (mode === "ulang") {
         const saring = pats.filter(p => statOf(p.pattern, progres) === "wrong");
@@ -166,14 +181,23 @@ function KilatPlayer({ level }: { level: string }) {
     }
     init();
     return () => { batal = true; };
-  }, [level, group, item, count, mode]);
+  }, [level, group, item, count, mode, unit]);
 
   const q = qs && !done ? qs[idx] : null;
 
   const pick = useCallback((n: number) => { if (locked || !q || n >= q.opts.length) return; setSel(n); }, [locked, q]);
 
   // Rekam SATU jawaban langsung ke DB (biar 1 soal aja udah kecatat, walau keluar di tengah).
-  const recordOne = useCallback((pattern: string, correct: boolean) => catatJawabanBunpou(pattern, correct, { xp: true }), []);
+  /* Kurikulum: jawaban Latihan Kilat = jenis 文法形式の判断 → tingkat T1–T3.
+     Naik/turun ditampilin sekali di akhir set (momen kecil). */
+  const [momen, setMomen] = useState<IsiMomen | null>(null);
+  const [momenTutup, setMomenTutup] = useState(false);
+  const recordOne = useCallback((pattern: string, correct: boolean) => {
+    void catatJenis("文法形式の判断", correct).then(e => {
+      if (e && e.arah !== 0 && e.akurasi != null) setMomen({ jenis: e.arah > 0 ? "naik" : "turun", jenisSoal: "文法形式の判断", tingkat: e.tingkat, akurasi: e.akurasi });
+    });
+    return catatJawabanBunpou(pattern, correct, { xp: true, level });
+  }, [level]);
 
   // Bikin/entri Riwayat drill dari jawaban PERTAMA, update tiap jawab → muncul di Log walau 1 soal.
   const saveSession = useCallback(async (answered: number, correctCount: number) => {
@@ -265,6 +289,7 @@ function KilatPlayer({ level }: { level: string }) {
     return (
       <div className="latihan-kilat">
         {misi && <PindahLangkah misi={misi} level={level} benar={ok} total={qs.length} mulai={mulai} />}
+        {done && momen && !momenTutup && <MomenKurikulum isi={momen} onTutup={() => setMomenTutup(true)} />}
         {popupSelesai && !misi && (
           <HonixFinishDialog
             skor={ok} total={qs.length} kategori="文法" xp={xp} streak={stats.streak}

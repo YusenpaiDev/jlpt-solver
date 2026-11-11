@@ -6,8 +6,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { honixSrc, type HonixPose } from "@/lib/honix-pose";
-import { ITEM_PENYELAMAT, MENIT_PENYELAMAT, PACE_MISI, langkahBerikut, urlLangkah, urlPenyelamat } from "@/lib/misi-harian";
+import "@/styles/kurikulum.css";
+import { ITEM_PENYELAMAT, MENIT_PENYELAMAT, PACE_MISI, langkahBerikut, urlLangkah, urlPenyelamat, type Langkah } from "@/lib/misi-harian";
+import { rencanaKurikulum, urlKurikulum } from "@/lib/misi-kurikulum";
 import { useMisiHarian, type AlasanBolong } from "@/lib/use-misi-harian";
+import { useKurikulum } from "@/lib/use-kurikulum";
+import { fiturLive } from "@/lib/kurikulum-config";
+import { seninDari } from "@/lib/kurikulum";
+import { Strip } from "@/components/kurikulum/Bagian";
+import { unitUlangan } from "@/components/kurikulum/Ulangan";
+import { MomenKurikulum, type IsiMomen } from "@/components/kurikulum/Momen";
 
 const BOLONG: Record<AlasanBolong, [string, string]> = {
   sibuk: ["Lagi sibuk", "Wajar. Gimana kalau turun ke Santai 10 menit dulu? Bisa naik lagi kapan aja."],
@@ -17,11 +25,16 @@ const BOLONG: Record<AlasanBolong, [string, string]> = {
   lain: ["Lainnya", "Oke. Mau turun ke Santai 10 menit dulu biar enteng?"],
 };
 
-function Kepala({ eyebrow, judul, menit, target }: { eyebrow: string; judul: string; menit: number; target: number }) {
+function Kepala({ eyebrow, judul, menit, target, peta = false }: { eyebrow: string; judul: string; menit: number; target: number; peta?: boolean }) {
   return (
     <>
       <div className="misi-h">
-        <div><div className="eyebrow">{eyebrow}</div><div className="misi-t">{judul}</div></div>
+        <div>
+          {peta
+            ? <div className="mku-h"><div className="eyebrow">{eyebrow}</div><Link href="/kurikulum">Peta →</Link></div>
+            : <div className="eyebrow">{eyebrow}</div>}
+          <div className="misi-t">{judul}</div>
+        </div>
         <div className="misi-min"><b>{menit}</b> / {target} menit</div>
       </div>
       <div className="mbar" role="progressbar" aria-label="Menit belajar hari ini" aria-valuenow={menit} aria-valuemin={0} aria-valuemax={target}>
@@ -31,11 +44,32 @@ function Kepala({ eyebrow, judul, menit, target }: { eyebrow: string; judul: str
   );
 }
 
-/** Kartu misi harian di Beranda (handoff Rencana Belajar §3–4). */
+const KUNCI_LEWAT = "honix:lewat-ulangan";
+const KUNCI_MOMEN = "honix:momen-unit";
+const baca = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+const tulis = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* mode privat */ } };
+
+/** Kartu misi harian di Beranda (handoff Rencana Belajar §3–4 + tempelan kurikulum §9). */
 export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak: number }) {
   const m = useMisiHarian(level);
+  const k = useKurikulum(level);
+  const ku = k.siap && k.kur ? k : null;
   const [biasa, setBiasa] = useState(false);
   const [pilih, setPilih] = useState<AlasanBolong | null>(null);
+  const senin = ku ? seninDari(ku.hariIni) : "";
+  const [lewatSenin, setLewatSenin] = useState(false);
+  const [momen, setMomen] = useState<IsiMomen | null>(null);
+
+  /* Minggu baru: momen "unit selesai" sekali per minggu (§8). */
+  useEffect(() => {
+    if (!ku || !senin) return;
+    const lalu = ku.unit[Math.min(26, ku.cur - 1) - 1];
+    if (!lalu || ku.cur - 1 < (ku.kur?.unit_mulai ?? 1) || ku.cur > 27 || lalu.st === "skip") return;
+    if (baca(KUNCI_MOMEN) === senin) return;
+    tulis(KUNCI_MOMEN, senin);
+    const t = setTimeout(() => setMomen({ jenis: "unit", minggu: lalu.u, kata: lalu.kata.length, pola: lalu.pola.length }), 600);
+    return () => clearTimeout(t);
+  }, [ku, senin]);
 
   const { tampilSheet, tutupSheet } = m;
   useEffect(() => {
@@ -48,12 +82,33 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
   if (!m.siap) return <div className="rbk rbk-misi"><div className="card misi" aria-busy="true" style={{ minHeight: 180 }} /></div>;
 
   const P = PACE_MISI[m.tingkat];
-  const berikut = langkahBerikut(m.rencana, m.langkah);
+  const rencana = ku ? rencanaKurikulum(ku, m.tingkat) : m.rencana;
+  const berikut = langkahBerikut(rencana, m.langkah);
+  const urlBerikut = (l: Langkah) => (ku ? urlKurikulum(l, ku) : urlLangkah(l, m.salah));
+  const eyebrow = ku ? `Misi hari ini · ${ku.cur > 26 ? "masa cadangan" : `Minggu ${ku.cur} dari 26`}` : "Misi hari ini";
+  const tierKilat = ku?.tingkat.get("文法形式の判断")?.tingkat ?? 1;
+  const unitUl = ku ? unitUlangan(ku) : null;
+  const ulanganSenin = ku && fiturLive("ulangan") && unitUl && new Date(`${ku.hariIni}T12:00:00`).getDay() === 1
+    && !ku.ulangan.some(u => u.minggu === senin) && !lewatSenin && baca(KUNCI_LEWAT) !== senin;
   const selesai = berikut === null;
   let kartu: React.ReactNode;
   let honix: { pose: HonixPose; bub: string } | null = null;
 
-  if (m.penyelamat && !biasa) {
+  if (ulanganSenin) {
+    kartu = (
+      <div className="card misi">
+        <div className="mku-h"><div className="eyebrow">Senin · misi khusus · Minggu {ku.cur} dari 26</div><Link href="/kurikulum">Peta kurikulum →</Link></div>
+        <div className="misi-t">Ulangan minggu {unitUl} · ±10 menit</div>
+        <Strip unit={ku.unit} />
+        <p className="misi-p">Materi & yang salah minggu lalu, ditanya ulang dalam bentuk baru. <b>24 soal.</b> Misi biasa tetap ada setelahnya.</p>
+        <div className="misi-cta">
+          <Link className="btn btn-p btn-lg" href="/progres/ulangan">Mulai ulangan</Link>
+          <button type="button" className="btn btn-q" onClick={() => { tulis(KUNCI_LEWAT, senin); setLewatSenin(true); }}>Lewati, ke misi biasa</button>
+        </div>
+        <p className="note" style={{ marginTop: 10 }}>Dilewati juga gak apa-apa. Yang lupa tetap masuk misi minggu ini.</p>
+      </div>
+    );
+  } else if (m.penyelamat && !biasa) {
     const apa = m.salah.kata > 0 ? "kata" : m.salah.pola > 0 ? "pola" : null;
     kartu = (
       <div className="card misi rescue">
@@ -74,14 +129,21 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
     const status = (n: number, dilewati: boolean) =>
       dilewati ? "skip" : n <= m.langkah ? "done" : m.langkah > 0 && berikut?.n === n ? "run" : "todo";
     const label = { done: "Selesai", run: "Lagi jalan", skip: "Gak ada yang perlu diulang" } as Record<string, string>;
+    if (ku) label.skip = "Belum ada yang jatuh tempo";
     const langkah = (
       <ol className="steps">
-        {m.rencana.map(l => {
+        {rencana.map(l => {
           const s = status(l.n, l.dilewati);
           return (
             <li key={l.n} className={`st ${s}`}>
               <span className="st-n">{s === "done" ? "✓" : l.n}</span>
-              <div><b>{l.judul}</b><small>{l.isi}</small><span className="st-s">{label[s] ?? `±${l.menit} menit`}</span></div>
+              <div>
+                <b>{l.judul}</b>
+                {ku && l.n === 3
+                  ? <small>{l.jumlah} soal · <span className="tier">T{tierKilat}</span><span lang="ja">文法形式の判断</span></small>
+                  : <small>{l.isi}</small>}
+                <span className="st-s">{label[s] ?? `±${l.menit} menit`}</span>
+              </div>
             </li>
           );
         })}
@@ -90,7 +152,8 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
     if (selesai) {
       kartu = (
         <div className="card misi done">
-          <Kepala eyebrow="Misi hari ini" judul="Misi selesai" menit={m.menitHariIni} target={P.m} />
+          <Kepala eyebrow={eyebrow} peta={Boolean(ku)} judul="Misi selesai" menit={m.menitHariIni} target={P.m} />
+          {ku && <Strip unit={ku.unit} />}
           <p className="misi-p"><b>{m.menitHariIni} menit</b> hari ini{m.menitHariIni >= P.m ? `, lewat dari target ${P.m}` : ""}. Cap hari ini udah nempel di kalender.</p>
           {langkah}
           <div className="misi-cta">
@@ -104,11 +167,12 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
       const jalan = m.langkah > 0;
       kartu = (
         <div className="card misi">
-          <Kepala eyebrow="Misi hari ini" judul={`${P.e} ${P.t} · ${P.m} menit`} menit={m.menitHariIni} target={P.m} />
-          {m.rencana[0].dilewati && !jalan && <p className="misi-p">Gak ada yang perlu diulang hari ini. Waktunya dipindah ke materi baru dan latihan soal.</p>}
+          <Kepala eyebrow={eyebrow} peta={Boolean(ku)} judul={`${P.e} ${P.t} · ${P.m} menit`} menit={m.menitHariIni} target={P.m} />
+          {ku && <Strip unit={ku.unit} />}
+          {rencana[0].dilewati && !jalan && <p className="misi-p">Gak ada yang perlu diulang hari ini. Waktunya dipindah ke materi baru dan latihan soal.</p>}
           {langkah}
           <div className="misi-cta">
-            <Link className="btn btn-p btn-lg" href={urlLangkah(berikut, m.salah)}>{jalan ? `Lanjut · ${berikut.judul}` : `Mulai misi · ${P.m} menit`}</Link>
+            <Link className="btn btn-p btn-lg" href={urlBerikut(berikut)}>{jalan ? `Lanjut · ${berikut.judul}` : `Mulai misi · ${P.m} menit`}</Link>
             <span className="note">{jalan ? `Lanjut dari langkah ${berikut.n}. Progres tersimpan otomatis.` : "Tiga langkah, jalan otomatis berurutan."}</span>
           </div>
         </div>
@@ -128,6 +192,8 @@ export function MisiHarian({ level, rekorStreak }: { level: string; rekorStreak:
           </div>
         </div>
       ) : kartu}
+
+      {momen && <MomenKurikulum isi={momen} onTutup={() => setMomen(null)} />}
 
       {/* Portal ke body: kolom Beranda punya stacking context sendiri, overlay di dalamnya ketutup kartu lain. */}
       {m.tampilSheet && createPortal(<div className="rbk">

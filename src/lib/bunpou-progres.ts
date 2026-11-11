@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { catatAktivitas } from "@/lib/aktivitas";
 import { laporkanXp } from "@/lib/honix-level";
+import { catatItem } from "@/lib/kurikulum-db";
 
 /**
  * Rekam satu jawaban drill Bunpou: bunpou_progress (benar/salah per pola) +
@@ -9,9 +10,11 @@ import { laporkanXp } from "@/lib/honix-level";
  *
  * `xp`: Latihan Kilat ngasih XP (8 benar / 2 salah), drill lain enggak.
  */
-export async function catatJawabanBunpou(pattern: string, benar: boolean, { xp = false } = {}): Promise<void> {
+export async function catatJawabanBunpou(pattern: string, benar: boolean, { xp = false, level }: { xp?: boolean; level?: string } = {}): Promise<void> {
   try {
     void catatAktivitas("bunpou");
+    /* Jadwal ulang kurikulum (no-op selama flag kurikulum mati). */
+    if (level) void catatItem("pola", pattern, level, benar);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;

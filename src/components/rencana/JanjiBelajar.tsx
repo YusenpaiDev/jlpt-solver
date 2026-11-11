@@ -7,15 +7,17 @@ import type { SesiUjian } from "@/lib/sesi-ujian";
 
 /** Kekejar / mepet / belum + perbaikan + atur sesi & pace (handoff Rencana Belajar §5).
  *  `ujian`: YYYY-MM-DD, "none", atau "" (belum milih). Nempel di onboarding & Pengaturan. */
-export function JanjiBelajar({ level, ujian, pace, sesi, onUbah }: {
+export function JanjiBelajar({ level, ujian, pace, sesi, onUbah, sisa = 1 }: {
   level: string;
   ujian: string;
   pace: number;
   sesi: SesiUjian[];
   onUbah: (ujian: string, pace: number) => void;
+  /** bagian materi yang belum dikuasai (hasil tes penempatan) */
+  sisa?: number;
 }) {
   const hariKe = (iso: string) => sesi.find(s => s.iso === iso)?.hari ?? null;
-  const nilai = (iso: string, m: number) => penilaianJanji(level, hariKe(iso), m);
+  const nilai = (iso: string, m: number) => penilaianJanji(level, hariKe(iso), m, sisa);
   const v = nilai(ujian, pace);
 
   const perbaikan = [];

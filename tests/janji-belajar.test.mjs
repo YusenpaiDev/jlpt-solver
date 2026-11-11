@@ -36,3 +36,11 @@ test('next pace up from the three onboarding choices', () => {
   assert.equal(paceBerikut(40), null);
   assert.equal(paceBerikut(60), null);
 });
+
+test('placement result shrinks the hours still needed', async () => {
+  const { penilaianJanji: p } = await import('../src/lib/janji-belajar.ts');
+  const penuh = p('N3', 100, 20);
+  const sisa = p('N3', 100, 20, 0.8);
+  assert.equal(sisa.butuh, Math.round(penuh.butuh * 0.8));
+  assert.equal(p('N3', 100, 20, 7).butuh, penuh.butuh); // dibatasi 0–1
+});

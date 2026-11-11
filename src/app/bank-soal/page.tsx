@@ -9,7 +9,6 @@ import "@/styles/materi-bank.css";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { BarisLevel } from "@/components/rencana/BarisLevel";
 import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
@@ -17,8 +16,8 @@ import { useUserStats } from "@/lib/use-user-stats";
 import { honixSrc } from "@/lib/honix-pose";
 import { fiturLive } from "@/lib/kurikulum-config";
 import { kapan } from "@/lib/terakhir-dibuka";
-import { gabungBankSoal, type SetUjian, type SesiMilik, type SetKatalog } from "@/lib/bank-soal";
-import { DEV_BYPASS, devBankSoal } from "@/lib/dev-materi";
+import type { SetUjian } from "@/lib/bank-soal";
+import { bukaSet, muatBankSoal, urlSet } from "@/lib/bank-soal-muat";
 import {
   susunPerjalanan, berikutnya, ringkasan, cocokSaring, menyala, AMBANG_ULANG,
   type Pos, type Bagian, type Saring,
@@ -47,27 +46,9 @@ export default function BankSoalPage() {
 
   useEffect(() => {
     async function load() {
-      if (DEV_BYPASS) {
-        const mode = new URLSearchParams(window.location.search).get("dev");
-        const d = ["N1", "N2", "N3", "N4", "N5"].map(l => devBankSoal(l, mode));
-        setSemua(gabungBankSoal(d.flatMap(x => x.milik), d.flatMap(x => x.katalog)));
-        setMuat("ready");
-        return;
-      }
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setMuat("error"); return; }
-      const [milik, katalog] = await Promise.all([
-        supabase.from("sessions")
-          .select("id, level, title, total, score, created_at, ai_result->section, ai_result->ready, ai_result->stats")
-          .eq("user_id", user.id)
-          .eq("ai_result->>kind", "materi")
-          .order("created_at", { ascending: false }),
-        supabase.rpc("daftar_katalog"),
-      ]);
-      if (milik.error) { setMuat("error"); return; }
-      /* Katalog gagal kebaca → tetap tampilin salinan yang udah dimiliki. */
-      setSemua(gabungBankSoal((milik.data ?? []) as SesiMilik[], katalog.error ? [] : (katalog.data ?? []) as SetKatalog[]));
+      const hasil = await muatBankSoal();
+      if (!hasil) { setMuat("error"); return; }
+      setSemua(hasil);
       setMuat("ready");
     }
     load().catch(() => setMuat("error"));
@@ -84,20 +65,13 @@ export default function BankSoalPage() {
 
   const buka = async (b?: Bagian) => {
     if (!b || b.status === "segera" || membuka) return;
-    const e = b.set;
-    const ke = (id: string) => router.push(e.section === "choukai" ? `/choukai/${id}` : `/latihan/${id}`);
-    if (e.id) { ke(e.id); return; }
-    if (!e.katalogId) return;
     /* Pertama kali dibuka: database nyalin set dari katalog ke akun ini. */
-    setMembuka(e.katalogId); setGagal(null);
-    const { data, error } = await createClient().rpc("ambil_set", { p_katalog: e.katalogId });
-    if (error || typeof data !== "string") {
-      setMembuka(null);
-      if (error?.message?.includes("subscription_required")) { router.push("/langganan"); return; }
-      setGagal(`Set ${LABEL(b)} ini belum bisa dibuka. Coba lagi sebentar.`);
-      return;
-    }
-    ke(data);
+    if (!b.set.id) { setMembuka(b.set.katalogId); setGagal(null); }
+    const r = await bukaSet(b.set);
+    if ("id" in r) { router.push(urlSet(b.set, r.id)); return; }
+    setMembuka(null);
+    if (r.galat === "langganan") { router.push("/langganan"); return; }
+    setGagal(`Set ${LABEL(b)} ini belum bisa dibuka. Coba lagi sebentar.`);
   };
 
   const siap = muat === "ready" && stats.loaded;

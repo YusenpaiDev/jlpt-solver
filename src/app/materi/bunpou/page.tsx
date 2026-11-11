@@ -209,7 +209,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
   };
   const recordResult = (pattern: string, benar: boolean) => {
     setProgres(prev => { const m = new Map(prev); const c = m.get(pattern) ?? { benar: 0, salah: 0 }; m.set(pattern, { benar: c.benar + (benar ? 1 : 0), salah: c.salah + (benar ? 0 : 1) }); return m; });
-    void catatJawabanBunpou(pattern, benar);
+    void catatJawabanBunpou(pattern, benar, { level });
   };
   const answerDrill = (opt: string) => {
     if (drillPick || !drillQs) return;

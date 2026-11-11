@@ -25,9 +25,10 @@ export const LABEL: Record<Penilaian, [string, string]> = {
 };
 
 /** null = belum ada tanggal ujian (atau udah lewat) → "Belum bisa dihitung". */
-export function penilaianJanji(level: string, sisaHari: number | null, menitPerHari: number) {
+/** `sisa` = bagian materi yang belum dikuasai (0–1), dari tes penempatan. */
+export function penilaianJanji(level: string, sisaHari: number | null, menitPerHari: number, sisa = 1) {
   if (sisaHari === null || sisaHari < 0) return null;
-  const butuh = KEBUTUHAN_JAM[level] ?? KEBUTUHAN_JAM.N3;
+  const butuh = Math.round((KEBUTUHAN_JAM[level] ?? KEBUTUHAN_JAM.N3) * Math.min(1, Math.max(0, sisa)));
   const jam = (sisaHari * menitPerHari / 60) * FAKTOR_BOLONG;
   const rasio = jam / butuh;
   const v: Penilaian = rasio >= AMBANG_KEKEJAR ? "ok" : rasio >= AMBANG_MEPET ? "mepet" : "gak";

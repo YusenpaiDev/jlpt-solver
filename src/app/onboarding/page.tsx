@@ -10,6 +10,13 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { daftarSesiUjian, rapikanTanggalUjian, type SesiUjian } from "@/lib/sesi-ujian";
 import { JanjiBelajar } from "@/components/rencana/JanjiBelajar";
+import { Penempatan } from "@/components/kurikulum/Penempatan";
+import { fiturLive } from "@/lib/kurikulum-config";
+
+/* Tes penempatan nyelip setelah pace, sebelum janji (HANDOFF-kurikulum §1):
+   verdict janji butuh sisa materi, jadi tes dulu baru janji. */
+const PENEMPATAN = fiturLive("penempatan");
+const SELESAI = PENEMPATAN ? 5 : 4;
 
 type Lv = "N5" | "N4" | "N3" | "N2" | "N1";
 const LV_NAME: Record<Lv, string> = { N5: "Pemula", N4: "Dasar", N3: "Menengah", N2: "Pra-mahir", N1: "Mahir" };
@@ -46,6 +53,7 @@ export default function Onboarding() {
   const [saved, setSaved] = useState(false);
   /* Sesi/pace diubah lewat "Janji di awal" setelah profil kesimpen di langkah 4. */
   const [janjiDiubah, setJanjiDiubah] = useState(false);
+  const [sisaMateri, setSisaMateri] = useState(1);
 
   // Init browser-only (tanggal ujian pakai Date + resume localStorage). Dibungkus
   // fungsi biar lolos rule "no sync setState in effect" (pola sama kayak page lain).
@@ -59,7 +67,7 @@ export default function Onboarding() {
         if (s.level) setLevel(s.level);
         if (s.examIso !== undefined) setExamIso(s.examIso === "none" ? "none" : rapikanTanggalUjian(s.examIso));
         if (s.goal !== undefined) setGoal(s.goal);
-        if (typeof s.step === "number") setStep(Math.min(s.step, 4));
+        if (typeof s.step === "number") setStep(Math.min(s.step, SELESAI));
       } catch { /* ignore */ }
     }
     init();
@@ -117,9 +125,9 @@ export default function Onboarding() {
       <div className="ob-frame">
         <div className="ob-bar">
           <div className="ob-dots">
-            {[0, 1, 2, 3, 4].map(i => <span key={i} className={`ob-dt${i < step ? " done" : i === step ? " on" : ""}`} />)}
+            {Array.from({ length: SELESAI + 1 }, (_, i) => <span key={i} className={`ob-dt${i < step ? " done" : i === step ? " on" : ""}`} />)}
           </div>
-          {skippable && <button className="ob-skip" onClick={() => go(Math.min(step + 1, 4))}>Lewati</button>}
+          {skippable && <button className="ob-skip" onClick={() => go(Math.min(step + 1, SELESAI))}>Lewati</button>}
         </div>
 
         <div className="ob-card">
@@ -198,8 +206,16 @@ export default function Onboarding() {
             </section>
           )}
 
-          {/* STEP 4 — Done */}
-          {step === 4 && (
+          {/* STEP 4 — Tes penempatan (cuma kalau fiturnya udah live) */}
+          {PENEMPATAN && step === 4 && level && (
+            <section className="ob-step">
+              <Penempatan level={level} ujian={examIso && examIso !== "none" ? examIso : null} pace={goal ?? 20}
+                langkah={[5, 6]} onSelesai={sisa => { setSisaMateri(sisa); go(SELESAI); }} />
+            </section>
+          )}
+
+          {/* STEP terakhir — Done */}
+          {step === SELESAI && (
             <section className="ob-step">
               <div className="ob-confetti">
                 {CONFETTI_PIECES.map((c, i) => (
@@ -215,7 +231,7 @@ export default function Onboarding() {
                 {goal && <div className="ob-sumr"><span className="k">TARGET HARIAN</span><span className="v">{GOALS.find(g => g.v === goal)?.t} — {goal} menit/hari</span></div>}
               </div>
               {level && (
-                <JanjiBelajar level={level} ujian={examIso ?? ""} pace={goal ?? 20} sesi={exams}
+                <JanjiBelajar level={level} ujian={examIso ?? ""} pace={goal ?? 20} sesi={exams} sisa={sisaMateri}
                   onUbah={(u, m) => { setExamIso(u); setGoal(m); setJanjiDiubah(true); }} />
               )}
               <div className="ob-donecta">

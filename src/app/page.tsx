@@ -15,6 +15,8 @@ import { putarHonix } from "@/lib/honix-sfx";
 import { Honix } from "@/components/honix/Honix";
 import { KalenderMini } from "@/components/rencana/KalenderMini";
 import { MisiHarian } from "@/components/rencana/MisiHarian";
+import { PerkiraanMini, type SesiSkor } from "@/components/kurikulum/Perkiraan";
+import { fiturLive } from "@/lib/kurikulum-config";
 import { devBeranda, type BerandaMentah } from "@/lib/dev-beranda";
 import { AuroraBackground, NavRail, BottomNav, PeringatanBanner } from "@/components/v2";
 import { useUserStats } from "@/lib/use-user-stats";
@@ -281,6 +283,8 @@ async function ambilMentah(now: Date): Promise<BerandaMentah | null> {
 export default function Home() {
   const stats = useUserStats();
   const [sessions, setSessions] = useState<Session[]>([]);
+  /* Semua sesi (bukan cuma 4 terakhir) buat perkiraan skor mini. */
+  const [semuaSesi, setSemuaSesi] = useState<SesiSkor[]>([]);
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
      profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
      halaman nampilin angka beku yang sama. */
@@ -384,6 +388,7 @@ export default function Home() {
       const riwayat = recentPractice(sess);
 
       setSessions(riwayat.slice(0, 4));
+      setSemuaSesi(sess as unknown as SesiSkor[]);
       setTotalSoal(sess.reduce((s, r) => s + (r.total ?? 0), 0)); // ukuran library soal (bank + analisis)
       setResume(riwayat.find(r => r.score == null) ?? riwayat[0] ?? sess[0] ?? null);
       const rata = accuracyPercent;
@@ -657,6 +662,8 @@ export default function Home() {
                 </div>
                 <div className="wk-note">{activeDays > 0 ? <><b>{activeDays} dari 7 hari</b> aktif — streak {streak} hari 🔥 jaga hari ini!</> : <>Belum ada aktivitas minggu ini — <b>mulai hari ini</b> 💪</>}</div>
               </div>
+
+              {fiturLive("perkiraan") && !loading && <PerkiraanMini sesi={semuaSesi} level={stats.targetLevel} hariIni={tanggalLokal()} />}
 
               <KalenderMini />
 
