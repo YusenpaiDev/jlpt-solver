@@ -932,7 +932,7 @@ function TutorialSection() {
         <button type="button" className="hx-btn hx-btn-g" onClick={mulaiTur}>▶ Putar</button>
       </div>
       <div className="hx-row">
-        <div><div className="hx-row-t">Bank Soal 過去問</div><p className="hx-row-s">Furigana, review, blok teks ke Sensei/Kamus/Catatan, salin pilihan, coret, timer.</p></div>
+        <div><div className="hx-row-t">Bank Soal</div><p className="hx-row-s">Furigana, review, blok teks ke Sensei/Kamus/Catatan, salin pilihan, coret, timer.</p></div>
         {sesiTerakhir
           ? <Link className="hx-btn hx-btn-g" href={`/analisis-foto?session=${sesiTerakhir}&tur=banksoal`}>▶ Putar</Link>
           : sesiTerakhir === null

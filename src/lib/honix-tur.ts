@@ -84,7 +84,7 @@ export const LANGKAH_HP: LangkahTur[] = [
 /** Bank Soal (/analisis-foto). Target = `data-tur` di halaman itu; yang gak
     kelihatan (panel kanan di bawah 1024px) dilewati otomatis. */
 export const LANGKAH_BANKSOAL: LangkahTur[] = [
-  { target: null, pose: "senang", judul: "Ruang latihan 過去問", isi: "Aku tunjukin alat-alatnya, ±1 menit." },
+  { target: null, pose: "senang", judul: "Ruang latihan Bank Soal", isi: "Aku tunjukin alat-alatnya, ±1 menit." },
   { target: "bs-filter", pose: "tunjuk", judul: "Saring per bagian", isi: "全部 buat semua soal. 文字, 語彙, 文法, 読解 buat fokus satu bagian." },
   { target: "bs-furigana", pose: "baca", judul: "SOAL & OPSI", isi: "Nyalain furigana di teks soal, atau di keempat pilihan jawaban sekaligus." },
   { target: "bs-aksi", pose: "tunjuk", judul: "REVIEW & EDIT", isi: "Tandai soal buat diulang nanti. EDIT kalau ada teks soal yang salah." },

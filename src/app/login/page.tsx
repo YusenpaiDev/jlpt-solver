@@ -414,7 +414,7 @@ function VisualPanel() {
           Honix JLPT
         </span>
         <h2 className="lg-visual-title">
-          Soal 過去問 asli.<br />
+          Latihan format JLPT.<br />
           Lengkap sama pembahasan.<br />
           <span className="grad">Lulus lebih pede.</span>
         </h2>
@@ -422,7 +422,7 @@ function VisualPanel() {
         <ul className="lg-visual-bullets">
           <li>
             <span className="lvb-icon iris"><Zap size={11} strokeWidth={1.6} /></span>
-            Bank soal 過去問 asli tiap level
+            Set latihan format JLPT tiap level
           </li>
           <li>
             <span className="lvb-icon emerald"><Check size={11} strokeWidth={2.4} /></span>
