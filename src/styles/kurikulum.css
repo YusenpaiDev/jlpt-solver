@@ -61,6 +61,8 @@
 .rbk .wt-b::after{content:'';position:absolute;inset:0 auto 0 0;width:var(--p);background:var(--c);border-radius:3px}
 .rbk .wt.s-done .wt-n,.rbk .wt.s-part .wt-n{color:var(--text)}
 .rbk .wt.s-skip{background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(255,255,255,.035) 6px 12px);border-style:dashed}
+/* Mode sisa waktu: unit yang gak kebagian jadwal sebelum ujian (Kejar/Akhir). */
+.rbk .wt.s-luar{opacity:.5;border-style:dotted}
 .rbk .wt.s-cur{border-color:var(--pt);background:rgba(221,65,36,.10);box-shadow:0 0 0 3px rgba(221,65,36,.15)}
 .rbk .wt.s-cur .wt-n{color:var(--pt)}
 .rbk .wt-now{position:absolute;left:9px;bottom:15px;font-size:10px;font-weight:700;color:var(--pt)}
@@ -73,6 +75,9 @@
 .rbk .pt-leg i{width:14px;height:14px;border-radius:4px;background:var(--surface-2);border:1px solid var(--line-2)}
 .rbk .pt-leg i.c{border-color:var(--pt);background:rgba(221,65,36,.1)}
 .rbk .pt-leg i.s{border-style:dashed}
+.rbk .pt-leg i.l{border-style:dotted;opacity:.6}
+.rbk .ku-mode{margin-top:16px;padding:14px 16px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);font-size:13.5px;line-height:1.55;color:var(--muted);text-wrap:pretty}
+.rbk .ku-mode b{color:var(--text)}
 .rbk .wd{padding:22px;animation:rbk-rise .35s var(--ease) both}
 .rbk .wd-t{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-top:4px}
 .rbk .wd-d{font-size:13px;color:var(--dim);margin-top:2px}

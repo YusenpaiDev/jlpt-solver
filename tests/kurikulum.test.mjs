@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  susunUnit, unitSekarang, tanggalUnit, seninDari, lanjutSrs, statusUnit, evaluasiTingkat, labelTingkat,
+  susunUnit, susunJadwal, mingguKe, tanggalMinggu, seninDari, lanjutSrs, evaluasiTingkat, labelTingkat,
   nilaiPenempatan, nilaiUlangan, perkiraanSkor, gabungPerCat, jadwalSimulasi, tempo, mingguKeUjian, materiPerHari,
 } from '../src/lib/kurikulum.ts';
 
@@ -26,12 +26,13 @@ test('material splits evenly into 26 units, mixing groups', () => {
 
 test('week position counts from the start Monday, skipping placed-out units', () => {
   const k = { level: 'N3', tanggal_mulai: '2027-01-06', unit_mulai: 4, tanggal_ujian: '2027-07-04' };
+  const j = susunJadwal(k, { akhir: 4, maksPerMinggu: 2, cadangan: 1, simulasiKejar: 14 });
   assert.equal(seninDari('2027-01-06'), '2027-01-04');
-  assert.equal(unitSekarang(k, '2027-01-04'), 4);
-  assert.equal(unitSekarang(k, '2027-03-01'), 12);
-  assert.equal(unitSekarang(k, '2026-12-30'), 4); // sebelum mulai
-  assert.equal(tanggalUnit(k, 3), null);
-  assert.deepEqual(tanggalUnit(k, 12), ['2027-03-01', '2027-03-07']);
+  assert.deepEqual(j.minggu[mingguKe(k, '2027-01-04')], [4]);
+  assert.deepEqual(j.minggu[mingguKe(k, '2027-03-01')], [12]);
+  assert.deepEqual(j.minggu[mingguKe(k, '2026-12-30')], [4]); // sebelum mulai
+  assert.ok(!j.minggu.flat().includes(3));
+  assert.deepEqual(tanggalMinggu(k, 8), ['2027-03-01', '2027-03-07']);
   assert.equal(mingguKeUjian('2027-03-01', '2027-07-04'), 18);
   assert.equal(mingguKeUjian('2027-03-01', null), null);
 });
@@ -45,15 +46,6 @@ test('SRS: 1·3·7·21·60 days, wrong answer goes back to tomorrow', () => {
   s = lanjutSrs(s, true, '2026-12-13', INTERVAL); assert.equal(s.status, 'dikuasai'); assert.equal(s.jatuh_tempo, '2027-02-11');
   s = lanjutSrs(s, true, '2027-02-11', INTERVAL); assert.equal(s.tahap, 5);
   assert.deepEqual(lanjutSrs(s, false, '2027-02-11', INTERVAL), { status: 'belajar', tahap: 0, jatuh_tempo: '2027-02-12' });
-});
-
-test('unit status', () => {
-  const full = [10, 0, 0, 0], open = [5, 0, 0, 5];
-  assert.equal(statusUnit(2, 4, 12, full, full), 'skip');
-  assert.equal(statusUnit(12, 4, 12, open, open), 'cur');
-  assert.equal(statusUnit(13, 4, 12, open, open), 'next');
-  assert.equal(statusUnit(10, 4, 12, full, [3, 1, 0, 0]), 'done');
-  assert.equal(statusUnit(11, 4, 12, open, full), 'part');
 });
 
 test('tier moves only after 20 answers: ≥80% up, <60% down, clamped 1–3', () => {

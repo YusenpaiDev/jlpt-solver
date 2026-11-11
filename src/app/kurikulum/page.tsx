@@ -4,11 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useKurikulum, type Kurikulum, type UnitTampil } from "@/lib/use-kurikulum";
-import { FASE, MINGGU_SIMULASI, faseMinggu, fiturLive } from "@/lib/kurikulum-config";
-import { tambahHari, dimulai, type StatusItem } from "@/lib/kurikulum";
+import { FASE, faseMinggu, fiturLive } from "@/lib/kurikulum-config";
+import { dimulai, type StatusItem } from "@/lib/kurikulum";
 import { BelumMulai, Disiapkan, Kerangka, KepalaKurikulum, tglPanjang, tglPendek } from "@/components/kurikulum/Bagian";
 
-const LABEL: Record<UnitTampil["st"], string> = { skip: "Dilewati", done: "Selesai", part: "Sebagian", cur: "Minggu ini", next: "Belum mulai" };
+const LABEL: Record<UnitTampil["st"], string> = { skip: "Dilewati", done: "Selesai", part: "Sebagian", cur: "Minggu ini", next: "Belum mulai", luar: "Di luar jadwal" };
 const STATUS_POLA: Record<StatusItem, [string, string]> = { dikuasai: ["Dikuasai", "dk"], hafal: ["Hafal", "hf"], belajar: ["Belajar", "bl"], baru: ["Baru", ""] };
 
 /** Peta 26 minggu (HANDOFF-kurikulum §6). */
@@ -29,20 +29,22 @@ export default function PetaKurikulum() {
 }
 
 function Peta({ k }: { k: Kurikulum }) {
-  const [pilih, setPilih] = useState(Math.min(26, Math.max(1, k.cur)));
-  const ujian = k.kur?.tanggal_ujian ?? null;
-  const akhir26 = k.unit[25]?.tanggal?.[1];
-  const cadangan = akhir26 && ujian && ujian > akhir26 ? Math.max(0, Math.round((Date.parse(ujian) - Date.parse(akhir26)) / (7 * 86_400_000))) : 0;
+  const [pilih, setPilih] = useState(Math.min(26, Math.max(1, k.ini[0] ?? k.kur?.unit_mulai ?? 1)));
+  const cad = k.cadangan;
+  const adaLuar = k.unit.some(u => u.st === "luar");
+  /* Di mode selain normal, satu fase = rentang unit, bukan minggu kalender. */
+  const satuan = k.mode === "normal" ? "Minggu" : "Unit";
+  const namaCad = k.mode === "akhir" ? "Mode akhir" : "Cadangan";
   return (
     <div className="pt-g">
       <section className="card pt-c">
         <div className="pt-ph">
           {FASE.map(f => (
             <div key={f.id} style={{ flex: f.minggu[1] - f.minggu[0] + 1 }}>
-              <i style={{ background: f.warna }} /><b>{f.t}</b><small>Minggu {f.minggu[0]}–{f.minggu[1]}{f.tingkat ? ` · ${f.tingkat}` : ""}</small>
+              <i style={{ background: f.warna }} /><b>{f.t}</b><small>{satuan} {f.minggu[0]}–{f.minggu[1]}{f.tingkat ? ` · ${f.tingkat}` : ""}</small>
             </div>
           ))}
-          {cadangan > 0 && <div style={{ flex: 1.6 }}><i style={{ background: "rgba(212,160,74,.35)" }} /><b>Cadangan</b><small>{cadangan} minggu</small></div>}
+          {cad && <div style={{ flex: 1.6 }}><i style={{ background: "rgba(212,160,74,.35)" }} /><b>{namaCad}</b><small>{cad.n} minggu</small></div>}
         </div>
         <div className="wg">
           {k.unit.map(u => {
@@ -54,19 +56,19 @@ function Peta({ k }: { k: Kurikulum }) {
                 {u.st === "done" && <span className="wt-i ok">✓</span>}
                 {u.st === "part" && <span className="wt-i">◐</span>}
                 {u.st === "skip" && <span className="wt-i">—</span>}
-                {MINGGU_SIMULASI.includes(u.u) && <span className="wt-sim" title="Simulasi" lang="ja">模</span>}
+                {k.simUnit.has(u.u) && <span className="wt-sim" title="Simulasi" lang="ja">模</span>}
                 {u.st === "cur" && <span className="wt-now">Minggu ini</span>}
                 <i className="wt-b" style={{ "--p": `${pct}%`, "--c": faseMinggu(u.u).warna } as React.CSSProperties} />
               </button>
             );
           })}
-          {cadangan > 0 && akhir26 && ujian && (
-            <div className="wt wt-x"><span className="wt-n">Cadangan<br />{cadangan} minggu</span><small>{tglPendek(tambahHari(akhir26, 1))} – {tglPendek(ujian)} · <span lang="ja">模 · 試験</span></small></div>
+          {cad && (
+            <div className="wt wt-x" title="Ulang yang lemah & simulasi, ditutup ujian"><span className="wt-n">{namaCad}<br />{cad.n} minggu</span><small>{tglPendek(cad.dari)} – {tglPendek(cad.sampai)}</small></div>
           )}
         </div>
         <div className="pt-leg">
           <span><i className="c" />Minggu ini</span><span><b className="ok-t">✓</b>Selesai</span><span>◐ Sebagian</span>
-          <span><i className="s" />Dilewati (tes penempatan)</span><span><b style={{ fontFamily: "var(--jps)", color: "var(--warning)" }} lang="ja">模</b>Simulasi bulanan</span>
+          <span><i className="s" />Dilewati (tes penempatan)</span>{adaLuar && <span><i className="l" />Di luar jadwal (boleh diintip)</span>}<span><b style={{ fontFamily: "var(--jps)", color: "var(--warning)" }} lang="ja">模</b>Simulasi bulanan</span>
         </div>
       </section>
       <DetailMinggu k={k} u={k.unit[pilih - 1]} />
@@ -85,13 +87,14 @@ function DetailMinggu({ k, u }: { k: Kurikulum; u: UnitTampil }) {
     done: ["Ulang materi ini", "btn-g", `/latihan/kotoba?unit=${u.u}&count=20`],
     skip: ["Ulang materi ini", "btn-g", `/latihan/kotoba?unit=${u.u}&count=20`],
     next: ["Intip materinya", "btn-g", `/latihan/kotoba?unit=${u.u}&count=10`],
+    luar: ["Intip materinya", "btn-g", `/latihan/kotoba?unit=${u.u}&count=10`],
   };
   const [teks, kelas, href] = cta[u.st];
   return (
     <aside className="card wd" aria-live="polite" key={u.u}>
       <div className="eyebrow">Fase {f.t}{f.tingkat ? ` · ${f.tingkat}` : ""}</div>
-      <div className="wd-t">Minggu {u.u} · {LABEL[u.st]}</div>
-      <div className="wd-d">{u.tanggal ? `${tglPendek(u.tanggal[0])} – ${tglPanjang(u.tanggal[1])}` : "Dikuasai dari tes penempatan"}</div>
+      <div className="wd-t">{k.mode === "normal" ? "Minggu" : "Unit"} {u.u} · {LABEL[u.st]}</div>
+      <div className="wd-d">{u.tanggal ? `${tglPendek(u.tanggal[0])} – ${tglPanjang(u.tanggal[1])}` : u.st === "skip" ? "Dikuasai dari tes penempatan" : "Gak kebagian jadwal sebelum ujian · boleh diintip"}</div>
       <div className="wd-s">
         <b>Kata<span>{dimulai(s)} / {u.kata.length} dimulai</span></b>
         <div className="stk">{seg.map(([c, v], i) => v > 0 && <i key={i} style={{ flex: v, background: i === 3 ? "transparent" : c }} />)}</div>
@@ -117,7 +120,7 @@ function DetailMinggu({ k, u }: { k: Kurikulum; u: UnitTampil }) {
         </ul>
       </div>
       {ul && <div className="wd-s"><b>Ulangan mingguan<span>Nempel {ul.benar} / {ul.total}</span></b></div>}
-      {MINGGU_SIMULASI.includes(u.u) && <div className="wd-s"><b>Simulasi bulanan<span>{fiturLive("simulasi") ? "dijadwalkan" : "sedang disiapkan"}</span></b></div>}
+      {k.simUnit.has(u.u) && <div className="wd-s"><b>Simulasi bulanan<span>{fiturLive("simulasi") ? "dijadwalkan" : "sedang disiapkan"}</span></b></div>}
       <Link className={`btn ${kelas}`} href={href}>{teks}</Link>
     </aside>
   );

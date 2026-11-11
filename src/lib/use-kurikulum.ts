@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { tanggalLokal } from "@/lib/aktivitas";
 import { ATURAN, fiturLive } from "@/lib/kurikulum-config";
-import { muatBunpou, muatKotoba, type DekBunpou, type DekKotoba } from "@/lib/dek-materi";
+import { muatBunpou, muatKotoba, muatPrioritas, type DekBunpou, type DekKotoba } from "@/lib/dek-materi";
 import { DEV_BYPASS } from "@/lib/dev-materi";
+import { rapikanTanggalUjian } from "@/lib/sesi-ujian";
 import {
-  evaluasiTingkat, hitungStatus, mingguKeUjian, seninDari, statusDariProgres, statusUnit, susunUnit, tambahHari, unitSekarang,
-  type Empat, type EvalTingkat, type KurikulumUser, type StatusItem, type StatusUnit, type Unit,
+  evaluasiTingkat, hitungStatus, jadwalSimulasi, letakUnit, mingguKe, mingguKeUjian, seninDari, statusDariProgres, statusUnit,
+  susunJadwal, susunUnit, tambahHari, tanggalMinggu,
+  type Empat, type EvalTingkat, type Jadwal, type KurikulumUser, type ModeWaktu, type Prioritas, type StatusItem, type StatusUnit, type Unit,
 } from "@/lib/kurikulum";
 
 export interface UnitTampil extends Unit { st: StatusUnit; kataSt: Empat; polaSt: Empat; tanggal: [string, string] | null }
@@ -21,7 +23,18 @@ export interface Kurikulum {
   belumMulai: boolean;
   kur: KurikulumUser | null;
   unit: UnitTampil[];
-  cur: number;
+  /** jadwal per minggu sampai ujian + mode sisa waktu (normal/padat/kejar/akhir) */
+  jadwal: Jadwal | null;
+  mode: ModeWaktu;
+  /** minggu ke-i sejak mulai (0 = minggu pertama) */
+  minggu: number;
+  /** unit minggu ini & minggu lalu ([] = masa cadangan / mode akhir) */
+  ini: number[];
+  lalu: number[];
+  /** unit yang minggunya ada simulasi (penanda 模 di peta) */
+  simUnit: Set<number>;
+  /** minggu tanpa unit di ujung jadwal (ulang & simulasi) */
+  cadangan: { n: number; dari: string; sampai: string } | null;
   hariIni: string;
   sisaMinggu: number | null;
   statusItem: (jenis: "kata" | "pola", kunci: string) => StatusItem;
@@ -41,12 +54,15 @@ interface Mentah {
   ulangan: Ulangan[];
 }
 
-/** Data contoh dev (cek visual tanpa login): N3, mulai dari minggu 4, sekarang minggu 12. */
-function devMentah(level: string, dekK: DekKotoba, dekB: DekBunpou, mode: string | null): Mentah {
+/** Data contoh dev (cek visual tanpa login): N3, mulai dari minggu 4, sekarang minggu 12.
+    ?dev=padat / kejar / akhir = ujian makin mepet, buat cek mode sisa waktu. */
+function devMentah(level: string, dekK: DekKotoba, dekB: DekBunpou, prio: Prioritas, mode: string | null): Mentah {
   const hariIni = tanggalLokal();
-  const kur: KurikulumUser = { level, tanggal_mulai: tambahHari(seninDari(hariIni), -8 * 7), unit_mulai: 4, tanggal_ujian: tambahHari(hariIni, 18 * 7) };
+  const senin = seninDari(hariIni);
+  const [lalu, mulai, ujian] = mode === "padat" ? [4, 1, 14] : mode === "kejar" ? [2, 1, 7] : mode === "akhir" ? [0, 1, 3] : [8, 4, 18];
+  const kur: KurikulumUser = { level, tanggal_mulai: tambahHari(senin, -lalu * 7), unit_mulai: mulai, tanggal_ujian: tambahHari(senin, ujian * 7 + 6) };
   if (mode === "baru") return { kur: null, item: new Map(), progK: new Map(), progB: new Map(), tingkat: [], ulangan: [] };
-  const unit = susunUnit(dekK.vocabulary, dekB.patterns);
+  const unit = susunUnit(dekK.vocabulary, dekB.patterns, prio);
   const item = new Map<string, { status: StatusItem; jatuh_tempo: string | null }>();
   unit.forEach(u => {
     const isi: [string, string][] = [...u.kata.map(k => ["kata", k] as [string, string]), ...u.pola.map(p => ["pola", p] as [string, string])];
@@ -77,6 +93,7 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
   const live = fiturLive("kurikulum") && aktif;
   const [dekK, setDekK] = useState<DekKotoba | null>(null);
   const [dekB, setDekB] = useState<DekBunpou | null>(null);
+  const [prio, setPrio] = useState<Prioritas>({});
   const [m, setM] = useState<Mentah | null>(null);
   const [hariIni] = useState(() => tanggalLokal());
 
@@ -84,10 +101,10 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
     if (!live) return;
     let batal = false;
     async function load() {
-      const [k, b] = await Promise.all([muatKotoba(level), muatBunpou(level)]);
+      const [k, b, p] = await Promise.all([muatKotoba(level), muatBunpou(level), muatPrioritas(level)]);
       if (batal) return;
-      setDekK(k); setDekB(b);
-      if (DEV_BYPASS) { setM(devMentah(level, k, b, new URLSearchParams(window.location.search).get("dev"))); return; }
+      setDekK(k); setDekB(b); setPrio(p);
+      if (DEV_BYPASS) { setM(devMentah(level, k, b, p, new URLSearchParams(window.location.search).get("dev"))); return; }
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || batal) return;
@@ -100,8 +117,12 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
         supabase.from("ulangan").select("minggu, unit, benar, total, per_bagian, item_lupa").eq("user_id", user.id).order("minggu", { ascending: true }),
       ]);
       if (batal) return;
+      /* Tanggal ujian ikut Pengaturan (metadata user), bukan salinan waktu mulai kurikulum,
+         biar mode sisa waktu ikut berubah kalau user ganti tanggal. "none" = belum nentuin. */
+      const md = user.user_metadata?.exam_date;
+      const k0 = (kur.data as KurikulumUser | null)?.level === level ? kur.data as KurikulumUser : null;
       setM({
-        kur: (kur.data as KurikulumUser | null)?.level === level ? kur.data as KurikulumUser : null,
+        kur: k0 && md !== undefined ? { ...k0, tanggal_ujian: rapikanTanggalUjian(md) } : k0,
         item: new Map((it.data ?? []).map(r => [`${r.jenis}:${r.kunci}`, { status: r.status as StatusItem, jatuh_tempo: r.jatuh_tempo }])),
         progK: new Map((kp.data ?? []).map(r => [r.word, { benar: r.benar ?? 0, salah: r.salah ?? 0 }])),
         progB: new Map((bp.data ?? []).map(r => [r.pattern, { benar: r.benar ?? 0, salah: r.salah ?? 0 }])),
@@ -115,7 +136,8 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
 
   return useMemo<Kurikulum>(() => {
     const kosong: Kurikulum = {
-      siap: false, belumMulai: false, kur: null, unit: [], cur: 1, hariIni, sisaMinggu: null,
+      siap: false, belumMulai: false, kur: null, unit: [], jadwal: null, mode: "normal", minggu: 0, ini: [], lalu: [],
+      simUnit: new Set(), cadangan: null, hariIni, sisaMinggu: null,
       statusItem: () => "baru", jatuhTempo: { kata: [], pola: [] }, tingkat: new Map(), ulangan: [], dekK, dekB,
     };
     if (!live || !m || !dekK || !dekB) return kosong;
@@ -124,18 +146,30 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
     const tingkat = new Map(m.tingkat.map(t => [t.jenis, { jenis: t.jenis, tingkat: t.tingkat, e: evaluasiTingkat(t.riwayat, t.tingkat, ATURAN.tingkat) }]));
     if (!m.kur) return { ...kosong, siap: true, belumMulai: true, statusItem, tingkat, ulangan: m.ulangan };
     const kur = m.kur;
-    const cur = unitSekarang(kur, hariIni);
-    const unit = susunUnit(dekK.vocabulary, dekB.patterns).map(u => {
+    const jadwal = susunJadwal(kur, ATURAN.waktu);
+    const letak = letakUnit(jadwal);
+    const minggu = mingguKe(kur, hariIni);
+    const unit = susunUnit(dekK.vocabulary, dekB.patterns, prio).map(u => {
       const kataSt = hitungStatus(u.kata, k => statusItem("kata", k));
       const polaSt = hitungStatus(u.pola, p => statusItem("pola", p));
-      const tgl = u.u < kur.unit_mulai ? null : [tambahHari(seninDari(kur.tanggal_mulai), (u.u - kur.unit_mulai) * 7), tambahHari(seninDari(kur.tanggal_mulai), (u.u - kur.unit_mulai) * 7 + 6)] as [string, string];
-      return { ...u, kataSt, polaSt, tanggal: tgl, st: statusUnit(u.u, kur.unit_mulai, cur, kataSt, polaSt) };
+      const i = letak.get(u.u);
+      return { ...u, kataSt, polaSt, tanggal: i == null ? null : tanggalMinggu(kur, i), st: statusUnit(u.u, kur.unit_mulai, letak, minggu, kataSt, polaSt) };
     });
+    const simUnit = new Set<number>();
+    for (const t of jadwalSimulasi(kur.tanggal_mulai, kur.tanggal_ujian, jadwal.mode, ATURAN.waktu.simulasiKejar)) {
+      const us = jadwal.minggu[mingguKe(kur, t)];
+      if (us?.length) simUnit.add(us[us.length - 1]);
+    }
+    const terakhir = jadwal.minggu.findLastIndex(us => us.length > 0);
+    const nCad = jadwal.minggu.length - terakhir - 1;
+    const cadangan = nCad > 0 && kur.tanggal_ujian ? { n: nCad, dari: tanggalMinggu(kur, terakhir + 1)[0], sampai: kur.tanggal_ujian } : null;
     const tempo = (jenis: "kata" | "pola") => [...m.item.entries()]
       .filter(([k, v]) => k.startsWith(`${jenis}:`) && v.jatuh_tempo != null && v.jatuh_tempo <= hariIni).map(([k]) => k.slice(5));
     return {
-      siap: true, belumMulai: false, kur, unit, cur, hariIni, sisaMinggu: mingguKeUjian(hariIni, kur.tanggal_ujian),
+      siap: true, belumMulai: false, kur, unit, jadwal, mode: jadwal.mode, minggu,
+      ini: jadwal.minggu[minggu] ?? [], lalu: minggu > 0 ? jadwal.minggu[minggu - 1] ?? [] : [], simUnit, cadangan,
+      hariIni, sisaMinggu: mingguKeUjian(hariIni, kur.tanggal_ujian),
       statusItem, jatuhTempo: { kata: tempo("kata"), pola: tempo("pola") }, tingkat, ulangan: m.ulangan, dekK, dekB,
     };
-  }, [live, m, dekK, dekB, hariIni]);
+  }, [live, m, dekK, dekB, prio, hariIni]);
 }

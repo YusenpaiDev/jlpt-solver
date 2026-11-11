@@ -5,7 +5,8 @@ import Link from "next/link";
 import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
 import { BelumMulai, Strip } from "@/components/kurikulum/Bagian";
 import { FASE, JUMLAH_UNIT, faseMinggu, fiturLive } from "@/lib/kurikulum-config";
-import { dimulai } from "@/lib/kurikulum";
+import { labelPosisi } from "@/lib/kurikulum";
+import { setUnit } from "@/lib/misi-kurikulum";
 import { useKurikulum } from "@/lib/use-kurikulum";
 
 /** Kartu Kurikulum paling atas /materi, versi "Sedang disiapkan"
@@ -43,16 +44,17 @@ export function KartuKurikulumLive({ level }: { level: string }) {
   const k = useKurikulum(level);
   if (!k.siap) return <section className="card kmc" aria-busy="true" style={{ minHeight: 120 }} />;
   if (k.belumMulai) return <BelumMulai level={level} penempatan={fiturLive("penempatan")} />;
-  const u = k.unit[Math.min(26, k.cur) - 1];
-  const fase = faseMinggu(u.u);
-  const polaMulai = u.pola.filter(p => k.statusItem("pola", p) !== "baru").length;
+  const u = setUnit(k, k.ini);
+  const ke = k.sisaMinggu != null ? ` · ${k.sisaMinggu} minggu ke ujian` : "";
+  const mulai = (xs: string[], j: "kata" | "pola") => xs.filter(x => k.statusItem(j, x) !== "baru").length;
   return (
     <Link className="kmc" href="/kurikulum">
       <span>
-        <span className="eyebrow">Kurikulum {level} · {k.cur > 26 ? "masa cadangan" : `Minggu ${k.cur} dari 26`}</span>
-        <b>Fase {fase.t} · minggu ini {u.kata.length} kata + {u.pola.length} pola</b>
+        <span className="eyebrow">Kurikulum {level} · {labelPosisi(k.mode, k.ini)}</span>
+        {u ? <b>Fase {faseMinggu(k.ini[0]).t} · minggu ini {u.kata.length} kata + {u.pola.length} pola</b>
+          : <b>{k.mode === "akhir" ? "Ulang yang lemah + set latihan format JLPT" : "Ulang & simulasi sebelum ujian"}</b>}
         <Strip unit={k.unit} />
-        <small>{dimulai(u.kataSt)} / {u.kata.length} kata dimulai · {polaMulai} / {u.pola.length} pola{k.sisaMinggu != null ? ` · ${k.sisaMinggu} minggu ke ujian` : ""}</small>
+        <small>{u ? `${mulai(u.kata, "kata")} / ${u.kata.length} kata dimulai · ${mulai(u.pola, "pola")} / ${u.pola.length} pola${ke}` : `Materi baru gak ditambah${ke}`}</small>
       </span>
       <span className="btn btn-g">Buka peta →</span>
     </Link>

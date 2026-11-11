@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { honixSrc } from "@/lib/honix-pose";
 import { strategiUntuk } from "@/lib/strategi-ujian";
 import { perkiraanSkor, jadwalSimulasi, tempo, tambahHari } from "@/lib/kurikulum";
+import { ATURAN } from "@/lib/kurikulum-config";
 import { susunPerjalanan } from "@/lib/perjalanan-soal";
 import { bukaSet, muatBankSoal, urlSet } from "@/lib/bank-soal-muat";
 import { simpanSimulasi, type BarisSimulasi } from "@/lib/kurikulum-db";
@@ -66,7 +67,7 @@ export function SimulasiTab({ level }: { level: string }) {
   }, [k.hariIni]);
   useEffect(() => { void muat(); }, [muat]);
 
-  const jadwal = useMemo(() => jadwalSimulasi(k.kur?.tanggal_mulai ?? k.hariIni, k.kur?.tanggal_ujian ?? null), [k.kur, k.hariIni]);
+  const jadwal = useMemo(() => jadwalSimulasi(k.kur?.tanggal_mulai ?? k.hariIni, k.kur?.tanggal_ujian ?? null, k.mode, ATURAN.waktu.simulasiKejar), [k.kur, k.hariIni, k.mode]);
   const pos = useMemo(() => susunPerjalanan(set.filter(s => s.level === level)), [set, level]);
   const totalMenit = L.waktu.reduce((n, b) => n + b.m, 0);
   const targetHikki = L.waktu.filter(b => b.c !== "choukai").reduce((n, b) => n + b.m, 0);

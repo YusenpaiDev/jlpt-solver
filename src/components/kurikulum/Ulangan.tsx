@@ -10,16 +10,26 @@ import { honixSrc } from "@/lib/honix-pose";
 import { ATURAN, fiturLive } from "@/lib/kurikulum-config";
 import { seninDari } from "@/lib/kurikulum";
 import { useKurikulum, type Kurikulum, type Ulangan as BarisUlangan } from "@/lib/use-kurikulum";
+import { namaUnit } from "@/lib/misi-kurikulum";
 import { BelumMulai } from "@/components/kurikulum/Bagian";
 
 export const BAGIAN_ULANGAN: { k: string; c: string }[] = [
   { k: "Kata", c: "var(--goi)" }, { k: "Pola", c: "var(--bunpou)" }, { k: "Jenis soal", c: "var(--dokkai)" },
 ];
 
-/** Unit yang diulang minggu ini = unit minggu lalu; null kalau belum ada. */
-export function unitUlangan(k: Kurikulum): number | null {
-  const u = Math.min(26, k.cur - 1);
-  return k.kur && u >= k.kur.unit_mulai ? u : null;
+/** Unit yang diulang minggu ini = unit minggu lalu (bisa 2 kalau dipadatin); [] kalau gak ada. */
+export function unitUlangan(k: Kurikulum): number[] {
+  return k.kur ? k.lalu.filter(u => u >= k.kur!.unit_mulai) : [];
+}
+
+/** "minggu 11" / "unit 5–6" buat judul ulangan. */
+export const judulUlangan = (k: Kurikulum, us: number[]) => namaUnit(k, us).toLowerCase();
+
+/** Kenapa minggu ini gak ada ulangan. */
+export function tanpaUlangan(k: Kurikulum): string {
+  if (k.mode === "akhir") return "Mode akhir: gak ada materi baru, jadi ulangan mingguan diganti set latihan format JLPT di Bank Soal.";
+  if (k.minggu > 0 && !k.ini.length) return "Masa cadangan: semua unit udah kebagian. Isi minggu ini ulang yang lemah & simulasi.";
+  return "Ulangan pertama muncul Senin depan, setelah unit minggu ini selesai.";
 }
 
 /** Tab Ulangan di Progres (gantiin Tes mini, HANDOFF-kurikulum §10). */
@@ -41,7 +51,7 @@ export function UlanganTab({ level }: { level: string }) {
     <div className="rbk">
       <div className="tes-in">
         <section className="card ti">
-          <div className="eyebrow">Ulangan mingguan{u ? ` · minggu ${u}` : ""}</div>
+          <div className="eyebrow">Ulangan mingguan{u.length ? ` · ${judulUlangan(k, u)}` : ""}</div>
           <div className="ti-big">±10 menit<span>·</span>{total} soal</div>
           <div className="comp">{BAGIAN_ULANGAN.map((b, i) => <div key={b.k} style={{ flex: [A.kata, A.pola, A.jenis][i], background: b.c }} />)}</div>
           <div className="comp-l">{BAGIAN_ULANGAN.map((b, i) => <span key={b.k}><i style={{ background: b.c }} />{b.k} {[A.kata, A.pola, A.jenis][i]}</span>)}</div>
@@ -51,8 +61,8 @@ export function UlanganTab({ level }: { level: string }) {
             <li>Waktu cuma dicatat. Dilewati juga gak apa-apa, yang lupa tetap masuk misi.</li>
           </ul>
           <div className="misi-cta">
-            {u ? <Link className="btn btn-p btn-lg" href="/progres/ulangan">Mulai ulangan</Link>
-              : <span className="note">Ulangan pertama muncul Senin depan, setelah unit minggu ini selesai.</span>}
+            {u.length ? <Link className="btn btn-p btn-lg" href="/progres/ulangan">Mulai ulangan</Link>
+              : <span className="note">{tanpaUlangan(k)}</span>}
           </div>
         </section>
         <section className="card ti">
