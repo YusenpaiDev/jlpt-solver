@@ -1,0 +1,71 @@
+/* /premium — tambahan Kurikulum (handoff kurikulum/ku-komp.css). Kartu harga &
+   tabel tetap pakai gaya halaman yang udah live; yang baru cuma pita, item
+   fitur "Sedang disiapkan", bagian Kurikulum 26 minggu, dan baris grup tabel. */
+
+/* Bagian Kurikulum 26 minggu */
+.rbk.kur{margin-top:60px}
+.rbk .kur-t{font-size:30px;font-weight:600;letter-spacing:-.03em;margin-top:6px;line-height:1.2}
+.rbk .kmap-c{padding:24px 24px 18px;margin-top:22px}
+.rbk .kmap{display:grid;grid-template-columns:repeat(26,minmax(0,1fr)) auto;grid-template-rows:20px 34px auto;column-gap:3px;row-gap:6px;align-items:center}
+.rbk .km-c{display:block;height:100%;border-radius:5px}
+.rbk .km-s{font-family:var(--jps);font-size:11px;font-weight:700;color:var(--warning);text-align:center;align-self:end;line-height:1}
+.rbk .km-x{font-family:var(--jps);font-size:13px;font-weight:700;height:100%;display:grid;place-items:center;padding:0 10px;margin-left:6px;border-radius:8px;background:rgba(212,160,74,.16);color:var(--warning);border:1px solid rgba(212,160,74,.5);white-space:nowrap}
+.rbk .km-l{padding-top:7px;border-top:2px solid var(--line-2);margin-right:4px;min-width:0}
+.rbk .km-l b{display:block;font-size:13px;font-weight:600}
+.rbk .km-l small{display:block;font-size:11.5px;color:var(--dim);margin-top:2px}
+.rbk .km-leg{display:none}
+.rbk .km-leg div{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:13px}
+.rbk .km-leg i{width:12px;height:12px;border-radius:3px}
+.rbk .km-leg small{color:var(--dim);font-size:11.5px}
+.rbk .km-n{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--dim)}
+.rbk .km-n span{display:flex;align-items:center;gap:6px}
+.rbk .km-n .km-s{font-size:12px}
+.rbk .cyc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.rbk .cy{padding:18px;display:flex;flex-direction:column;gap:6px;border-radius:16px}
+.rbk .cy-w{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--pt)}
+.rbk .cy b{font-size:15px;font-weight:600}
+.rbk .cy p{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}
+.rbk .cy .prep{margin:4px 0 0;align-self:flex-start}
+.rbk .cy-ok{font-size:11.5px;color:var(--success);font-weight:600;margin-top:4px}
+.rbk .aset{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.rbk .as{padding:18px}
+.rbk .as b{display:block;font-size:30px;font-weight:700;letter-spacing:-.035em;font-variant-numeric:tabular-nums;line-height:1.1}
+.rbk .as>span:not(.prep){display:block;font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.4}
+.rbk .as .prep{margin:8px 0 0}
+.rbk .kur-n{margin-top:14px;padding:14px 16px;border-radius:14px;border:1px dashed rgba(85,112,181,.6);background:rgba(85,112,181,.08);font-size:13px;line-height:1.55;color:var(--muted)}
+.rbk .kur-n b{color:var(--text)}
+
+/* Kartu Pro: pita kurikulum (Paket Ujian) + item fitur yang belum live */
+.pr-plan .plan-rib{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:-4px 0 2px;padding:9px 12px;border-radius:12px;background:linear-gradient(90deg,rgba(221,65,36,.3),rgba(221,65,36,.08));border:1px solid rgba(221,65,36,.35);font-size:12.5px;font-weight:600;color:#EC7A5C}
+.pr-plan .plan-rib .prep{margin-left:0}
+.plan-features li.pp{color:var(--text-tertiary,rgba(255,255,255,.6))}
+.plan-features li.pp .pp-i{flex-shrink:0;width:13px;height:13px;margin-top:2px;border-radius:50%;border:1.5px dashed rgba(85,112,181,.95)}
+.plan-features li.pp .prep{margin-left:6px}
+
+/* Tabel banding: legenda, baris grup, baris yang belum live */
+.cmp-leg{display:flex;gap:8px 18px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--text-tertiary,rgba(255,255,255,.52));margin:0 0 14px}
+.cmp-leg span{display:flex;align-items:center;gap:6px}
+.cmp-leg .prep{margin:0}
+.cmp-leg .cmp-ok{color:var(--accent-emerald,#8FCB52)}
+.cmp-row.cmp-grup{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-tertiary,rgba(255,255,255,.52));padding-top:20px;padding-bottom:8px}
+.cmp-row.cmp-np .cmp-col{opacity:.65}
+.cmp-row.cmp-np .cmp-feature{color:var(--text-secondary,rgba(255,255,255,.72))}
+.cmp-row .cmp-feature .prep{margin-left:6px}
+
+@media (max-width:767px){
+  .rbk .kur-t{font-size:23px}
+  .rbk .kmap-c{padding:18px 14px}
+  .rbk .kmap{grid-template-rows:16px 26px;column-gap:2px}
+  .rbk .km-c{border-radius:3px}
+  .rbk .km-s{font-size:9px}
+  .rbk .km-x{font-size:10px;padding:0 5px;margin-left:3px}
+  .rbk .km-l{display:none}
+  .rbk .km-leg{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .rbk .cyc{grid-template-columns:1fr 1fr}
+  .rbk .aset{grid-template-columns:1fr 1fr}
+  .cmp-row .cmp-feature .prep{display:flex;width:max-content;margin:4px 0 0}
+  /* HP: kartu Pro paling atas, tabel tanpa kolom Lifetime */
+  .pr-plan.popular{order:-1}
+  .cmp-row:not(.cmp-grup){grid-template-columns:1.5fr 1fr 1fr !important}
+  .cmp-row>.cmp-col.gold{display:none}
+}
