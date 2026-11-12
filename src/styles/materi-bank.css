@@ -32,6 +32,18 @@
 .rbk .lj-r b{display:block;font-size:14.5px;font-weight:600}
 .rbk .lj-r small{display:block;font-size:12px;color:var(--dim);margin-top:2px}
 .rbk .lj-r .mbar{margin:8px 0 0;height:5px}
+/* label jenis: bahasa sehari-hari + istilah JLPT kecil */
+.rbk .lj-j{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.rbk .lj-j.k{color:#D2A6D3}.rbk .lj-j.b{color:#9CCBCD}
+.rbk .lj-j em{font-style:normal;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--dim)}
+.rbk .lj-r b{font-size:16px}
+.rbk .lj-jp{font-family:var(--jps);font-weight:600;color:var(--dim);margin-left:4px}
+.rbk .lj-r small{font-size:13px;color:var(--muted);margin-top:4px}
+.rbk .lj-r small.lj-t{font-size:12px;color:var(--dim);margin-top:2px}
+.rbk .lj-a{display:flex;flex-direction:column;align-items:center;gap:6px}
+.rbk .lj-a .btn{white-space:nowrap}
+.rbk .lj-l{font-size:12px;color:var(--dim)!important}
+.rbk .lj-l:hover{color:var(--text)!important}
 .rbk .qd{display:flex;flex-direction:column;gap:8px}
 .rbk .qd-b{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;min-height:64px;color:var(--text);transition:border-color .2s,background .2s}
 .rbk a.qd-b:hover,.rbk a.qd-b:focus-visible{border-color:var(--line-2);background:var(--surface-2);color:var(--text)}
@@ -199,7 +211,7 @@
   .rbk .today{grid-template-columns:1fr}
   .rbk .lj{padding:18px}
   .rbk .lj-r{grid-template-columns:44px minmax(0,1fr)}
-  .rbk .lj-r .btn{grid-column:1/-1}
+  .rbk .lj-a{grid-column:1/-1}.rbk .lj-a .btn{width:100%}
   .rbk .lj-g{width:44px;height:44px;font-size:19px}
   .rbk .kb{grid-template-columns:1fr}
   .rbk .kbp{padding:18px 16px}
