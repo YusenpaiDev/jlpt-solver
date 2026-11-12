@@ -4,7 +4,8 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { catatItem, jatuhTempo } from "@/lib/kurikulum-db";
-import { bacaUnit, muatUnit } from "@/lib/dek-materi";
+import { bacaUnit, muatPrioritas, muatUnit } from "@/lib/dek-materi";
+import { paket, teratas } from "@/lib/sering-keluar";
 import { catatAktivitas } from "@/lib/aktivitas";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useHonixReaksi } from "@/lib/use-honix-reaksi";
@@ -122,6 +123,9 @@ function KotobaPlayer({ level }: { level: string }) {
   const mode = params.get("mode");
   /* ?unit=5 atau 5,6 (dua unit seminggu kalau kurikulum dipadatin) */
   const unitP = params.get("unit");
+  /* ?sering=1 → kata paling sering keluar di soal; &paket=n → paket 10 ke-n. */
+  const seringP = params.get("sering");
+  const paketP = Number(params.get("paket")) || 0;
   const misi = langkahMisi(params.get("misi"));
   const [mulai] = useState(() => Date.now());
 
@@ -165,6 +169,13 @@ function KotobaPlayer({ level }: { level: string }) {
       let pool = deck.vocabulary;
       if (group) pool = pool.filter(w => w.group === group);
       /* Kurikulum: unit=n → kata unit itu; mode=tempo → yang jatuh tempo hari ini. */
+      if (seringP) {
+        const p = await muatPrioritas(level);
+        if (batal) return;
+        const top = teratas(deck.vocabulary, w => w.word, p.kata);
+        const isi = new Set((paketP > 0 ? paket(top, paketP) : top).map(w => w.word));
+        if (isi.size) pool = pool.filter(w => isi.has(w.word));
+      }
       const unit = bacaUnit(unitP);
       if (unit.length) {
         const semua = await muatUnit(level);
@@ -187,7 +198,7 @@ function KotobaPlayer({ level }: { level: string }) {
     }
     init();
     return () => { batal = true; };
-  }, [level, group, count, mode, unitP]);
+  }, [level, group, count, mode, unitP, seringP, paketP]);
 
   const q = qs && !done ? qs[idx] : null;
   const pick = useCallback((n: number) => { if (locked || !q || n >= q.opts.length) return; setSel(n); }, [locked, q]);

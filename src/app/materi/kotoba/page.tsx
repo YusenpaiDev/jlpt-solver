@@ -14,6 +14,14 @@ import FlashPlayer, { type FlashWord } from "@/components/FlashPlayer";
 import { statusKata } from "@/lib/status-materi";
 import { catatTerakhir } from "@/lib/terakhir-dibuka";
 import { catatItem } from "@/lib/kurikulum-db";
+import { muatPrioritas } from "@/lib/dek-materi";
+import { JUMLAH_TERATAS, labelKeluar, teratas } from "@/lib/sering-keluar";
+import { HonixTurHalaman } from "@/components/honix/HonixTurHalaman";
+import { LANGKAH_KOTOBA } from "@/lib/tur-materi";
+import "@/styles/sering-keluar.css";
+
+/** Kelompok bayangan buat filter "Sering keluar" (bukan baris kana beneran). */
+const SERING = "__sering";
 
 interface Kotoba { word: string; reading: string; meaning: string; group: string; example?: string; example_id?: string; pos?: string; jlpt_level?: string; note?: string; }
 interface Deck { level: string; title: string; source: string; count: number; groupOrder: string[]; vocabulary: Kotoba[]; }
@@ -120,7 +128,18 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
   const POS_LIST = useMemo(() => POS_ALL.filter(p => DATA.some(w => posOf(w) === p)), [DATA]);
 
   const [query, setQuery] = useState("");
-  const [statusF, setStatusF] = useState<"all" | State | "fav">("all");
+  const [statusF, setStatusF] = useState<"all" | State | "fav" | "sering">("all");
+  /* Seberapa sering tiap kata keluar di soal (src/data/prioritas). */
+  const [prio, setPrio] = useState<Record<string, number> | undefined>(undefined);
+  /* Tur nunggu data ini, biar langkah label "di N soal" gak kelewat. */
+  const [prioSiap, setPrioSiap] = useState(false);
+  useEffect(() => {
+    let batal = false;
+    muatPrioritas(level).then(p => { if (!batal) { setPrio(p.kata); setPrioSiap(true); } });
+    if (new URLSearchParams(window.location.search).get("sering")) setTimeout(() => { if (!batal) setStatusF("sering"); }, 0);
+    return () => { batal = true; };
+  }, [level]);
+  const top = useMemo(() => teratas(DATA, w => w.word, prio), [DATA, prio]);
   const [posF, setPosF] = useState<Pos | null>(null);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([deck.groupOrder[0]]));
   const [sel, setSel] = useState<Kotoba | null>(null);
@@ -162,6 +181,13 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
+    /* "Sering keluar": satu kelompok bayangan, urut dari yang paling sering. */
+    if (statusF === "sering") {
+      let ws = top.filter(w => match(w, q));
+      if (posF) ws = ws.filter(w => posOf(w) === posF);
+      const known = top.filter(w => statDari(progres.get(w.word)).state === "known").length;
+      return ws.length ? [{ name: SERING, words: ws, total: top.length, pct: top.length ? Math.round((known / top.length) * 100) : 0 }] : [];
+    }
     return GROUP_ORDER.map(name => {
       let ws = DATA.filter(w => w.group === name && match(w, q));
       if (posF) ws = ws.filter(w => posOf(w) === posF);
@@ -174,7 +200,7 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
     }).filter(g => g.words.length > 0);
     // `progres` wajib ikut: tanpa itu, filter "Dikuasai/Sering salah" dan
     // persentase per unit ngendon di nilai lama tiap user nilai satu kartu.
-  }, [query, statusF, posF, favs, progres, DATA, GROUP_ORDER]);
+  }, [query, statusF, posF, favs, progres, DATA, GROUP_ORDER, top]);
 
   useEffect(() => { if (query.trim() || statusF !== "all" || posF) setOpenGroups(new Set(groups.map(g => g.name))); }, [query, statusF, posF, groups]);
 
@@ -187,7 +213,7 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
     requestAnimationFrame(() => document.querySelector(`[data-grup="${CSS.escape(grup)}"]`)?.scrollIntoView({ block: "start" }));
   }, [GROUP_ORDER, level]);
   const toggleGrup = (name: string) => {
-    if (!openGroups.has(name)) catatTerakhir("kotoba", { level, grup: name });
+    if (!openGroups.has(name) && name !== SERING) catatTerakhir("kotoba", { level, grup: name });
     setOpenGroups(s => { const n = new Set(s); if (n.has(name)) n.delete(name); else n.add(name); return n; });
   };
 
@@ -291,7 +317,7 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
                 <div className="sep" />
                 <div className="seg"><div className="n" style={{ color: "var(--text-dim)" }}>{summary.neu}</div><div className="l">Belum</div></div>
               </div>
-              <button onClick={() => router.push(`/latihan/kotoba?level=${level}`)} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "13px 22px", borderRadius: 99, background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 8px 22px -8px rgba(221,65,36,0.7)" }}><Zap size={14} /> Latihan Kilat</button>
+              <button data-tur="kv-kilat" onClick={() => router.push(`/latihan/kotoba?level=${level}`)} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "13px 22px", borderRadius: 99, background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 8px 22px -8px rgba(221,65,36,0.7)" }}><Zap size={14} /> Latihan Kilat</button>
             </div>
           </div>
 
@@ -302,6 +328,11 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
 
           <div className="kv-chips">
             <button className={`chip${statusF === "all" ? " on" : ""}`} onClick={() => setStatusF("all")}>Semua <span className="n">{DATA.length}</span></button>
+            {top.length > 0 && (
+              <button className={`chip chip-sk${statusF === "sering" ? " on" : ""}`} data-tur="kv-sering" onClick={() => setStatusF(s => s === "sering" ? "all" : "sering")}>
+                🔥 Sering keluar <span className="n">{Math.min(top.length, JUMLAH_TERATAS)}</span>
+              </button>
+            )}
             <button className={`chip wrong${statusF === "wrong" ? " on" : ""}`} onClick={() => setStatusF("wrong")}><span className="d d-wrong" />Sering salah <span className="n">{summary.wrong}</span></button>
             <button className={`chip${statusF === "seen" ? " on" : ""}`} onClick={() => setStatusF("seen")}><span className="d d-seen" />Pernah muncul <span className="n">{summary.seen}</span></button>
             <button className={`chip${statusF === "new" ? " on" : ""}`} onClick={() => setStatusF("new")}><span className="d d-new" />Belum <span className="n">{summary.neu}</span></button>
@@ -315,32 +346,38 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
 
           <div className="kv-grid">
             <div className="kv-main">
-              {groups.map(g => {
+              {groups.map((g, gi) => {
                 const open = openGroups.has(g.name);
                 const th = THEME[g.name];
+                const bayangan = g.name === SERING;
+                /* Target tur "kv-sk": label pertama di kelompok pertama. */
+                const iSk = gi === 0 ? g.words.findIndex(w => labelKeluar(prio?.[w.word])) : -1;
                 return (
-                  <div className={`kv-unit${open ? " open" : ""}`} key={g.name} data-grup={g.name}>
+                  <div className={`kv-unit${open ? " open" : ""}`} key={g.name} data-grup={bayangan ? undefined : g.name}>
                     <div className="kv-uhead" onClick={() => toggleGrup(g.name)}>
                       <ChevronRight size={14} className="kv-chev" />
                       <span className="kv-ut">
-                        {th?.label ? `${th.label} · ` : ""}{g.name.replace(/ 合う$/, "")}{th?.jp && <span className="jpt"> {th.jp}</span>} {th?.id && <span className="thid">{th.id}</span>}
+                        {bayangan ? <>🔥 Paling sering keluar di soal <span className="thid">urut dari yang paling sering</span></>
+                          : <>{th?.label ? `${th.label} · ` : ""}{g.name.replace(/ 合う$/, "")}{th?.jp && <span className="jpt"> {th.jp}</span>} {th?.id && <span className="thid">{th.id}</span>}</>}
                         <span className="cnt">{g.total} kata</span>
                       </span>
                       <div className="kv-utrack"><i style={{ width: `${g.pct}%` }} /></div>
                       <span className="kv-upct" style={g.pct === 0 ? { color: "var(--text-dim)", fontWeight: 500 } : undefined}>{g.pct === 0 ? "belum dilatih" : `${g.pct}% dikuasai`}</span>
-                      <button className="kv-drill" onClick={e => { e.stopPropagation(); openFlash(DATA.filter(w => w.group === g.name)); }}><Zap size={11} /> Flash unit ({g.total})</button>
+                      <button className="kv-drill" data-tur={gi === 0 ? "kv-flash" : undefined} onClick={e => { e.stopPropagation(); openFlash(bayangan ? g.words : DATA.filter(w => w.group === g.name)); }}><Zap size={11} /> Flash unit ({g.total})</button>
                     </div>
                     {open && (
                       <div className="kv-words">
-                        {g.words.map(w => {
+                        {g.words.map((w, wi) => {
                           const st = statDari(progres.get(w.word)); const h = hitsText(st); const fav = favs.has(w.word);
+                          const sk = labelKeluar(prio?.[w.word]);
+                          const turSk = wi === iSk ? "kv-sk" : undefined;
                           return (
                             <div className={`kv-w${sel?.word === w.word ? " sel" : ""}`} key={w.word} onClick={() => setSel(w)}>
                               <span className={`kv-dot ${DOT[st.state]}`} />
-                              <span className="kv-wjp">{w.word}<span className="r">{w.reading}</span></span>
+                              <span className="kv-wjp">{w.word}<span className="r">{w.reading}</span>{sk && <span className="sk-badge" data-tur={turSk}>{sk}</span>}</span>
                               <span className="kv-wid">{w.meaning}</span>
                               <span className={`kv-whits${h.bad ? " bad" : ""}`}>{h.t}</span>
-                              <button className={`kv-star${fav ? " on" : ""}`} onClick={e => { e.stopPropagation(); toggleFav(w); }} disabled={busy === w.word}><Star size={15} fill={fav ? "currentColor" : "none"} /></button>
+                              <button className={`kv-star${fav ? " on" : ""}`} data-tur={gi === 0 && wi === 0 ? "kv-star" : undefined} onClick={e => { e.stopPropagation(); toggleFav(w); }} disabled={busy === w.word}><Star size={15} fill={fav ? "currentColor" : "none"} /></button>
                             </div>
                           );
                         })}
@@ -400,6 +437,8 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
         </div>
 
         {flashWords && <FlashPlayer words={flashWords} onClose={() => setFlashWords(null)} onNilai={(w, tau) => nilaiKata(w.id, tau)} />}
+        {/* Tur pop-up sekali: ini loh filter sering keluar, label, flash, latihan, simpan. */}
+        {prioSiap && <HonixTurHalaman id="kotoba" langkah={LANGKAH_KOTOBA} />}
       </main>
     </>
   );

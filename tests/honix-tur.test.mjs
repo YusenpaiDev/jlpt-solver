@@ -46,9 +46,9 @@ test("langkah: diawali & diakhiri langkah tengah, HP gabung jadi Lainnya", () =>
 
 import { keputusanTurHalaman, LANGKAH_BANKSOAL } from "../src/lib/honix-tur.ts";
 
-test("tur halaman: nunggu tur menu selesai, terus sekali aja", () => {
-  assert.equal(keputusanTurHalaman(TUR_AWAL, "banksoal"), false);
-  assert.equal(keputusanTurHalaman({ ...TUR_AWAL, terakhir: "rusak" }, "banksoal"), false);
+test("tur halaman: sekali aja per halaman (tur menu udah gak otomatis, jadi gak ditungguin)", () => {
+  assert.equal(keputusanTurHalaman(TUR_AWAL, "banksoal"), true);
+  assert.equal(keputusanTurHalaman({ ...TUR_AWAL, halaman: { banksoal: hariLalu(0) } }, "banksoal"), false);
   const habisTurMenu = { terakhir: hariLalu(1), ingatkan: true, halaman: {} };
   assert.equal(keputusanTurHalaman(habisTurMenu, "banksoal"), true);
   assert.equal(keputusanTurHalaman({ ...habisTurMenu, halaman: { banksoal: hariLalu(0) } }, "banksoal"), false);

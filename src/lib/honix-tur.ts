@@ -41,10 +41,10 @@ export function keputusanTur(tur: TurState, kini: Date): "tur" | "tawar" | null 
   return kini.getTime() - lalu >= HARI_TAWAR * 86_400_000 ? "tawar" : null;
 }
 
-/** Tur halaman muncul otomatis sekali — tapi baru setelah tur menu beres,
-    biar dua tur gak tabrakan di kunjungan pertama. */
+/** Tur halaman muncul otomatis sekali per halaman. Dulu nunggu tur menu
+    beres biar gak tabrakan; tur menu sekarang cuma dari Pengaturan
+    (HANDOFF-alur-belajar §5), jadi gak perlu ditungguin lagi. */
 export function keputusanTurHalaman(tur: TurState, id: string): boolean {
-  if (!tur.terakhir || Number.isNaN(Date.parse(tur.terakhir))) return false;
   return !tur.halaman[id];
 }
 

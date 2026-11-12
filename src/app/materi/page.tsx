@@ -13,7 +13,11 @@ import { BarisLevel } from "@/components/rencana/BarisLevel";
 import { KartuKurikulumDisiapkan, KartuKurikulumLive } from "@/components/rencana/KartuKurikulum";
 import { fiturLive } from "@/lib/kurikulum-config";
 import { useUserStats } from "@/lib/use-user-stats";
-import { muatBunpou, muatKotoba, type DekBunpou, type DekKotoba } from "@/lib/dek-materi";
+import { muatBunpou, muatKotoba, muatPrioritas, type DekBunpou, type DekKotoba } from "@/lib/dek-materi";
+import { jumlahPaket, paket, paketBerikut, teratas, UKURAN_PAKET } from "@/lib/sering-keluar";
+import type { Prioritas } from "@/lib/kurikulum";
+import { HonixTurHalaman } from "@/components/honix/HonixTurHalaman";
+import { LANGKAH_MATERI } from "@/lib/tur-materi";
 import { gabungBankSoal, type SetKatalog } from "@/lib/bank-soal";
 import { susunPerjalanan } from "@/lib/perjalanan-soal";
 import { bacaTerakhir, kapan, type Terakhir } from "@/lib/terakhir-dibuka";
@@ -41,6 +45,7 @@ export default function MateriPage() {
   const lv = stats.targetLevel as Lv;
   const [dekK, setDekK] = useState<DekKotoba | null>(null);
   const [dekB, setDekB] = useState<DekBunpou | null>(null);
+  const [prio, setPrio] = useState<Prioritas>({});
   const [progK, setProgK] = useState<Map<string, Hitungan>>(new Map());
   const [progB, setProgB] = useState<Map<string, Hitungan>>(new Map());
   const [favorit, setFavorit] = useState<Set<string>>(new Set());
@@ -82,9 +87,9 @@ export default function MateriPage() {
   useEffect(() => {
     if (!stats.loaded) return;
     let batal = false;
-    void Promise.all([muatKotoba(lv), muatBunpou(lv)]).then(([k, b]) => {
+    void Promise.all([muatKotoba(lv), muatBunpou(lv), muatPrioritas(lv)]).then(([k, b, p]) => {
       if (batal) return;
-      setDekK(k); setDekB(b);
+      setDekK(k); setDekB(b); setPrio(p);
       if (DEV_BYPASS) {
         const d = devProgres(k.vocabulary.map(w => w.word), b.patterns.map(p => p.pattern), new URLSearchParams(window.location.search).get("dev"));
         setProgK(new Map(d.kata.map(r => [r.word, r])));
@@ -125,15 +130,22 @@ export default function MateriPage() {
     const P = hitungEmpat(dekB.patterns, sp);
     const lanjutK = kataK.find(k => k.kunci === tk?.grup) ?? tebak(kataK);
     const lanjutB = kataB.find(k => k.kunci === tb?.grup) ?? tebak(kataB);
+    /* Paling sering keluar di soal, paket 10 (beres = semua udah pernah dilatih). */
+    const topK = teratas(dekK.vocabulary, w => w.word, prio.kata);
+    const topB = teratas(dekB.patterns, p => p.pattern, prio.pola);
+    const sering = {
+      kata: { isi: topK.map(w => w.word), berikut: paketBerikut(topK, w => sk(w) !== "new") },
+      pola: { isi: topB.map(p => p.pattern), berikut: paketBerikut(topB, p => sp(p) !== "new") },
+    };
     return {
-      K, P, tk, tb, lanjutK, lanjutB,
+      K, P, tk, tb, lanjutK, lanjutB, sering,
       kataK: urut(kataK, tk?.grup), kataB: urut(kataB, tb?.grup),
       jumlahKelompokK: kataK.length, jumlahKelompokB: kataB.length,
       rawan: dekB.patterns.filter(p => p.confusableWith.length > 0).length,
       disimpan: dekK.vocabulary.filter(w => favorit.has(w.word)).length,
       baru: K[0] + K[1] + K[2] + P[0] + P[1] + P[2] === 0 && !tk && !tb,
     };
-  }, [dekK, dekB, progK, progB, favorit, terakhir, lv]);
+  }, [dekK, dekB, progK, progB, favorit, terakhir, lv, prio]);
 
   return (
     <>
@@ -160,8 +172,10 @@ export default function MateriPage() {
                   : <KartuKurikulumDisiapkan level={lv} kata={dekK?.vocabulary.length ?? 0} pola={dekB?.patterns.length ?? 0} />}
               </div>
 
+              {(hasil.sering.kata.isi.length > 0 || hasil.sering.pola.isi.length > 0) && <KartuSering lv={lv} sering={hasil.sering} />}
+
               <div className="today">
-                <section className="card lj">
+                <section className="card lj" data-tur="mt-lanjut">
                   <div className="eyebrow">{hasil.baru ? "Mulai belajar" : "Lanjut dari terakhir"}</div>
                   {hasil.lanjutK && (
                     <BarisLanjut jenis="kata" k={hasil.lanjutK} baru={hasil.baru} kapan={hasil.tk ? kapan(hasil.tk.at) : ""}
@@ -175,7 +189,7 @@ export default function MateriPage() {
                 <PintuCepat salahK={hasil.K[2]} salahP={hasil.P[2]} rawan={hasil.rawan} />
               </div>
 
-              <div className="kb">
+              <div className="kb" data-tur="mt-panel">
                 <Panel judul="Kotoba" jp="語彙" ket={`${(dekK?.vocabulary.length ?? 0).toLocaleString("id-ID")} kata ${lv} · ${hasil.jumlahKelompokK} kelompok`}
                   empat={hasil.K} kelompok={hasil.kataK} satuan="kata" terakhir={hasil.tk?.grup}
                   semua={{ href: "/materi/kotoba", teks: `Semua ${hasil.jumlahKelompokK} kelompok →` }}
@@ -212,6 +226,8 @@ export default function MateriPage() {
             </>
           )}
         </div>
+        {/* Tur pop-up sekali: ini loh mulai dari mana. */}
+        {hasil && <HonixTurHalaman id="materi" langkah={LANGKAH_MATERI} />}
       </main>
     </>
   );
@@ -221,7 +237,7 @@ function PintuCepat({ salahK, salahP, rawan }: { salahK: number; salahP: number;
   const salah = salahK + salahP;
   const ulang = salahK > 0 ? "/latihan/kotoba?mode=ulang&count=10" : "/latihan/kilat?mode=ulang&count=10&teknik=lewat";
   return (
-    <div className="qd">
+    <div className="qd" data-tur="mt-pintu">
       {salah > 0 ? (
         <Link className="card qd-b" href={ulang}>
           <span className="qd-i" lang="ja" style={{ color: "var(--danger)", background: "rgba(224,86,111,.14)" }}>誤</span>
@@ -346,5 +362,49 @@ function BarisLanjut({ jenis, k, baru, kapan: kpn, polaTerakhir, href }: {
         <Link className="lj-l" href={k.href}>Lihat daftarnya</Link>
       </span>
     </div>
+  );
+}
+
+/* "Mulai dari yang paling sering keluar" (permintaan owner 12 Nov): alasan
+   konkret buat hafalan + paket 10 yang bisa beres satu-satu. Contoh isi paket
+   berikutnya ditunjukin biar kelihatan "ini loh yang dihafal". */
+const JENIS_SK = {
+  kata: { label: "Hafalan kata", istilah: "Kotoba", satuan: "kata", aksi: "Hafalin", cls: "k", latihan: "/latihan/kotoba", daftar: "/materi/kotoba" },
+  pola: { label: "Pola kalimat", istilah: "Bunpou", satuan: "pola", aksi: "Latihan", cls: "b", latihan: "/latihan/kilat", daftar: "/materi/bunpou" },
+} as const;
+
+function KartuSering({ lv, sering }: { lv: string; sering: Record<keyof typeof JENIS_SK, { isi: string[]; berikut: number | null }> }) {
+  return (
+    <section className="card skc" data-tur="mt-sering">
+      <div className="eyebrow">Bingung mulai dari mana?</div>
+      <b className="skc-t">🔥 Hafalin yang paling sering keluar di soal</b>
+      <p className="skc-p">Kata & pola yang paling sering muncul di soal {lv}, dipecah paket {UKURAN_PAKET}. Satu paket cuma ±4 menit.</p>
+      <div className="skc-g">
+        {(Object.keys(JENIS_SK) as (keyof typeof JENIS_SK)[]).filter(j => sering[j].isi.length > 0).map(j => {
+          const J = JENIS_SK[j];
+          const { isi, berikut } = sering[j];
+          const n = jumlahPaket(isi.length);
+          const beres = berikut == null ? n : berikut - 1;
+          const contoh = paket(isi, berikut ?? 1).slice(0, 4);
+          const href = berikut != null ? `${J.latihan}?sering=1&paket=${berikut}&count=${UKURAN_PAKET}` : `${J.latihan}?sering=1&count=${UKURAN_PAKET}`;
+          return (
+            <div className="skc-r" key={j}>
+              <span className={`lj-j ${J.cls}`}>{J.label}<em>{J.istilah}</em></span>
+              <div className="skc-pk" aria-label={`${beres} dari ${n} paket beres`}>
+                {Array.from({ length: n }, (_, i) => (
+                  <i key={i} className={i < beres ? "ok" : i + 1 === berikut ? "now" : ""}>{i < beres ? "✓" : i + 1}</i>
+                ))}
+                <span>{berikut != null ? `Paket ${berikut} dari ${n}` : "Semua paket beres 🎉"}</span>
+              </div>
+              <div className="skc-c" lang="ja">{contoh.map(x => <span key={x}>{x}</span>)}{berikut != null && <small>+{paket(isi, berikut).length - contoh.length} lagi</small>}</div>
+              <div className="skc-a">
+                <Link className="btn btn-p" href={href}>{berikut != null ? `${J.aksi} paket ${berikut}` : `Ulang ${UKURAN_PAKET} ${J.satuan} acak`} →</Link>
+                <Link className="lj-l" href={`${J.daftar}?sering=1`}>Lihat semua {isi.length} {J.satuan}</Link>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
