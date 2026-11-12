@@ -1,5 +1,8 @@
 "use client";
 
+import { useTerkunci } from "@/components/premium/Gembok";
+import { bukaPremium } from "@/lib/akses-premium";
+
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
 
 import { useEffect, useMemo, useState } from "react";
@@ -37,6 +40,8 @@ function wordCount(text: string) {
 }
 
 export default function CatatanPage() {
+  /* Masa percobaan habis & belum Premium → tombol aksi buka pop-up Premium. */
+  const terkunci = useTerkunci();
   const stats = useUserStats();
   const [catatan, setCatatan] = useState<Catatan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,6 +119,7 @@ export default function CatatanPage() {
   };
 
   const handleNew = () => {
+    if (terkunci) { bukaPremium("simpan"); return; }
     if (isDirty) {
       if (!confirm("Catatan belum disimpan. Tetap buat baru?")) return;
     }

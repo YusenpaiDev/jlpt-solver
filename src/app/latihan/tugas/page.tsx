@@ -1,5 +1,8 @@
 "use client";
 
+import { useTerkunci } from "@/components/premium/Gembok";
+import { bukaPremium } from "@/lib/akses-premium";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -92,6 +95,8 @@ function scoreTone(score: number | null, total: number): "good" | "mid" | "bad" 
 }
 
 export default function LembarTugas() {
+  /* Masa percobaan habis & belum Premium → tombol aksi buka pop-up Premium. */
+  const terkunci = useTerkunci();
   const [stage, setStage] = useState<Stage>("setup");
 
   /* Setup */
@@ -160,6 +165,7 @@ export default function LembarTugas() {
   }).length;
 
   async function handleGenerate() {
+    if (terkunci) { bukaPremium("latihan"); return; }
     setError(null);
     setStage("generating");
     try {

@@ -1,5 +1,7 @@
 "use client";
 
+import { KunciHalaman } from "@/components/premium/Gembok";
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUserStats } from "@/lib/use-user-stats";
@@ -15,7 +17,7 @@ import { HasilUlangan, unitUlangan, judulUlangan, tanpaUlangan, BAGIAN_ULANGAN }
 import { setUnit } from "@/lib/misi-kurikulum";
 
 /** Ulangan mingguan: 24 soal dari unit minggu lalu (HANDOFF-kurikulum §10). */
-export default function UlanganPage() {
+function UlanganPageIsi() {
   const stats = useUserStats();
   const router = useRouter();
   const k = useKurikulum(stats.targetLevel, stats.loaded);
@@ -71,4 +73,9 @@ export default function UlanganPage() {
       ) : <p className="ku-muat" role="status">Menyiapkan soal…</p>}
     </Kerangka>
   );
+}
+
+/* Masa percobaan habis & belum Premium → layar gembok, bukan soal. */
+export default function UlanganPage() {
+  return <KunciHalaman><UlanganPageIsi /></KunciHalaman>;
 }

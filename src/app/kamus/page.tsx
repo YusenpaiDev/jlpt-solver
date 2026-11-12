@@ -1,5 +1,8 @@
 "use client";
 
+import { useTerkunci } from "@/components/premium/Gembok";
+import { bukaPremium } from "@/lib/akses-premium";
+
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
 
 import { useEffect, useMemo, useState } from "react";
@@ -70,6 +73,8 @@ export default function Kamus() {
   const [flipped, setFlipped] = useState(false);
   const [shuffled, setShuffled] = useState(false);
   const [flashOrder, setFlashOrder] = useState<number[]>([]);
+  /* Masa percobaan habis & belum Premium → tombol aksi buka pop-up Premium. */
+  const terkunci = useTerkunci();
 
   /* Modal: add */
   const [addOpen, setAddOpen] = useState(false);
@@ -330,6 +335,7 @@ export default function Kamus() {
 
   /* ── Toggle favorite ── */
   const toggleFavorite = async (id: string) => {
+    if (terkunci) { bukaPremium("simpan"); return; }
     const w = words.find(x => x.id === id);
     if (!w) return;
     const next = !w.favorite;
@@ -397,7 +403,7 @@ export default function Kamus() {
   };
 
   /* ── Flash mode ── */
-  const openFlash = () => { setFlashMode("picker"); };
+  const openFlash = () => { if (terkunci) { bukaPremium("latihan"); return; } setFlashMode("picker"); };
   const pickDeck = (deckId: "all" | number) => {
     setFlashDeckId(deckId);
     setFlashIdx(0);
@@ -507,7 +513,7 @@ export default function Kamus() {
         </header>
 
         <div className="kk-toolbar">
-          <button type="button" className="tb-btn tb-flash" onClick={openFlash} disabled={words.length === 0}>
+          <button type="button" className={`tb-btn tb-flash${terkunci ? " gk-btn" : ""}`} onClick={openFlash} disabled={words.length === 0}>
             <span><Zap size={15} fill="currentColor" strokeWidth={0.8} />FLASH</span>
             <span className="tb-meta">Mode Hafalan</span>
           </button>
@@ -515,7 +521,7 @@ export default function Kamus() {
             <span><Upload size={14} strokeWidth={2} />IMPORT</span>
             <span className="tb-meta">Bulk paste / file</span>
           </button>
-          <button type="button" className="tb-btn tb-tambah" onClick={() => setAddOpen(true)}>
+          <button type="button" className={`tb-btn tb-tambah${terkunci ? " gk-btn" : ""}`} onClick={() => (terkunci ? bukaPremium("simpan") : setAddOpen(true))}>
             <span><Plus size={14} strokeWidth={2.4} />TAMBAH</span>
             <span className="tb-meta">Satu per satu</span>
           </button>

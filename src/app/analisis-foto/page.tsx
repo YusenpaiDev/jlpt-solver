@@ -1,5 +1,7 @@
 "use client";
 
+import { KunciHalaman } from "@/components/premium/Gembok";
+
 import { assertProgressSaved, createSaveQueue } from "@/lib/save-progress";
 
 import { useState, useRef, useEffect } from "react";
@@ -2579,7 +2581,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
 /* ─── Camera Modal (desktop webcam) ─────────────────────────── */
 
 /* ─── Page ──────────────────────────────────────────────────── */
-export default function AnalisisFoto() {
+function AnalisisFotoIsi() {
   const stats = useUserStats();
   const [stage,               setStage]               = useState<Stage>("upload");
   /* Fase pembuka halaman. Dulu ini flag `redirecting` yang dihitung di
@@ -2885,4 +2887,9 @@ export default function AnalisisFoto() {
       </main>
     </>
   );
+}
+
+/* Masa percobaan habis & belum Premium → layar gembok, bukan soal. */
+export default function AnalisisFoto() {
+  return <KunciHalaman><AnalisisFotoIsi /></KunciHalaman>;
 }
