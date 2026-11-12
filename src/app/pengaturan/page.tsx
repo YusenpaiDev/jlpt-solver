@@ -5,6 +5,8 @@ import { useHonix } from "@/lib/use-honix";
 import { tesSuaraHonix } from "@/lib/honix-sfx";
 import { mulaiTur } from "@/lib/honix-tur";
 import { bukaCaraBelajar } from "@/components/alur/CaraBelajar";
+import { PasangPengingat } from "@/components/alur/PasangPengingat";
+import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -76,11 +78,6 @@ export default function Pengaturan() {
   const [furiganaMode, setFuriganaMode] = useState<"all" | "level" | "off">("all");
 
   /* Notif */
-  const [notifDaily, setNotifDaily] = useState(true);
-  const [notifStreak, setNotifStreak] = useState(true);
-  const [notifMateri, setNotifMateri] = useState(false);
-  const [notifWeekly, setNotifWeekly] = useState(true);
-  const [notifPush, setNotifPush] = useState(false);
 
   /* Privacy */
   const [privLeaderboard, setPrivLeaderboard] = useState(false);
@@ -302,15 +299,7 @@ export default function Pengaturan() {
                 onSave={showSaved}
               />
             )}
-            {active === "notif" && (
-              <NotifSection
-                daily={notifDaily} setDaily={setNotifDaily}
-                streakWarn={notifStreak} setStreakWarn={setNotifStreak}
-                materi={notifMateri} setMateri={setNotifMateri}
-                weekly={notifWeekly} setWeekly={setNotifWeekly}
-                push={notifPush} setPush={setNotifPush}
-              />
-            )}
+            {active === "notif" && <NotifSection menit={waktuPerHari} />}
             {active === "honix" && <HonixSection />}
             {active === "tutorial" && <TutorialSection />}
             {active === "sub" && <SubscriptionSection />}
@@ -695,23 +684,31 @@ function AISection({
 
 /* ─── Notification section ─── */
 
-function NotifSection({
-  daily, setDaily, streakWarn, setStreakWarn, materi, setMateri,
-  weekly, setWeekly, push, setPush,
-}: {
-  daily: boolean; setDaily: (v: boolean) => void;
-  streakWarn: boolean; setStreakWarn: (v: boolean) => void;
-  materi: boolean; setMateri: (v: boolean) => void;
-  weekly: boolean; setWeekly: (v: boolean) => void;
-  push: boolean; setPush: (v: boolean) => void;
-}) {
+/* Dulu isinya 5 saklar (reminder harian, streak, email mingguan, push) yang
+   gak disimpan & gak ngirim apa-apa. Sekarang cuma yang beneran jalan, sisanya
+   jujur "Sedang disiapkan". */
+function NotifSection({ menit }: { menit: number }) {
   return (
-    <Card title="Notifikasi" desc="Kapan kamu mau di-ping">
-      <Toggle label="Reminder belajar harian"             sub="Setiap hari jam 19:00 (sesuaikan di bawah)" on={daily} onChange={setDaily} />
-      <Toggle label="Streak akan hilang"                  sub="2 jam sebelum streak putus"                on={streakWarn} onChange={setStreakWarn} />
-      <Toggle label="Materi baru tersedia"                sub="Kalau materi favorit kamu di-update"       on={materi} onChange={setMateri} />
-      <Toggle label="Insight mingguan via email"          sub="Setiap Senin pagi — rangkuman progress"   on={weekly} onChange={setWeekly} />
-      <Toggle label="Push notification mobile"            sub="Belum tersedia — coming soon"              on={push} onChange={setPush} />
+    <Card title="Pengingat" desc="Biar gak lupa belajar">
+      <PasangPengingat menit={menit} />
+      <div className="pg-toggle-row" style={{ cursor: "default" }}>
+        <div>
+          <div className="pg-toggle-label">Di dalam app · selalu nyala</div>
+          <div className="pg-toggle-sub">Lonceng & banner Beranda: streak mau putus, tes mini mingguan, ujian makin dekat, latihan mandek.</div>
+        </div>
+      </div>
+      <div className="pg-toggle-row" style={{ cursor: "default" }}>
+        <div>
+          <div className="pg-toggle-label">Pengingat harian & rekap mingguan via email<LabelDisiapkan /></div>
+          <div className="pg-toggle-sub">Cuma kalau hari itu belum belajar, maksimal sekali sehari.</div>
+        </div>
+      </div>
+      <div className="pg-toggle-row" style={{ cursor: "default" }}>
+        <div>
+          <div className="pg-toggle-label">Push notification HP<LabelDisiapkan /></div>
+          <div className="pg-toggle-sub">Sementara pakai pengingat kalender di atas.</div>
+        </div>
+      </div>
     </Card>
   );
 }

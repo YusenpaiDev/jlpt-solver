@@ -32,6 +32,17 @@ export function seninDari(tanggal: string): string {
   return t.toISOString().slice(0, 10);
 }
 
+/** Lonceng/banner "Tes mini minggu ini belum": cuma Jumat–Minggu (biar gak
+    nagih dari Senin), dan berhenti begitu tes minggu ini udah ada. `tanggal` =
+    tanggal lokal sesi dibuat. */
+export function perluIngatTesMini(sesi: { kind?: string | null; tanggal: string }[], hariIni: string): boolean {
+  const [y, m, d] = hariIni.split("-").map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = Minggu
+  if (dow !== 5 && dow !== 6 && dow !== 0) return false;
+  const senin = seninDari(hariIni);
+  return !sesi.some(s => s.kind === "tes_mini" && s.tanggal >= senin && s.tanggal <= hariIni);
+}
+
 function akurasi(h: Hitung, kat: string[]) {
   let a = 0, c = 0;
   for (const k of kat) {

@@ -8,6 +8,7 @@ import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
 import { fiturLive, JUMLAH_UNIT, type FiturBaru } from "@/lib/kurikulum-config";
 import { PACE_MISI, tingkatPace } from "@/lib/misi-harian";
 import { honixSrc } from "@/lib/honix-pose";
+import { PasangPengingat } from "@/components/alur/PasangPengingat";
 
 const tanggalPanjang = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
@@ -59,6 +60,8 @@ export function CaraKerja({ level, ujian, pace, unitMulai, langkah, onMulai }: {
               ))}
             </ul>
             <p className="cwk-n">Cukup ingat satu: <b style={{ color: "var(--text)" }}>tiap hari buka Honix, kerjain misi.</b> Sisanya Honix yang atur.</p>
+            {/* Biar yang lupa buka app tetap diingetin — lewat kalender HP sendiri. */}
+            <PasangPengingat menit={P.m} />
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element -- PNG transparan Honix */}
           <div className="cwk-hx"><img className="hx" src={honixSrc("senang")} alt="Honix" /></div>
