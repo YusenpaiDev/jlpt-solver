@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Mail, Lock, Eye, EyeOff, User as UserIcon, ArrowRight, Check, Sparkles,
@@ -25,6 +25,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  /* Habis hapus akun dari Pengaturan → /login?pesan=akun-dihapus. */
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("pesan") !== "akun-dihapus") return;
+    const t = setTimeout(() => setSuccess("Akunmu udah dihapus. Makasih udah belajar bareng Honix."), 0);
+    return () => clearTimeout(t);
+  }, []);
 
   const supabase = createClient();
 

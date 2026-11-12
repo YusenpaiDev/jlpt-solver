@@ -1,0 +1,113 @@
+/* Pengaturan v2 (handoff-pengaturan/peng/pg.css, di-port 1:1).
+   `.m X` di prototype = @media (max-width:767px). Scope .rbk. */
+.rbk .pg{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:start;margin-top:22px}
+.rbk .pgm{position:sticky;top:24px;padding:10px;display:flex;flex-direction:column;gap:2px;border-radius:24px}
+.rbk .pgm button{display:grid;grid-template-columns:20px minmax(0,1fr) 16px;gap:12px;align-items:center;min-height:46px;padding:0 14px;border-radius:14px;font-size:14px;font-weight:500;color:var(--muted);text-align:left}
+.rbk .pgm button:hover,.rbk .pgm button:focus-visible{background:rgba(255,255,255,.04);color:var(--text)}
+.rbk .pgm button.on{background:var(--surface-2);color:var(--text);font-weight:600}
+.rbk .pgm button.dz{color:var(--dim)}
+.rbk .pgm button.dz.on{color:var(--danger)}
+.rbk .pgm .ch{display:grid;place-items:center;color:var(--dim)}
+.rbk .pgp{padding:30px 32px;border-radius:24px;min-width:0}
+.rbk .pgp>h2{font-size:19px;font-weight:600}
+.rbk .pgp-s{font-size:13px;color:var(--dim);margin:4px 0 20px}
+.rbk .pgp.dzp{border-color:rgba(224,86,111,.3)}
+.rbk .pf-ph{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.rbk .pf-ph .ava{width:76px;height:76px;font-size:28px}
+.rbk .pf-ph small{display:block;font-size:12px;color:var(--dim);margin-top:8px}
+.rbk .btn.sm{min-height:40px;padding:0 14px;font-size:13px}
+.rbk .fld{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;min-width:0}
+.rbk .fld span{font-size:12.5px;font-weight:600;color:var(--muted)}
+.rbk .fld em{font-style:normal;font-weight:400;color:var(--dim)}
+.rbk .fld input,.rbk .fld select{min-height:48px;padding:0 16px;border-radius:12px;background:rgba(11,10,12,.5);border:1px solid var(--line-2);color:var(--text);font:inherit;font-size:14.5px;width:100%}
+.rbk .fld input[readonly]{color:var(--muted)}
+.rbk .fld input:focus-visible,.rbk .fld select:focus-visible{outline:2px solid var(--pt);outline-offset:1px}
+.rbk .fld2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.rbk .pg-save{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;padding-top:18px;border-top:1px solid var(--line)}
+.rbk .card2{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:rgba(11,10,12,.3)}
+.rbk .nt-r{display:flex;align-items:center;gap:10px}
+.rbk .sel-s{min-height:40px;padding:0 10px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line-2);color:var(--text);font:inherit;font-size:13px}
+.rbk .tg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.rbk .tgt{padding:18px 20px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
+.rbk .tgt:last-child{border-right:0}
+.rbk .tgt>span{font-size:11.5px;color:var(--dim);font-weight:500;display:flex;align-items:center;gap:6px}
+.rbk .tgt>b{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.rbk .tgt>small{font-size:12.5px;color:var(--muted)}
+.rbk .tgt .btn{align-self:flex-start;margin-top:8px;min-height:40px;font-size:13px;padding:0 14px}
+.rbk .lock{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--surface-3);color:var(--muted)}
+.rbk .pace3{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.rbk .pace3 button{min-height:40px;padding:0 10px;border-radius:10px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--surface-2);border:1px solid var(--line)}
+.rbk .pace3 button.on{background:rgba(221,65,36,.16);border-color:rgba(221,65,36,.5);color:var(--text)}
+.rbk .rows{display:flex;flex-direction:column}
+.rbk .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 0;min-height:64px;border-bottom:1px solid var(--line)}
+.rbk .row:last-child{border-bottom:0}
+.rbk .row-i{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-family:var(--jps);font-size:17px;font-weight:700;background:var(--surface-2);color:var(--muted)}
+.rbk .row-i.o{background:rgba(221,65,36,.14);color:var(--pt)}
+.rbk .row-i img{width:30px;height:30px}
+.rbk .row b{display:block;font-size:14.5px;font-weight:600}
+.rbk .row small{display:block;font-size:12.5px;color:var(--dim);margin-top:2px;line-height:1.4}
+.rbk .row .btn{min-height:40px;font-size:13px;padding:0 14px}
+.rbk .row .seg{background:var(--surface-2)}
+.rbk .row .seg button{min-height:36px;padding:0 12px;font-size:12.5px}
+.rbk .row .sw{cursor:pointer}
+.rbk .row.dz b{color:var(--danger)}
+.rbk .btn-d{color:var(--danger);border:1px solid rgba(224,86,111,.45);background:transparent}
+.rbk .btn-d:hover,.rbk .btn-d:focus-visible{background:rgba(224,86,111,.10)}
+.rbk .btn-d[disabled]{opacity:.45;cursor:default}
+.rbk .sub-c{padding:20px 22px;margin-bottom:14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;background:linear-gradient(135deg,rgba(221,65,36,.12),var(--surface) 60%);border-color:rgba(221,65,36,.3)}
+.rbk .sub-c b.sub-pl{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;flex-wrap:wrap}
+.rbk .sub-c .mbar{max-width:420px;margin:12px 0 6px}
+.rbk .sub-c small{font-size:12.5px;color:var(--muted)}
+.rbk .sub-a{display:flex;flex-direction:column;gap:8px}
+.rbk .quota{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}
+.rbk .qt2{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.rbk .qt2 div{display:flex;justify-content:space-between}
+.rbk .qt2 b{color:var(--text);font-variant-numeric:tabular-nums}
+.rbk .qt2 .mbar{margin:0;height:6px}
+.rbk .help{font-size:12.5px;color:var(--dim);text-align:center;margin-top:4px}
+.rbk .m-out{display:none}
+/* sheet ganti target */
+.rbk .gt h2,.rbk .gt>p{text-align:left}
+.rbk .lvp5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:16px}
+.rbk .lvp5 button{min-height:56px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;font-size:16px}
+.rbk .lvp5 button small{font-size:10.5px;font-weight:500;color:var(--dim)}
+.rbk .lvp5 button.cur{opacity:.55;cursor:default}
+.rbk .lvp5 button.sel{border-color:var(--primary);background:rgba(221,65,36,.14)}
+.rbk .gt-l{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:18px}
+.rbk .gt .opts{justify-content:flex-start;margin-top:8px}
+.rbk .gt-info{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--muted)}
+.rbk .gt-info b{color:var(--text)}
+.rbk .cfm{display:block;width:100%;margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line-2);color:var(--text);font:inherit;font-size:15px;letter-spacing:.1em}
+/* avatar & tombol bahaya (dari rb.css prototype) */
+.rbk .ava{border-radius:50%;background:linear-gradient(135deg,var(--primary),#A4243B);display:grid;place-items:center;font-weight:700;border:2px solid rgba(255,255,255,.12);overflow:hidden;flex:none}
+.rbk .ava img{width:100%;height:100%;object-fit:cover}
+.rbk .ava.hxa{background:var(--surface-2)}
+.rbk .pf-ph input[type=file]{display:none}
+.rbk .pgp .err{color:var(--danger);font-size:12.5px;margin-top:10px}
+.rbk .row .aksi{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.rbk .pgi{margin-top:0}
+@media (max-width:767px){
+  .rbk .pg{grid-template-columns:1fr;gap:0;margin-top:14px}
+  .rbk .pgm{position:static;flex-direction:row;overflow-x:auto;scrollbar-width:none;padding:6px;border-radius:16px;margin-bottom:14px}
+  .rbk .pgm button{flex:none;grid-template-columns:18px auto;min-height:44px;padding:0 12px;font-size:13px;white-space:nowrap}
+  .rbk .pgm .ch{display:none}
+  .rbk .pgp{padding:20px 16px}
+  .rbk .fld2{grid-template-columns:1fr;gap:0}
+  .rbk .pg-save .btn-p{flex:1}
+  .rbk .tg3{grid-template-columns:1fr}
+  .rbk .tgt{border-right:0;border-bottom:1px solid var(--line);padding:14px 16px}
+  .rbk .tgt:last-child{border-bottom:0}
+  .rbk .row{padding:14px 0;gap:10px}
+  .rbk .row.wrap{grid-template-columns:1fr}
+  .rbk .row.wrap>:last-child{justify-self:start}
+  .rbk .row-i{width:36px;height:36px;font-size:15px}
+  .rbk .sub-c{grid-template-columns:1fr;padding:16px}
+  .rbk .sub-a{flex-direction:row}
+  .rbk .sub-a .btn{flex:1}
+  .rbk .quota{grid-template-columns:1fr}
+  .rbk .m-out{display:flex;width:100%;margin-top:16px}
+}
+/* Tombol Keluar (HP) pakai TombolKeluar; label nav-nya (opacity 0, cuma muncul pas rail di-hover) → tampilin lagi di sini. */
+.rbk .m-out{align-items:center;justify-content:center;gap:8px}
+.rbk .m-out .nav-item-label{display:inline!important;opacity:1!important;font-size:14px;font-weight:600}
+.rbk .m-out .nav-item-icon{width:16px;height:16px}
