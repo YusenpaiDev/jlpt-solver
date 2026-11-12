@@ -60,6 +60,8 @@
 .rbk .skc-c small{font-size:12px;color:var(--dim)}
 .rbk .skc-a{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:2px}
 .rbk .qd{display:flex;flex-direction:column;gap:8px}
+/* Tiga pintu cepat dibagi rata setinggi kartu "Lanjut dari terakhir" di sebelahnya (biar gak bolong di bawah). */
+.rbk .qd>.qd-b{flex:1}
 .rbk .qd-b{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;min-height:64px;color:var(--text);transition:border-color .2s,background .2s}
 .rbk a.qd-b:hover,.rbk a.qd-b:focus-visible{border-color:var(--line-2);background:var(--surface-2);color:var(--text)}
 .rbk .qd-b.off{opacity:.6;cursor:default}
