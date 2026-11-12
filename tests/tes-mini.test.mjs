@@ -56,3 +56,13 @@ test('ignores unknown categories and broken counts', () => {
   assert.equal(r.bagian[0].skor, 60);  // c dibatasi ≤ a
   assert.equal(r.bagian[2].skor, null); // 0 soal 聴解 = belum ada data
 });
+
+import { perluIngatTesMini } from '../src/lib/tes-mini.ts';
+test('reminder: Fri–Sun only, skipped once this week\'s test exists', () => {
+  const lalu = [{ kind: 'tes_mini', tanggal: '2026-11-05' }]; // minggu lalu
+  assert.equal(perluIngatTesMini(lalu, '2026-11-12'), false); // Kamis: belum waktunya
+  assert.equal(perluIngatTesMini(lalu, '2026-11-13'), true);  // Jumat
+  assert.equal(perluIngatTesMini(lalu, '2026-11-15'), true);  // Minggu
+  assert.equal(perluIngatTesMini([...lalu, { kind: 'tes_mini', tanggal: '2026-11-10' }], '2026-11-14'), false);
+  assert.equal(perluIngatTesMini([{ kind: 'materi', tanggal: '2026-11-10' }], '2026-11-14'), true);
+});

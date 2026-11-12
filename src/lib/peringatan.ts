@@ -7,6 +7,8 @@ import { rapikanTanggalUjian } from "@/lib/sesi-ujian";
 import type { TargetLevel } from "@/lib/use-user-stats";
 import { statusAkses } from "@/lib/batas-paket";
 import { peringatanTrial, type AksesTrial } from "@/lib/peringatan-trial";
+import { perluIngatTesMini, seninDari } from "@/lib/tes-mini";
+import { fiturLive } from "@/lib/kurikulum-config";
 
 /**
  * Peringatan belajar — streak mau putus, ujian makin dekat, latihan mandek,
@@ -75,6 +77,8 @@ const KATEGORI: { jp: string; ro: string; href: string }[] = [
 
 interface BarisSesi {
   created_at: string;
+  /** ai_result.kind — "tes_mini" buat tes mini mingguan */
+  kind?: string | null;
   stats?: { answered?: number; perCat?: Record<string, { a: number; c: number }> } | null;
 }
 interface BarisProgres { benar: number; salah: number }
@@ -141,7 +145,7 @@ async function ambilBahan(): Promise<Bahan | null> {
     // baris — dan streak 40 hari harus kebaca 40, bukan kepotong jendela.
     supabase.from("aktivitas_harian").select("tanggal")
       .eq("user_id", user.id).order("tanggal", { ascending: false }),
-    supabase.from("sessions").select("created_at,ai_result->stats")
+    supabase.from("sessions").select("created_at,ai_result->stats,ai_result->kind")
       .eq("user_id", user.id).order("created_at", { ascending: false }).limit(300),
     supabase.from("kotoba_progress").select("benar,salah")
       .eq("user_id", user.id).lt("updated_at", batasUlang),
@@ -399,6 +403,21 @@ export function susunPeringatan(bahan: Bahan, sekarang = new Date()): Peringatan
       judul: `Minggu ini baru ${aktifMingguIni} dari 7 hari aktif`,
       pesan: "Sebentar tiap hari lebih nempel daripada sekali lama di akhir pekan.",
       aksi: { label: "Latihan kilat", href: "/latihan/kilat" },
+    });
+  }
+
+  /* Tes mini mingguan cuma ada di tab Progres — tanpa ini user gak tahu ada.
+     Jumat–Minggu aja, berhenti begitu dikerjain. Id per minggu biar titik
+     merah lonceng nyala lagi minggu depan. Kalau Ulangan Senin udah live,
+     tes mini diganti (kartu Senin di misi), jadi gak diingetin lagi. */
+  if (!fiturLive("ulangan") && perluIngatTesMini(bahan.sesi.map(s => ({ kind: s.kind, tanggal: tanggalLokal(new Date(s.created_at)) })), hariIni)) {
+    P.push({
+      id: `tes-mini-${seninDari(hariIni)}`,
+      tingkat: "ingat",
+      ikon: "📝",
+      judul: "Tes mini minggu ini belum",
+      pesan: "15 soal, ±15 menit, buat ngecek seminggu ini nempel atau nggak. Hasilnya jadi perkiraan skormu. Bisa sampai Minggu malam.",
+      aksi: { label: "Mulai tes mini", href: "/progres?tab=tes" },
     });
   }
 

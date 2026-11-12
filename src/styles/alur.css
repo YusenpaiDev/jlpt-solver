@@ -134,3 +134,14 @@
   .rbk .kn,.rbk .tur-c,.rbk .al-toast{animation:none}
   .rbk .tur-hl{transition:none}
 }
+
+/* Pasang pengingat di kalender HP */
+.rbk .pgi{margin-top:16px;padding:16px 18px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line)}
+.rbk .pgi-t{font-size:15px;font-weight:700}
+.rbk .pgi-p{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5;text-wrap:pretty}
+.rbk .pgi-a{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:12px}
+.rbk .pgi-j{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.rbk .pgi-j input{min-height:44px;padding:0 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line-2);color:var(--text);font:600 15px var(--sans);color-scheme:dark}
+.rbk .pgi-a .btn{min-height:44px}
+.rbk .pgi-ok{font-size:12.5px;color:var(--success);margin-top:10px;line-height:1.5}
+.rbk .pgi-ok b{color:var(--text)}
