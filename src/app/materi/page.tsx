@@ -164,29 +164,12 @@ export default function MateriPage() {
                 <section className="card lj">
                   <div className="eyebrow">{hasil.baru ? "Mulai belajar" : "Lanjut dari terakhir"}</div>
                   {hasil.lanjutK && (
-                    <div className="lj-r">
-                      <span className="lj-g k" lang="ja">{hasil.lanjutK.jp.slice(0, 1)}</span>
-                      <span>
-                        <b>{hasil.baru ? "Mulai dari kelompok pertama: " : "Kotoba · "}<span lang="ja">{hasil.lanjutK.jp}</span> {hasil.lanjutK.nama}</b>
-                        <small>{hasil.baru ? `${hasil.lanjutK.total} kata` : `${hasil.lanjutK.empat[0] + hasil.lanjutK.empat[1]} dari ${hasil.lanjutK.total} kata dimulai${hasil.tk ? ` · ${kapan(hasil.tk.at)}` : ""}`}</small>
-                        {!hasil.baru && <div className="mbar"><i style={{ width: `${persenDimulai(hasil.lanjutK.empat)}%` }} /></div>}
-                      </span>
-                      <Link className="btn btn-p" href={hasil.lanjutK.href}>{hasil.baru ? "Mulai" : "Lanjut"}</Link>
-                    </div>
+                    <BarisLanjut jenis="kata" k={hasil.lanjutK} baru={hasil.baru} kapan={hasil.tk ? kapan(hasil.tk.at) : ""}
+                      href={`/latihan/kotoba?group=${encodeURIComponent(hasil.lanjutK.kunci)}&count=10`} />
                   )}
                   {hasil.lanjutB && (
-                    <div className="lj-r">
-                      <span className="lj-g b" lang="ja">{hasil.lanjutB.jp.slice(0, 1)}</span>
-                      <span>
-                        <b>{hasil.baru ? "Atau Bunpou: " : "Bunpou · "}<span lang="ja">{hasil.lanjutB.jp}</span> {hasil.lanjutB.nama}</b>
-                        <small>
-                          {hasil.baru ? `${hasil.lanjutB.total} pola`
-                            : hasil.tb?.pola ? <>Terakhir dibuka <span lang="ja">{hasil.tb.pola}</span> · {kapan(hasil.tb.at)}</>
-                            : `${hasil.lanjutB.empat[0] + hasil.lanjutB.empat[1]} dari ${hasil.lanjutB.total} pola dimulai${hasil.tb ? ` · ${kapan(hasil.tb.at)}` : ""}`}
-                        </small>
-                      </span>
-                      <Link className="btn btn-g" href={hasil.lanjutB.href}>{hasil.baru ? "Mulai" : "Lanjut"}</Link>
-                    </div>
+                    <BarisLanjut jenis="pola" k={hasil.lanjutB} baru={hasil.baru} kapan={hasil.tb ? kapan(hasil.tb.at) : ""} polaTerakhir={hasil.tb?.pola}
+                      href={`/latihan/kilat?group=${encodeURIComponent(hasil.lanjutB.kunci)}&count=5`} />
                   )}
                 </section>
                 <PintuCepat salahK={hasil.K[2]} salahP={hasil.P[2]} rawan={hasil.rawan} />
@@ -321,5 +304,47 @@ function Panel({ judul, jp, ket, empat, kelompok, satuan, terakhir, semua, catat
         <span className="note">{catatan}</span>
       </div>
     </section>
+  );
+}
+
+/* "Lanjut dari terakhir" (permintaan owner 12 Nov): bahasa sehari-hari dulu,
+   istilah Kotoba/Bunpou jadi label kecil; kalimat ajakan + tombol yang bilang
+   mau ngapain, langsung ke latihan. Daftar lengkapnya tetap bisa dibuka. */
+const JENIS = {
+  kata: { label: "Hafalan kata", istilah: "Kotoba", jp: "語彙", satuan: "kata", n: 10, menit: 4, aksi: "Hafalin", cls: "k" },
+  pola: { label: "Pola kalimat", istilah: "Bunpou", jp: "文法", satuan: "pola", n: 5, menit: 3, aksi: "Latihan", cls: "b" },
+} as const;
+
+function BarisLanjut({ jenis, k, baru, kapan: kpn, polaTerakhir, href }: {
+  jenis: keyof typeof JENIS; k: Kelompok; baru: boolean; kapan: string; polaTerakhir?: string; href: string;
+}) {
+  const J = JENIS[jenis];
+  const mulai = k.empat[0] + k.empat[1];
+  const sisa = Math.max(0, k.total - mulai);
+  const n = Math.min(J.n, baru || sisa === 0 ? k.total : sisa);
+  const ajak = baru
+    ? `${k.total} ${J.satuan} di kelompok ini. Mulai ${n} dulu, cuma ±${J.menit} menit.`
+    : sisa === 0
+      ? `Semua ${J.satuan} udah dimulai. Ulang biar makin nempel.`
+      : sisa <= J.n
+        ? `Tinggal ${sisa} ${J.satuan} lagi. Beresin sekarang, cuma ±${J.menit} menit.`
+        : `Tinggal ${sisa} ${J.satuan} lagi. ${n} ${J.satuan} cuma ±${J.menit} menit.`;
+  return (
+    <div className="lj-r">
+      <span className={`lj-g ${J.cls}`} lang="ja">{k.jp.slice(0, 1)}</span>
+      <span>
+        <span className={`lj-j ${J.cls}`}>{J.label}<em>{J.istilah} <span lang="ja">{J.jp}</span></em></span>
+        <b>{k.nama} <span className="lj-jp" lang="ja">{k.jp}</span></b>
+        <small>{ajak}</small>
+        {(kpn || polaTerakhir) && !baru && (
+          <small className="lj-t">Terakhir {polaTerakhir ? <><span lang="ja">{polaTerakhir}</span> · </> : ""}{kpn}</small>
+        )}
+        <div className="mbar" aria-label={`${mulai} dari ${k.total} ${J.satuan} dimulai`}><i style={{ width: `${persenDimulai(k.empat)}%` }} /></div>
+      </span>
+      <span className="lj-a">
+        <Link className="btn btn-p" href={href}>{sisa > 0 || baru ? `${J.aksi} ${n} ${J.satuan}` : `Ulang ${n} ${J.satuan}`} →</Link>
+        <Link className="lj-l" href={k.href}>Lihat daftarnya</Link>
+      </span>
+    </div>
   );
 }
