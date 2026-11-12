@@ -704,7 +704,10 @@ input, textarea, select { font-size: 16px; }
 .nav-spacer { flex: 1; }
 .nav-upgrade {
   margin-top: 12px;
-  padding: 14px 14px;
+  /* Kiri 8px: ikon 28px jatuh di garis tengah yang sama dengan ikon nav 20px
+     (12px padding + 10px) waktu rail-nya ciut — dulu 14px, ikonnya geser 6px
+     ke kanan dan kotaknya lebih tinggi dari tombol lain. */
+  padding: 8px 12px 8px 8px;
   border-radius: 14px;
   background: linear-gradient(135deg, rgba(221,65,36,0.18), rgba(139,90,140,0.10));
   border: 1px solid rgba(221,65,36,0.24);

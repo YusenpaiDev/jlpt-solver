@@ -11,6 +11,8 @@ import { useBayar } from "@/lib/bayar";
 import { fiturLive, type FiturBaru } from "@/lib/kurikulum-config";
 import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
 import { KurikulumPremium, TabelBanding, type GrupBanding } from "@/components/pembayaran/KurikulumPremium";
+import { honixSrc } from "@/lib/honix-pose";
+import "@/styles/premium-lifetime.css";
 
 type Cycle = "monthly" | "yearly";
 type PlanColor = "slate" | "iris" | "gold";
@@ -35,6 +37,8 @@ interface Plan {
   color: PlanColor;
   popular?: boolean;
   features: PlanFeature[];
+  /** Lifetime: rincian "termasuk" di bawah poin utama. */
+  termasuk?: PlanFeature[];
 }
 
 const PLANS: Plan[] = [
@@ -93,9 +97,20 @@ const PLANS: Plan[] = [
       { t: "Semua fitur Pro · selamanya", on: true, highlight: true },
       { t: "Tidak ada perpanjangan", on: true, highlight: true },
       { t: "Fitur baru gratis selamanya", on: true, highlight: true },
+      { t: "Lanjut N3 → N2 → N1 tanpa bayar lagi", on: true, highlight: true },
+    ],
+    termasuk: [
+      { t: "Kurikulum mingguan sampai hari ujian", on: true, fitur: "kurikulum" },
+      { t: "Soal orisinal bertingkat T1–T3", on: true, fitur: "soal_orisinal" },
+      { t: "Perkiraan skor + simulasi bulanan", on: true, fitur: "perkiraan" },
+      { t: "Sensei AI & Kotoba tersimpan tanpa batas", on: true },
+      { t: "Bank Soal · Choukai · Materi 8.342 kata", on: true },
     ],
   },
 ];
+
+/** Lifetime vs Pro Bulanan setahun penuh — angkanya dari harga di atas, bukan ditulis tangan. */
+const SETAHUN_BULANAN = (PLANS.find(p => p.id === "pro")?.monthly ?? 0) * 12;
 
 /* Trial = akses penuh selama 7 hari, jadi fitur baru ikut kebuka di trial. */
 const COMPARE: GrupBanding[] = [
@@ -342,7 +357,16 @@ function PlanCard({
           <Star size={9} fill="white" strokeWidth={0} /> PALING POPULER
         </span>
       )}
+      {isLifetime && (
+        <span className="plan-life-badge">
+          <Sparkles size={10} strokeWidth={2.4} /> SEKALI BAYAR
+        </span>
+      )}
       {isCurrent && <span className="plan-current-badge">Aktif</span>}
+      {isLifetime && !isCurrent && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="plan-life-honix" src={honixSrc("lulus")} alt="" aria-hidden="true" />
+      )}
       {plan.id === "pro" && cycle === "yearly" && (
         <div className="plan-rib">Termasuk kurikulum 26 minggu sampai hari ujian{!fiturLive("kurikulum") && <LabelDisiapkan kecil />}</div>
       )}
@@ -362,6 +386,11 @@ function PlanCard({
           <>
             <span className="plan-amount">{fmt(price)}</span>
             <span className="plan-period">bayar sekali</span>
+            {SETAHUN_BULANAN > price && (
+              <span className="plan-life-hemat">
+                Lebih murah dari <b>12 bulan Pro</b> ({fmt(SETAHUN_BULANAN)}) — sesudahnya <b>gratis selamanya</b>.
+              </span>
+            )}
           </>
         ) : (
           <>
@@ -387,7 +416,8 @@ function PlanCard({
       </button>
 
       <ul className="plan-features">
-        {plan.features.map(f => {
+        {[...plan.features, ...(plan.termasuk ? [null] : []), ...(plan.termasuk ?? [])].map(f => {
+          if (!f) return <li key="termasuk" className="plan-life-sep">termasuk</li>;
           /* Fitur yang belum live: lingkaran putus-putus + teks redup + label. */
           if (f.fitur && !fiturLive(f.fitur)) {
             return <li key={f.t} className="pp"><span className="pp-i" aria-hidden="true" /><span>{f.t}<LabelDisiapkan kecil /></span></li>;
