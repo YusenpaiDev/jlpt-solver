@@ -5,12 +5,15 @@ export type FiturBaru = "kurikulum" | "soal_orisinal" | "penempatan" | "ulangan"
 
 /** feature_live.* — false = tampil dengan label "Sedang disiapkan", tanpa tombol aktif. */
 export const FITUR_LIVE: Record<FiturBaru, boolean> = {
-  kurikulum: false,
+  /* Nyala 13 Nov 2026 — butuh supabase/migrations/20261111-kurikulum.sql
+     udah jalan di produksi (tabel item_status, ulangan, simulasi, dst). */
+  kurikulum: true,
+  penempatan: true,
+  ulangan: true,
+  perkiraan: true,
+  simulasi: true,
+  /* Soalnya belum dibikin — tunggu aba-aba owner. */
   soal_orisinal: false,
-  penempatan: false,
-  ulangan: false,
-  perkiraan: false,
-  simulasi: false,
 };
 
 /* Buat preview/dev: NEXT_PUBLIC_FITUR_LIVE="kurikulum,ulangan" atau "semua". */
