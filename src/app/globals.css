@@ -8414,6 +8414,16 @@ html { scrollbar-gutter: stable; }
 .beranda-v2 .q-opt { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 11px; background: rgba(255,255,255,0.03); border: 1px solid var(--b-line); cursor: pointer; font-family: var(--b-jp); font-size: 13.5px; font-weight: 600; transition: .14s; }
 .beranda-v2 .q-opt:hover { border-color: rgba(221,65,36,0.4); background: rgba(221,65,36,0.07); }
 .beranda-v2 .q-opt.ok { background: rgba(107,142,63,0.14); border-color: var(--b-success); }
+/* Kilat harian: pilihan = tombol, salah = merah, sisanya redup setelah jawab. */
+.beranda-v2 button.q-opt { font: inherit; font-family: var(--b-jp); font-size: 13.5px; font-weight: 600; color: inherit; text-align: left; width: 100%; min-height: 44px; }
+.beranda-v2 button.q-opt:disabled { cursor: default; opacity: .55; }
+.beranda-v2 button.q-opt:disabled:hover { border-color: var(--b-line); background: rgba(255,255,255,0.03); }
+.beranda-v2 .q-opt.no { background: rgba(224,86,111,0.12); border-color: #E0566F; }
+.beranda-v2 .no-k { background: #E0566F !important; border-color: #E0566F !important; color: #2A0A12 !important; }
+.beranda-v2 .blank.isi { color: var(--b-success, #8FCB52); border-bottom: 2px solid var(--b-success, #8FCB52); }
+.beranda-v2 .q-ex { font-size: 12.5px; line-height: 1.5; color: rgba(255,255,255,.72); padding: 10px 12px; border-radius: 11px; background: rgba(255,255,255,.03); border: 1px solid var(--b-line); }
+.beranda-v2 .q-ex b { color: #fff; }
+.beranda-v2 .q-ex small { display: block; margin-top: 3px; color: var(--b-dim); font-size: 11.5px; }
 .beranda-v2 .ok-k { background: var(--b-success) !important; border-color: var(--b-success) !important; color: #14200A !important; }
 .beranda-v2 .q-k { width: 20px; height: 20px; border-radius: 6px; background: var(--b-surface-3); border: 1px solid var(--b-line-2); display: grid; place-items: center; font-family: var(--font-sans); font-size: 10px; font-weight: 700; color: var(--b-dim); flex-shrink: 0; }
 .beranda-v2 .q-foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }

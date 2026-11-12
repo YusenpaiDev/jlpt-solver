@@ -15,6 +15,7 @@ import { putarHonix } from "@/lib/honix-sfx";
 import { Honix } from "@/components/honix/Honix";
 import { KalenderMini } from "@/components/rencana/KalenderMini";
 import { MisiHarian } from "@/components/rencana/MisiHarian";
+import { KilatHarian } from "@/components/beranda/KilatHarian";
 import { bukaCaraBelajar } from "@/components/alur/CaraBelajar";
 import "@/styles/alur.css";
 import { PerkiraanMini, type SesiSkor } from "@/components/kurikulum/Perkiraan";
@@ -599,17 +600,8 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                <div className="bv-quiz card">
-                  <div className="q-head"><h3>⚡ Latihan Kilat</h3><span>1 / 5 · 文法</span></div>
-                  <div className="q-q">昨日 友達 <span className="blank">＿＿</span> 久しぶりに会った。</div>
-                  <div className="q-opts">
-                    <div className="q-opt"><span className="q-k">A</span>を</div>
-                    <div className="q-opt ok"><span className="q-k ok-k">B</span>と</div>
-                    <div className="q-opt"><span className="q-k">C</span>に</div>
-                    <div className="q-opt"><span className="q-k">D</span>が</div>
-                  </div>
-                  <div className="q-foot"><span>4 soal lagi · ~2 menit</span><Link href={`/latihan/kilat?level=${stats.targetLevel}`} className="btn btn-p sm">▶ Mulai</Link></div>
-                </div>
+                {/* Soal pola Bunpou level target, ganti tiap hari. */}
+                <KilatHarian level={stats.targetLevel} />
               </div>
 
               {/* fokus latihan 5 kategori — dari ai_result.stats (real) */}
