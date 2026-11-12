@@ -69,18 +69,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Halaman akun dan pembayaran tetap dapat dibuka setelah akses berakhir.
+  /* Masa percobaan habis: HALAMAN tetap kebuka semua — isinya kelihatan,
+     yang "ngerjain" digembok di app (components/premium/Gembok.tsx) dan
+     nulis data ditolak RLS (20261112-baca-setelah-trial.sql). Dulu semua
+     halaman dilempar ke /langganan, jadi user nyangkut di situ terus dan
+     gemboknya gak pernah kelihatan. Yang dijaga di sini tinggal API (Sensei,
+     furigana, tugas, dst). Akun & pembayaran tetap jalan: bayar, export,
+     dan hapus akun harus bisa walau aksesnya habis. */
   const path = request.nextUrl.pathname;
-  const akun = ["/pengaturan", "/langganan", "/onboarding", "/api/payment", "/api/log-error"]
+  const bebas = ["/api/payment", "/api/log-error", "/api/akun"]
     .some(p => path === p || path.startsWith(`${p}/`));
-  if (user && !isPublic && !akun) {
+  if (user && path.startsWith("/api/") && !isPublic && !bebas) {
     const { data: pro, error } = await supabase.rpc("is_pro");
     const akses = statusAkses(user.created_at, pro === true);
     const unavailable = Boolean(error) || typeof pro !== "boolean";
     if (unavailable || !akses.boleh) {
-      const response = path.startsWith("/api/")
-        ? NextResponse.json({ error: unavailable ? "Status akses belum bisa diperiksa." : "Masa percobaan atau langgananmu sudah berakhir. Berlangganan Pro untuk melanjutkan.", code: unavailable ? "access_unavailable" : "subscription_required" }, { status: unavailable ? 503 : 403 })
-        : NextResponse.redirect(new URL(`/langganan${unavailable ? "?status=unavailable" : ""}`, request.url));
+      const response = NextResponse.json({ error: unavailable ? "Status akses belum bisa diperiksa." : "Masa percobaan atau langgananmu sudah berakhir. Berlangganan Pro untuk melanjutkan.", code: unavailable ? "access_unavailable" : "subscription_required" }, { status: unavailable ? 503 : 403 });
       supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
       return response;
     }

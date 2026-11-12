@@ -14,7 +14,7 @@ import { NAMA_FITUR, type Fitur } from "@/lib/batas-paket";
 import { PAKET, rupiah } from "@/lib/paket";
 import {
   useLangganan, sisaHari, hasilPerpanjang, namaPendek,
-  tglPanjang, tglPendek, tglJam, LABEL_TX,
+  tglPanjang, tglPendek, tglJam, LABEL_TX, statusTampil,
 } from "@/lib/langganan";
 
 /**
@@ -249,7 +249,8 @@ export default function Langganan() {
                 ) : (
                   <>
                     {tx.map(t => {
-                      const st = LABEL_TX[t.status] ?? { teks: t.status.toUpperCase(), kelas: "py-s-off" };
+                      const s = statusTampil(t.status, t.dibuat);
+                      const st = LABEL_TX[s] ?? { teks: s.toUpperCase(), kelas: "py-s-off" };
                       return (
                         <div key={t.order_id} className="py-tx">
                           <div style={{ minWidth: 0 }}>

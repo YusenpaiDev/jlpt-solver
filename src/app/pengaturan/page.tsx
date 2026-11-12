@@ -524,7 +524,7 @@ function Bahaya({ kabari }: { kabari: (t: string) => void }) {
   return (
     <>
       <div className="rows">
-        <Baris cls="dz wrap" t="Reset progres" d="Hapus riwayat soal, streak, kalender cap, dan status kata & pola. Kamus, catatan, XP, & langganan tetap aman."
+        <Baris cls="dz wrap" t="Reset progres" d="Hapus riwayat soal (termasuk set yang udah kamu buka dari Bank Soal), streak, kalender cap, dan status kata & pola. Kamus, catatan, XP, & langganan tetap aman."
           kanan={<button type="button" className="btn btn-d" onClick={() => setBuka("reset")}>Reset progres</button>} />
         <Baris cls="dz wrap" t="Hapus akun" d="Semua data hilang permanen. Langganan yang masih aktif ikut hangus."
           kanan={<button type="button" className="btn btn-d" onClick={() => setBuka("hapus")}>Hapus akun</button>} />
@@ -556,7 +556,7 @@ function Konfirmasi({ aksi, onTutup, onBerhasil }: { aksi: "reset" | "hapus"; on
       <h2>{hapus ? "Hapus akun permanen?" : "Reset semua progres?"}</h2>
       <p>{hapus
         ? "Semua data, termasuk Kamus, catatan, riwayat, dan langganan aktif, hilang dan gak bisa dikembalikan."
-        : "Riwayat soal, streak, kalender cap, dan status kata & pola dihapus. Kamus, catatan, XP, & langganan tetap aman. Gak bisa dibatalkan."}</p>
+        : "Riwayat soal, set yang udah kamu buka dari Bank Soal (bisa dibuka lagi dari awal), streak, kalender cap, dan status kata & pola dihapus. Kamus, catatan, XP, & langganan tetap aman. Gak bisa dibatalkan."}</p>
       <div className="gt-l">Ketik <b style={{ color: "var(--text)" }}>{kata}</b> buat lanjut</div>
       <input className="cfm" value={ketik} onChange={e => setKetik(e.target.value)} aria-label={`Ketik ${kata}`} autoComplete="off" />
       {galat && <p className="err" role="alert">{galat}</p>}

@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     /* Preferensi AI dari Pengaturan (user_metadata.ai_pref). */
     const md = user?.user_metadata ?? {};
-    const pref = instruksiPref(rapikanPref(md.ai_pref), typeof md.target_level === "string" ? md.target_level : null);
+    const pref = instruksiPref(rapikanPref(md.ai_pref), md.target_level);
 
     const response = await client.messages.create({
       model: "claude-haiku-4-5",
