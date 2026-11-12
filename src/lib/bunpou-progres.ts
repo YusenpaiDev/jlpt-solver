@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { catatAktivitas } from "@/lib/aktivitas";
-import { laporkanXp } from "@/lib/honix-level";
+import { tambahXp, XP } from "@/lib/xp";
 import { catatItem } from "@/lib/kurikulum-db";
 
 /**
@@ -25,10 +25,6 @@ export async function catatJawabanBunpou(pattern: string, benar: boolean, { xp =
       salah: (data?.salah ?? 0) + (benar ? 0 : 1),
     }, { onConflict: "user_id,pattern" });
     if (!xp) return;
-    const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
-    if (!prof) return;
-    const { data: tersimpan } = await supabase.from("profiles")
-      .update({ xp: prof.xp + (benar ? 8 : 2) }).eq("id", user.id).select("xp").single();
-    if (tersimpan) laporkanXp({ userId: user.id, sebelum: prof.xp, sesudah: tersimpan.xp });
+    await tambahXp(benar ? XP.jawabBenar : XP.jawabSalah);
   } catch { /* nyusul pas reload */ }
 }

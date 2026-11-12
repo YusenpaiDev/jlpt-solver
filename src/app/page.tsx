@@ -522,7 +522,7 @@ export default function Home() {
               <span className={`bv-pill streak${faseNaik === "naik" && !kurangiGerak ? " bump" : ""}`}>
                 <span className="fl">🔥</span> <b>{loading ? dash : streakTampil}</b> hari
               </span>
-              <div className="bv-xp"><div className="bv-xp-top"><span>Level {stats.level}</span><b>{stats.xp} / {stats.xpTarget} XP</b></div><div className="bv-xp-bar"><i style={{ width: `${Math.round(stats.xp / stats.xpTarget * 100)}%` }} /></div></div>
+              <div className="bv-xp"><div className="bv-xp-top"><span title="Level XP Honix — beda sama level JLPT (N1–N5)">Lv Honix {stats.level}</span><b>{stats.xp} / {stats.xpTarget} XP</b></div><div className="bv-xp-bar"><i style={{ width: `${Math.round(stats.xp / stats.xpTarget * 100)}%` }} /></div></div>
               <span className="bv-lv">{stats.targetLevel}</span>
               {/* HP gak punya menu "Lainnya" lagi — avatar jadi jalan ke Pengaturan (dan Keluar di sana). */}
               <Link href="/pengaturan" aria-label="Pengaturan akun" className={`bv-ava${avatar ? "" : " honix"}`}>{avatar ? <img src={avatar} alt={name} className="bv-ava-img" referrerPolicy="no-referrer" /> : <Image src={honixSrc("kepala")} alt="" width={46} height={46} className="avatar-hx" />}</Link>

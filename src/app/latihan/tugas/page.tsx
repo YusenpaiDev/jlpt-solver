@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
 import { SubTabs } from "@/components/alur/SubTabs";
+import { tambahXp, XP } from "@/lib/xp";
 import { KartuKenalan } from "@/components/alur/KartuKenalan";
 import {
   Check, X, ChevronLeft, ChevronRight, Clock, History, Sparkles, Wand2, Flag, Pause,
@@ -206,6 +207,8 @@ export default function LembarTugas() {
       total: soalList.length,
       score: correctCount,
     });
+    /* Lembar Tugas dulu gak ngasih XP sama sekali. Aturannya sama kayak set Bank Soal. */
+    void tambahXp(correctCount * XP.setBenar + XP.setSelesai);
     setSaving(false);
     setSaved(true);
     // refresh
