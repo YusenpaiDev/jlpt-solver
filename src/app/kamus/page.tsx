@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { setSavedWordFavorite } from "@/lib/supabase/savedWords";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
+import { SubTabs } from "@/components/alur/SubTabs";
 import {
   Search, BookA, BookOpen, ChevronRight, ChevronLeft, Layers, Zap, Wand2, Plus, Upload,
   X, Edit3, Trash2, Calendar, Camera, Shuffle, Check, Loader2, BarChart3, Star,
@@ -475,7 +476,8 @@ export default function Kamus() {
 
         <header className="kk-header">
           <div>
-            <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Kamus" }]} />
+            <Breadcrumb items={[{ label: "Kamus", href: "/kamus" }, { label: "Kamus" }]} />
+            <SubTabs grup="kamus" aktif="kamus" />
             <h1 className="kk-title">
               Kamus <span className="kk-title-jp">辞書</span>
             </h1>

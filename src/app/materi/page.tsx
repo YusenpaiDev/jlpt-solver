@@ -209,7 +209,7 @@ export default function MateriPage() {
                   <span><b>Strategi ujian {lv}</b><small>Waktu per bagian, skor aman, urutan ngerjain</small></span>
                   <span className="btn btn-g">Buka</span>
                 </Link>
-                <Link className="card dr2 bs" href="/bank-soal">
+                <Link className="card dr2 bs" href="/latihan/set">
                   <span className="sb-g" lang="ja">問</span>
                   <span><b>Latihan soal format JLPT</b><small>Bank Soal · {jumlahSet[lv] ? `${jumlahSet[lv]} set ${lv}` : "belum ada set"}, <span lang="ja">筆記</span> + <span lang="ja">聴解</span></small></span>
                   <span className="btn btn-g">Bank Soal →</span>

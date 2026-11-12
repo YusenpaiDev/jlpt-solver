@@ -5,12 +5,14 @@ import "@/styles/rencana-tes.css";
 import "@/styles/rencana-strategi.css";
 import "@/styles/rencana-belajar.css";
 import "@/styles/kurikulum.css";
+import "@/styles/alur.css";
 
 import { useMemo } from "react";
 import Link from "next/link";
 import { ATURAN } from "@/lib/kurikulum-config";
 import { strategiUntuk } from "@/lib/strategi-ujian";
 import { gabungPerCat, perkiraanSkor, tambahHari, type Perkiraan } from "@/lib/kurikulum";
+import { KartuKenalan } from "@/components/alur/KartuKenalan";
 
 export interface SesiSkor { created_at: string; stats?: { perCat?: Record<string, { a?: number; c?: number }>; last_practiced_at?: string } | null }
 
@@ -116,7 +118,16 @@ export function PerkiraanMini({ sesi, level, hariIni }: { sesi: SesiSkor[]; leve
           ))}
           <p className="mcal-f">Perkiraan dari {p.jawaban} jawaban · bukan skor resmi</p>
         </>
-      ) : <p className="mcal-f">Belum bisa dihitung · {p.jawaban} / {ATURAN.perkiraan.minTotal} jawaban</p>}
-    </div></div>
+      ) : (
+        <div className="estf">
+          <p className="note">Butuh ±{ATURAN.perkiraan.minTotal} jawaban biar bisa dihitung.</p>
+          <div className="few-b"><i style={{ width: `${Math.min(100, (p.jawaban / ATURAN.perkiraan.minTotal) * 100)}%` }} /></div>
+          <div className="note">{p.jawaban} / {ATURAN.perkiraan.minTotal} jawaban</div>
+        </div>
+      )}
+    </div>
+    {/* Pertama kali perkiraan berubah dari "butuh jawaban" ke angka (HANDOFF-alur-belajar §4). */}
+    <KartuKenalan id="perkiraan" live={p.siap} />
+    </div>
   );
 }

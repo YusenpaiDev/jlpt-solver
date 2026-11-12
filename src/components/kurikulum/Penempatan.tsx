@@ -50,7 +50,7 @@ export function Penempatan({ level, ujian, pace, langkah, onSelesai }: {
   pace: number;
   langkah?: [number, number];
   /** dipanggil setelah kurikulum_user kesimpan; `sisa` = bagian materi yang belum dikuasai */
-  onSelesai: (sisa: number) => void;
+  onSelesai: (sisa: number, unitMulai: number | null) => void;
 }) {
   const [fase, setFase] = useState<"mulai" | "soal" | "hasil">("mulai");
   const [dek, setDek] = useState<{ k: DekKotoba; b: DekBunpou; unit: Unit[] } | null>(null);
@@ -99,7 +99,7 @@ export function Penempatan({ level, ujian, pace, langkah, onSelesai }: {
           ...u.kata.map(k => ({ jenis: "kata" as const, kunci: k })), ...u.pola.map(p => ({ jenis: "pola" as const, kunci: p })),
         ]));
       }
-      onSelesai(h?.sisa ?? 1);
+      onSelesai(h?.sisa ?? 1, h ? unitMulai : null);
     } catch { setSimpan("gagal"); }
   };
 

@@ -614,7 +614,7 @@ export function StatistikView({ embedded = false }: { embedded?: boolean }) {
                   <p className="st-insight-body">
                     Coba latih lebih banyak soal kategori {insight.label} — kerjain set di Lembar Tugas buat boost akurasi.
                   </p>
-                  <Link href="/lembar-tugas" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
+                  <Link href="/latihan/tugas" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
                     Mulai sesi fokus →
                   </Link>
                 </>

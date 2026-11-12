@@ -5,6 +5,7 @@ import { HonixEmpty } from "@/components/honix/HonixEmpty";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
+import { SubTabs } from "@/components/alur/SubTabs";
 import {
   Search, NotebookPen, Folder, Tag as TagIcon, Plus, Trash2, Loader2, Check, Star,
   Bold, Italic, Heading2, Quote, Link as LinkIcon, Code, Wand2, Sparkles,
@@ -200,7 +201,8 @@ export default function CatatanPage() {
 
         <header className="ct-header">
           <div>
-            <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Catatan" }]} />
+            <Breadcrumb items={[{ label: "Kamus", href: "/kamus" }, { label: "Catatan" }]} />
+            <SubTabs grup="kamus" aktif="catatan" />
             <h1 className="ct-title">
               Catatan <span className="ct-title-jp">メモ</span>
             </h1>

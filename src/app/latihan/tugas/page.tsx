@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
+import { SubTabs } from "@/components/alur/SubTabs";
+import { KartuKenalan } from "@/components/alur/KartuKenalan";
 import {
   Check, X, ChevronLeft, ChevronRight, Clock, History, Sparkles, Wand2, Flag, Pause,
   BookOpen, BookA, Zap, NotebookPen,
@@ -250,13 +252,14 @@ export default function LembarTugas() {
           <div>
             <Breadcrumb items={
               stage === "setup"
-                ? [{ label: "Beranda", href: "/" }, { label: "Lembar Tugas" }]
+                ? [{ label: "Latihan", href: "/latihan/set" }, { label: "Lembar Tugas" }]
                 : [
-                    { label: "Beranda", href: "/" },
-                    { label: "Lembar Tugas" },
+                    { label: "Latihan", href: "/latihan/set" },
+                    { label: "Lembar Tugas", href: "/latihan/tugas" },
                     { label: `Sesi · ${count} soal` },
                   ]
             } />
+            {stage === "setup" && <SubTabs grup="latihan" aktif="tugas" />}
             <div className="lt-header-title-row">
               {stage === "quiz" && (
                 <span className={`lv-badge lv-${level.toLowerCase()}`}>
@@ -294,6 +297,7 @@ export default function LembarTugas() {
             )}
           </div>
         </header>
+        {stage === "setup" && <KartuKenalan id="bebas_tugas" bebas />}
 
         {error && (
           <div className="glass-card" style={{ padding: 16, marginBottom: 16, border: "1px solid rgba(164,36,59,0.32)", background: "rgba(164,36,59,0.06)" }}>

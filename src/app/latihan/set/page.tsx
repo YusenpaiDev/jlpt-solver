@@ -10,6 +10,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuroraBackground, NavRail, BottomNav, UserBar, Breadcrumb } from "@/components/v2";
+import { SubTabs } from "@/components/alur/SubTabs";
+import { KartuKenalan } from "@/components/alur/KartuKenalan";
 import { BarisLevel } from "@/components/rencana/BarisLevel";
 import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
 import { useUserStats } from "@/lib/use-user-stats";
@@ -84,7 +86,8 @@ export default function BankSoalPage() {
       <BottomNav />
       <main className="app-shell">
         <UserBar streakDays={stats.streak} xp={stats.xp} xpTarget={stats.xpTarget} avatarLetter={stats.initial} isPro={stats.isPro} />
-        <Breadcrumb items={[{ label: "Beranda", href: "/" }, { label: "Bank Soal" }]} />
+        <Breadcrumb items={[{ label: "Latihan", href: "/latihan/set" }, { label: "Set format JLPT" }]} />
+        <SubTabs grup="latihan" aktif="set" />
 
         <div className="rbk mbk">
           <div className="head">
@@ -106,6 +109,7 @@ export default function BankSoalPage() {
               </div>
             )}
           </div>
+          <KartuKenalan id="bebas_bank" bebas />
 
           {!siap ? (
             muat === "error"

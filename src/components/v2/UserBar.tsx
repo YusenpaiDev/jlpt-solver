@@ -8,6 +8,9 @@ import { createClient } from "@/lib/supabase/client";
 import { usePeringatan } from "@/lib/peringatan";
 import { useTandaHarian } from "@/lib/tanda-harian";
 import { honixSrc } from "@/lib/honix-pose";
+import { bukaCaraBelajar } from "@/components/alur/CaraBelajar";
+import { TombolKeluar } from "./TombolKeluar";
+import "@/styles/alur.css";
 
 interface UserBarProps {
   streakDays: number;
@@ -81,6 +84,8 @@ export function UserBar({
   return (
     <div className="af-userbar">
       <div className="af-userbar-left">
+        {/* Penjelasan cara belajar kapan aja (HANDOFF-alur-belajar §4 C9). */}
+        <button type="button" className="al-help" aria-label="Cara belajar di Honix" data-tur="bantuan" onClick={bukaCaraBelajar}>?</button>
         <div className="streak-pill">
           <div className="streak-flame">
             <svg width="14" height="14" viewBox="0 0 24 24" fill={`url(#${flameGradientId})`} aria-hidden>
@@ -196,6 +201,8 @@ export function UserBar({
                 <Link href="/langganan" className="nav-item" onClick={() => setAccountOpen(false)}>
                   <CreditCard size={18} aria-hidden /> Langganan
                 </Link>
+                {/* HP gak punya menu "Lainnya" lagi — keluar akun lewat sini. */}
+                <TombolKeluar />
               </nav>
             </>
           )}

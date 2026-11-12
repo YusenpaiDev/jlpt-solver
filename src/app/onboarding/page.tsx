@@ -12,11 +12,15 @@ import { daftarSesiUjian, rapikanTanggalUjian, type SesiUjian } from "@/lib/sesi
 import { JanjiBelajar } from "@/components/rencana/JanjiBelajar";
 import { Penempatan } from "@/components/kurikulum/Penempatan";
 import { fiturLive } from "@/lib/kurikulum-config";
+import { CaraKerja } from "@/components/alur/CaraKerja";
+import { KUNCI_OB_SELESAI } from "@/lib/kenalan";
 
 /* Tes penempatan nyelip setelah pace, sebelum janji (HANDOFF-kurikulum §1):
    verdict janji butuh sisa materi, jadi tes dulu baru janji. */
 const PENEMPATAN = fiturLive("penempatan");
 const SELESAI = PENEMPATAN ? 5 : 4;
+/* Penutup "Cara kerja Honix" setelah janji (HANDOFF-alur-belajar §2). */
+const CARA = SELESAI + 1;
 
 type Lv = "N5" | "N4" | "N3" | "N2" | "N1";
 const LV_NAME: Record<Lv, string> = { N5: "Pemula", N4: "Dasar", N3: "Menengah", N2: "Pra-mahir", N1: "Mahir" };
@@ -54,6 +58,8 @@ export default function Onboarding() {
   /* Sesi/pace diubah lewat "Janji di awal" setelah profil kesimpen di langkah 4. */
   const [janjiDiubah, setJanjiDiubah] = useState(false);
   const [sisaMateri, setSisaMateri] = useState(1);
+  /* Titik mulai kurikulum dari tes penempatan (null = dilewati, undefined = gak ada tes). */
+  const [unitMulai, setUnitMulai] = useState<number | null | undefined>(undefined);
 
   // Init browser-only (tanggal ujian pakai Date + resume localStorage). Dibungkus
   // fungsi biar lolos rule "no sync setState in effect" (pola sama kayak page lain).
@@ -67,7 +73,7 @@ export default function Onboarding() {
         if (s.level) setLevel(s.level);
         if (s.examIso !== undefined) setExamIso(s.examIso === "none" ? "none" : rapikanTanggalUjian(s.examIso));
         if (s.goal !== undefined) setGoal(s.goal);
-        if (typeof s.step === "number") setStep(Math.min(s.step, SELESAI));
+        if (typeof s.step === "number") setStep(Math.min(s.step, CARA));
       } catch { /* ignore */ }
     }
     init();
@@ -115,6 +121,7 @@ export default function Onboarding() {
     if (janjiDiubah) {
       try { await createClient().auth.updateUser({ data: { exam_date: examIso, daily_goal_minutes: goal } }); } catch { /* lanjut aja */ }
     }
+    try { localStorage.setItem(KUNCI_OB_SELESAI, String(Date.now())); } catch { /* mode privat */ }
     router.replace(dest);
   };
 
@@ -122,10 +129,10 @@ export default function Onboarding() {
 
   return (
     <div className="ob-page">
-      <div className="ob-frame">
+      <div className={`ob-frame${step === CARA ? " ob-lebar" : ""}`}>
         <div className="ob-bar">
           <div className="ob-dots">
-            {Array.from({ length: SELESAI + 1 }, (_, i) => <span key={i} className={`ob-dt${i < step ? " done" : i === step ? " on" : ""}`} />)}
+            {Array.from({ length: CARA + 1 }, (_, i) => <span key={i} className={`ob-dt${i < step ? " done" : i === step ? " on" : ""}`} />)}
           </div>
           {skippable && <button className="ob-skip" onClick={() => go(Math.min(step + 1, SELESAI))}>Lewati</button>}
         </div>
@@ -210,7 +217,7 @@ export default function Onboarding() {
           {PENEMPATAN && step === 4 && level && (
             <section className="ob-step">
               <Penempatan level={level} ujian={examIso && examIso !== "none" ? examIso : null} pace={goal ?? 20}
-                langkah={[5, 6]} onSelesai={sisa => { setSisaMateri(sisa); go(SELESAI); }} />
+                langkah={[4, CARA]} onSelesai={(sisa, u) => { setSisaMateri(sisa); setUnitMulai(u); go(SELESAI); }} />
             </section>
           )}
 
@@ -235,10 +242,17 @@ export default function Onboarding() {
                   onUbah={(u, m) => { setExamIso(u); setGoal(m); setJanjiDiubah(true); }} />
               )}
               <div className="ob-donecta">
-                <button className="ob-btn ob-btn-p" onClick={() => finish("/materi")}>▶ Mulai belajar materi</button>
-                <button className="ob-btn ob-btn-g" onClick={() => finish("/")}>Buka Beranda</button>
+                <button className="ob-btn ob-btn-p" onClick={() => go(CARA)}>Lanjut →</button>
               </div>
               <div className="ob-hintset">Semua bisa diganti di Pengaturan → Target belajar</div>
+            </section>
+          )}
+
+          {/* STEP penutup — Cara kerja Honix */}
+          {step === CARA && level && (
+            <section className="ob-step">
+              <CaraKerja level={level} ujian={examIso && examIso !== "none" ? examIso : null} pace={goal ?? 20}
+                unitMulai={PENEMPATAN ? unitMulai : undefined} langkah={[CARA, CARA]} onMulai={() => finish("/")} />
             </section>
           )}
         </div>
