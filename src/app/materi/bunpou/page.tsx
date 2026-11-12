@@ -17,6 +17,14 @@ import { grupBanding } from "@/lib/banding-pola";
 import { BandingPola } from "@/components/rencana/BandingPola";
 import { statusPola } from "@/lib/status-materi";
 import { catatTerakhir } from "@/lib/terakhir-dibuka";
+import { muatPrioritas } from "@/lib/dek-materi";
+import { JUMLAH_TERATAS, labelKeluar, teratas } from "@/lib/sering-keluar";
+import { HonixTurHalaman } from "@/components/honix/HonixTurHalaman";
+import { LANGKAH_BUNPOU } from "@/lib/tur-materi";
+import "@/styles/sering-keluar.css";
+
+/** Kelompok bayangan buat filter "Sering keluar". */
+const SERING = "__sering";
 
 interface Ex { jp: string; highlight: string; id: string; }
 interface Pattern {
@@ -98,7 +106,17 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
   const BY_ID = useMemo(() => new Map(PATTERNS.map(p => [p.id, p])), [PATTERNS]);
 
   const [query, setQuery] = useState("");
-  const [statusF, setStatusF] = useState<"all" | State | "fav" | "warn">("all");
+  const [statusF, setStatusF] = useState<"all" | State | "fav" | "warn" | "sering">("all");
+  /* Seberapa sering tiap pola keluar di soal (src/data/prioritas). */
+  const [prio, setPrio] = useState<Record<string, number> | undefined>(undefined);
+  /* Tur nunggu data ini, biar langkah label "di N soal" gak kelewat. */
+  const [prioSiap, setPrioSiap] = useState(false);
+  useEffect(() => {
+    let batal = false;
+    muatPrioritas(level).then(p => { if (!batal) { setPrio(p.pola); setPrioSiap(true); } });
+    return () => { batal = true; };
+  }, [level]);
+  const top = useMemo(() => teratas(PATTERNS, p => p.pattern, prio), [PATTERNS, prio]);
   const [sort, setSort] = useState<Sort>("fungsi");
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([GROUPS[0]?.key]));
   const [sel, setSel] = useState<Pattern | null>(PATTERNS[0] ?? null);
@@ -152,9 +170,17 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
       if (!match(p, q)) return false;
       if (statusF === "fav") return favs.has(p.pattern);
       if (statusF === "warn") return p.confusableWith.length > 0;
+      if (statusF === "sering") return true;
       if (statusF !== "all") return statOf(p.pattern, progres) === statusF;
       return true;
     };
+    /* "Sering keluar": satu kelompok bayangan, urut dari yang paling sering. */
+    if (statusF === "sering") {
+      const ps = top.filter(keep);
+      const known = top.filter(p => statOf(p.pattern, progres) === "known").length;
+      return ps.length ? [{ key: SERING, name: "🔥 Paling sering keluar di soal", jp: "", patterns: ps, total: top.length,
+        warn: top.filter(p => p.confusableWith.length > 0).length, pct: top.length ? Math.round((known / top.length) * 100) : 0 }] : [];
+    }
     return GROUPS.map(g => {
       let ps = PATTERNS.filter(p => p.functionGroup === g.key && keep(p));
       if (sort === "az") ps = ps.slice().sort((a, b) => a.pattern.localeCompare(b.pattern, "ja"));
@@ -163,7 +189,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
       const warn = PATTERNS.filter(p => p.functionGroup === g.key && p.confusableWith.length > 0).length;
       return { ...g, patterns: ps, total, warn, pct: total ? Math.round((known / total) * 100) : 0 };
     }).filter(g => g.patterns.length > 0);
-  }, [query, statusF, sort, favs, PATTERNS, GROUPS, progres]);
+  }, [query, statusF, sort, favs, PATTERNS, GROUPS, progres, top]);
 
   useEffect(() => {
     if (query.trim() || statusF !== "all") setOpenGroups(new Set(groups.map(g => g.key)));
@@ -173,6 +199,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     if (q.get("status") === "warn") setStatusF("warn");
+    if (q.get("sering")) setStatusF("sering");
     const grup = q.get("grup");
     if (!grup || !GROUPS.some(g => g.key === grup)) return;
     setOpenGroups(new Set([grup]));
@@ -182,7 +209,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
     requestAnimationFrame(() => document.querySelector(`[data-grup="${CSS.escape(grup)}"]`)?.scrollIntoView({ block: "start" }));
   }, [GROUPS, PATTERNS, level]);
   const toggleGrup = (key: string) => {
-    if (!openGroups.has(key)) catatTerakhir("bunpou", { level, grup: key });
+    if (!openGroups.has(key) && key !== SERING) catatTerakhir("bunpou", { level, grup: key });
     setOpenGroups(s => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   };
   const pilihPola = (p: Pattern) => { setSel(p); catatTerakhir("bunpou", { level, grup: p.functionGroup, pola: p.pattern }); };
@@ -273,7 +300,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
                 <div className="sep" />
                 <div className="seg"><div className="n" style={{ color: "var(--text-dim)" }}>{summary.neu}</div><div className="l">Belum</div></div>
               </div>
-              <button className="bv-cta" onClick={() => router.push(`/latihan/kilat?level=${level}`)}><Zap size={14} /> Latihan Kilat</button>
+              <button className="bv-cta" data-tur="bv-kilat" onClick={() => router.push(`/latihan/kilat?level=${level}`)}><Zap size={14} /> Latihan Kilat</button>
             </div>
           </div>
 
@@ -286,39 +313,47 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
 
           <div className="bv-chips">
             <button className={`chip${statusF === "all" ? " on" : ""}`} onClick={() => setStatusF("all")}>Semua <span className="n">{DECK.count}</span></button>
+            {top.length > 0 && (
+              <button className={`chip chip-sk${statusF === "sering" ? " on" : ""}`} data-tur="bv-sering" onClick={() => setStatusF(s => s === "sering" ? "all" : "sering")}>
+                🔥 Sering keluar <span className="n">{Math.min(top.length, JUMLAH_TERATAS)}</span>
+              </button>
+            )}
             <button className={`chip wrong${statusF === "wrong" ? " on" : ""}`} onClick={() => setStatusF("wrong")}><span className="d d-wrong" />Sering salah <span className="n">{summary.wrong}</span></button>
             <button className={`chip${statusF === "seen" ? " on" : ""}`} onClick={() => setStatusF("seen")}><span className="d d-seen" />Pernah muncul <span className="n">{summary.seen}</span></button>
             <button className={`chip${statusF === "new" ? " on" : ""}`} onClick={() => setStatusF("new")}><span className="d d-new" />Belum <span className="n">{summary.neu}</span></button>
             <span className="csep" />
-            <button className={`chip${statusF === "warn" ? " on" : ""}`} onClick={() => setStatusF(s => s === "warn" ? "all" : "warn")}>⚠️ Rawan ketuker <span className="n">{summary.warn}</span></button>
+            <button className={`chip${statusF === "warn" ? " on" : ""}`} data-tur="bv-warn" onClick={() => setStatusF(s => s === "warn" ? "all" : "warn")}>⚠️ Rawan ketuker <span className="n">{summary.warn}</span></button>
             <button className={`chip${statusF === "fav" ? " on" : ""}`} onClick={() => setStatusF(s => s === "fav" ? "all" : "fav")}><Star size={11} fill={statusF === "fav" ? "currentColor" : "none"} /> Favorit {favs.size > 0 && <span className="n">{favs.size}</span>}</button>
           </div>
 
           <div className="bv-grid">
             <div className="bv-main">
-              {groups.map(g => {
+              {groups.map((g, gi) => {
                 const open = openGroups.has(g.key);
+                const bayangan = g.key === SERING;
+                /* Target tur "bv-sk": label pertama di kelompok pertama. */
+                const iSk = gi === 0 ? g.patterns.findIndex(p => labelKeluar(prio?.[p.pattern])) : -1;
                 return (
-                  <div className={`bv-fn${open ? " open" : ""}`} key={g.key} data-grup={g.key}>
+                  <div className={`bv-fn${open ? " open" : ""}`} key={g.key} data-grup={bayangan ? undefined : g.key}>
                     <div className="bv-fn-head" onClick={() => toggleGrup(g.key)}>
                       <ChevronRight size={14} className="bv-chev" />
                       <span className="bv-fn-t">
-                        {g.name} · <span className="jpt">{g.jp}</span> <span className="cnt">{g.total} pola</span>
+                        {g.name}{g.jp && <> · <span className="jpt">{g.jp}</span></>} <span className="cnt">{g.total} pola</span>
                         {g.warn > 0 && <span className="warn-tag">⚠️ {g.warn} RAWAN KETUKER</span>}
                       </span>
                       <div className="bv-track"><i style={{ width: `${g.pct}%`, background: "var(--success2)" }} /></div>
                       <span className="bv-pct" style={g.pct === 0 ? { color: "var(--text-dim)", fontWeight: 500 } : undefined}>{g.pct === 0 ? "belum dilatih" : `${g.pct}% dikuasai`}</span>
-                      <button className="bv-drill" onClick={e => { e.stopPropagation(); router.push(`/latihan/kilat?level=${level}&group=${g.key}`); }}><Zap size={11} /> Drill kelompok ({g.total})</button>
+                      <button className="bv-drill" data-tur={gi === 0 ? "bv-drill" : undefined} onClick={e => { e.stopPropagation(); router.push(bayangan ? `/latihan/kilat?level=${level}&sering=1&count=10` : `/latihan/kilat?level=${level}&group=${g.key}`); }}><Zap size={11} /> Drill kelompok ({g.total})</button>
                     </div>
                     {open && (
                       <div className="bv-pats">
-                        {g.patterns.map(p => {
+                        {g.patterns.map((p, pi) => {
                           const st = statOf(p.pattern, progres); const fav = favs.has(p.pattern); const pg = progres.get(p.pattern);
                           const hit = st === "wrong" ? `salah ${pg?.salah ?? 0}×` : st === "known" ? `benar ${pg?.benar ?? 0}×` : st === "seen" ? `${(pg?.benar ?? 0) + (pg?.salah ?? 0)}× coba` : "—";
                           return (
                             <div className={`bv-p${sel?.id === p.id ? " sel" : ""}`} key={p.id} onClick={() => pilihPola(p)}>
                               <span className={`bv-dot ${DOT[st]}`} />
-                              <span className="bv-p-gm">{p.pattern}</span>
+                              <span className="bv-p-gm">{p.pattern}{labelKeluar(prio?.[p.pattern]) && <span className="sk-badge" data-tur={pi === iSk ? "bv-sk" : undefined}>{labelKeluar(prio?.[p.pattern])}</span>}</span>
                               <span className="bv-p-arti">{p.meaning}</span>
                               <div className="bv-p-setsu">{p.setsuzoku.slice(0, 2).map((s, i) => <span key={s} className={`schip${i ? " alt" : ""}`}>{s}</span>)}</div>
                               <span className={`bv-p-hits${st === "wrong" ? " bad" : ""}`}>{hit}</span>
@@ -438,6 +473,8 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
           <BandingPola key={banding.id} grup={grupBanding(banding, BY_ID)} level={level} progres={progres}
             onCatat={recordResult} onTutup={() => setBanding(null)} />
         )}
+        {/* Tur pop-up sekali: ini loh filter sering keluar, label, drill, rawan ketuker, latihan. */}
+        {prioSiap && <HonixTurHalaman id="bunpou" langkah={LANGKAH_BUNPOU} />}
       </main>
     </>
   );

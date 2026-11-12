@@ -1,0 +1,10 @@
+/* "Paling sering keluar di soal": chip filter + label per kata/pola (halaman
+   Kotoba & Bunpou, di luar .rbk jadi warnanya ditulis langsung). */
+.chip.chip-sk { border-color: rgba(221,65,36,.45) !important; color: #F2A58E !important; }
+.chip.chip-sk.on { background: linear-gradient(180deg,#E8573A,#C9361C) !important; border-color: transparent !important; color: #fff !important; }
+.chip.chip-sk .n { opacity: .85; }
+.sk-badge { display: inline-flex; align-items: center; margin-left: 8px; padding: 1px 7px; border-radius: 99px; font-family: var(--font-sans); font-size: 10.5px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; color: #F2A58E; background: rgba(221,65,36,.12); border: 1px solid rgba(221,65,36,.35); vertical-align: 2px; }
+/* Bunpou: pola bisa panjang → label turun ke baris kedua biar gak nabrak kolom arti. */
+.bv-p-gm .sk-badge { display: flex; width: fit-content; margin: 4px 0 0; }
+/* Pola panjang (〜も〜なら、〜も〜) dulu nabrak kolom arti karena nowrap di kolom 148px. */
+.bunpou-v3 .bv-p-gm { white-space: normal; overflow-wrap: anywhere; }

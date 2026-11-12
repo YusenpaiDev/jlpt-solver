@@ -8,7 +8,8 @@ import { useHonixReaksi } from "@/lib/use-honix-reaksi";
 import { putarHonix } from "@/lib/honix-sfx";
 import { catatJawabanBunpou } from "@/lib/bunpou-progres";
 import { catatJenis, jatuhTempo } from "@/lib/kurikulum-db";
-import { bacaUnit, muatUnit } from "@/lib/dek-materi";
+import { bacaUnit, muatPrioritas, muatUnit } from "@/lib/dek-materi";
+import { paket, teratas } from "@/lib/sering-keluar";
 import { MomenKurikulum, type IsiMomen } from "@/components/kurikulum/Momen";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
@@ -111,6 +112,9 @@ function KilatPlayer({ level }: { level: string }) {
   const mode = params.get("mode");
   /* ?unit=5 atau 5,6 (dua unit seminggu kalau kurikulum dipadatin) */
   const unitP = params.get("unit");
+  /* ?sering=1 → pola paling sering keluar di soal; &paket=n → paket 10 ke-n. */
+  const seringP = params.get("sering");
+  const paketP = Number(params.get("paket")) || 0;
   const misi = langkahMisi(params.get("misi"));
   const [mulai] = useState(() => Date.now());
   /* Kartu teknik 文法形式の判断 sebelum soal pertama, kecuali udah disembunyiin. */
@@ -163,6 +167,13 @@ function KilatPlayer({ level }: { level: string }) {
       let pats = d.patterns;
       if (group) pats = pats.filter(p => p.functionGroup === group);
       /* Kurikulum: unit=n → pola unit itu; mode=tempo → yang jatuh tempo hari ini. */
+      if (seringP) {
+        const p = await muatPrioritas(level);
+        if (batal) return;
+        const top = teratas(d.patterns, x => x.pattern, p.pola);
+        const isi = new Set((paketP > 0 ? paket(top, paketP) : top).map(x => x.pattern));
+        if (isi.size) pats = pats.filter(x => isi.has(x.pattern));
+      }
       const unit = bacaUnit(unitP);
       if (unit.length) {
         const semua = await muatUnit(level);
@@ -185,7 +196,7 @@ function KilatPlayer({ level }: { level: string }) {
     }
     init();
     return () => { batal = true; };
-  }, [level, group, item, count, mode, unitP]);
+  }, [level, group, item, count, mode, unitP, seringP, paketP]);
 
   const q = qs && !done ? qs[idx] : null;
 
