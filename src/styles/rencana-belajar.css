@@ -7,8 +7,12 @@
 .rbk .mcal-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
 .rbk .mcal-h b{font-size:14px}
 .rbk .mcal-h a{font-size:12px}
-.rbk .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;user-select:none;-webkit-user-select:none}
-.rbk .mg{aspect-ratio:1;border-radius:7px;background:var(--surface-2);display:grid;place-items:center;font-family:var(--jps);font-size:10px;color:transparent;font-style:normal}
+/* minmax(0,1fr) + align-content:start: kotak pakai aspect-ratio, jadi kalau grid
+   kebetulan dapat tinggi lebih, baris melar → lebar kotak ikut melar → kalender
+   meledak keluar kartu (kejadian di Beranda, kambuh-kambuhan). Kolom dikunci ke
+   lebar kartu, baris gak ikut ngisi tinggi. */
+.rbk .mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-content:start;gap:4px;user-select:none;-webkit-user-select:none}
+.rbk .mg{aspect-ratio:1;min-width:0;border-radius:7px;background:var(--surface-2);display:grid;place-items:center;font-family:var(--jps);font-size:10px;color:transparent;font-style:normal}
 /* Cap mini: gaya .stamp kalender Progres, dikecilin buat sel ±37px. */
 .rbk .mg .stamp.t1{--s:18px;border-width:1.5px}
 .rbk .mg .stamp.t2{--s:21px;border-width:1.5px}
