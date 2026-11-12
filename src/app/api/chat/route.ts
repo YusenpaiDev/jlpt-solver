@@ -4,6 +4,7 @@ import { prepareChat, SENSEI_SCOPE } from "@/lib/chat-context";
 import { pakaiKuota, responsKuota } from "@/lib/kuota";
 import { createClient } from "@/lib/supabase/server";
 import { ambilProfilBelajar } from "@/lib/profil-belajar-server";
+import { instruksiPref, rapikanPref } from "@/lib/preferensi-ai";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -32,10 +33,14 @@ export async function POST(req: NextRequest) {
       { role: "user", content: JSON.stringify({ profil_belajar: profil, materi_soal: { judul: input.title, ...input.question }, pertanyaan: input.message }) },
     ];
 
+    /* Preferensi AI dari Pengaturan (user_metadata.ai_pref). */
+    const md = user?.user_metadata ?? {};
+    const pref = instruksiPref(rapikanPref(md.ai_pref), typeof md.target_level === "string" ? md.target_level : null);
+
     const response = await client.messages.create({
       model: "claude-haiku-4-5",
-      max_tokens: 280,
-      system: SENSEI_SCOPE,
+      max_tokens: pref.maksToken,
+      system: `${SENSEI_SCOPE}\n\n${pref.teks}`,
       messages,
     });
 
