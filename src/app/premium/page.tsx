@@ -11,7 +11,8 @@ import { useBayar } from "@/lib/bayar";
 import { fiturLive, type FiturBaru } from "@/lib/kurikulum-config";
 import { LabelDisiapkan } from "@/components/rencana/LabelDisiapkan";
 import { KurikulumPremium, TabelBanding, type GrupBanding } from "@/components/pembayaran/KurikulumPremium";
-import { honixSrc } from "@/lib/honix-pose";
+import { honixSrc, type HonixPose } from "@/lib/honix-pose";
+import { OfflineVsHonix } from "@/components/pembayaran/OfflineVsHonix";
 import "@/styles/premium-lifetime.css";
 
 type Cycle = "monthly" | "yearly";
@@ -37,6 +38,8 @@ interface Plan {
   color: PlanColor;
   popular?: boolean;
   features: PlanFeature[];
+  /** Honix di kepala kartu. */
+  honix?: HonixPose;
   /** Lifetime: rincian "termasuk" di bawah poin utama. */
   termasuk?: PlanFeature[];
 }
@@ -53,7 +56,9 @@ const PLANS: Plan[] = [
     features: [
       { t: "Bank Soal set latihan format JLPT", on: true },
       { t: "Choukai + audio per soal", on: true },
-      { t: "Materi 8.342 kata · 650 pola", on: true },
+      { t: "Kotoba 8.342 kata & Bunpou 650 pola, per level N5–N1", on: true },
+      { t: "Latihan Kilat & flashcard", on: true },
+      { t: "Catatan & Kamus pribadi", on: true },
       { t: "Tes penempatan", on: true, fitur: "penempatan" },
       { t: "Ulangan mingguan", on: true, fitur: "ulangan" },
       { t: "Kotoba tersimpan tanpa batas", on: true },
@@ -72,6 +77,7 @@ const PLANS: Plan[] = [
     cta: "Pilih Pro",
     popular: true,
     color: "iris",
+    honix: "terbang",
     features: [
       { t: "Kurikulum mingguan sampai hari ujian", on: true, highlight: true, fitur: "kurikulum" },
       { t: "Soal orisinal bertingkat T1–T3", on: true, highlight: true, fitur: "soal_orisinal" },
@@ -80,9 +86,11 @@ const PLANS: Plan[] = [
       { t: "Kotoba tersimpan tanpa batas", on: true, highlight: true },
       { t: "Chat Sensei AI tanpa batas", on: true, highlight: true },
       { t: "Furigana tanpa batas", on: true },
+      { t: "Kotoba 8.342 kata & Bunpou 650 pola, per level N5–N1", on: true },
+      { t: "Latihan Kilat & flashcard", on: true },
+      { t: "Catatan & Kamus pribadi (bisa di-export)", on: true },
       { t: "Bank Soal set latihan format JLPT", on: true },
       { t: "Choukai + audio per soal", on: true },
-      { t: "Materi 8.342 kata · 650 pola", on: true },
     ],
   },
   {
@@ -93,6 +101,7 @@ const PLANS: Plan[] = [
     lifetimePrice: 1_490_000,
     cta: "Beli Lifetime",
     color: "gold",
+    honix: "lulus",
     features: [
       { t: "Semua fitur Pro · selamanya", on: true, highlight: true },
       { t: "Tidak ada perpanjangan", on: true, highlight: true },
@@ -104,7 +113,8 @@ const PLANS: Plan[] = [
       { t: "Soal orisinal bertingkat T1–T3", on: true, fitur: "soal_orisinal" },
       { t: "Perkiraan skor + simulasi bulanan", on: true, fitur: "perkiraan" },
       { t: "Sensei AI & Kotoba tersimpan tanpa batas", on: true },
-      { t: "Bank Soal · Choukai · Materi 8.342 kata", on: true },
+      { t: "Kotoba & Bunpou per level · Latihan Kilat · flashcard", on: true },
+      { t: "Bank Soal · Choukai · Catatan & Kamus pribadi", on: true },
     ],
   },
 ];
@@ -117,7 +127,9 @@ const COMPARE: GrupBanding[] = [
   { grup: "Belajar & latihan", baris: [
     { label: "Bank Soal set latihan format JLPT", trial: "Lengkap", pro: "Lengkap", life: "Lengkap" },
     { label: "Choukai + audio",                   trial: true, pro: true, life: true },
-    { label: "Materi Kotoba & Bunpou · 8.342 kata, 650 pola", trial: true, pro: true, life: true },
+    { label: "Materi Kotoba & Bunpou · 8.342 kata, 650 pola, per level N5–N1", trial: true, pro: true, life: true },
+    { label: "Latihan Kilat & flashcard",                     trial: true, pro: true, life: true },
+    { label: "Catatan & Kamus pribadi · bisa di-export",      trial: true, pro: true, life: true },
     { label: "Misi harian, kalender cap, strategi ujian",     trial: true, pro: true, life: true },
   ] },
   { grup: "Kurikulum & tes", baris: [
@@ -264,6 +276,8 @@ export default function Premium() {
           ))}
         </div>
 
+        <OfflineVsHonix />
+
         <KurikulumPremium />
 
         <section className="pr-compare" id="compare">
@@ -363,17 +377,20 @@ function PlanCard({
         </span>
       )}
       {isCurrent && <span className="plan-current-badge">Aktif</span>}
-      {isLifetime && !isCurrent && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="plan-life-honix" src={honixSrc("lulus")} alt="" aria-hidden="true" />
-      )}
+
       {plan.id === "pro" && cycle === "yearly" && (
         <div className="plan-rib">Termasuk kurikulum 26 minggu sampai hari ujian{!fiturLive("kurikulum") && <LabelDisiapkan kecil />}</div>
       )}
 
-      <div>
-        <h3 className="plan-name">{plan.name}</h3>
-        <p className="plan-tagline">{plan.tagline}</p>
+      <div className="plan-head">
+        <div>
+          <h3 className="plan-name">{plan.name}</h3>
+          <p className="plan-tagline">{plan.tagline}</p>
+        </div>
+        {plan.honix && !isCurrent && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="plan-honix" src={honixSrc(plan.honix)} alt="" aria-hidden="true" />
+        )}
       </div>
 
       <div className="plan-price">

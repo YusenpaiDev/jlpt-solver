@@ -50,16 +50,18 @@
   z-index: 1;
 }
 
-.plan-life-honix {
-  position: absolute;
-  top: 6px; right: 8px;
-  width: 92px; height: 92px;
+/* Honix di kepala kartu Pro & Lifetime — sejajar nama, gak nimpa pita/badge. */
+.plan-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.plan-head > div { min-width: 0; }
+.plan-honix {
+  flex-shrink: 0;
+  width: 84px; height: 84px;
+  margin: -16px -10px -14px 0;
   object-fit: contain;
-  filter: drop-shadow(0 6px 18px rgba(212, 160, 74, 0.45));
   pointer-events: none;
 }
-/* Nama & tagline gak ketiban Honix. */
-.plan-gold .plan-name, .plan-gold .plan-tagline { padding-right: 88px; }
+.plan-iris .plan-honix { filter: drop-shadow(0 6px 18px rgba(221, 65, 36, 0.45)); }
+.plan-gold .plan-honix { filter: drop-shadow(0 6px 18px rgba(212, 160, 74, 0.45)); }
 
 .plan-life-hemat {
   flex-basis: 100%;

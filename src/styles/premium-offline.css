@@ -1,0 +1,80 @@
+/* /premium — bagian "Belajar offline vs pakai Honix". */
+
+.ovh { margin: 8px 0 64px; }
+.ovh-head { text-align: center; margin-bottom: 26px; }
+.ovh-head .pr-section-sub { text-align: center; }
+
+.ovh-tabel { padding: 0; overflow: hidden; }
+.ovh-row {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr) minmax(0, 1.3fr);
+  gap: 22px;
+  align-items: start;
+  padding: 16px 24px;
+  border-top: 1px solid var(--edge-soft);
+}
+.ovh-row:first-child { border-top: 0; }
+
+.ovh-kop {
+  padding-top: 18px; padding-bottom: 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  background: rgba(255, 255, 255, .02);
+}
+.ovh-k-off { color: var(--text-muted); }
+.ovh-k-hx { display: inline-flex; align-items: center; gap: 8px; color: #EC7A5C; }
+.ovh-k-hx img { width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(221, 65, 36, .45)); }
+
+.ovh-momen { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.4; }
+.ovh-off, .ovh-hx {
+  display: flex; gap: 9px; align-items: flex-start;
+  margin: 0; font-size: 13px; line-height: 1.5;
+}
+.ovh-off > svg, .ovh-hx > svg { flex-shrink: 0; margin-top: 3px; }
+.ovh-off { color: var(--text-tertiary); }
+.ovh-off > svg { color: var(--text-muted); }
+.ovh-hx { color: var(--text-primary); }
+.ovh-hx > svg { color: #EC7A5C; }
+
+/* Kolom Honix sedikit disorot biar mata langsung ke sana. */
+.ovh-row:not(.ovh-kop) .ovh-hx {
+  margin: -8px -12px; padding: 8px 12px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(221, 65, 36, .1), rgba(221, 65, 36, .03));
+}
+
+.ovh-ringkas {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 14px; margin-top: 14px;
+}
+.ovh-ringkas > div {
+  padding: 16px 20px; border-radius: 16px;
+  border: 1px solid var(--edge-soft);
+}
+.ovh-ringkas small {
+  display: block; margin-bottom: 8px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ovh-r-off > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ovh-r-off span { display: inline-flex; align-items: center; gap: 6px; }
+.ovh-r-off em {
+  font-style: normal; font-size: 12.5px; color: var(--text-tertiary);
+  padding: 4px 10px; border-radius: 999px; border: 1px dashed var(--edge-default, rgba(255,255,255,.18));
+}
+.ovh-r-off i { font-style: normal; color: var(--text-muted); font-size: 12px; }
+.ovh-r-hx {
+  background: linear-gradient(135deg, rgba(221, 65, 36, .22), rgba(221, 65, 36, .06));
+  border-color: rgba(221, 65, 36, .4) !important;
+  font-size: 14px; color: var(--text-primary);
+}
+.ovh-r-hx small { color: #EC7A5C; }
+.ovh-r-hx em { font-style: normal; font-weight: 700; font-size: 17px; }
+
+@media (max-width: 767px) {
+  .ovh-head .pr-section-title { font-size: 23px; }
+  .ovh-kop { display: none; }
+  .ovh-row { grid-template-columns: 1fr; gap: 10px; padding: 16px 18px; }
+  .ovh-row:nth-child(2) { border-top: 0; }
+  .ovh-row:not(.ovh-kop) .ovh-hx { margin: 0; }
+  .ovh-ringkas { grid-template-columns: 1fr; }
+}
