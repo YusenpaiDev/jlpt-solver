@@ -2197,7 +2197,7 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
                           {c.isi}
                         </p>
                         <a
-                          href="/catatan"
+                          href="/kamus/catatan"
                           style={{ marginTop: 8, display: "inline-block", fontSize: 10.5, color: "var(--accent-emerald)", fontWeight: 500 }}
                         >
                           Buka di Catatan →

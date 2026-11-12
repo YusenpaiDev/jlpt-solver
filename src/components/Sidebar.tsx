@@ -24,9 +24,9 @@ interface Profile {
 const navItems = [
   { icon: House,         label: "Beranda",        href: "/"               },
   { icon: GraduationCap, label: "Materi",         href: "/materi"         },
-  { icon: ClipboardList, label: "Lembar Tugas",    href: "/lembar-tugas"   },
+  { icon: ClipboardList, label: "Lembar Tugas",    href: "/latihan/tugas"   },
   { icon: BookOpen,      label: "Kamus",           href: "/kamus"          },
-  { icon: NotebookPen,   label: "Catatan",          href: "/catatan"        },
+  { icon: NotebookPen,   label: "Catatan",          href: "/kamus/catatan"        },
   { icon: BarChart2,     label: "Progres",         href: "/progres"        },
 ];
 

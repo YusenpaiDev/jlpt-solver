@@ -2,24 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Home, BookOpen, ListTodo, BookA, NotebookPen, BarChart3,
-  Settings, Sparkles,
-} from "lucide-react";
+import { Home, BookOpen, BookA, BarChart3, Settings, Sparkles } from "lucide-react";
 import { useIsPro } from "@/lib/use-is-pro";
 import { HonixTurHost } from "@/components/honix/HonixTurHost";
+import { CaraBelajarHost } from "@/components/alur/CaraBelajar";
 import { TombolKeluar } from "./TombolKeluar";
 import { IkonBankSoal } from "./IkonBankSoal";
 import { navAktif } from "@/lib/nav-aktif";
 
+/* Nav 5 menu (HANDOFF-alur-belajar §6): Bank Soal + Lembar Tugas jadi tab di
+   Latihan, Catatan jadi tab di Kamus. `tur` = target tur Honix. */
 const NAV_ITEMS = [
-  { href: "/",              label: "Beranda",       Icon: Home },
-  { href: "/materi",        label: "Materi",        Icon: BookOpen },
-  { href: "/bank-soal",     label: "Bank Soal",     Icon: IkonBankSoal },
-  { href: "/lembar-tugas",  label: "Lembar Tugas",  Icon: ListTodo },
-  { href: "/kamus",         label: "Kamus",         Icon: BookA },
-  { href: "/catatan",       label: "Catatan",       Icon: NotebookPen },
-  { href: "/progres",       label: "Progres",       Icon: BarChart3 },
+  { href: "/",              label: "Beranda",       Icon: Home,          tur: "beranda" },
+  { href: "/materi",        label: "Materi",        Icon: BookOpen,      tur: "materi" },
+  { href: "/latihan/set",   label: "Latihan",       Icon: IkonBankSoal,  tur: "latihan" },
+  { href: "/kamus",         label: "Kamus",         Icon: BookA,         tur: "kamus" },
+  { href: "/progres",       label: "Progres",       Icon: BarChart3,     tur: "progres" },
 ] as const;
 
 /**
@@ -47,7 +45,7 @@ export function NavRail() {
 
       <div className="nav-section-label">Belajar</div>
 
-      {NAV_ITEMS.map(({ href, label, Icon }) => {
+      {NAV_ITEMS.map(({ href, label, Icon, tur }) => {
         const active = isActive(href);
         /* Materi = pintu utama belajar — dibikin menonjol biar user baru gak bingung mulai dari mana. */
         const prio = href === "/materi";
@@ -57,7 +55,7 @@ export function NavRail() {
             href={href}
             className={`nav-item${active ? " active" : ""}${prio ? " nav-prio" : ""}`}
             aria-current={active ? "page" : undefined}
-            data-tur={href === "/" ? "beranda" : href.slice(1)}
+            data-tur={tur}
           >
             <Icon className="nav-item-icon" size={20} strokeWidth={active ? 1.8 : 1.6} />
             <span className="nav-item-label">
@@ -95,6 +93,7 @@ export function NavRail() {
 
       {/* Tur cara pakai — render lewat portal, jadi ikut jalan di HP walau rail-nya disembunyiin. */}
       <HonixTurHost />
+      <CaraBelajarHost />
     </nav>
   );
 }

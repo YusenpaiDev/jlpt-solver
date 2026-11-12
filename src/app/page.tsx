@@ -15,6 +15,8 @@ import { putarHonix } from "@/lib/honix-sfx";
 import { Honix } from "@/components/honix/Honix";
 import { KalenderMini } from "@/components/rencana/KalenderMini";
 import { MisiHarian } from "@/components/rencana/MisiHarian";
+import { bukaCaraBelajar } from "@/components/alur/CaraBelajar";
+import "@/styles/alur.css";
 import { PerkiraanMini, type SesiSkor } from "@/components/kurikulum/Perkiraan";
 import { fiturLive } from "@/lib/kurikulum-config";
 import { devBeranda, type BerandaMentah } from "@/lib/dev-beranda";
@@ -515,12 +517,14 @@ export default function Home() {
               <p>{meta.date}{meta.days != null && <> · JLPT {stats.targetLevel} · <b>{meta.days} hari lagi</b> menuju ujian</>}</p>
             </div>
             <div className="bv-top-r">
+              <button type="button" className="al-help" aria-label="Cara belajar di Honix" data-tur="bantuan" onClick={bukaCaraBelajar}>?</button>
               <span className={`bv-pill streak${faseNaik === "naik" && !kurangiGerak ? " bump" : ""}`}>
                 <span className="fl">🔥</span> <b>{loading ? dash : streakTampil}</b> hari
               </span>
               <div className="bv-xp"><div className="bv-xp-top"><span>Level {stats.level}</span><b>{stats.xp} / {stats.xpTarget} XP</b></div><div className="bv-xp-bar"><i style={{ width: `${Math.round(stats.xp / stats.xpTarget * 100)}%` }} /></div></div>
               <span className="bv-lv">{stats.targetLevel}</span>
-              <div className={`bv-ava${avatar ? "" : " honix"}`}>{avatar ? <img src={avatar} alt={name} className="bv-ava-img" referrerPolicy="no-referrer" /> : <Image src={honixSrc("kepala")} alt="" width={46} height={46} className="avatar-hx" />}</div>
+              {/* HP gak punya menu "Lainnya" lagi — avatar jadi jalan ke Pengaturan (dan Keluar di sana). */}
+              <Link href="/pengaturan" aria-label="Pengaturan akun" className={`bv-ava${avatar ? "" : " honix"}`}>{avatar ? <img src={avatar} alt={name} className="bv-ava-img" referrerPolicy="no-referrer" /> : <Image src={honixSrc("kepala")} alt="" width={46} height={46} className="avatar-hx" />}</Link>
             </div>
           </div>
 
@@ -573,7 +577,7 @@ export default function Home() {
           <div className="bv-grid">
             <div className="bv-col">
               {/* Misi harian (Rencana Belajar §3): paling atas kolom kiri, di bawah baris statistik. */}
-              {stats.loaded && <MisiHarian level={stats.targetLevel} rekorStreak={stats.rekor} />}
+              {stats.loaded && <MisiHarian level={stats.targetLevel} rekorStreak={stats.rekor} sesi={semuaSesi} />}
               {/* kanji + quiz */}
               <div className="bv-duo">
                 <div className="bv-kanji card">

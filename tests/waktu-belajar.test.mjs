@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { halamanBelajar, detikDihitung, BATAS_DIAM_MS } from '../src/lib/waktu-belajar.ts';
 
 test('study pages are counted, including nested routes', () => {
-  for (const p of ['/materi', '/materi/bunpou', '/latihan/kilat', '/analisis-foto', '/choukai/abc', '/lembar-tugas', '/kamus', '/catatan']) {
+  for (const p of ['/materi', '/materi/bunpou', '/latihan/kilat', '/analisis-foto', '/choukai/abc', '/latihan/tugas', '/kamus', '/kamus/catatan']) {
     assert.equal(halamanBelajar(p), true, p);
   }
 });
 
 test('non-study pages are not counted', () => {
-  for (const p of ['/', '/pengaturan', '/langganan', '/login', '/statistik', '/progres', '/admin', '/materiku']) {
+  for (const p of ['/', '/pengaturan', '/langganan', '/login', '/statistik', '/progres', '/admin', '/materiku', '/latihan/set']) {
     assert.equal(halamanBelajar(p), false, p);
   }
 });

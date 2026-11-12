@@ -20,12 +20,14 @@ const HALAMAN_BELAJAR = [
   "/latihan",
   "/analisis-foto", // player latihan
   "/choukai",
-  "/lembar-tugas",
-  "/kamus",
-  "/catatan",
+  "/kamus", // termasuk /kamus/catatan
 ];
 
+/* Daftar set (dulu /bank-soal) cuma katalog, bukan belajar — tetap gak dihitung. */
+const BUKAN_BELAJAR = ["/latihan/set"];
+
 export function halamanBelajar(path: string): boolean {
+  if (BUKAN_BELAJAR.includes(path)) return false;
   return HALAMAN_BELAJAR.some(h => path === h || path.startsWith(`${h}/`));
 }
 

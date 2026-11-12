@@ -4,6 +4,7 @@ import { Honix } from "@/components/honix/Honix";
 import { useHonix } from "@/lib/use-honix";
 import { tesSuaraHonix } from "@/lib/honix-sfx";
 import { mulaiTur } from "@/lib/honix-tur";
+import { bukaCaraBelajar } from "@/components/alur/CaraBelajar";
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -906,7 +907,7 @@ function HonixSection() {
 /* Semua tur cara pakai di satu tempat. Tur Bank Soal butuh halaman soalnya,
    jadi tombolnya buka set soal terakhir dengan ?tur=banksoal. */
 function TutorialSection() {
-  const { setelan, ubah, kurangiGerak } = useHonix();
+  const { kurangiGerak } = useHonix();
   const [sesiTerakhir, setSesiTerakhir] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -928,8 +929,12 @@ function TutorialSection() {
         <div><h3 id="hx-tutorial-title">Tutorial</h3><span>Putar ulang tur cara pakai kapan aja</span></div>
       </header>
       <div className="hx-row">
-        <div><div className="hx-row-t">Menu utama</div><p className="hx-row-s">Kenalan sama semua menu: Materi, Lembar Tugas, Kamus, Catatan, Progres. ±1 menit.</p></div>
+        <div><div className="hx-row-t">Ulangi tur Honix</div><p className="hx-row-s">7 langkah ikut alur belajar: misi harian, kurikulum, Progres, Latihan, Materi. ±1 menit, di Beranda.</p></div>
         <button type="button" className="hx-btn hx-btn-g" onClick={mulaiTur}>▶ Putar</button>
+      </div>
+      <div className="hx-row">
+        <div><div className="hx-row-t">Cara belajar di Honix</div><p className="hx-row-s">5 tahap dari belajar sampai ujian, dan gimana misi harian nyampurin tahapnya.</p></div>
+        <button type="button" className="hx-btn hx-btn-g" onClick={bukaCaraBelajar}>Buka</button>
       </div>
       <div className="hx-row">
         <div><div className="hx-row-t">Bank Soal</div><p className="hx-row-s">Furigana, review, blok teks ke Sensei/Kamus/Catatan, salin pilihan, coret, timer.</p></div>
@@ -939,10 +944,7 @@ function TutorialSection() {
             ? <Link className="hx-btn hx-btn-g" href="/materi">Buka Materi</Link>
             : <span className="hx-btn hx-btn-g" aria-disabled="true">…</span>}
       </div>
-      <div className="hx-row">
-        <div><div className="hx-row-t" id="hx-ingat">Ingatkan tiap bulan</div><p className="hx-row-s" id="hx-ingat-sub">Sebulan sekali Honix nawarin tur menu lagi lewat kotak kecil di pojok. Gak maksa.</p></div>
-        <button type="button" className="hx-tg-target" role="switch" aria-checked={setelan.tur.ingatkan} aria-labelledby="hx-ingat" aria-describedby="hx-ingat-sub" onClick={() => ubah({ tur: { ...setelan.tur, ingatkan: !setelan.tur.ingatkan } })}><span className={`hx-tg${setelan.tur.ingatkan ? " hx-on" : ""}`} /></button>
-      </div>
+
     </section>
   );
 }

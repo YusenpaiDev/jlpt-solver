@@ -101,16 +101,19 @@ test('kotoba group names', () => {
 });
 
 import { navAktif } from '../src/lib/nav-aktif.ts';
-test('nav: Materi lights up on curriculum pages, Bank Soal on strategy', () => {
+test('nav (5 menu): Materi on curriculum, Latihan on /latihan/* + strategy, Kamus on Catatan', () => {
   assert.ok(navAktif('/materi', '/materi'));
   assert.ok(navAktif('/materi', '/materi/kotoba'));
   assert.ok(navAktif('/materi', '/kurikulum/keterampilan'));
-  assert.ok(!navAktif('/materi', '/bank-soal'));
-  assert.ok(navAktif('/bank-soal', '/bank-soal'));
-  assert.ok(navAktif('/bank-soal', '/strategi'));
-  assert.ok(!navAktif('/bank-soal', '/materi'));
+  assert.ok(!navAktif('/materi', '/latihan/set'));
+  assert.ok(navAktif('/latihan/set', '/latihan/set'));
+  assert.ok(navAktif('/latihan/set', '/latihan/tugas'));
+  assert.ok(navAktif('/latihan/set', '/latihan/kilat'));
+  assert.ok(navAktif('/latihan/set', '/strategi'));
+  assert.ok(!navAktif('/latihan/set', '/materi'));
+  assert.ok(navAktif('/kamus', '/kamus/catatan'));
+  assert.ok(!navAktif('/kamus', '/kamusku'));
   assert.ok(navAktif('/', '/'));
   assert.ok(!navAktif('/', '/materi'));
   assert.ok(navAktif('/progres', '/progres/pamer'));
-  assert.ok(!navAktif('/kamus', '/kamusku'));
 });

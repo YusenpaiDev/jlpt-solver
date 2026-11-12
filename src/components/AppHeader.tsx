@@ -7,7 +7,7 @@ import { Bell, Sparkles } from "lucide-react";
 
 const NAV = [
   { label: "Materi",  href: "/materi" },
-  { label: "Latihan", href: "/lembar-tugas" },
+  { label: "Latihan", href: "/latihan/tugas" },
   { label: "Pro",     href: "/premium" },
 ];
 

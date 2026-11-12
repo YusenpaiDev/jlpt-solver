@@ -344,7 +344,7 @@ function Progres() {
                   <div className="glass-card pr-scard pr-insight">
                     <div className="pr-scard-h" style={{ color: "var(--accent-primary, #E8704F)" }}>Insight</div>
                     <p>Kategori terlemah kamu: <b>{weakest.jp} ({weakest.ro})</b> di <b>{weakest.pct}%</b>. Fokus latihan di sini biar naik.</p>
-                    <Link href="/bank-soal" className="pr-go">Latihan sekarang →</Link>
+                    <Link href="/latihan/set" className="pr-go">Latihan sekarang →</Link>
                   </div>
                 )}
               </aside>

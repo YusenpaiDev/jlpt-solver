@@ -39,6 +39,12 @@ export interface Kurikulum {
   sisaMinggu: number | null;
   statusItem: (jenis: "kata" | "pola", kunci: string) => StatusItem;
   jatuhTempo: { kata: string[]; pola: string[] };
+  /** item jatuh tempo + tahap SRS, buat detail "Kenapa n ini?" di misi */
+  tempoItem: { kunci: string; status: string; tahap: number; jatuh_tempo: string }[];
+  /** jumlah item yang jatuh tempo besok (misi selesai → "Besok: …") */
+  tempoBesok: number;
+  /** belum ada kata/pola yang lagi dipelajari (misi pertama) */
+  hariPertama: boolean;
   tingkat: Map<string, Tingkat>;
   ulangan: Ulangan[];
   dekK: DekKotoba | null;
@@ -47,7 +53,7 @@ export interface Kurikulum {
 
 interface Mentah {
   kur: KurikulumUser | null;
-  item: Map<string, { status: StatusItem; jatuh_tempo: string | null }>;
+  item: Map<string, { status: StatusItem; tahap: number; jatuh_tempo: string | null }>;
   progK: Map<string, { benar: number; salah: number }>;
   progB: Map<string, { benar: number; salah: number }>;
   tingkat: { jenis: string; tingkat: number; riwayat: boolean[] }[];
@@ -55,21 +61,23 @@ interface Mentah {
 }
 
 /** Data contoh dev (cek visual tanpa login): N3, mulai dari minggu 4, sekarang minggu 12.
-    ?dev=padat / kejar / akhir = ujian makin mepet, buat cek mode sisa waktu. */
+    ?dev=padat / kejar / akhir = ujian makin mepet, buat cek mode sisa waktu; ?dev=pertama = misi pertama. */
 function devMentah(level: string, dekK: DekKotoba, dekB: DekBunpou, prio: Prioritas, mode: string | null): Mentah {
   const hariIni = tanggalLokal();
   const senin = seninDari(hariIni);
   const [lalu, mulai, ujian] = mode === "padat" ? [4, 1, 14] : mode === "kejar" ? [2, 1, 7] : mode === "akhir" ? [0, 1, 3] : [8, 4, 18];
   const kur: KurikulumUser = { level, tanggal_mulai: tambahHari(senin, -lalu * 7), unit_mulai: mulai, tanggal_ujian: tambahHari(senin, ujian * 7 + 6) };
   if (mode === "baru") return { kur: null, item: new Map(), progK: new Map(), progB: new Map(), tingkat: [], ulangan: [] };
+  /* ?dev=pertama: baru selesai tes penempatan (mulai minggu 4), belum ada item. */
+  if (mode === "pertama") return { kur: { level, tanggal_mulai: senin, unit_mulai: 4, tanggal_ujian: tambahHari(senin, 23 * 7 + 6) }, item: new Map(), progK: new Map(), progB: new Map(), tingkat: [], ulangan: [] };
   const unit = susunUnit(dekK.vocabulary, dekB.patterns, prio);
-  const item = new Map<string, { status: StatusItem; jatuh_tempo: string | null }>();
+  const item = new Map<string, { status: StatusItem; tahap: number; jatuh_tempo: string | null }>();
   unit.forEach(u => {
     const isi: [string, string][] = [...u.kata.map(k => ["kata", k] as [string, string]), ...u.pola.map(p => ["pola", p] as [string, string])];
     isi.forEach(([j, k], i) => {
       const st: StatusItem | null = u.u < 4 ? "dikuasai" : u.u < 11 ? (["dikuasai", "hafal", "hafal", "belajar"] as const)[i % 4]
         : u.u === 11 ? (i % 6 === 0 ? null : (["hafal", "belajar"] as const)[i % 2]) : u.u === 12 ? (i % 3 === 0 ? "belajar" : null) : null;
-      if (st) item.set(`${j}:${k}`, { status: st, jatuh_tempo: i % 9 === 0 ? hariIni : tambahHari(hariIni, 3) });
+      if (st) item.set(`${j}:${k}`, { status: st, tahap: st === "dikuasai" ? 5 : st === "hafal" ? 3 : i % 2, jatuh_tempo: i % 9 === 0 ? hariIni : i % 7 === 0 ? tambahHari(hariIni, 1) : tambahHari(hariIni, 3) });
     });
   });
   const r = (n: number, of = 20) => Array.from({ length: of }, (_, i) => i < n);
@@ -110,7 +118,7 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
       if (!user || batal) return;
       const [kur, it, kp, bp, tg, ul] = await Promise.all([
         supabase.from("kurikulum_user").select("level, tanggal_mulai, unit_mulai, tanggal_ujian").eq("user_id", user.id).maybeSingle(),
-        supabase.from("item_status").select("jenis, kunci, status, jatuh_tempo").eq("user_id", user.id).eq("level", level),
+        supabase.from("item_status").select("jenis, kunci, status, tahap, jatuh_tempo").eq("user_id", user.id).eq("level", level),
         supabase.from("kotoba_progress").select("word, benar, salah").eq("user_id", user.id),
         supabase.from("bunpou_progress").select("pattern, benar, salah").eq("user_id", user.id),
         supabase.from("tingkat_jenis_soal").select("jenis, tingkat, riwayat").eq("user_id", user.id),
@@ -123,7 +131,7 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
       const k0 = (kur.data as KurikulumUser | null)?.level === level ? kur.data as KurikulumUser : null;
       setM({
         kur: k0 && md !== undefined ? { ...k0, tanggal_ujian: rapikanTanggalUjian(md) } : k0,
-        item: new Map((it.data ?? []).map(r => [`${r.jenis}:${r.kunci}`, { status: r.status as StatusItem, jatuh_tempo: r.jatuh_tempo }])),
+        item: new Map((it.data ?? []).map(r => [`${r.jenis}:${r.kunci}`, { status: r.status as StatusItem, tahap: Number(r.tahap) || 0, jatuh_tempo: r.jatuh_tempo }])),
         progK: new Map((kp.data ?? []).map(r => [r.word, { benar: r.benar ?? 0, salah: r.salah ?? 0 }])),
         progB: new Map((bp.data ?? []).map(r => [r.pattern, { benar: r.benar ?? 0, salah: r.salah ?? 0 }])),
         tingkat: (tg.data ?? []) as Mentah["tingkat"],
@@ -138,7 +146,8 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
     const kosong: Kurikulum = {
       siap: false, belumMulai: false, kur: null, unit: [], jadwal: null, mode: "normal", minggu: 0, ini: [], lalu: [],
       simUnit: new Set(), cadangan: null, hariIni, sisaMinggu: null,
-      statusItem: () => "baru", jatuhTempo: { kata: [], pola: [] }, tingkat: new Map(), ulangan: [], dekK, dekB,
+      statusItem: () => "baru", jatuhTempo: { kata: [], pola: [] }, tempoItem: [], tempoBesok: 0, hariPertama: true,
+      tingkat: new Map(), ulangan: [], dekK, dekB,
     };
     if (!live || !m || !dekK || !dekB) return kosong;
     const statusItem = (jenis: "kata" | "pola", kunci: string): StatusItem =>
@@ -169,7 +178,12 @@ export function useKurikulum(level: string, aktif = true): Kurikulum {
       siap: true, belumMulai: false, kur, unit, jadwal, mode: jadwal.mode, minggu,
       ini: jadwal.minggu[minggu] ?? [], lalu: minggu > 0 ? jadwal.minggu[minggu - 1] ?? [] : [], simUnit, cadangan,
       hariIni, sisaMinggu: mingguKeUjian(hariIni, kur.tanggal_ujian),
-      statusItem, jatuhTempo: { kata: tempo("kata"), pola: tempo("pola") }, tingkat, ulangan: m.ulangan, dekK, dekB,
+      statusItem, jatuhTempo: { kata: tempo("kata"), pola: tempo("pola") },
+      tempoItem: [...m.item.entries()].filter(([, v]) => v.jatuh_tempo != null && v.jatuh_tempo <= hariIni)
+        .map(([k, v]) => ({ kunci: k.slice(5), status: v.status, tahap: v.tahap, jatuh_tempo: v.jatuh_tempo! })),
+      tempoBesok: [...m.item.values()].filter(v => v.jatuh_tempo === tambahHari(hariIni, 1)).length,
+      hariPertama: ![...m.item.values()].some(v => v.status !== "dikuasai"),
+      tingkat, ulangan: m.ulangan, dekK, dekB,
     };
   }, [live, m, dekK, dekB, prio, hariIni]);
 }

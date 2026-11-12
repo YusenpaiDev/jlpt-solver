@@ -13,7 +13,8 @@ import { createClient } from "@/lib/supabase/client";
 import { honixSrc } from "@/lib/honix-pose";
 import { strategiUntuk } from "@/lib/strategi-ujian";
 import { perkiraanSkor, jadwalSimulasi, tempo, tambahHari } from "@/lib/kurikulum";
-import { ATURAN } from "@/lib/kurikulum-config";
+import { ATURAN, fiturLive } from "@/lib/kurikulum-config";
+import { KartuKenalan } from "@/components/alur/KartuKenalan";
 import { susunPerjalanan } from "@/lib/perjalanan-soal";
 import { bukaSet, muatBankSoal, urlSet } from "@/lib/bank-soal-muat";
 import { simpanSimulasi, type BarisSimulasi } from "@/lib/kurikulum-db";
@@ -126,6 +127,8 @@ export function SimulasiTab({ level }: { level: string }) {
   const sebelumnya = selesai[selesai.length - 2];
   return (
     <div className="rbk">
+      {/* Pertama kali buka layar simulasi (HANDOFF-alur-belajar §4). */}
+      <KartuKenalan id="simulasi" live={fiturLive("simulasi")} />
       {terakhir && !aktif && <HasilSimulasi b={terakhir} lalu={sebelumnya} level={level} targetHikki={targetHikki} />}
       <div className="sim-g" style={{ marginTop: terakhir && !aktif ? 16 : 0 }}>
         <section className="card tcard">
@@ -208,7 +211,7 @@ function HasilSimulasi({ b, lalu, level, targetHikki }: { b: BarisSimulasi; lalu
   const lulus = total >= L.lulus && skor.every(x => x.nilai >= min(x.k));
   const beda = (x: number) => (x > 0 ? `+${x}` : `${x}`);
   const lemah = [...skor].sort((p, q) => p.nilai / p.max - q.nilai / q.max)[0];
-  const latihan = lemah.k === "聴解" || lemah.k === "読解" ? "/bank-soal" : "/latihan/kilat";
+  const latihan = lemah.k === "聴解" || lemah.k === "読解" ? "/latihan/set" : "/latihan/kilat";
   const menit = b.menit?.["筆記"] ?? null;
   const tp = [{ k: "筆記", m: menit, t: targetHikki, audio: false }, { k: "聴解", m: null, t: L.waktu.find(w => w.c === "choukai")?.m ?? 0, audio: true }];
   return (
