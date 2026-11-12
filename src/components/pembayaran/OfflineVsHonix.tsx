@@ -69,8 +69,8 @@ export function OfflineVsHonix() {
         {BARIS.map(b => (
           <div className="ovh-row" key={b.momen}>
             <b className="ovh-momen">{b.momen}</b>
-            <p className="ovh-off"><X size={14} strokeWidth={2.2} aria-label="Offline" />{b.offline}</p>
-            <p className="ovh-hx"><Check size={14} strokeWidth={2.4} aria-label="Honix" />{b.honix}</p>
+            <p className="ovh-off"><span className="ovh-i" aria-label="Offline"><X size={12} strokeWidth={2.6} /></span>{b.offline}</p>
+            <p className="ovh-hx"><span className="ovh-i" aria-label="Honix"><Check size={13} strokeWidth={3} /></span>{b.honix}</p>
           </div>
         ))}
       </div>

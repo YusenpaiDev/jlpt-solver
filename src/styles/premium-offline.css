@@ -1,4 +1,6 @@
-/* /premium — bagian "Belajar offline vs pakai Honix". */
+/* /premium — bagian "Belajar offline vs pakai Honix". Hijau di sini sengaja
+   lebih terang dari --success (zaitun) biar centangnya nyala. */
+.ovh { --ovh-ijo: #4ADE80; --ovh-merah: #F87171; }
 
 .ovh { margin: 8px 0 64px; }
 .ovh-head { text-align: center; margin-bottom: 26px; }
@@ -21,7 +23,7 @@
   background: rgba(255, 255, 255, .02);
 }
 .ovh-k-off { color: var(--text-muted); }
-.ovh-k-hx { display: inline-flex; align-items: center; gap: 8px; color: #EC7A5C; }
+.ovh-k-hx { display: inline-flex; align-items: center; gap: 8px; color: var(--ovh-ijo); }
 .ovh-k-hx img { width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(221, 65, 36, .45)); }
 
 .ovh-momen { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.4; }
@@ -29,17 +31,27 @@
   display: flex; gap: 9px; align-items: flex-start;
   margin: 0; font-size: 13px; line-height: 1.5;
 }
-.ovh-off > svg, .ovh-hx > svg { flex-shrink: 0; margin-top: 3px; }
+.ovh-i {
+  flex-shrink: 0;
+  display: grid; place-items: center;
+  width: 20px; height: 20px; margin-top: -1px;
+  border-radius: 50%;
+}
 .ovh-off { color: var(--text-tertiary); }
-.ovh-off > svg { color: var(--text-muted); }
-.ovh-hx { color: var(--text-primary); }
-.ovh-hx > svg { color: #EC7A5C; }
+.ovh-off .ovh-i { color: var(--ovh-merah); background: rgba(248, 113, 113, .12); border: 1px solid rgba(248, 113, 113, .3); }
+.ovh-hx { color: var(--text-primary); font-weight: 500; }
+.ovh-hx .ovh-i {
+  color: #06210F;
+  background: var(--ovh-ijo);
+  box-shadow: 0 0 12px rgba(74, 222, 128, .55);
+}
 
-/* Kolom Honix sedikit disorot biar mata langsung ke sana. */
+/* Kolom Honix disorot hijau biar mata langsung ke sana. */
 .ovh-row:not(.ovh-kop) .ovh-hx {
   margin: -8px -12px; padding: 8px 12px;
   border-radius: 10px;
-  background: linear-gradient(90deg, rgba(221, 65, 36, .1), rgba(221, 65, 36, .03));
+  background: linear-gradient(90deg, rgba(74, 222, 128, .13), rgba(74, 222, 128, .03));
+  border-left: 2px solid var(--ovh-ijo);
 }
 
 .ovh-ringkas {
