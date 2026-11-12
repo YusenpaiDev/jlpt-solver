@@ -12,7 +12,7 @@ import {
 import { StabiloLayer, STABILO_COLORS, type HiStroke } from "@/components/StabiloLayer";
 import { useUserStats } from "@/lib/use-user-stats";
 import { catatAktivitas } from "@/lib/aktivitas";
-import { laporkanXp } from "@/lib/honix-level";
+import { tambahXp, XP } from "@/lib/xp";
 
 type Level = "N1" | "N2" | "N3" | "N4" | "N5";
 
@@ -390,12 +390,7 @@ export default function ChoukaiPlayer() {
         const stats = { answered, correct, last_practiced_at: new Date().toISOString(), perCat: { "聴解": { a: answered, c: correct } } };
         const nextAi = { ...(session.ai_result ?? {}), stats, user_progress: { answers } };
         await supabase.from("sessions").update({ score: correct, ai_result: nextAi }).eq("id", sessionId);
-        const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
-        if (prof) {
-          const { data: tersimpan } = await supabase.from("profiles")
-            .update({ xp: prof.xp + correct * 10 + 5 }).eq("id", user.id).select("xp").single();
-          if (tersimpan) laporkanXp({ userId: user.id, sebelum: prof.xp, sesudah: tersimpan.xp });
-        }
+        await tambahXp(correct * XP.setBenar + XP.setSelesai);
       } catch { /* biarin — nyusul kalau gagal */ }
     })();
   }, [answers, questions.length, sessionId, saved, session]);

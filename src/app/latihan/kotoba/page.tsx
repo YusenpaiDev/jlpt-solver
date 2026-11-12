@@ -10,7 +10,7 @@ import { catatAktivitas } from "@/lib/aktivitas";
 import { useUserStats } from "@/lib/use-user-stats";
 import { useHonixReaksi } from "@/lib/use-honix-reaksi";
 import { putarHonix } from "@/lib/honix-sfx";
-import { laporkanXp } from "@/lib/honix-level";
+import { tambahXp, XP } from "@/lib/xp";
 import { PindahLangkah, langkahMisi } from "@/components/rencana/PindahLangkah";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { HonixReaction } from "@/components/honix/HonixReaction";
@@ -228,12 +228,7 @@ function KotobaPlayer({ level }: { level: string }) {
         void catatItem("kata", q.word, level, correct);
         catatAktivitas("kotoba");
         if (!user) return;
-        const { data: prof } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
-        if (prof) {
-          const { data: tersimpan } = await supabase.from("profiles")
-            .update({ xp: prof.xp + (correct ? 8 : 2) }).eq("id", user.id).select("xp").single();
-          if (tersimpan) laporkanXp({ userId: user.id, sebelum: prof.xp, sesudah: tersimpan.xp });
-        }
+        await tambahXp(correct ? XP.jawabBenar : XP.jawabSalah);
         const ai_result = { kind: "drill", stats: { answered, correct: correctCount, perCat: { "語彙": { a: answered, c: correctCount } } } };
         if (sessId) await supabase.from("sessions").update({ total: answered, score: correctCount, ai_result }).eq("id", sessId);
         else { const { data } = await supabase.from("sessions").insert({ user_id: user.id, level, category: "語彙", title: `Drill Kotoba ${level}`, total: answered, score: correctCount, ai_result }).select("id").single(); if (data) setSessId(data.id); }

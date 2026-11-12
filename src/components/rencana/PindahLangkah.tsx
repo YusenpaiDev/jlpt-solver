@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { langkahBerikut, urlLangkah } from "@/lib/misi-harian";
 import { catatMisi, useMisiHarian } from "@/lib/use-misi-harian";
+import { tambahXp, XP } from "@/lib/xp";
+import { tanggalLokal } from "@/lib/aktivitas";
 import { useKurikulum } from "@/lib/use-kurikulum";
 import { rencanaKurikulum, urlKurikulum } from "@/lib/misi-kurikulum";
 
@@ -34,6 +36,16 @@ export function PindahLangkah({ misi, level, benar, total, mulai }: {
     if (tercatat.current) return;
     tercatat.current = true;
     void catatMisi(misi === "penyelamat" ? { penyelamat: true } : { langkah: Number(misi) });
+    /* Bonus XP misi beres (langkah 3) / misi penyelamat — sekali sehari. */
+    if (misi === "3" || misi === "penyelamat") {
+      const kunci = `honix:xp-misi:${misi}`, hari = tanggalLokal();
+      try {
+        if (localStorage.getItem(kunci) !== hari) {
+          localStorage.setItem(kunci, hari);
+          void tambahXp(misi === "3" ? XP.misiSelesai : XP.misiPenyelamat);
+        }
+      } catch { /* mode privat: lewati bonusnya */ }
+    }
   }, [misi]);
 
   const n = misi === "penyelamat" ? 0 : Number(misi);

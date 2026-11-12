@@ -48,7 +48,7 @@ export function HonixLevelUp() {
   return (
     <div className={`hx hx-level-banner${kurangiGerak ? " hx-rm" : ""}`} role="status">
       <Honix pose="lulus" size={64} sizeHp={52} entry="in-pop" idle="none" alt="" />
-      <div><strong>Level {aktif.level}!</strong><p>{aktif.pesan}</p></div>
+      <div><strong>Lv Honix {aktif.level}!</strong><p>{aktif.pesan}</p></div>
       <button type="button" className="hx-level-close" aria-label="Tutup perayaan naik level"
         onClick={() => setAktif(null)}>×</button>
     </div>

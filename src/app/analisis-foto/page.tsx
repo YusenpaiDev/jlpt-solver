@@ -21,7 +21,7 @@ import { catatAktivitas } from "@/lib/aktivitas";
 import { JatahHabisInline, JatahHabisDialog } from "@/components/pembayaran/JatahHabis";
 import { HonixFinishDialog } from "@/components/honix/HonixFinishDialog";
 import { Honix } from "@/components/honix/Honix";
-import { laporkanXp } from "@/lib/honix-level";
+import { tambahXp, XP } from "@/lib/xp";
 import { bacaKuotaHabis, sisaWaktuReset, type KuotaHabis } from "@/lib/kuota-habis";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -935,23 +935,11 @@ function ResultView({ onReset, result, setResult, chatMsgs, setChatMsgs, isSaved
         const userAns = answers[qi];
         return userAns && userAns === q.correct;
       }).length;
-      const xpGain = correctCount * 10 + 5;
+      const xpGain = correctCount * XP.setBenar + XP.setSelesai;
 
       try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: profile } = await supabase
-          .from("profiles").select("xp").eq("id", user.id).single();
-        if (!profile) return;
-        const currentXp = profile.xp ?? 0;
-
-        const { data: tersimpan } = await supabase.from("profiles")
-          .update({ xp: currentXp + xpGain })
-          .eq("id", user.id).select("xp").single();
-        if (!tersimpan) return;
-        laporkanXp({ userId: user.id, sebelum: currentXp, sesudah: tersimpan.xp });
+        const sesudah = await tambahXp(xpGain);
+        if (sesudah == null) return;
 
         setScoreSaved(true);
         setToast({ text: `+${xpGain} XP — ${correctCount}/${total} benar`, ok: true });
