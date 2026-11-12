@@ -1,5 +1,7 @@
 "use client";
 
+import { KunciHalaman } from "@/components/premium/Gembok";
+
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -372,6 +374,11 @@ function KotobaKeyed() {
   return <KotobaPlayer key={params.toString()} level={targetLevel} />;
 }
 
-export default function Page() {
+function PageIsi() {
   return <Suspense fallback={<div className="lk-load">Memuat…</div>}><KotobaKeyed /></Suspense>;
+}
+
+/* Masa percobaan habis & belum Premium → layar gembok, bukan soal. */
+export default function Page() {
+  return <KunciHalaman><PageIsi /></KunciHalaman>;
 }

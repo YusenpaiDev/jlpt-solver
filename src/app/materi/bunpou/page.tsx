@@ -1,5 +1,8 @@
 "use client";
 
+import { useTerkunci } from "@/components/premium/Gembok";
+import { bukaPremium } from "@/lib/akses-premium";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -91,6 +94,8 @@ export default function BunpouDeck() {
 }
 
 function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
+  /* Masa percobaan habis & belum Premium → tombol aksi buka pop-up Premium. */
+  const terkunci = useTerkunci();
   const router = useRouter();
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
      profiles.streak sendiri — kolom yang gak pernah di-update, jadi tiap
@@ -215,6 +220,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
   const pilihPola = (p: Pattern) => { setSel(p); catatTerakhir("bunpou", { level, grup: p.functionGroup, pola: p.pattern }); };
 
   const toggleFav = async (p: Pattern) => {
+    if (terkunci) { bukaPremium("simpan"); return; }
     if (busy) return;
     setBusy(p.pattern);
     const next = !favs.has(p.pattern);
@@ -300,7 +306,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
                 <div className="sep" />
                 <div className="seg"><div className="n" style={{ color: "var(--text-dim)" }}>{summary.neu}</div><div className="l">Belum</div></div>
               </div>
-              <button className="bv-cta" data-tur="bv-kilat" onClick={() => router.push(`/latihan/kilat?level=${level}`)}><Zap size={14} /> Latihan Kilat</button>
+              <button className={`bv-cta${terkunci ? " gk-btn" : ""}`} data-tur="bv-kilat" onClick={() => (terkunci ? bukaPremium("latihan") : router.push(`/latihan/kilat?level=${level}`))}><Zap size={14} /> Latihan Kilat</button>
             </div>
           </div>
 
@@ -343,7 +349,7 @@ function BunpouIsi({ level, stats }: { level: string; stats: UserStats }) {
                       </span>
                       <div className="bv-track"><i style={{ width: `${g.pct}%`, background: "var(--success2)" }} /></div>
                       <span className="bv-pct" style={g.pct === 0 ? { color: "var(--text-dim)", fontWeight: 500 } : undefined}>{g.pct === 0 ? "belum dilatih" : `${g.pct}% dikuasai`}</span>
-                      <button className="bv-drill" data-tur={gi === 0 ? "bv-drill" : undefined} onClick={e => { e.stopPropagation(); router.push(bayangan ? `/latihan/kilat?level=${level}&sering=1&count=10` : `/latihan/kilat?level=${level}&group=${g.key}`); }}><Zap size={11} /> Drill kelompok ({g.total})</button>
+                      <button className="bv-drill" data-tur={gi === 0 ? "bv-drill" : undefined} onClick={e => { e.stopPropagation(); if (terkunci) { bukaPremium("latihan"); return; } router.push(bayangan ? `/latihan/kilat?level=${level}&sering=1&count=10` : `/latihan/kilat?level=${level}&group=${g.key}`); }}><Zap size={11} /> Drill kelompok ({g.total})</button>
                     </div>
                     {open && (
                       <div className="bv-pats">

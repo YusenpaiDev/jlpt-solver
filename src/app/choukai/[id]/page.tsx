@@ -1,5 +1,7 @@
 "use client";
 
+import { KunciHalaman } from "@/components/premium/Gembok";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -275,7 +277,7 @@ function Pembahasan({ q, correct, correctNum }: { q: ChoukaiQuestion; correct: b
 
 /* ─── Main page ─── */
 
-export default function ChoukaiPlayer() {
+function ChoukaiPlayerIsi() {
   const stats = useUserStats();
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -799,4 +801,9 @@ export default function ChoukaiPlayer() {
       </div>
     </>
   );
+}
+
+/* Masa percobaan habis & belum Premium → layar gembok, bukan soal. */
+export default function ChoukaiPlayer() {
+  return <KunciHalaman><ChoukaiPlayerIsi /></KunciHalaman>;
 }

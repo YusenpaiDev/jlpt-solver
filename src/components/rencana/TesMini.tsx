@@ -1,5 +1,7 @@
 "use client";
 
+import { bukaPremium } from "@/lib/akses-premium";
+
 import "@/styles/rencana-dasar.css";
 import "@/styles/rencana-strategi.css";
 import "@/styles/rencana-tes.css";
@@ -80,7 +82,7 @@ export function TesMini({ level, sesi, choukai30 }: {
     const { data, error } = await createClient().rpc("buat_tes_mini", { p_minggu: senin, p_level: level });
     if (error) {
       setMulai(false);
-      if (error.message.includes("subscription_required")) { router.push("/langganan"); return; }
+      if (error.message.includes("subscription_required")) { bukaPremium("latihan"); return; }
       /* Alasan asli dari database ikut ditampilin kecil, biar gagalnya gampang dilacak. */
       setPesan(error.message.includes("belum cukup") ? `Soal ${level} di Bank Soal belum cukup buat tes mini.` : `Tes mini belum bisa dibuat. Coba lagi sebentar. (${error.message.slice(0, 140)})`);
       return;

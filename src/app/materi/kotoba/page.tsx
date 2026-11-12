@@ -1,5 +1,8 @@
 "use client";
 
+import { useTerkunci } from "@/components/premium/Gembok";
+import { bukaPremium } from "@/lib/akses-premium";
+
 import { HonixEmpty } from "@/components/honix/HonixEmpty";
 
 import { useEffect, useMemo, useState } from "react";
@@ -112,6 +115,8 @@ export default function KotobaDeck() {
 }
 
 function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
+  /* Masa percobaan habis & belum Premium → tombol aksi buka pop-up Premium. */
+  const terkunci = useTerkunci();
   const router = useRouter();
   const level = deck.level;
   /* Streak dari useUserStats → streak_saya(). Sebelumnya tiap halaman baca
@@ -219,6 +224,7 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
   };
 
   const toggleFav = async (w: Kotoba) => {
+    if (terkunci) { bukaPremium("simpan"); return; }
     if (busy) return;
     setBusy(w.word);
     const next = !favs.has(w.word);
@@ -266,6 +272,7 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
      Kamus pakai FlashPlayer yang sama TANPA prop onNilai — kata simpanan di
      sana gak punya konsep level/penguasaan, jadi player-nya tetap polos. */
   const openFlash = (words: Kotoba[]) => {
+    if (terkunci) { bukaPremium("latihan"); return; }
     if (!words.length) return;
     setFlashWords(words.map(w => ({ id: w.word, kanji: w.word, reading: w.reading, meaning: w.meaning, level: w.jlpt_level ?? level, example: w.example ?? null })));
   };
@@ -319,7 +326,7 @@ function KotobaIsi({ deck, stats }: { deck: Deck; stats: UserStats }) {
                 <div className="sep" />
                 <div className="seg"><div className="n" style={{ color: "var(--text-dim)" }}>{summary.neu}</div><div className="l">Belum</div></div>
               </div>
-              <button data-tur="kv-kilat" onClick={() => router.push(`/latihan/kotoba?level=${level}`)} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "13px 22px", borderRadius: 99, background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 8px 22px -8px rgba(221,65,36,0.7)" }}><Zap size={14} /> Latihan Kilat</button>
+              <button data-tur="kv-kilat" className={terkunci ? "gk-btn" : undefined} onClick={() => (terkunci ? bukaPremium("latihan") : router.push(`/latihan/kotoba?level=${level}`))} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "13px 22px", borderRadius: 99, background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 8px 22px -8px rgba(221,65,36,0.7)" }}><Zap size={14} /> Latihan Kilat</button>
             </div>
           </div>
 

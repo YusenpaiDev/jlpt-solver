@@ -1,5 +1,7 @@
 "use client";
 
+import { KunciHalaman } from "@/components/premium/Gembok";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -9,7 +11,7 @@ import { Disiapkan, Kerangka } from "@/components/kurikulum/Bagian";
 import { Penempatan } from "@/components/kurikulum/Penempatan";
 
 /** Tes penempatan di luar onboarding: dari Materi / Kurikulum / Pengaturan ("Ulangi tes penempatan"). */
-export default function PenempatanPage() {
+function PenempatanPageIsi() {
   const stats = useUserStats();
   const router = useRouter();
   const [pace, setPace] = useState(20);
@@ -32,4 +34,9 @@ export default function PenempatanPage() {
         : <p className="ku-muat" role="status">Memuat…</p>}
     </Kerangka>
   );
+}
+
+/* Masa percobaan habis & belum Premium → layar gembok, bukan soal. */
+export default function PenempatanPage() {
+  return <KunciHalaman><PenempatanPageIsi /></KunciHalaman>;
 }

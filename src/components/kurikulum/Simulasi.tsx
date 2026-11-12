@@ -15,6 +15,7 @@ import { strategiUntuk } from "@/lib/strategi-ujian";
 import { perkiraanSkor, jadwalSimulasi, tempo, tambahHari } from "@/lib/kurikulum";
 import { ATURAN, fiturLive } from "@/lib/kurikulum-config";
 import { KartuKenalan } from "@/components/alur/KartuKenalan";
+import { bukaPremium } from "@/lib/akses-premium";
 import { susunPerjalanan } from "@/lib/perjalanan-soal";
 import { bukaSet, muatBankSoal, urlSet } from "@/lib/bank-soal-muat";
 import { simpanSimulasi, type BarisSimulasi } from "@/lib/kurikulum-db";
@@ -93,7 +94,7 @@ export function SimulasiTab({ level }: { level: string }) {
     if (!p?.hikki) { setGalat(`Belum ada set ${level} yang siap buat simulasi.`); return; }
     setSibuk(true); setGalat(null);
     const r = await bukaSet(p.hikki.set);
-    if (!("id" in r)) { setSibuk(false); if (r.galat === "langganan") router.push("/langganan"); else setGalat("Simulasi belum bisa dimulai. Coba lagi sebentar."); return; }
+    if (!("id" in r)) { setSibuk(false); if (r.galat === "langganan") bukaPremium("latihan"); else setGalat("Simulasi belum bisa dimulai. Coba lagi sebentar."); return; }
     try {
       if (!DEV_BYPASS) await simpanSimulasi({ n, tanggal: k.hariIni, sesi: [r.id], skor: null, menit: null });
       router.push(urlSet(p.hikki.set, r.id));

@@ -1,5 +1,7 @@
 "use client";
 
+import { KunciHalaman } from "@/components/premium/Gembok";
+
 import { Suspense, useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -490,6 +492,11 @@ function KilatKeyed() {
   return <KilatPlayer key={params.toString()} level={targetLevel} />;
 }
 
-export default function Page() {
+function PageIsi() {
   return <Suspense fallback={<div className="lk-load">Memuat…</div>}><KilatKeyed /></Suspense>;
+}
+
+/* Masa percobaan habis & belum Premium → layar gembok, bukan soal. */
+export default function Page() {
+  return <KunciHalaman><PageIsi /></KunciHalaman>;
 }

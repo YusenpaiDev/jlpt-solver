@@ -6,6 +6,7 @@ import { Home, BookOpen, BookA, BarChart3, Settings, Sparkles } from "lucide-rea
 import { useIsPro } from "@/lib/use-is-pro";
 import { HonixTurHost } from "@/components/honix/HonixTurHost";
 import { CaraBelajarHost } from "@/components/alur/CaraBelajar";
+import { PremiumHost } from "@/components/premium/Gembok";
 import { TombolKeluar } from "./TombolKeluar";
 import { IkonBankSoal } from "./IkonBankSoal";
 import { navAktif } from "@/lib/nav-aktif";
@@ -94,6 +95,8 @@ export function NavRail() {
       {/* Tur cara pakai — render lewat portal, jadi ikut jalan di HP walau rail-nya disembunyiin. */}
       <HonixTurHost />
       <CaraBelajarHost />
+      {/* Gembok setelah masa percobaan habis: cegat link latihan + pop-up Premium. */}
+      <PremiumHost />
     </nav>
   );
 }

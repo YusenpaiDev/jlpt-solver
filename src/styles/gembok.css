@@ -1,0 +1,15 @@
+/* Gembok setelah masa percobaan habis (src/components/premium/Gembok.tsx). */
+.rbk .gk-sheet{max-width:440px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 24px 20px}
+.rbk .gk-hx{width:110px;margin-top:-6px}
+.rbk .gk-t{font-size:21px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.rbk .gk-p{font-size:13.5px;color:var(--muted);line-height:1.5;text-wrap:pretty}
+.rbk .gk-l{list-style:none;padding:12px 14px;margin:4px 0 2px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);text-align:left;display:flex;flex-direction:column;gap:7px;width:100%}
+.rbk .gk-l li{font-size:13px;color:var(--text);padding-left:22px;position:relative;line-height:1.4}
+.rbk .gk-l li::before{content:"✓";position:absolute;left:2px;color:var(--success);font-weight:700}
+.rbk .gk-cta{width:100%;justify-content:center}
+.rbk.gk-hal{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.rbk .gk-kartu{max-width:440px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 24px 22px}
+
+/* 🔒 di tombol yang ngarah ke halaman latihan (link-nya dicegat → pop-up). */
+body[data-terkunci="1"] a.btn:is([href^="/latihan/kotoba"],[href^="/latihan/kilat"],[href^="/analisis-foto"],[href^="/choukai/"],[href^="/progres/ulangan"],[href^="/penempatan"])::before,
+body[data-terkunci="1"] .gk-btn::before{content:"🔒";margin-right:6px;font-size:.9em}

@@ -1,5 +1,8 @@
 "use client";
 
+import { useTerkunci } from "@/components/premium/Gembok";
+import { bukaPremium } from "@/lib/akses-premium";
+
 import "@/styles/rencana-dasar.css";
 import "@/styles/rencana-strategi.css";
 import "@/styles/rencana-misi.css";
@@ -36,6 +39,8 @@ const LABEL = (b: Bagian) => (b.set.section === "choukai" ? "聴解" : "筆記")
 /** Bank Soal: set latihan format JLPT sebagai perjalanan 桜 → 鳳
     (HANDOFF-materi-bank-soal §3). Pindahan dari daftar ujian di /materi. */
 export default function BankSoalPage() {
+  /* Masa percobaan habis & belum Premium → tombol aksi buka pop-up Premium. */
+  const terkunci = useTerkunci();
   const stats = useUserStats();
   const router = useRouter();
   const [semua, setSemua] = useState<SetUjian[]>([]);
@@ -67,12 +72,13 @@ export default function BankSoalPage() {
 
   const buka = async (b?: Bagian) => {
     if (!b || b.status === "segera" || membuka) return;
+    if (terkunci) { bukaPremium("latihan"); return; }
     /* Pertama kali dibuka: database nyalin set dari katalog ke akun ini. */
     if (!b.set.id) { setMembuka(b.set.katalogId); setGagal(null); }
     const r = await bukaSet(b.set);
     if ("id" in r) { router.push(urlSet(b.set, r.id)); return; }
     setMembuka(null);
-    if (r.galat === "langganan") { router.push("/langganan"); return; }
+    if (r.galat === "langganan") { bukaPremium("latihan"); return; }
     setGagal(`Set ${LABEL(b)} ini belum bisa dibuka. Coba lagi sebentar.`);
   };
 
