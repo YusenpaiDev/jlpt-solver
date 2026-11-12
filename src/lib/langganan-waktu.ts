@@ -16,6 +16,17 @@ export function hasilPerpanjang(until: string | null, bulan: number, sekarang = 
   return hasil;
 }
 
+/**
+ * Status yang ditampilin di riwayat. `pending` yang udah lewat 24 jam = user
+ * nutup jendela Midtrans tanpa milih metode bayar: di sisi Midtrans
+ * transaksinya gak pernah ada, jadi notifikasi "expire" juga gak bakal
+ * datang dan barisnya PENDING selamanya. Tampilannya aja yang diganti —
+ * isi tabel tetap (kalau ternyata dibayar, webhook tetap ngubah jadi lunas).
+ */
+export function statusTampil(status: string, dibuat: string, sekarang = Date.now()): string {
+  return status === "pending" && sekarang - new Date(dibuat).getTime() > HARI ? "tidak-selesai" : status;
+}
+
 /* ── Peringatan H-7 / H-3 / H-1 ─────────────────────────────────
    Dismissal hanya berlaku pada tanggal WIB dan ambang yang sama. */
 export const ambangPeringatan = (sisa: number) => (sisa <= 1 ? 1 : sisa <= 3 ? 3 : 7);

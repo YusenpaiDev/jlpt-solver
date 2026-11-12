@@ -32,6 +32,7 @@ export const LABEL_TX: Record<string, { teks: string; kelas: string }> = {
   gagal:      { teks: "GAGAL",        kelas: "py-s-bad" },
   kadaluarsa: { teks: "KADALUARSA",   kelas: "py-s-bad" },
   refund:     { teks: "DIKEMBALIKAN", kelas: "py-s-off" },
+  "tidak-selesai": { teks: "TIDAK SELESAI", kelas: "py-s-off" },
 };
 
 /** "19 September 2026" */
@@ -50,7 +51,7 @@ export const tglJam = (iso: string | Date) => `${tglPanjang(iso)}, ${jam(iso)} W
 export const sisaHari = (until: string | null, sekarang = Date.now()) =>
   until ? Math.ceil((new Date(until).getTime() - sekarang) / HARI) : null;
 
-export { hasilPerpanjang, ambangPeringatan, sudahDitutup, tutupPeringatan } from "@/lib/langganan-waktu";
+export { hasilPerpanjang, statusTampil, ambangPeringatan, sudahDitutup, tutupPeringatan } from "@/lib/langganan-waktu";
 
 /** Hijau <60%, kuning 60–89%, merah ≥90%. */
 export const isiMeter = (pakai: number, batas: number) => {

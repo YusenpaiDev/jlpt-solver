@@ -24,7 +24,10 @@ export function rapikanPref(x: unknown): PrefAi {
 }
 
 /** Tambahan system prompt + batas token jawaban. */
-export function instruksiPref(p: PrefAi, level: string | null): { teks: string; maksToken: number } {
+export function instruksiPref(p: PrefAi, level: unknown): { teks: string; maksToken: number } {
+  /* Level dari user_metadata (bisa diubah user sendiri) — cuma N1–N5 yang
+     boleh masuk system prompt, sisanya dianggap gak ada. */
+  const lv = typeof level === "string" && /^N[1-5]$/.test(level) ? level : null;
   const baris = [
     p.gaya === "lengkap"
       ? "Gaya jawaban: LENGKAP — jelasin poin tata bahasanya juga (pola, penyambungan, kenapa pilihan lain salah), tetap rapi & gak bertele-tele."
@@ -36,7 +39,7 @@ export function instruksiPref(p: PrefAi, level: string | null): { teks: string; 
       ? "Jangan tulis cara baca kanji."
       : p.furigana === "semua"
         ? "Tulis cara baca (hiragana) dalam kurung setelah setiap kanji, mis. 勉強（べんきょう）."
-        : `Tulis cara baca (hiragana) dalam kurung cuma buat kanji yang kira-kira di atas level ${level ?? "user"}, mis. 影響（えいきょう）.`,
+        : `Tulis cara baca (hiragana) dalam kurung cuma buat kanji yang kira-kira di atas level ${lv ?? "user"}, mis. 影響（えいきょう）.`,
   ];
   return { teks: `Preferensi user:\n- ${baris.join("\n- ")}`, maksToken: p.gaya === "lengkap" ? 520 : 280 };
 }

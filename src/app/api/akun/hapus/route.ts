@@ -24,9 +24,24 @@ export async function POST(req: Request) {
   if (errProfil && !tabelGakAda(errProfil)) { console.error("[akun/hapus] profiles:", errProfil.message); gagal.push("profiles"); }
   if (gagal.length) return NextResponse.json({ pesan: "Sebagian data belum kehapus, akunmu belum dihapus. Coba lagi sebentar." }, { status: 500 });
 
-  /* Foto profil (bucket avatars/<user id>/…). Gagal di sini gak nahan penghapusan akun. */
-  const { data: foto } = await admin.storage.from("avatars").list(user.id);
-  if (foto?.length) await admin.storage.from("avatars").remove(foto.map(f => `${user.id}/${f.name}`));
+  /* Foto profil (bucket avatars/<user id>/…). Wajib bersih sebelum akun login
+     dihapus — sesudahnya gak ada lagi yang bisa minta foto itu dihapus.
+     Dihapus per 100 sampai folder kosong (batas putaran biar gak muter terus). */
+  const avatars = admin.storage.from("avatars");
+  for (let putaran = 0; putaran < 20; putaran++) {
+    const { data: foto, error: eList } = await avatars.list(user.id, { limit: 100 });
+    if (eList) {
+      if (/bucket not found/i.test(eList.message)) break; // bucket-nya gak ada = gak ada foto
+      console.error("[akun/hapus] avatars list:", eList.message);
+      return NextResponse.json({ pesan: "Foto profilmu belum kehapus, akunmu belum dihapus. Coba lagi sebentar." }, { status: 500 });
+    }
+    if (!foto?.length) break;
+    const { error: eHapus } = await avatars.remove(foto.map(f => `${user.id}/${f.name}`));
+    if (eHapus) {
+      console.error("[akun/hapus] avatars remove:", eHapus.message);
+      return NextResponse.json({ pesan: "Foto profilmu belum kehapus, akunmu belum dihapus. Coba lagi sebentar." }, { status: 500 });
+    }
+  }
 
   const { error: errAuth } = await admin.auth.admin.deleteUser(user.id);
   if (errAuth) {

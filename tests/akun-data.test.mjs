@@ -24,4 +24,6 @@ test('missing tables are skipped, other errors are not', () => {
   assert.equal(tabelGakAda({ code: 'PGRST205', message: "Could not find the table 'public.simulasi'" }), true);
   assert.equal(tabelGakAda({ code: '42501', message: 'permission denied' }), false);
   assert.equal(tabelGakAda(null), false);
+  assert.equal(tabelGakAda({ code: '42703', message: 'column "user_id" does not exist' }), false);
+  assert.equal(tabelGakAda({ message: 'function public.x() does not exist' }), false);
 });

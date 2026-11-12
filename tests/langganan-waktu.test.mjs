@@ -34,3 +34,12 @@ test("pengingat yang ditutup kemarin tidak menutup pengingat hari ini", () => {
     assert.equal(isi.get("pro-warn-dismissed-2026-10-09"), "1");
   } finally { delete globalThis.localStorage; }
 });
+
+test("pending lewat 24 jam ditampilin tidak selesai, status lain apa adanya", async () => {
+  const { statusTampil } = await import("../src/lib/langganan-waktu.ts");
+  const kini = Date.parse("2026-11-13T12:00:00Z");
+  assert.equal(statusTampil("pending", "2026-11-13T09:00:00Z", kini), "pending");
+  assert.equal(statusTampil("pending", "2026-11-09T09:00:00Z", kini), "tidak-selesai");
+  assert.equal(statusTampil("lunas", "2026-11-01T09:00:00Z", kini), "lunas");
+  assert.equal(statusTampil("kadaluarsa", "2026-11-01T09:00:00Z", kini), "kadaluarsa");
+});

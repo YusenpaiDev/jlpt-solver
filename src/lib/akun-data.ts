@@ -3,7 +3,9 @@
    /api/akun/reset & /api/akun/hapus pakai service role, cuma baris milik
    user itu (user_id = dia). */
 
-/** "Riwayat soal, streak, kalender cap, status kata & pola". Kamus, catatan, XP, langganan aman. */
+/** "Riwayat soal, streak, kalender cap, status kata & pola". Kamus, catatan, XP, langganan aman.
+    `sessions` juga nampung salinan set Bank Soal yang udah dibuka — ikut kehapus,
+    dan teks konfirmasi di Pengaturan bilang begitu. */
 export const TABEL_PROGRES = [
   "sessions", "kotoba_progress", "bunpou_progress", "aktivitas_harian", "waktu_belajar",
   "misi_harian", "tes_mini", "item_status", "tingkat_jenis_soal", "ulangan", "simulasi",
@@ -19,8 +21,11 @@ export const KATA_KONFIRMASI = { reset: "RESET", hapus: "HAPUS" } as const;
 export const cocokKonfirmasi = (aksi: keyof typeof KATA_KONFIRMASI, ketik: unknown) =>
   typeof ketik === "string" && ketik.trim().toUpperCase() === KATA_KONFIRMASI[aksi];
 
-/** Tabel yang belum ada (migration belum dijalanin) dilewati, bukan dianggap gagal. */
+/** Tabel yang belum ada (migration belum dijalanin) dilewati, bukan dianggap gagal.
+    Cuma dari kode error — teks "does not exist" juga muncul di error lain
+    (kolom/fungsi/policy hilang), dan kalau ikut dilewati, data yang gagal
+    kehapus bakal dilaporin "beres". */
 export function tabelGakAda(e: { code?: string; message?: string } | null): boolean {
   if (!e) return false;
-  return e.code === "42P01" || e.code === "PGRST205" || /does not exist|could not find the table/i.test(e.message ?? "");
+  return e.code === "42P01" || e.code === "PGRST205";
 }
