@@ -77,7 +77,6 @@ const PLANS: Plan[] = [
     cta: "Pilih Pro",
     popular: true,
     color: "iris",
-    honix: "terbang",
     features: [
       { t: "Kurikulum mingguan sampai hari ujian", on: true, highlight: true, fitur: "kurikulum" },
       { t: "Soal orisinal bertingkat T1–T3", on: true, highlight: true, fitur: "soal_orisinal" },
